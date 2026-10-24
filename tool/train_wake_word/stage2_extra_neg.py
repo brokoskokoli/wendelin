@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""WP133 Teil A3: Fehlalarme des Bands (Stufe 2 nur unter 0,999) mit mehr oeffentlichen Negativdaten, nur v8a.
+"""WP133 Teil A3: Fehlalarme des Bands (Stufe 2 nur unter 0,999) mit mehr oeffentlichen Negativdaten, fuer ein Stufe-1-Modell (--tag, Standard v8a).
 
 Zwei zusaetzliche Quellen, ohne bestehende Quellen/Caches zu aendern (neue Caches: s1x/, s2n/ unter $RES):
   fleurs_rest  FLEURS-de-Test ohne die bisher genutzte erste Stunde (words_measure.clip_list("fleurs"), sortiert nach Dateiname), wie fleurs auf Spitze 1 normiert
@@ -12,7 +12,8 @@ bei Schwelle 0,98 gegen stage2_cut.cut_fixed abgeglichen.
 
 Lauf (Repo-Root, K=~/wendelin-models/kws):
   nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_extra_neg.py --model v8a=$K/wp130/out/wendelin_wp130_a.onnx --threads 2
-Ausgabe nur lokal: $RES/stage2_extra_neg.md. Selbsttest: test_stage2_extra_neg.py."""
+Anderes Stufe-1-Modell: --tag <name> --model <name>=<pfad>; braucht die s2p-Caches des Tags (stage2_analysis.py --cut-only), sonst Abbruch.
+Ausgabe nur lokal: $RES/stage2_extra_neg.md (v8a) bzw. stage2_extra_neg_<tag>.md, dazu *_passed.local.md bzw. *_passed_<tag>.local.md. Selbsttest: test_stage2_extra_neg.py."""
 import argparse, functools, glob, json, math, os, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -26,7 +27,7 @@ import stage2_analysis as A
 import stage2_cut as C
 
 SR = W.SR
-TAG = C.CUT_TAG
+TAG = C.CUT_TAG                                                 # Standard; main() setzt es per --tag (verifier_eval.py setzt E.TAG ebenfalls)
 NEW_SRC = ("fleurs_rest", "mls_de")
 OLD_SRC = ("neg_huawei", "neg_handy2", "syn", "fleurs", "conf")
 THRS = (0.95, 0.98, 0.99)
@@ -153,6 +154,23 @@ def hours(src):
 def s1x_path(tag, src): return f"{V.RES}/s1x/{V.ctag(tag)}/{src}.npz"
 
 
+def report_path(tag=None, passed=False):
+    """Berichtsdatei je Tag: v8a unveraendert stage2_extra_neg.md, sonst mit Tag im Namen."""
+    tag = TAG if tag is None else tag
+    sfx = "" if tag == C.CUT_TAG else f"_{tag}"
+    return f"{V.RES}/stage2_extra_neg{'_passed' if passed else ''}{sfx}{'.local' if passed else ''}.md"
+
+
+def missing_caches(tx):
+    """Liste (norm, Wort) ohne vollstaendigen hw2-Cache (s2p des Tags oder s2n): dann waere der Bericht still leer."""
+    return [(k[2], w) for k, d in tx.items() for w, v in d.items() if v is None]
+
+
+def missing_s2p():
+    """(norm, Wort) ohne s2p-Cache des Tags (Voraussetzung fuer den Bericht, vor den Rechenlaeufen pruefbar)."""
+    return [(n, w) for n in (False, True) for w in V.WORDS if not os.path.exists(C.cut_path(TAG, w, *CUT, n))]
+
+
 def s2n_path(word, norm):
     nm = f"-nm{C.NORM_PEAK}" if norm else ""
     return f"{V.RES}/s2n/{V.ctag(TAG)}-p{CUT[0]}-t{CUT[1]}{nm}/hw2@{W.key(word)}.json"
@@ -160,7 +178,7 @@ def s2n_path(word, norm):
 
 # ---------- Laeufe ----------
 def run_s1x(model, threads):
-    """Wertekurven von v8a je Fenster fuer die neuen Quellen (gleiche Verarbeitung wie v8_measure.run_s1) -> s1x/<tag>/<src>.npz."""
+    """Wertekurven des Tags je Fenster fuer die neuen Quellen (gleiche Verarbeitung wie v8_measure.run_s1) -> s1x/<tag>/<src>.npz."""
     import onnxruntime as ort
     pad = lambda x: np.concatenate([np.zeros(SR, "float32"), x, np.zeros(SR, "float32")])
     af = sess = None
@@ -280,7 +298,7 @@ def render(res, target_note=""):
            "app-2.0-0.9-nm-b999": "hw2 + norm + Band 0,999"}
     pools = {"neu (fleurs_rest + mls_de)": NEW_SRC, "alle ohne conf": tuple(s for s in NEW_SRC + OLD_SRC if s != "conf")}
     hs = {s: hours(s) for s in NEW_SRC + OLD_SRC}
-    out = ["# Fehlalarme des Bands mit mehr öffentlichen Negativdaten (WP133 A3): v8a, App-Bezug mit Halten, Ausschnitt 2,0/0,9", "",
+    out = [f"# Fehlalarme des Bands mit mehr öffentlichen Negativdaten (WP133 A3): {TAG}, App-Bezug mit Halten, Ausschnitt 2,0/0,9", "",
            "Zelle = durchkommende Ereignisse (FA/h, Poisson-95-%-Obergrenze, zweiseitig/exakt). Ereignisse werden nur gezählt, nicht auf Treffer der Wortsilben geprüft. "
            "Poisson setzt unabhängige Ereignisse voraus; Clips derselben Sprecher/Kapitel sind korreliert, die Obergrenze ist daher eher zu knapp. "
            "conf = synthetische Verwechsler (kein Alltagssprecher, nicht in den Pools).", "",
@@ -329,27 +347,34 @@ def render_passed(res, tx, thr=0.98):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--model", action="append", default=[], help="v8a=<pfad>")
+    ap.add_argument("--model", action="append", default=[], help="<tag>=<pfad> (Tag wie --tag)")
+    ap.add_argument("--tag", default=C.CUT_TAG, help="Stufe-1-Modell (Name aus --model), Standard v8a")
     ap.add_argument("--threads", type=int, default=2)
     ap.add_argument("--report-only", action="store_true")
     a = ap.parse_args()
+    global TAG
+    TAG = a.tag
     models = V.parse_models(a.model, False)
-    if TAG not in models: sys.exit("braucht --model v8a=<pfad>")
+    if TAG not in models: sys.exit(f"braucht --model {TAG}=<pfad> (zu --tag {TAG})")
     if not a.report_only:
+        pre = missing_s2p()                                   # fail-closed vor den Rechenlaeufen
+        if pre: sys.exit(f"s2p-Caches fehlen fuer Tag {TAG} {pre}: zuerst stage2_analysis.py --cut-only fuer das Tag laufen lassen, dann diesen Lauf")
         run_s1x(models[TAG], a.threads)
     first, _ = split_first_hour(fleurs_files())
     assert [n for n, _ in first] == [n for n, _ in W.clip_list("fleurs")], "erste Stunde weicht von words_measure.clip_list ab"
     curves = {**V.load_curves(TAG), **load_new_curves()}
     if not a.report_only: run_s2n(curves, a.threads)
     tx = load_tx()
+    miss = missing_caches(tx)
+    if miss: sys.exit(f"hw2-Caches fehlen fuer Tag {TAG} {miss}: zuerst stage2_analysis.py --cut-only fuer das Tag laufen lassen (s2p), dann diesen Lauf ohne --report-only (s2n)")
     res = evaluate(curves, tx)
     labels = V.filter_labels(W.read_labels())
     bad = check_parity(res, curves, tx, labels)
     print("Paritaet mit cut_fixed (bisherige Quellen, 0,98):", "OK" if not bad else f"ABWEICHUNGEN {bad}", flush=True)
     md = render(res) + ("" if not bad else f"\n**Achtung: Abweichungen zur Gegenprobe {bad}**\n")
-    open(f"{V.RES}/stage2_extra_neg.md", "w").write(md)
-    open(f"{V.RES}/stage2_extra_neg_passed.local.md", "w").write(render_passed(res, tx))
-    print(f"-> {V.RES}/stage2_extra_neg.md", flush=True)
+    open(report_path(), "w").write(md)
+    open(report_path(passed=True), "w").write(render_passed(res, tx))
+    print(f"-> {report_path()}", flush=True)
 
 
 if __name__ == "__main__":

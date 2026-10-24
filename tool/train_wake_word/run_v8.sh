@@ -6,6 +6,7 @@
 # Variablen: NJ = parallele Erzeuger (2), THREADS = Rechenkerne in features/train (NJ), TAG = Modellname (a),
 #   STEPS (5000), SEED (1), HIDDEN (128), N_POS/N_CONF/N_NEG/N_CV (Mengen; N_CV=0 = Common Voice ohne Download auslassen), PROBE=1 (Mini-Probe in $W/probe, ohne Marker),
 #   FIX = Ordner der Wortaufnahmen mit labels/ und raw/ (nur Huawei-Block 1 bis 3, siehe real_split.py).
+#   EXCLUDE_VOICES (Stimmen auslassen, eigenes W) und V7_DATA=0 (ohne WP58-Daten): siehe WP137-Kommentare unten.
 #   REAL_POS = 1 (Standard, Verhalten WP130) | 0 (WP133 „-syn“: ohne echte Positive; eigener Arbeitsordner $W/work_syn, FIX und real_pos
 #   werden nie gelesen; gen/Downloads bleiben gemeinsam). Jedes Modell bekommt <modell>.onnx.meta.json mit real_pos/tag/steps/seed/hidden;
 #   v8_measure.py --split all akzeptiert nur Modelle mit real_pos 0 (und v7).
@@ -21,16 +22,44 @@ T=$(cd "$(dirname "$0")" && pwd)
 FIX=${FIX:-$HOME/wendelin-fixtures/wake/words}
 NJ=${NJ:-2}; THREADS=${THREADS:-$NJ}; TAG=${TAG:-a}; STEPS=${STEPS:-5000}; SEED=${SEED:-1}; HIDDEN=${HIDDEN:-128}
 N_POS=${N_POS:-34000}; N_CONF=${N_CONF:-10000}; N_NEG=${N_NEG:-13000}; N_CV=${N_CV:-4000}
-PROBE=${PROBE:-0}; REAL_POS=${REAL_POS:-1}
+PROBE=${PROBE:-0}; REAL_POS=${REAL_POS:-1}; EXCLUDE_VOICES=${EXCLUDE_VOICES:-}; V7_DATA=${V7_DATA:-1}
 case $REAL_POS in 0|1) ;; *) echo "REAL_POS muss 0 oder 1 sein" >&2; exit 2 ;; esac
+case $V7_DATA in 0|1) ;; *) echo "V7_DATA muss 0 oder 1 sein" >&2; exit 2 ;; esac
 step=${1:-alle}
 N="nice -n 5"
 HF=https://huggingface.co/rhasspy/piper-voices/resolve/main/de/de_DE
 CV=https://huggingface.co/datasets/fsicoli/common_voice_17_0/resolve/main/audio/de/train/de_train_0.tar   # CC0
 G=$W/gen; [ "$PROBE" = 1 ] && G=$W/probe/gen
-D=$W/dl; WK=$W/work; [ "$PROBE" = 1 ] && WK=$W/probe/work
+D=${DL:-$W/dl}; WK=$W/work; [ "$PROBE" = 1 ] && WK=$W/probe/work
 if [ "$REAL_POS" = 0 ]; then WK=$W/work_syn; [ "$PROBE" = 1 ] && WK=$W/probe/work_syn; fi
+[ "$V7_DATA" = 0 ] && WK=${WK}_nov7      # eigener Merkmalsordner: nie features.done eines Laufs mit v7-Daten wiederverwenden
 mkdir -p "$D" "$G/.done" "$WK" "$W/out"
+# WP137: V7_DATA=0 = ohne die WP58-Daten pos/pos2/conf2/neg (gen verlinkt sie nicht, features nutzt nur pos_v8/conf_v8/neg_v8,cv + FLEURS).
+# Fail-closed: existiert eines dieser Verzeichnisse in $G, bricht gen/features ab (sonst wuerden sie unbemerkt einfliessen).
+no_v7_check() {
+  [ "$V7_DATA" = 0 ] || return 0
+  local d
+  for d in pos pos2 conf2 neg; do
+    [ -e "$G/$d" ] && { echo "V7_DATA=0, aber $G/$d existiert (v7-Daten); anderen Arbeitsordner W nehmen" >&2; exit 1; }
+  done
+  return 0
+}
+# WP137: EXCLUDE_VOICES = Komma-Liste von Stimmen (Ordner v-<name>), die gen_samples nicht sieht (Stimmen, die fuer dieses Set ausgelassen werden).
+# Nur mit eigenem W (nie die WP130-Daten mischen); Downloads per DL= gemeinsam nutzbar. Die Auswahl steht in $G/voices.txt und im Sidecar.
+VD=$D
+if [ -n "$EXCLUDE_VOICES" ]; then
+  [ "$W" = "$K0/wp130" ] && { echo "EXCLUDE_VOICES braucht ein eigenes W (nicht $K0/wp130)" >&2; exit 2; }
+  VD=$W/voices; mkdir -p "$VD"
+fi
+voices_dir() {      # Stimmenordner fuer gen_samples: bei EXCLUDE_VOICES nur Symlinks auf die erlaubten v-*-Ordner
+  [ -z "$EXCLUDE_VOICES" ] && return 0
+  local v n
+  for v in "$D"/v-*; do
+    n=${v##*/v-}
+    if [[ ",$EXCLUDE_VOICES," == *",$n,"* ]]; then [ -e "$VD/v-$n" ] && { echo "ausgeschlossene Stimme $n liegt in $VD" >&2; exit 1; }; else [ -e "$VD/v-$n" ] || ln -s "$v" "$VD/v-$n"; fi
+  done
+  ls "$VD" > "$G/voices.txt"
+}
 
 fetch() {      # fetch <url> <ziel>: fortsetzbar, erst .part, dann umbenennen
   [ -s "$2" ] && return 0
@@ -67,7 +96,7 @@ synth_kind() {   # synth_kind <kind> <ordner> <n> <seedbasis> [weitere Argumente
   marker "$out" && return 0
   local pids=() p
   for s in $(seq 1 "$NJ"); do
-    $N $PY -I "$T/gen_samples.py" --kind "$kind" --out "$G/$out" --n $((n / NJ)) --seed $((sb + s)) --voices "$D" "$@" &
+    $N $PY -I "$T/gen_samples.py" --kind "$kind" --out "$G/$out" --n $((n / NJ)) --seed $((sb + s)) --voices "$VD" "$@" &
     pids+=($!)
   done
   for p in "${pids[@]}"; do wait "$p" || { echo "gen_samples ($kind) fehlgeschlagen" >&2; exit 1; }; done    # kein .done bei Fehler
@@ -93,8 +122,10 @@ cv_step() {      # Common Voice de (CC0, ohne Login ueber die HF-Spiegelung), je
 gen() {
   download
   verify_dl
+  voices_dir
+  no_v7_check
   mkdir -p "$G/real"
-  link "$B/gen/pos" "$G/pos"; link "$B/gen/pos2" "$G/pos2"; link "$B/gen/conf2" "$G/conf2"; link "$B/gen/neg" "$G/neg"
+  if [ "$V7_DATA" = 1 ]; then link "$B/gen/pos" "$G/pos"; link "$B/gen/pos2" "$G/pos2"; link "$B/gen/conf2" "$G/conf2"; link "$B/gen/neg" "$G/neg"; fi
   link "$B/gen/real/train" "$G/real/train"; link "$B/gen/real/dev" "$G/real/dev"     # FLEURS de_de (CC-BY 4.0)
   synth_kind pos_v8 pos_v8 "$N_POS" 100
   synth_kind conf_v8 conf_v8 "$N_CONF" 200
@@ -116,11 +147,16 @@ real_pos_step() {      # echte Positive: nur Huawei Block 1 bis 3 (real_split.py
 # ---------- Phase features ----------
 features() {
   [ -f "$WK/features.done" ] && return 0
+  no_v7_check
+  local pd=pos,pos2,pos_v8 cd=conf2,conf_v8 nd=neg,neg_v8,cv
+  [ "$V7_DATA" = 0 ] && { pd=pos_v8; cd=conf_v8; nd=neg_v8,cv; }
+  # --n-neg ist die Zahl der gebauten Negativ-Clips (Ziehen mit Zuruecklegen aus dem Pool), keine Obergrenze durch die Poolgroesse:
+  # weniger Negativ-Dateien als n-neg (neg_v8 13000 < 14000) ist unkritisch; nur ein leerer Pool bricht ab.
   local rp=(--real-pos "$WK/real_pos" --real-pos-rep 100)
   [ "$REAL_POS" = 0 ] && rp=(--no-real-pos)      # fail-closed: train.py bricht ab, wenn trotzdem echte Positive auftauchen
   $N $PY -I "$T/train.py" features --gen "$G" --models "$D/oww" --work "$WK" \
     --real "$G/real/train" --real-val "$G/real/dev" --real-rep 3 "${rp[@]}" \
-    --pos-dirs pos,pos2,pos_v8 --conf-dirs conf2,conf_v8 --neg-dirs neg,neg_v8,cv \
+    --pos-dirs "$pd" --conf-dirs "$cd" --neg-dirs "$nd" \
     --n-pos 30000 --n-neg 14000 --ncpu "$THREADS" --seed "$SEED"
   touch "$WK/features.done"
 }
@@ -131,10 +167,14 @@ train() {
   if [ -f "$out.done" ]; then      # vorhandenes Modell muss zum Schalter passen (kein stilles Wiederverwenden von a/c mit echten Positiven)
     if [ -f "$out.meta.json" ]; then grep -q "\"real_pos\": $REAL_POS[,}]" "$out.meta.json" || { echo "$out gehoert zu anderem REAL_POS" >&2; exit 1; }
     elif [ "$REAL_POS" = 0 ]; then echo "$out ohne Sidecar, REAL_POS=0 abgelehnt" >&2; exit 1; fi
+    if [ -f "$out.meta.json" ]; then      # Sidecar ohne Feld = Altbestand (v7_data 1, keine Ausschluesse)
+      local ev vd; ev=$(sed -n 's/.*"exclude_voices": "\([^"]*\)".*/\1/p' "$out.meta.json"); vd=$(sed -n 's/.*"v7_data": \([01]\).*/\1/p' "$out.meta.json")
+      [ "$ev" = "$EXCLUDE_VOICES" ] && [ "${vd:-1}" = "$V7_DATA" ] || { echo "$out gehoert zu anderem EXCLUDE_VOICES/V7_DATA" >&2; exit 1; }
+    fi
     return 0
   fi
   $N $PY -I "$T/train.py" train --work "$WK" --out "$out" --threads "$THREADS" --steps "$STEPS" --seed "$SEED" --hidden "$HIDDEN"
-  printf '{"real_pos": %s, "tag": "%s", "steps": %s, "seed": %s, "hidden": %s}\n' "$REAL_POS" "$TAG" "$STEPS" "$SEED" "$HIDDEN" > "$out.meta.json"
+  printf '{"real_pos": %s, "tag": "%s", "steps": %s, "seed": %s, "hidden": %s, "exclude_voices": "%s", "v7_data": %s}\n' "$REAL_POS" "$TAG" "$STEPS" "$SEED" "$HIDDEN" "$EXCLUDE_VOICES" "$V7_DATA" > "$out.meta.json"
   shasum -a 256 "$out" | tee "$out.sha256"
   touch "$out.done"
 }

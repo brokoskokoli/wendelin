@@ -94,6 +94,143 @@ class Split(unittest.TestCase):
             self.assertIn("Pruef-Clip", p.stderr + p.stdout)
 
 
+OLD_TRAIN = lambda r: (r["geraet"] == "huawei" and int(r["block"]) in (1, 2, 3) and r["wort"] in ("Wendelin", "Hey Wendelin")
+                       and r["status"] in ("ok", "unsicher") and 0 < float(r["ende"]) - float(r["start"]) <= 2.0)   # Stand WP130 (eingefroren)
+
+
+def write_csv(path, text):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f: f.write(text)
+
+
+SPEAKERS_CSV = "kuerzel,rolle,train_blocks\nanna,split,1 2\nbert,train,\ncarl,eval,\n"
+
+
+def label_csv(geraet, blocks):
+    head = "geraet,block,runde,wort,start,ende,status\n"
+    return head + "".join(f"{geraet},{b},1,{w},{3 * i + 20 * b},{3 * i + 20 * b + 1},ok\n" for b in blocks for i, w in enumerate(("Wendelin", "Hey Wendelin")))
+
+
+def write_wav(path, seconds=500):
+    import soundfile as sf
+    rng = np.random.default_rng(1)
+    sf.write(path, (rng.standard_normal(seconds * R.SR) * 0.1).astype("float32"), R.SR, subtype="PCM_16")
+
+
+class WeitereSprecher(unittest.TestCase):
+    def test_huawei_split_unveraendert(self):
+        for st in ("ok", "unsicher", "fehler", ""):
+            for e in ("1", "2", "3"):
+                for b in ("0", "1", "3", "4", "6"):
+                    for g in ("huawei", "handy2", "anna"):
+                        for w in WORDS:
+                            r = dict(geraet=g, block=b, wort=w, start="0", ende=e, status=st)
+                            self.assertEqual(R.is_train_clip(r), bool(OLD_TRAIN(r)), r)
+                            self.assertEqual(R.is_train_clip(r, R.default_speakers()), bool(OLD_TRAIN(r)), r)
+        self.assertEqual(R.select(rows()), R.select(rows(), R.default_speakers()))
+
+    def test_load_speakers(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, "speakers.csv"); write_csv(p, SPEAKERS_CSV)
+            sp = R.load_speakers(p)
+            self.assertEqual((sp["anna"], sp["bert"], sp["carl"], sp["huawei"], sp["handy2"]), ((1, 2), None, (), (1, 2, 3), ()))
+            for bad in ("kuerzel,rolle,train_blocks\ncarl,eval,\nCarl,train,\n",           # Kuerzel nicht [a-z0-9]
+                        "kuerzel,rolle,train_blocks\ncarl,eval,\ncarl,eval,\n",             # doppelt
+                        "kuerzel,rolle,train_blocks\ncarl,eval,\nhuawei,eval,\n",           # fester Sprecher
+                        "kuerzel,rolle,train_blocks\ncarl,eval,\nhandy2,train,\n",
+                        "kuerzel,rolle,train_blocks\ncarl,eval,\nanna,spaeter,\n",           # Rolle
+                        "kuerzel,rolle,train_blocks\ncarl,eval,\nanna,split,\n",             # split ohne Bloecke
+                        "kuerzel,rolle,train_blocks\ncarl,eval,\nanna,eval,1\n",             # eval mit Bloecken
+                        "kuerzel,rolle,train_blocks\ncarl,eval,\nanna,split,x\n",            # Bloecke unlesbar
+                        "kuerzel,rolle,train_blocks\nanna,split,1\n"):                       # kein reiner Pruef-Sprecher
+                write_csv(p, bad)
+                with self.assertRaises(SystemExit, msg=bad): R.load_speakers(p)
+
+    def test_train_clips_je_sprecher_und_fail_closed(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, "s.csv"); write_csv(p, SPEAKERS_CSV); sp = R.load_speakers(p)
+        base = dict(wort="Wendelin", start="0", ende="1", status="ok")
+        ok = lambda g, b: R.is_train_clip(dict(base, geraet=g, block=str(b)), sp)
+        self.assertEqual([ok("anna", b) for b in (1, 2, 3, 6)], [True, True, False, False])     # split
+        self.assertTrue(all(ok("bert", b) for b in (1, 4, 6)))                                  # train
+        self.assertFalse(any(ok("carl", b) for b in range(0, 8)))                               # nur Pruefung
+        self.assertFalse(ok("unbekannt", 1))                                                    # nicht in der Konfig
+        self.assertFalse(ok("handy2", 1))
+        self.assertTrue(ok("huawei", 3) and not ok("huawei", 4))
+        self.assertFalse(R.is_train_clip(dict(base, geraet="anna", block="x"), sp))
+
+    def test_quelle_nur_fuer_trainingssprecher(self):
+        sp = {"huawei": (1, 2, 3), "anna": (1,), "bert": None, "carl": ()}
+        self.assertEqual(R.speaker_source(sp, "huawei"), R.SOURCES["huawei"])
+        self.assertEqual(R.speaker_source(sp, "anna"), "speakers/anna/raw/all_anna.m4a")
+        self.assertEqual(R.speaker_source(sp, "bert"), "speakers/bert/raw/all_bert.m4a")
+        for k in ("carl", "unbekannt", "handy2"):
+            with self.assertRaises(ValueError): R.speaker_source(sp, k)
+
+    def test_check_dir_mit_sprechern(self):
+        sp = {"huawei": (1, 2, 3), "anna": (1, 2), "carl": ()}
+        with tempfile.TemporaryDirectory() as d:
+            for n in ("huawei_b1_r01_bare_000100.wav", "anna_b2_r01_hey_000100.wav"):
+                open(os.path.join(d, n), "w").close()
+            R.check_dir(d, speakers=sp)
+            with self.assertRaises(SystemExit): R.check_dir(d)                                    # Standard kennt anna nicht
+            for bad in ("anna_b3_r01_bare_000100.wav", "carl_b1_r01_bare_000100.wav", "zed_b1_r01_bare_000100.wav"):
+                open(os.path.join(d, bad), "w").close()
+                with self.assertRaises(SystemExit, msg=bad): R.check_dir(d, speakers=sp)
+                os.remove(os.path.join(d, bad))
+
+    def test_assert_syn_only_weist_pruefsprecher_ab(self):
+        pos = [f"s{i}" for i in range(20)]
+        for fremd in ("carl_b1_r01_bare_000100.wav", "anna_b2_r01_bare_000100.wav"):
+            with self.assertRaises(SystemExit): R.assert_syn_only(R.pos_for_split(pos, [fremd], 1, "train"), pos, "train")
+            with self.assertRaises(SystemExit): R.assert_syn_only(pos[:18] + [fremd], pos, "train")
+
+    def run_cut(self, d, extra=()):
+        fix, work, out = (os.path.join(d, x) for x in ("fix", "work", "out"))
+        write_csv(os.path.join(fix, "labels", "labels.csv"), label_csv("huawei", range(1, 7)))
+        os.makedirs(work, exist_ok=True); write_wav(os.path.join(work, "train_huawei.wav"))
+        return fix, work, out, subprocess.run([sys.executable, "-I", os.path.join(HERE, "real_split.py"), "cut", "--fix", fix, "--work", work, "--out", out, *extra],
+                                              capture_output=True, text=True)
+
+    def test_cut_huawei_bitgleich_mit_und_ohne_speakers_csv(self):
+        with tempfile.TemporaryDirectory() as d1, tempfile.TemporaryDirectory() as d2:
+            _, _, o1, p1 = self.run_cut(d1)
+            self.assertEqual(p1.returncode, 0, p1.stderr)
+            self.assertIn("echte Positive (Training): 6 Clips", p1.stdout)
+            sc = os.path.join(d2, "s.csv"); write_csv(sc, "kuerzel,rolle,train_blocks\ncarl,eval,\n")      # Pruef-Sprecher ohne Dateien: wird nie gelesen
+            _, _, o2, p2 = self.run_cut(d2, ("--speakers", sc))
+            self.assertEqual(p2.returncode, 0, p2.stderr)
+            self.assertEqual(sorted(os.listdir(o1)), sorted(os.listdir(o2)))
+            self.assertEqual(len(os.listdir(o1)), 6)
+            for n in os.listdir(o1): self.assertEqual(open(os.path.join(o1, n), "rb").read(), open(os.path.join(o2, n), "rb").read(), n)
+
+    def test_cut_mit_weiteren_sprechern(self):
+        with tempfile.TemporaryDirectory() as d:
+            sc = os.path.join(d, "s.csv"); write_csv(sc, SPEAKERS_CSV)
+            fix = os.path.join(d, "fix")
+            for k, bl in (("anna", range(1, 5)), ("bert", range(1, 3))):
+                write_csv(os.path.join(fix, "speakers", k, "labels", "labels.csv"), label_csv(k, bl))
+            write_csv(os.path.join(fix, "speakers", "carl", "labels", "labels.csv"), label_csv("carl", range(1, 3)))   # liegt da, darf aber nie Clips ergeben
+            os.makedirs(os.path.join(d, "work"))
+            write_wav(os.path.join(d, "work", "train_anna.wav"))
+            write_wav(os.path.join(d, "work", "train_bert.wav"))
+            fix, work, out, p = self.run_cut(d, ("--speakers", sc))
+            self.assertEqual(p.returncode, 0, p.stderr + p.stdout)
+            names = sorted(os.listdir(out))
+            self.assertEqual(len([n for n in names if n.startswith("huawei_")]), 6)
+            self.assertEqual(sorted({n.split("_")[1] for n in names if n.startswith("anna_")}), ["b1", "b2"])      # Block 3, 4: Pruefung
+            self.assertEqual(len([n for n in names if n.startswith("bert_")]), 4)
+            self.assertFalse([n for n in names if n.startswith(("carl_", "handy2_"))])
+            self.assertEqual(len(names), 6 + 4 + 4)
+
+    def test_cut_ohne_pruef_sprecher_bricht_ab(self):
+        with tempfile.TemporaryDirectory() as d:
+            sc = os.path.join(d, "s.csv"); write_csv(sc, "kuerzel,rolle,train_blocks\nanna,split,1\n")
+            _, _, out, p = self.run_cut(d, ("--speakers", sc))
+            self.assertNotEqual(p.returncode, 0)
+            self.assertFalse(os.path.exists(out))
+
+
 class PosForSplit(unittest.TestCase):
     def test_train_py_nutzt_pos_for_split_und_check_dir(self):
         src = open(os.path.join(HERE, "train.py"), encoding="utf-8").read()

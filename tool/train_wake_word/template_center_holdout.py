@@ -121,7 +121,7 @@ def main():
     srcs = m.sources()
     labels = m.read_labels()
     train_rows = [r for r in labels if m.is_train_row(r)]
-    eval_rows = [r for r in labels if m.is_eval_row(r)]
+    eval_rows = m.pruef_rows(labels)
     x = m.load16(f"{m.WORK121}/all_{m.TRAIN_DEVICE}.wav")
     T, _, info = m.enroll(chain, x, train_rows, "noise")
     mus, _ = m.neutral_means(chain, cache, srcs)

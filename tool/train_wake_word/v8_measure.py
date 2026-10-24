@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """WP130 Punkt 5: Messung der openWakeWord-Modelle (v7 und Kandidaten) fuer „Wendelin“ und „Hey Wendelin“ NUR auf dem Pruef-Split.
 
-Pruef-Split (aus real_split.py, nie im Training): Huawei Block 4 bis 6, das gesamte zweite Handy (Block 1 bis 6). Huawei Block 1 bis 3
-sind Trainingsdaten und werden nie gewertet. Ausgabe wie words_measure.py: Treffer bei gleicher FA/h (Ziel 2/h, Kreuz-Auswahl nach
+Pruef-Split (aus real_split.py, nie im Training): Huawei Block 4 bis 6 und das zweite Handy Block 4 bis 6. Huawei Block 1 bis 3
+sind Trainingsdaten und werden nie gewertet; das zweite Handy hat in Block 1 bis 3 dieselben gesprochenen Rufe gleichzeitig aufgenommen
+(Sitzung gepaart, real_split.paired_sessions) und faellt ebenfalls heraus. Alle bis 2026-10-24 gemeldeten WP137-Zahlen enthielten noch
+das zweite Handy Block 1 bis 3 (Datenleck, hier behoben). Hinweis: Auch das zweite Handy Block 4 bis 6 und die Negativaufnahmen sind dieselbe Sitzung wie Huawei (Versatz etwa 0,72 s); die 60 Prüf-Labels sind 30 Rufe mit je 2 Mikrofonen, und FA/h „echt“ über neg_huawei+neg_handy2 zählt dieselbe Zeit doppelt (nur dokumentiert). Ausgabe wie words_measure.py: Treffer bei gleicher FA/h (Ziel 2/h, Kreuz-Auswahl nach
 cv_pick, Wilson-Intervall), je Geraet, Stufe 1 („-“) und Stufe 2 (hw2). FA/h auf neg_huawei/neg_handy2 (echt), syn und fleurs.
 Dazu synthetische Verwechsler: Seed-Satz aus gen_samples (conf_v8-Texte) mit den macOS-Stimmen aus gen_say_test.py. Disjunkt zum
 Training sind nur die Stimmen (macOS nur in der Messung); die TEXTE stammen aus derselben CONF_V8-Liste wie im Training und
@@ -53,18 +55,25 @@ def eval_blocks(dev, split="eval"):
 
 
 def filter_labels(labels, split="eval"):
-    """Nur Pruef-Labels der beiden Woerter (labels im Format von words_measure.read_labels)."""
-    out = [lb for lb in labels if lb["word"] in WORDS and lb["dev"] in DEVICES and lb["block"] in eval_blocks(lb["dev"], split)]
-    assert_eval_only(out, split)
+    """Nur Pruef-Labels der beiden Woerter (labels im Format von words_measure.read_labels). Aufnahmen, die dieselbe Sitzung wie eine
+    Trainingsaufnahme sind (real_split.paired_sessions, z. B. das zweite Handy bei Block 1 bis 3), fallen heraus."""
+    pairs = {} if split == "all" else R.paired_sessions(labels)
+    out = [lb for lb in labels if lb["word"] in WORDS and lb["dev"] in DEVICES and lb["block"] in eval_blocks(lb["dev"], split)
+           and (lb["dev"], lb["block"]) not in pairs]
+    assert_eval_only(out, split, labels)
     return out
 
 
-def assert_eval_only(labels, split="eval"):
-    """Fail-closed: ein Trainings-Label in der Messung bricht ab (nur split="all" erlaubt sie)."""
+def assert_eval_only(labels, split="eval", ref=None):
+    """Fail-closed: ein Trainings-Label in der Messung bricht ab (nur split="all" erlaubt sie), ebenso ein Label, dessen Aufnahme laut ref
+    (alle Labels, Standard: labels selbst) dieselbe Sitzung wie eine Trainingsaufnahme ist."""
     if split == "all": return
+    pairs = R.paired_sessions(labels if ref is None else ref)
     for lb in labels:
         if lb["dev"] == R.TRAIN_DEVICE and lb["block"] in R.TRAIN_BLOCKS:
             raise SystemExit(f"Trainings-Label in der Messung: {lb['dev']} Block {lb['block']}")
+        if (lb["dev"], lb["block"]) in pairs:
+            raise SystemExit(f"Label in der Messung ist dieselbe Sitzung wie eine Trainingsaufnahme: {lb['dev']} Block {lb['block']} (= {pairs[(lb['dev'], lb['block'])]})")
 
 
 def check_split_models(split, models):
@@ -292,13 +301,22 @@ def grid(models, curves, labels, hr):
     return rows
 
 
+def cell_folds(rows, dev, word, tag, split="eval"):
+    """Folds einer Zelle: folds_for ohne Test-Bloecke, die keine Pruef-Labels haben (gepaarte Sitzung, n_b* = 0). Einzige Quelle fuer cv_cell UND lost_calls
+    (die Schwellen aus cv_cell werden dort per zip mit diesen Folds gepaart). Ohne Zeile der Zelle: ungefilterte Folds."""
+    folds = folds_for(dev, split)
+    r = next((r for r in rows if r["dev"] == dev and r["word"] == word and r["prog"] == tag), None)
+    if split == "all" or r is None: return folds
+    return [f for f in folds if any(r[f"n_b{b}"] for b in f[1])]
+
+
 def cv_cell(rows, dev, word, tag, stages, calib, target, split="eval"):
     """-> (hit, n, [Konfiguration je Fold]) mit Kreuz-Auswahl im Pruef-Split; None, wenn keine Zeile oder FA-Grenze nie eingehalten."""
     pts = sorted((W.calib_point(r, calib) for r in rows
                   if r["dev"] == dev and r["word"] == word and r["prog"] == tag and r["stage2"] in stages),
                  key=lambda p: (p["stage2"] == "-", -p["ord"]))
     if not pts: return None
-    return W.cv_pick(pts, pts[0]["hours"], target, folds_for(dev, split))
+    return W.cv_pick(pts, pts[0]["hours"], target, cell_folds(rows, dev, word, tag, split))
 
 
 def cfg_key(r): return f"{r['prog']}{r['thr']}+{r['stage2']}"

@@ -2,7 +2,8 @@
 Lauf (Venv mit numpy/soundfile/piper, z. B. wp58):
   ~/wendelin-models/kws/wp58/venv/bin/python -I -m unittest discover -s tool/train_wake_word -p 'test_stage2_extra_neg.py'
 Hinweis: Das Gate fuehrt keine Python-Tests aus."""
-import os, sys, unittest
+import json, os, sys, tempfile, unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.dirname(HERE))
@@ -10,6 +11,7 @@ import numpy as np  # noqa: E402
 import words_measure as W  # noqa: E402
 import stage2_cut as C  # noqa: E402
 import stage2_extra_neg as E  # noqa: E402
+import v8_measure as V  # noqa: E402
 
 
 def curve(points, n=400, step=0.08):
@@ -96,6 +98,90 @@ class CacheTest(unittest.TestCase):
         for vn in E.VARIANTS[1:]: self.assertIn(vn, C.VARS)
         self.assertEqual(C.VARS["app-2.0-0.9-b995"]["upper"], C.APP_UPPER)
         self.assertEqual(C.VARS["app-2.0-0.9-b999"]["upper"], 0.999)
+
+
+class TagTest(unittest.TestCase):
+    """--tag: Caches/Kurven/Berichte des gewaehlten Tags, nicht die von v8a (Mini-Daten in tmp, V.RES und E.TAG werden gesetzt)."""
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.res = self.tmp.name
+        for patch in (mock.patch.object(V, "RES", self.res), mock.patch.object(V, "CACHE_TAG", {}), mock.patch.object(E, "TAG", E.TAG)):
+            patch.start(); self.addCleanup(patch.stop)
+
+    def put_s1x(self, tag, val):
+        p = E.s1x_path(tag, E.NEW_SRC[0]); os.makedirs(os.path.dirname(p), exist_ok=True)
+        np.savez_compressed(p, **{"x|t": np.zeros(2, "float32"), "x|s": np.full(2, val, "float32")})
+
+    def put_cut(self, tag, txt):
+        for w in V.WORDS:
+            p = C.cut_path(tag, w, *E.CUT, False); os.makedirs(os.path.dirname(p), exist_ok=True)
+            with open(p, "w") as fh: json.dump({"k": txt}, fh)
+
+    def test_curves_follow_tag(self):
+        self.put_s1x("v8a", 0.1); self.put_s1x("ca1", 0.9)
+        for tag in ("v8a", "ca1"):                            # zweite Quelle leer, nur die erste zaehlt
+            np.savez_compressed(E.s1x_path(tag, E.NEW_SRC[1]))
+        E.TAG = "ca1"
+        self.assertAlmostEqual(float(E.load_new_curves()[E.NEW_SRC[0]]["x"][1][0]), 0.9, places=5)
+        E.TAG = "v8a"
+        self.assertAlmostEqual(float(E.load_new_curves()[E.NEW_SRC[0]]["x"][1][0]), 0.1, places=5)
+
+    def test_cut_cache_follows_tag_and_missing_is_reported(self):
+        self.put_cut("v8a", "alt"); self.put_cut("ca1", "neu")
+        E.TAG = "ca1"
+        for w in V.WORDS:                                     # s2n nur fuer ca1
+            p = E.s2n_path(w, False); os.makedirs(os.path.dirname(p), exist_ok=True); 
+            with open(p, "w") as fh: json.dump({"n": "x"}, fh)
+        tx = E.load_tx()[(*E.CUT, False)]
+        self.assertEqual(tx[V.WORDS[0]], {"k": "neu", "n": "x"})
+        E.TAG = "v8a"
+        self.assertEqual(E.missing_caches(E.load_tx()), [(False, w) for w in V.WORDS] + [(True, w) for w in V.WORDS])
+        E.TAG = "ca1"
+        self.assertEqual([m for m in E.missing_caches(E.load_tx()) if not m[0]], [])
+
+    def test_report_path_per_tag(self):
+        self.assertTrue(E.report_path("v8a").endswith("/stage2_extra_neg.md"))
+        self.assertTrue(E.report_path("v8a", True).endswith("/stage2_extra_neg_passed.local.md"))
+        self.assertTrue(E.report_path("ca1").endswith("/stage2_extra_neg_ca1.md"))
+        self.assertTrue(E.report_path("ca1", True).endswith("/stage2_extra_neg_passed_ca1.local.md"))
+
+    def test_title_names_tag(self):
+        E.TAG = "ca1"
+        res = {(s, w, vn, t): None for s in E.NEW_SRC + E.OLD_SRC for w in V.WORDS for vn in E.VARIANTS for t in E.THRS}
+        with mock.patch.object(E, "hours", return_value=1.0), mock.patch.object(E, "clip_paths", return_value={}):
+            self.assertIn(": ca1, App-Bezug", E.render(res).splitlines()[0])
+
+    def test_main_requires_model_for_tag(self):
+        m = os.path.join(self.res, "m.onnx"); 
+        with open(m, "w") as fh: fh.write("x")
+        with mock.patch.object(sys, "argv", ["x", "--tag", "ca1", "--model", f"fc1={m}"]):
+            with self.assertRaises(SystemExit) as cm: E.main()
+        self.assertIn("ca1", str(cm.exception))
+        self.assertEqual(E.TAG, "ca1")
+
+    def run_main(self, *extra):
+        m = os.path.join(self.res, "m.onnx")
+        with open(m, "w") as fh: fh.write("x")
+        files = [("a", 1.0)]
+        with mock.patch.object(sys, "argv", ["x", "--tag", "ca1", "--model", f"ca1={m}", *extra]), \
+                mock.patch.object(E, "fleurs_files", return_value=files), mock.patch.object(W, "clip_list", return_value=files), \
+                mock.patch.object(E, "split_first_hour", return_value=(files, [])), \
+                mock.patch.object(V, "load_curves", return_value={}), mock.patch.object(E, "load_new_curves", return_value={}), \
+                mock.patch.object(E, "run_s1x") as s1x, mock.patch.object(E, "run_s2n") as s2n:
+            with self.assertRaises(SystemExit) as cm: E.main()
+        return str(cm.exception), s1x, s2n
+
+    def test_main_aborts_without_s2n_cache(self):
+        self.put_cut("ca1", "neu")                            # s2p da, s2n fehlt
+        msg, s1x, _ = self.run_main("--report-only")
+        self.assertIn("hw2-Caches fehlen", msg)
+        s1x.assert_not_called()
+
+    def test_main_checks_s2p_before_compute(self):
+        msg, s1x, s2n = self.run_main()                       # kein s2p-Cache: vor den Rechenlaeufen Abbruch
+        self.assertIn("s2p-Caches fehlen", msg)
+        self.assertIn("--cut-only", msg)
+        s1x.assert_not_called(); s2n.assert_not_called()
 
 
 if __name__ == "__main__":
