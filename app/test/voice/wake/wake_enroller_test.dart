@@ -54,30 +54,33 @@ void main() {
     expect((await store.load('a'))!.embeddings, hasLength(3));
   });
 
-  test('Folgen für den Prüfer B werden je Aufnahme gespeichert (WP143)', () async {
-    final store = FakeWakeTemplateStore();
-    final features = fakeFeatures()
-      ..sequenceFor = (clip) =>
-          Float32List(3 * 96)..[0] = clip.length.toDouble();
-    final e = enroller(
-      SequenceAudio([recording(), recording()]),
-      store,
-      target: 2,
-      features: features,
-    );
-    await e.run();
-    final t = await e.finish();
-    expect(t.sequences, hasLength(2));
-    expect(t.sequences.first.word, WakeTemplates.wordW);
-    expect(t.sequences.first.frames, 3);
-    // Zuschnitt: 900 ms Sprache, -0,12 s / +0,20 s, nach dem Trim ohne Stille.
-    expect(
-      features.sequenceCalls.first.length,
-      inInclusiveRange(16000, 16 * 1300),
-    );
-    final back = (await store.load('a'))!;
-    expect(back.sequences, hasLength(2));
-  });
+  test(
+    'Folgen für den Prüfer B werden je Aufnahme gespeichert (WP143)',
+    () async {
+      final store = FakeWakeTemplateStore();
+      final features = fakeFeatures()
+        ..sequenceFor = (clip) =>
+            Float32List(3 * 96)..[0] = clip.length.toDouble();
+      final e = enroller(
+        SequenceAudio([recording(), recording()]),
+        store,
+        target: 2,
+        features: features,
+      );
+      await e.run();
+      final t = await e.finish();
+      expect(t.sequences, hasLength(2));
+      expect(t.sequences.first.word, WakeTemplates.wordW);
+      expect(t.sequences.first.frames, 3);
+      // Zuschnitt: 900 ms Sprache, -0,12 s / +0,20 s, ohne Trim.
+      expect(
+        features.sequenceCalls.first.length,
+        inInclusiveRange(16000, 16 * 1300),
+      );
+      final back = (await store.load('a'))!;
+      expect(back.sequences, hasLength(2));
+    },
+  );
 
   test(
     'ohne Folge (Zuschnitt zu kurz) bleibt die Vorlage ohne Prüfer B',
@@ -91,8 +94,41 @@ void main() {
       final t = await e.finish();
       expect(t.embeddings, hasLength(2));
       expect(t.hasSequences, isFalse);
+      expect(e.sequencesDropped, 2, reason: 'gemeldet, nicht still');
     },
   );
+
+  test('Wort über 2,2 s Zuschnitt: keine Folge, gemeldet (WP143)', () async {
+    final features = fakeFeatures()
+      ..sequenceFor = (clip) => Float32List(3 * 96);
+    final e = enroller(
+      SequenceAudio([recording(speech: 1950), recording()]),
+      FakeWakeTemplateStore(),
+      target: 2,
+      features: features,
+    );
+    await e.run();
+    final t = await e.finish();
+    expect(t.embeddings, hasLength(2));
+    expect(t.sequences, hasLength(1));
+    expect(e.sequencesDropped, 1);
+  });
+
+  test('Folge entsteht aus dem Kontext: kurzes Wort wird aufgefüllt', () async {
+    final features = fakeFeatures()
+      ..sequenceFor = (clip) => Float32List(3 * 96);
+    final e = enroller(
+      SequenceAudio([recording(speech: 300), recording(speech: 300)]),
+      FakeWakeTemplateStore(),
+      target: 2,
+      features: features,
+    );
+    await e.run();
+    await e.finish();
+    // 300 ms Sprache: Zuschnitt 0,62 s, aufgefüllt auf 1,0 s echtes Audio.
+    expect(features.sequenceCalls.map((c) => c.length), [16000, 16000]);
+    expect(e.sequencesDropped, 0);
+  });
 
   test('ungültige Aufnahmen werden verworfen und gezählt', () async {
     final audio = SequenceAudio([

@@ -162,64 +162,61 @@ Int16List verifierBLiveClip(Int16List pcm, int endSample) {
   ),
 );
 
-/// Trim of a template cut: frames of 160 samples count when their RMS is
-/// within 40 dB of the loudest frame; the result keeps 800 samples around
-/// them. Bounds `(from, to)` inside [clip]; no frame counts (silence): the
-/// whole clip.
-({int from, int to}) verifierBTrimBounds(Int16List clip) {
-  const frame = 160, margin = 800;
-  final n = clip.length ~/ frame;
-  final rms = List<double>.filled(n, 0);
-  var peak = 0.0;
-  for (var f = 0; f < n; f++) {
-    var sum = 0.0;
-    for (var i = f * frame; i < (f + 1) * frame; i++) {
-      sum += clip[i] * clip[i].toDouble();
-    }
-    rms[f] = math.sqrt(sum / frame);
-    peak = math.max(peak, rms[f]);
-  }
-  // The measurement works on samples scaled to +-1.
-  final ref = peak / 32768 + 1e-9;
-  var first = -1, last = -1;
-  for (var f = 0; f < n; f++) {
-    final db = 20 * math.log(rms[f] / 32768 / ref) / math.ln10;
-    if (db > -40) {
-      if (first < 0) first = f;
-      last = f;
-    }
-  }
-  if (first < 0) return (from: 0, to: clip.length);
-  return (
-    from: math.max(0, first * frame - margin),
-    to: math.min(clip.length, (last + 1) * frame + margin),
+/// Bounds `(from, to)` of the template clip in [length] samples of
+/// recording: the cut of [verifierBTemplateBounds] for the speech from
+/// [speechStart] to [speechEnd], no trim. A cut shorter than
+/// [WakeClassifierRules.verifierBMinTemplateSamples] is padded
+/// symmetrically (the odd sample at the end) with the real audio around it,
+/// never with zeros; if the recording lacks audio on one side the window
+/// moves to the other. `null` when the recording itself is shorter than the
+/// minimum, the speech lies outside it, or the cut is longer than
+/// [WakeClassifierRules.verifierBMaxTemplateSamples] (not measured).
+({int from, int to})? verifierBTemplateWindow(
+  int length,
+  int speechStart,
+  int speechEnd,
+) {
+  final min = WakeClassifierRules.verifierBMinTemplateSamples;
+  final cut = verifierBTemplateBounds(
+    length,
+    speechStart / AudioInput.sampleRate,
+    speechEnd / AudioInput.sampleRate,
   );
+  if (cut.to <= cut.from || length < min) return null;
+  if (cut.to - cut.from > WakeClassifierRules.verifierBMaxTemplateSamples) {
+    return null;
+  }
+  var from = cut.from, to = cut.to;
+  final missing = min - (to - from);
+  if (missing > 0) {
+    from -= missing ~/ 2;
+    to += missing - missing ~/ 2;
+    if (from < 0) {
+      to -= from;
+      from = 0;
+    }
+    if (to > length) {
+      from -= to - length;
+      to = length;
+    }
+  }
+  return (from: from, to: to);
 }
 
-/// The template clip of an enrollment recording: the speech from
-/// [speechStart] to [speechEnd] (samples in [pcm]) cut by
-/// [verifierBTemplateBounds], trimmed by [verifierBTrimBounds] and scaled to
-/// the peak [WakeClassifierRules.verifyPeak]. `null` when shorter than
-/// [WakeClassifierRules.verifierBMinTemplateSamples].
+/// The template clip of an enrollment recording: [verifierBTemplateWindow]
+/// of [pcm] (the speech from [speechStart] to [speechEnd], samples in
+/// [pcm]) scaled to the peak [WakeClassifierRules.verifyPeak]. [pcm] needs
+/// real audio around the speech (`Utterance.context`). `null` when the
+/// recording is too short.
 Int16List? verifierBTemplateClip(
   Int16List pcm,
   int speechStart,
   int speechEnd,
 ) {
-  final cut = verifierBTemplateBounds(
-    pcm.length,
-    speechStart / AudioInput.sampleRate,
-    speechEnd / AudioInput.sampleRate,
-  );
-  if (cut.to <= cut.from) return null;
-  final part = Int16List.sublistView(pcm, cut.from, cut.to);
-  final trim = verifierBTrimBounds(part);
-  final clip = Int16List.sublistView(part, trim.from, trim.to);
-  if (clip.length < WakeClassifierRules.verifierBMinTemplateSamples) {
-    return null;
-  }
+  final w = verifierBTemplateWindow(pcm.length, speechStart, speechEnd);
+  if (w == null) return null;
   return normalizePeak(
-    clip,
+    Int16List.sublistView(pcm, w.from, w.to),
     target: WakeClassifierRules.verifyPeak,
     minPeak: 1,
   );
@@ -360,10 +357,14 @@ final class VerifierBWakeVerifier implements WakeEndAwareVerifier {
     return (score: score, threshold: threshold, ok: ok);
   }
 
-  Future<bool> _viaFallback(Int16List pcm) {
-    _kind = fallback.kind;
+  Future<bool> _viaFallback(Int16List pcm) async {
     onDecision?.call(fallbackLabel, null, null);
-    return fallback.confirm(pcm);
+    _kind = fallback.kind;
+    final ok = await fallback.confirm(pcm);
+    // The fallback may pick its engine while it confirms (Parakeet or
+    // Whisper): [kind] is the one that decided.
+    _kind = fallback.kind;
+    return ok;
   }
 
   /// Prepared template sequences per word; only templates of the feature

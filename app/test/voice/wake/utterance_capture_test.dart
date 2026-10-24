@@ -30,6 +30,21 @@ void main() {
     expect(r.speechEnd - r.speechStart, inInclusiveRange(16 * 880, 16 * 940));
   });
 
+  test('Kontext für Prüfer B: echtes Audio um die Sprache (WP143)', () {
+    final r = run(UtteranceCapture(), recording())!;
+    final c = r.context!;
+    // Dieselbe Sprache wie in pcm, nur mit mehr Rand.
+    expect(
+      c.sublist(r.contextStart, r.contextEnd),
+      r.pcm!.sublist(r.speechStart, r.speechEnd),
+    );
+    expect(r.contextStart, greaterThanOrEqualTo(16 * 300));
+    expect(c.length - r.contextEnd, greaterThanOrEqualTo(16 * 400));
+    // Die WP134-Vorlage bleibt unverändert (200 ms Rand).
+    expect(r.speechStart, 16 * 200);
+    expect(r.pcm!.length - r.speechEnd, 16 * 200);
+  });
+
   test('zu leise: Pegel unter der Grenze', () {
     final r = run(UtteranceCapture(), recording(amplitude: 350))!;
     expect(r.verdict, UtteranceVerdict.tooQuiet);

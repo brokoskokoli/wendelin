@@ -58,6 +58,24 @@ void main() {
       expect(r.embedInputs.first.first, 3.0);
     });
 
+    test(
+      'Embedding-Frames je Länge = gemessene Paare von openWakeWord (WP137)',
+      () {
+        // `pcm.oww_frames_checked` der Lieferung (an echtem openWakeWord gemessen).
+        const pairs = {
+          16000: 3, 16480: 4, 17760: 5, 19040: 6, 24000: 9,
+          32000: 16, 40000: 22, 44000: 25, 44160: 25, //
+        };
+        pairs.forEach((samples, frames) {
+          final seq = WakeFeatureChain.batchSequence(
+            FakeRunner(),
+            pcm(samples),
+          );
+          expect(seq!.length ~/ 96, frames, reason: '$samples Samples');
+        });
+      },
+    );
+
     test('auf Vielfache von 160 gekürzt', () {
       final r = FakeRunner();
       WakeFeatureChain.batchSequence(r, pcm(44100));

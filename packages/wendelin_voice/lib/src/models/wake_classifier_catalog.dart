@@ -176,15 +176,20 @@ abstract final class WakeClassifierRules {
 
   /// Template cut of verifier B: seconds before the start of the speech
   /// (a double on purpose: the cut is `trunc((start - lead) * 16000)` in
-  /// floating point like the measurement; no padding).
+  /// floating point like the measurement; the cut is padded only up to
+  /// [verifierBMinTemplateSamples]).
   static const verifierBTemplateLeadSeconds = 0.12;
 
   /// Template cut of verifier B: seconds after the end of the speech.
   static const verifierBTemplateTailSeconds = 0.20;
 
-  /// Template cut of verifier B: a clip shorter than this (after the trim)
-  /// is discarded.
-  static const verifierBMinTemplateSamples = 4000;
+  /// Template cut of verifier B: a shorter cut is padded with the real audio
+  /// around it to this length (1.0 s, WP137 probe; no trim, never zeros).
+  static const verifierBMinTemplateSamples = 16000;
+
+  /// Template cut of verifier B: a longer cut (2.2 s) is discarded; only
+  /// clips up to this length were measured (WP137).
+  static const verifierBMaxTemplateSamples = 35200;
 
   /// A template of verifier B needs at least this many embedding frames
   /// (the measurement used 2-6); a template with fewer is not stored.

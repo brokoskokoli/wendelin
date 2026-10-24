@@ -223,6 +223,7 @@ class WakeEnroller extends ChangeNotifier {
   /// Verifier B sequence per accepted recording (`null`: the cut was too
   /// short); parallel to [_embeddings].
   final _sequences = <Float32List?>[];
+  var _sequencesDropped = 0;
   var _phase = EnrollPhase.idle;
   UtteranceVerdict? _last;
   var _rejected = 0;
@@ -236,6 +237,11 @@ class WakeEnroller extends ChangeNotifier {
 
   /// Usable recordings so far.
   int get accepted => _embeddings.length;
+
+  /// Accepted recordings that yielded no sequence for verifier B (WP143:
+  /// too short or fewer than two embedding frames); logged as
+  /// `enroll-sequence-dropped`. They still count for the plain comparison.
+  int get sequencesDropped => _sequencesDropped;
 
   /// Dropped recordings so far.
   int get rejected => _rejected;
@@ -341,11 +347,20 @@ class WakeEnroller extends ChangeNotifier {
     _unchecked = 0;
     _embeddings.add(scored.embedding);
     final f = features;
-    _sequences.add(
-      f is WakeSequenceExtractor
-          ? await verifierBTemplate(f, u.pcm!, u.speechStart, u.speechEnd)
-          : null,
-    );
+    final sequence = f is WakeSequenceExtractor
+        ? await verifierBTemplate(
+            f,
+            u.context ?? u.pcm!,
+            u.context == null ? u.speechStart : u.contextStart,
+            u.context == null ? u.speechEnd : u.contextEnd,
+          )
+        : null;
+    if (sequence == null && f is WakeSequenceExtractor) {
+      // Not silent: the recording counts for hw2 but not for verifier B.
+      _sequencesDropped++;
+      voiceLog('enroll-sequence-dropped', {'word': word});
+    }
+    _sequences.add(sequence);
     _dropInconsistent();
     notifyListeners();
   }

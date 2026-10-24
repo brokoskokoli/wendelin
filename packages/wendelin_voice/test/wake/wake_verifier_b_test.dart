@@ -196,31 +196,82 @@ void main() {
             .round(),
     ]);
 
-    test('Trim -40 dB mit 800 Samples Rand', () {
-      final part = Int16List.sublistView(word(0.001), 14080, 33600);
-      expect(verifierBTrimBounds(part), (from: 1120, to: 17120));
-    });
-
-    test('Trim greift bei lauter Umgebung nicht', () {
-      final part = Int16List.sublistView(word(0.4), 14080, 33600);
-      expect(verifierBTrimBounds(part), (from: 0, to: 19520));
-    });
-
-    test('Stille: ganzer Clip', () {
-      expect(verifierBTrimBounds(Int16List(1600)), (from: 0, to: 1600));
-    });
-
-    test('Vorlagen-Clip: Länge nach Trim, Spitze 0,5', () {
+    test('lange Wörter: Zuschnitt unverändert, kein Trim, Spitze 0,5', () {
+      // Sprache 16000..30400: Zuschnitt 14080..33600 = 19520 Samples.
       final c = verifierBTemplateClip(word(0.001), 16000, 30400)!;
-      expect(c.length, 16000);
+      expect(c.length, 19520);
       expect(c.map((s) => s.abs()).reduce(math.max), closeTo(16384, 1));
+      // Stille am Rand bleibt (der Trim -40 dB ist entfernt).
+      expect(c.first.abs(), lessThan(100));
     });
 
-    test('Clip unter 4000 Samples wird verworfen', () {
+    int zeroRun(Int16List c) {
+      var run = 0, best = 0;
+      for (final s in c) {
+        run = s == 0 ? run + 1 : 0;
+        best = math.max(best, run);
+      }
+      return best;
+    }
+
+    test('kurzes Wort: symmetrisch mit echtem Audio auf 1,0 s aufgefüllt', () {
+      final pcm = word(0.001);
+      // Sprache 20000..24000 (0,25 s): Zuschnitt 0,57 s, 7 420 Samples fehlen.
+      final cut = verifierBTemplateBounds(48000, 1.25, 1.5);
+      final missing = 16000 - (cut.to - cut.from);
+      final w = verifierBTemplateWindow(48000, 20000, 24000)!;
+      expect(w.from, cut.from - missing ~/ 2);
+      expect(w.to, cut.to + missing - missing ~/ 2);
+      expect(w.to - w.from, 16000);
+      final c = verifierBTemplateClip(pcm, 20000, 24000)!;
+      expect(c.length, 16000);
+      // Echtes Audio, keine Nullen: die Samples sind die der Aufnahme.
+      final peak = pcm
+          .sublist(w.from, w.to)
+          .map((s) => s.abs())
+          .reduce(math.max);
+      final gain = 16384 / peak;
+      for (var i = 0; i < c.length; i += 97) {
+        expect(c[i], closeTo(pcm[w.from + i] * gain, 1));
+      }
+      expect(zeroRun(c), lessThan(20));
+    });
+
+    test('Aufnahme reicht vorn nicht: Fenster rutscht nach hinten', () {
+      expect(verifierBTemplateWindow(48000, 1000, 5000), (from: 0, to: 16000));
+    });
+
+    test('Aufnahme reicht hinten nicht: Fenster rutscht nach vorn', () {
+      expect(verifierBTemplateWindow(48000, 44000, 47000), (
+        from: 32000,
+        to: 48000,
+      ));
+    });
+
+    test('Aufnahme kürzer als 1,0 s oder Sprache außerhalb: null', () {
+      expect(verifierBTemplateWindow(15999, 2000, 9000), isNull);
+      expect(verifierBTemplateClip(Int16List(15999), 2000, 9000), isNull);
+      expect(verifierBTemplateWindow(48000, 50000, 52000), isNull);
+    });
+
+    test('Zuschnitt über 2,2 s wird verworfen, darunter bleibt er', () {
+      // Zuschnitt = Sprache + 0,32 s (5120 Samples): Grenze bei 30080.
+      expect(verifierBTemplateWindow(96000, 16000, 16000 + 30000), isNotNull);
+      expect(verifierBTemplateWindow(96000, 16000, 16000 + 30200), isNull);
       expect(
-        verifierBTemplateClip(word(0.001).sublist(0, 3000), 500, 2500),
+        verifierBTemplateClip(Int16List(96000), 16000, 16000 + 30200),
         isNull,
       );
+    });
+
+    test('genau 1,0 s Zuschnitt bleibt unverändert', () {
+      // Zuschnitt 16000 Samples: Sprache 14080+1920 .. : start 1.0 s, Ende 1.68.
+      final cut = verifierBTemplateBounds(48000, 1.0, 1.68);
+      expect(cut.to - cut.from, 16000);
+      expect(verifierBTemplateWindow(48000, 16000, 26880), (
+        from: cut.from,
+        to: cut.to,
+      ));
     });
 
     test(
@@ -228,7 +279,7 @@ void main() {
       () async {
         final e = FakeWakeFeatureExtractor();
         expect(await verifierBTemplate(e, word(0.001), 16000, 30400), isNull);
-        expect(e.sequenceCalls.single.length, 16000);
+        expect(e.sequenceCalls.single.length, 19520);
       },
     );
 

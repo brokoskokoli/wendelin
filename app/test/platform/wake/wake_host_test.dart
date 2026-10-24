@@ -697,9 +697,11 @@ void main() {
         List<WakeTemplates> sets,
       ) async {
         final (c, _) = await container(sets);
+        // Live: `mu + e0` in every frame (centered: e0).
         final live = Float32List(25 * 96);
         for (var f = 0; f < 25; f++) {
-          live[f * 96] = 1;
+          live.setAll(f * 96, wakeVerifierBMu);
+          live[f * 96] += 1;
         }
         final inner = ProviderContainer(
           parent: c,
@@ -718,7 +720,7 @@ void main() {
       }
 
       test('mit Folgen entscheidet B, kein Rückfall, Log verifier=b', () async {
-        final f = Float32List(96)..[0] = 1;
+        final f = Float32List.fromList(wakeVerifierBMu)..[0] += 1;
         final (p, logs) = await parts([withSeq(f)]);
         final v = p.verifier(detector: WakeDetector.model);
         expect(
@@ -735,7 +737,8 @@ void main() {
       });
 
       test('B lehnt ab: false, trotzdem kein Rückfall', () async {
-        final f = Float32List(96)..[1] = 1; // orthogonal zum Live-Strom
+        // Zentriert -e0: Gegenrichtung zum Live-Strom.
+        final f = Float32List.fromList(wakeVerifierBMu)..[0] -= 1;
         final (p, logs) = await parts([withSeq(f)]);
         final v = p.verifier(detector: WakeDetector.model);
         expect(
@@ -750,9 +753,12 @@ void main() {
         () async {
           final (c, _) = await container([]);
           expect(
-            DeviceWakeParts(c).verifier(detector: WakeDetector.model),
+            DeviceWakeParts(
+              c,
+              useVerifierB: false,
+            ).verifier(detector: WakeDetector.model),
             isA<PreferredWakeVerifier>(),
-            reason: 'Platzhalter-mu: B ist aus',
+            reason: 'B ausgeschaltet',
           );
           expect(
             DeviceWakeParts(c, useVerifierB: true).verifier(),
