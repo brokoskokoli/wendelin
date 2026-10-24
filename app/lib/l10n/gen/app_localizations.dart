@@ -8397,6 +8397,18 @@ abstract class AppLocalizations {
   /// **'Das trainierte Modell wird für diese Einstellung benötigt: {v}.'**
   String wakeDetectorModelNeeded(String v);
 
+  /// No description provided for @wakeDetectorNothingToHear.
+  ///
+  /// In de, this message translates to:
+  /// **'Ohne das Modell hört nur deine eingelernte Stimme zu, und die fehlt. Lade das Modell oder lerne deine Stimme ein, sonst bleibt das Wake Word aus.'**
+  String get wakeDetectorNothingToHear;
+
+  /// No description provided for @wakeDetectorNothingToHearAuto.
+  ///
+  /// In de, this message translates to:
+  /// **'Automatisch hört auf dem Telefon mit deiner eingelernten Stimme, und die fehlt. Lerne deine Stimme ein oder wähle „Trainiertes Modell“, sonst bleibt das Wake Word aus.'**
+  String get wakeDetectorNothingToHearAuto;
+
   /// No description provided for @wakeDetectorTemplates.
   ///
   /// In de, this message translates to:
@@ -8433,6 +8445,12 @@ abstract class AppLocalizations {
   /// **'Gehört.'**
   String get wakeEnrollHeard;
 
+  /// No description provided for @wakeEnrollInconsistent.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Aufnahme passte nicht zu den anderen und wurde entfernt. Bitte noch einmal.'**
+  String get wakeEnrollInconsistent;
+
   /// No description provided for @wakeEnrollIntro.
   ///
   /// In de, this message translates to:
@@ -8451,11 +8469,23 @@ abstract class AppLocalizations {
   /// **'Ohne Mikrofon kann Wendelin deine Stimme nicht lernen.'**
   String get wakeEnrollNoMic;
 
+  /// No description provided for @wakeEnrollNoRecognizer.
+  ///
+  /// In de, this message translates to:
+  /// **'Spracherkennung fehlt: Ohne sie kann „Wendelin“ beim Einlernen nicht geprüft werden. Bitte lade unter Einstellungen → Sprache ein Erkennungsmodell.'**
+  String get wakeEnrollNoRecognizer;
+
   /// No description provided for @wakeEnrollNoSpeech.
   ///
   /// In de, this message translates to:
   /// **'Nichts gehört. Noch einmal bitte.'**
   String get wakeEnrollNoSpeech;
+
+  /// No description provided for @wakeEnrollNotWord.
+  ///
+  /// In de, this message translates to:
+  /// **'Nicht als „{word}“ erkannt. Bitte noch einmal.'**
+  String wakeEnrollNotWord(String word);
 
   /// No description provided for @wakeEnrollProcessing.
   ///
@@ -8499,6 +8529,12 @@ abstract class AppLocalizations {
   /// **'Wie du es im Alltag sagst, gern aus einer anderen Ecke.'**
   String get wakeEnrollPrompt3;
 
+  /// No description provided for @wakeEnrollRejected.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} abgelehnt'**
+  String wakeEnrollRejected(int count);
+
   /// No description provided for @wakeEnrollSaveWith.
   ///
   /// In de, this message translates to:
@@ -8534,6 +8570,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Zu leise. Bitte etwas lauter.'**
   String get wakeEnrollTooQuiet;
+
+  /// No description provided for @wakeEnrollUnchecked.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Prüfung ist gerade nicht möglich (Spracherkennung nicht bereit). Bitte noch einmal.'**
+  String get wakeEnrollUnchecked;
 
   /// No description provided for @wakeExplainBatteryBody.
   ///
@@ -9020,6 +9062,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Neu einlernen'**
   String get wakeWordRetrain;
+
+  /// No description provided for @wakeWordTemplatesFew.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur {count} brauchbare Aufnahmen übrig. Bitte neu einlernen.'**
+  String wakeWordTemplatesFew(int count);
 
   /// No description provided for @wakeWordTemplatesMissing.
   ///

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """WP133 Teil A2: Ausschnitt fuer Stufe 2 (hw2) – Paritaet mit der App und Vor-/Nachlauf.
 
-Die App entscheidet ein Ereignis mit dem Spitzenwert (Halten, candidate_wake_engine `_eventScore`, `holdWindows` 5 = 0,4 s) und schneidet
-[endSample - 2 s, endSample + 0,9 s] am Entscheidungsfenster; die Messung (words_measure.score_events) nimmt das erste Fenster >= Schwelle.
+Die App entscheidet ein Ereignis mit dem Spitzenwert (WP141: Halten ab dem ersten Fenster im Band bis 0,8 s danach, einschliesslich;
+candidate_wake_engine `_eventScore`, `holdDuration`) und schneidet [endSample - 2 s, endSample + 0,9 s] am Spitzenfenster; die Messung (words_measure.score_events) nimmt das erste Fenster >= Schwelle.
 Hier werden beide Bezugszeiten („erst“, „app“) mit Vorlauf {1,2; 2,0; 2,5} s x Nachlauf {0,9; 1,3; 1,8} s verglichen (hw2 und hw2 auf
 Spitze 0,5 normalisiert, je allein und mit Band 0,999), je Modell (Standard v8a), Segmente an Schwellen >= 0.95, eigener Cache s2p/ je Modell (Name+Hash der Modelldatei; Schluessel = seg_key der
 Bezugszeit, je Vor-/Nachlauf/Normalisierung ein Ordner). Auswertung wie stage2_analysis: Kreuz-Auswahl mit Wilson, feste Schwelle, FA, Verwechsler.
@@ -29,38 +29,51 @@ REFS = ("erst", "app")                          # Bezugszeit: erstes Fenster >= 
 PRES = (1.2, 2.0, 2.5)                          # Vorlauf in s
 TAILS = (0.9, 1.3, 1.8)                         # Nachlauf in s
 APP_PRE, APP_TAIL = 2.0, 0.9                    # Ausschnitt der App (wake_word_listener verifyWindow / verifyTail)
-APP_UPPER, APP_HOLD = 0.995, 5                  # WakeClassifierRules.acceptFrom / holdWindows (Stand Branch WP129)
+APP_UPPER, APP_HOLD_S = 0.995, 0.8              # WakeClassifierRules.acceptFrom (Stand Branch WP129) / holdWindow (WP141)
+APP_HOLD = 11                                   # Alias (Fensterzahl, alte Schreibweise): 11 Fenster = 10 Abstaende = 0,8 s; hold=1 heisst roh
 BANDS = (None, 0.999)                           # Band der Stufe 2: keins | 0,999; dazu fuer den App-Ausschnitt 0,995 (APP_UPPER)
 NORM_PEAK = 0.5
 FIXED_THR = 0.98
 
 
 # ---------- Reine Funktionen ----------
-def app_events(t, v, lower, upper=APP_UPPER, hold=APP_HOLD, refr=W.REFR):
-    """Nachbildung von CandidateWakeEngine (Branch WP129) auf der Stufe-1-Kurve: [(Entscheidungszeit, Spitzenwert)].
-    Erstes Fenster im Band [lower, upper) startet das Halten (Zaehler 1), danach zaehlt jedes Fenster mit Wert >= Spitze (neue Spitze);
-    ein Wert >= upper entscheidet sofort mit diesem Wert, jeder andere Wert (kleiner, NaN) oder der Zaehler `hold` entscheidet mit der Spitze.
-    Ausserhalb des Haltens entscheidet der Rohwert; Entscheidung = Wert >= lower; danach Sperrzeit `refr` (Fenster-Ende zu Fenster-Ende)."""
-    out, last, peak, count = [], -1e9, None, 0
+def app_events(t, v, lower, upper=APP_UPPER, hold_s=APP_HOLD_S, refr=W.REFR, hold=None, flush=True):
+    """Nachbildung von CandidateWakeEngine (WP141) auf der Stufe-1-Kurve: [(Spitzenzeit, Spitzenwert)].
+    Ab dem ersten Fenster im Band [lower, upper) wird gehalten, bis (Fensterende - erstes Fensterende) >= hold_s (einschliesslich: das
+    Fenster bei +hold_s zaehlt noch mit und entscheidet; Vergleich in Samples bei 16 kHz). Abfaelle unter die Spitze oder unter das Band
+    und NaN beenden das Halten nicht. Ein Wert >= upper entscheidet sofort mit diesem Wert (direkt). Sonst entscheidet am Ende die
+    Spitze (bei gleichen Werten das spaetere Fenster); die Trefferzeit ist das Spitzenfenster. hold_s <= 0 (Alias hold=1): das erste Fenster im Band
+    entscheidet. Sperrzeit `refr` von Trefferzeit zu Trefferzeit.
+    flush=True (Standard): ein am Kurvenende noch offenes Halten entscheidet mit der Spitze (Spitzenzeit, Spitze), die Sperrzeit gilt wie
+    sonst. Das entspricht einem weiterlaufenden Strom mit leisen Fenstern (die App sieht solche Ereignisse, die Kurve eines kurzen Clips
+    endet nur frueher). flush=False: unvollstaendiges Halten am Stromende gibt kein Ereignis (so entscheidet die Dart-Engine, Paritaetstest).
+    Gleiche Regel wie Dart, Paritaetsfixture packages/wendelin_voice/test/fixtures/wake_hold_parity.json (test_stage2_cut.py)."""
+    if hold is not None: hold_s = (hold - 1) * 0.08          # Alias: Fensterzahl inkl. erstem Fenster
+    hold_n, refr_n = round(hold_s * SR), round(refr * SR)
+    out, last = [], None
+    start = pk = pk_t = pk_n = None
     for ti, vi in zip(t, v):
-        s = None if vi != vi else float(vi)                   # NaN ist kein Wert
-        ev = None
-        if peak is None:
-            if s is None or s < lower or s >= upper:
-                ev = s
+        n = round(float(ti) * SR)
+        s = None if vi is None or vi != vi else float(vi)      # NaN/None ist kein Wert
+        ev = None                                              # (Zeit, Samples, Wert)
+        if start is None:
+            if s is None or s < lower: continue
+            if s >= upper or hold_n <= 0:
+                ev = (float(ti), n, s)
             else:
-                peak, count = s, 1
-                if count >= hold: ev, peak = peak, None
+                start, pk, pk_t, pk_n = n, s, float(ti), n
         elif s is not None and s >= upper:
-            peak, ev = None, s
-        elif s is not None and s >= peak:
-            peak, count = s, count + 1
-            if count >= hold: ev, peak = peak, None
+            ev, start = (float(ti), n, s), None
         else:
-            ev, peak = peak, None
-        if ev is None or ev < lower or ti - last < refr: continue
-        last = ti
-        out.append((float(ti), ev))
+            if s is not None and s >= pk: pk, pk_t, pk_n = s, float(ti), n
+            if n - start >= hold_n:
+                ev, start = (pk_t, pk_n, pk), None
+        if ev is None: continue
+        if last is not None and ev[1] - last < refr_n: continue
+        last = ev[1]
+        out.append((ev[0], ev[2]))
+    if flush and start is not None and (last is None or pk_n - last >= refr_n):
+        out.append((pk_t, pk))
     return out
 
 

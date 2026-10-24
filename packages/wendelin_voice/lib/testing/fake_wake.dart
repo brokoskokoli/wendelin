@@ -19,7 +19,11 @@ final class FakeWakeWordEngine implements WakeWordEngine {
     this.keywordId = 'wake',
     this.acceptDelay = Duration.zero,
     this.direct = false,
+    this.holdMs,
   });
+
+  /// `WakeWordHit.holdMs` of every hit (WP141).
+  final int? holdMs;
 
   /// Hits are sure hits (`WakeWordHit.direct`, WP129).
   final bool direct;
@@ -78,6 +82,7 @@ final class FakeWakeWordEngine implements WakeWordEngine {
               endSample: _samples,
               confidence: 0.9,
               direct: direct,
+              holdMs: holdMs,
             ),
           ]
         : const [];

@@ -174,7 +174,7 @@ class _State extends ConsumerState<WakeServiceSection> {
     final verify = ref.watch(wakeVerifyProvider).value ?? true;
     final tone = ref.watch(wakeToneProvider).value ?? true;
     final noRole = !status.holdsRole;
-    final noVoice = speakers.isEmpty;
+    final noVoice = speakers.isEmpty && ref.watch(wakeNeedsVoiceProvider);
     final locked = (noRole || noVoice) && !settings.enabled;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

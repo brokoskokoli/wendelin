@@ -81,11 +81,11 @@ packages/wendelin_tools/test/executor/tool_executor_test.dart: 1154
 packages/wendelin_voice/lib/src/models/model_downloader.dart#ModelDownloader._downloadFile: 122
 packages/wendelin_voice/lib/src/models/speech_model_catalog.dart#SpeechModelCatalog: 482
 packages/wendelin_voice/lib/src/models/voice_settings.dart#VoiceSettings.fromJson: 95
-packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart: 754
-packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline: 708
+packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart: 734
+packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline: 685
 packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline._answer: 115
 packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline._listenAfter: 91
-packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline._run: 99
+packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline._run: 98
 packages/wendelin_voice/test/voice_pipeline_test.dart: 1495
 tool/check_deps.dart#main: 89
 tool/self_test.dart: 777

@@ -20,6 +20,7 @@ void _worker(SendPort out) {
         return WhisperResult(
           text: '${samples.length} Samples',
           language: language ?? 'de',
+          meanLogProb: samples.length == 1600 ? -0.25 : null,
         );
       });
     } else if (message == 'exit') {
@@ -54,6 +55,8 @@ void main() {
     final r = await remote.transcribe(Float32List(1600), language: 'fr');
     expect(r.text, '1600 Samples');
     expect(r.language, 'fr');
+    expect(r.meanLogProb, -0.25);
+    expect((await remote.transcribe(Float32List(16))).meanLogProb, isNull);
     expect((await remote.transcribe(Float32List(16))).language, 'de');
     await expectLater(
       remote.transcribe(Float32List(16), language: 'xx'),

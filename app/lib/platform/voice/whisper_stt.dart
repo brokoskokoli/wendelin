@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
@@ -10,7 +11,11 @@ import 'pcm.dart';
 @immutable
 final class WhisperResult {
   /// Creates a result.
-  const WhisperResult({required this.text, this.language = ''});
+  const WhisperResult({
+    required this.text,
+    this.language = '',
+    this.meanLogProb,
+  });
 
   /// Recognized text as returned by the model.
   final String text;
@@ -18,6 +23,29 @@ final class WhisperResult {
   /// Language code the model used or detected (`de`, `fr`, `en`, … or
   /// empty).
   final String language;
+
+  /// Mean log probability of the output tokens (`ys_log_probs` of
+  /// sherpa-onnx), `null` if the model does not report it. Only logged
+  /// (`stt-lang lp=`), never used to block (WP140).
+  final double? meanLogProb;
+}
+
+/// Mean of the `ys_log_probs` in the result JSON of sherpa-onnx, `null`
+/// when the field is missing, empty, not numeric or the JSON is invalid.
+double? meanLogProbOf(String? json) {
+  if (json == null) return null;
+  try {
+    final probs = (jsonDecode(json) as Map<String, Object?>)['ys_log_probs'];
+    if (probs is! List || probs.isEmpty) return null;
+    var sum = 0.0;
+    for (final p in probs) {
+      if (p is! num) return null;
+      sum += p;
+    }
+    return sum / probs.length;
+  } on Object {
+    return null;
+  }
 }
 
 /// Duration of one Whisper run (for the log and measurements, WP19).
@@ -157,7 +185,13 @@ final class WhisperSpeechToText implements SpeechToText {
         : whisperConfidence(
             text,
             audio: samplesToDuration(pcm.length),
-            languageSupported: fixed != null || languages.contains(detected),
+            // An empty language (engines without detection, e.g. Parakeet)
+            // is no evidence against the language: only a detected foreign
+            // language counts as unsupported.
+            languageSupported:
+                fixed != null ||
+                detected.isEmpty ||
+                languages.contains(detected),
           );
     // Which language was used, never what was said.
     voiceLog('stt-lang', {
@@ -166,6 +200,7 @@ final class WhisperSpeechToText implements SpeechToText {
       'lang': lang,
       'detected': detected.isEmpty ? null : detected,
       'conf': confidence,
+      'lp': raw.meanLogProb,
     });
     if (text.isEmpty) return Transcript(text: '', language: lang);
     return Transcript(text: text, language: lang, confidence: confidence);

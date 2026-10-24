@@ -96,6 +96,8 @@
       }
     }
   },
+  "wakeDetectorNothingToHear": "Ohne das Modell hört nur deine eingelernte Stimme zu, und die fehlt. Lade das Modell oder lerne deine Stimme ein, sonst bleibt das Wake Word aus.",
+  "wakeDetectorNothingToHearAuto": "Automatisch hört auf dem Telefon mit deiner eingelernten Stimme, und die fehlt. Lerne deine Stimme ein oder wähle „Trainiertes Modell“, sonst bleibt das Wake Word aus.",
   "wakeDetectorTemplates": "Vorlagen deiner Stimme",
   "wakeDetectorTemplatesHint": "Vergleicht mit deinen Aufnahmen. Braucht das Einlernen.",
   "wakeDetectorTitle": "Erkennung",
@@ -120,6 +122,33 @@
   "wakeEnrollMicPreparing": "Mikrofon wird vorbereitet …",
   "wakeEnrollNoMic": "Ohne Mikrofon kann Wendelin deine Stimme nicht lernen.",
   "wakeEnrollNoSpeech": "Nichts gehört. Noch einmal bitte.",
+  "wakeEnrollNoRecognizer": "Spracherkennung fehlt: Ohne sie kann „Wendelin“ beim Einlernen nicht geprüft werden. Bitte lade unter Einstellungen → Sprache ein Erkennungsmodell.",
+  "wakeEnrollNotWord": "Nicht als „{word}“ erkannt. Bitte noch einmal.",
+  "@wakeEnrollNotWord": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeEnrollInconsistent": "Diese Aufnahme passte nicht zu den anderen und wurde entfernt. Bitte noch einmal.",
+  "wakeEnrollUnchecked": "Die Prüfung ist gerade nicht möglich (Spracherkennung nicht bereit). Bitte noch einmal.",
+  "wakeEnrollRejected": "{count} abgelehnt",
+  "@wakeEnrollRejected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wakeWordTemplatesFew": "Nur {count} brauchbare Aufnahmen übrig. Bitte neu einlernen.",
+  "@wakeWordTemplatesFew": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "wakeEnrollProcessing": "Wird verarbeitet …",
   "wakeEnrollProgress": "{accepted} von {target}",
   "@wakeEnrollProgress": {

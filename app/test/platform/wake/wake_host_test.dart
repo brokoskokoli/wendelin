@@ -25,12 +25,18 @@ final class _Parts implements WakeParts {
     this.engineless = false,
     this.verdict = true,
     this.direct = false,
+    this.holdMs,
     this.engineError,
     this.openError,
+    this.errorsOnlyModel = false,
   });
+
+  /// The errors hit only the classifier (the templates work).
+  final bool errorsOnlyModel;
 
   final bool engineless;
   final bool direct;
+  final int? holdMs;
   final Object? engineError;
   final Object? openError;
   bool verdict;
@@ -49,10 +55,13 @@ final class _Parts implements WakeParts {
     engines++;
     lastDetector = detector;
     lastStation = station;
+    final hit = !errorsOnlyModel || detector == WakeDetector.model;
     final error = engineError;
-    if (error != null) throw error;
-    if (openError != null) return _OpenFails(openError!);
-    return engineless ? null : FakeWakeWordEngine(direct: direct);
+    if (hit && error != null) throw error;
+    if (hit && openError != null) return _OpenFails(openError!);
+    return engineless
+        ? null
+        : FakeWakeWordEngine(direct: direct, holdMs: holdMs);
   }
 
   @override
@@ -293,6 +302,34 @@ void main() {
         'stage=1-unchecked score=0.900 verifier=none',
       ),
     );
+    expect(
+      logs.join('\n'),
+      contains('wake-decision engine=wake hold_ms=0 peak=0.900 path=unchecked'),
+    );
+  });
+
+  test('wake-decision: abgelehnter Stufe-2-Kandidat wird geloggt', () async {
+    await start(verify: true, p: _Parts(verdict: false, holdMs: 800));
+    await hear(FakeWakeWordEngine.markerFrame(1600));
+    for (var i = 0; i < 12; i++) {
+      await hear(Int16List(1600));
+    }
+    await until(() => logs.any((l) => l.contains('result=no')));
+    expect(
+      logs.join('\n'),
+      contains('wake-decision engine=wake hold_ms=800 peak=0.900 path=stage2'),
+    );
+    expect(calls(), isNot(contains('hit')));
+  });
+
+  test('wake-decision: Direkttreffer mit hold_ms > 0', () async {
+    await start(verify: true, p: _Parts(direct: true, holdMs: 640));
+    await hear(FakeWakeWordEngine.markerFrame(1600));
+    await until(() => calls().contains('hit'));
+    expect(
+      logs.join('\n'),
+      contains('wake-decision engine=wake hold_ms=640 peak=0.900 path=direct'),
+    );
   });
 
   group('Erkennung (WP129)', () {
@@ -338,8 +375,8 @@ void main() {
       expect(parts.engines, 1);
     });
 
-    test('Modell fehlt: failed modelMissing, kein Mikrofon, kein Rückfall '
-        'auf Vorlagen', () async {
+    test('Modell fehlt und auch sonst nichts da: failed modelMissing, kein '
+        'Mikrofon', () async {
       parts = _Parts(
         engineError: const VoiceException(VoiceErrorKind.modelMissing, 'x'),
       );
@@ -355,8 +392,56 @@ void main() {
         logs.where((l) => l.contains('wake-failed')),
         contains(endsWith('reason=model-missing')),
       );
-      expect(parts.engines, 1);
+      expect(parts.engines, 2, reason: 'Modell, dann Vorlagen versucht');
       expect(calls(), isNot(contains('startMic')));
+    });
+
+    for (final viaOpen in [false, true]) {
+      test('Modell fehlt (${viaOpen ? 'beim Öffnen' : 'beim Bauen'}), Vorlagen '
+          'da: Rückfall auf Vorlagen, Dienst hört zu (WP140)', () async {
+        const missing = VoiceException(VoiceErrorKind.modelMissing, 'x');
+        parts = _Parts(
+          engineError: viaOpen ? null : missing,
+          openError: viaOpen ? missing : null,
+          errorsOnlyModel: true,
+        );
+        audio = ServiceAudioInput(channel);
+        host = WakeHost(parts: parts, audio: audio);
+        await host.attach();
+        await fromKotlin('run', {'verify': false, 'detector': 'model'});
+        await until(() => calls().contains('startMic'));
+        expect(calls(), isNot(contains('failed')));
+        expect(parts.lastDetector, WakeDetector.templates);
+        expect(
+          logs,
+          contains(
+            allOf(contains('wake-fallback'), contains('reason=model-missing')),
+          ),
+        );
+        // The service listens with the templates (not with the missing model).
+        expect(
+          logs,
+          contains(
+            allOf(contains('wake-listening'), contains('detector=templates')),
+          ),
+        );
+      }, timeout: const Timeout(Duration(seconds: 10)));
+    }
+
+    test('Modell fehlt, keine Vorlagen: failed modelMissing (Hinweis in den '
+        'Einstellungen)', () async {
+      parts = _Parts(
+        engineError: const VoiceException(VoiceErrorKind.modelMissing, 'x'),
+        errorsOnlyModel: true,
+        engineless: true,
+      );
+      audio = ServiceAudioInput(channel);
+      host = WakeHost(parts: parts, audio: audio);
+      await host.attach();
+      await fromKotlin('run', {'verify': false, 'detector': 'model'});
+      await until(() => calls().contains('failed'));
+      final failed = toKotlin.firstWhere((c) => c.$1 == 'failed').$2! as Map;
+      expect(failed['reason'], 'modelMissing');
     });
 
     test('Modelldatei fehlt beim Öffnen: failed modelMissing (der Weg der '
@@ -553,7 +638,7 @@ void main() {
         ['a', 'b'],
       );
       expect(e.modelThreshold, isNull);
-      expect(e.holdWindows, 0);
+      expect(e.holdDuration, Duration.zero);
     });
 
     test(
@@ -578,7 +663,7 @@ void main() {
           expect(e.templates, isNull);
           expect(e.modelThreshold, band(station).verifyFrom);
           expect(e.directThreshold, band(station).acceptFrom);
-          expect(e.holdWindows, WakeClassifierRules.holdWindows);
+          expect(e.holdDuration, WakeClassifierRules.holdWindow);
           expect(e.silenceFloor, isNotNull);
           expect(e.silenceFloor!.minRms, WakeClassifierRules.silenceFloorRms);
           expect(e.silenceFloor!.ratio, 0, reason: 'kein Rauschboden-Faktor');

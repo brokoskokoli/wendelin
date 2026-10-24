@@ -23,6 +23,8 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP134 – Stopp-Wort ausgebaut, Unterbrechen nur mit „Wendelin“ (Gerätetest)](wp134.md)
 - [WP135 Smart Home schneller (A, B, B2, C, D, E)](wp135.md)
 - [WP136 – Parakeet lädt nach dem Download (Gerätetest)](wp136.md)
+- [WP140 – Einlernen prüft den Inhalt, unsichere Erkennung verworfen, Ja/Nein robuster (Gerätetest)](wp140.md)
+- [WP141 – Wake-Halten bis 0,8 s (Gerätetest)](wp141.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)
 - [WP85 Kontakte, SMS und Anrufe (`contacts`)](wp85.md)

@@ -324,11 +324,11 @@ void main() {
     });
 
     test(
-      'external: nur strikte Zustimmung, „Ja, bitte“/„Okay, warte“ → Tipp',
+      'external: nur strikte Zustimmung, „Okay“/„Okay, warte“ → Tipp',
       () async {
         final tts = FakeTextToSpeech();
         await deleteBySaying(const [
-          Transcript(text: 'Ja, bitte'),
+          Transcript(text: 'Okay'),
           Transcript(text: 'Okay, warte'),
         ], tts: tts);
         await waitConv(c, (s) => s.pending != null);
@@ -339,6 +339,28 @@ void main() {
               tts.spoken.contains('Bitte sag ja oder nein.'),
         );
         await Future<void>.delayed(const Duration(milliseconds: 50));
+        expect(c.read(agentControllerProvider).pending!.answered, isFalse);
+        expect(env.calendar.events, hasLength(1));
+        c.read(agentControllerProvider.notifier).answer(approved: false);
+        await voice().whenIdle;
+      },
+    );
+
+    test(
+      'external: „Yeah.“/„All right.“ (Fehlhörung von „Nein“) → Tipp, kein Ja',
+      () async {
+        final tts = FakeTextToSpeech();
+        await deleteBySaying(const [
+          Transcript(text: 'Yeah.'),
+          Transcript(text: 'All right.'),
+        ], tts: tts);
+        await waitConv(c, (s) => s.pending != null);
+        await waitVoice(
+          c,
+          (v) =>
+              !v.awaitingAnswer &&
+              tts.spoken.contains('Bitte sag ja oder nein.'),
+        );
         expect(c.read(agentControllerProvider).pending!.answered, isFalse);
         expect(env.calendar.events, hasLength(1));
         c.read(agentControllerProvider.notifier).answer(approved: false);

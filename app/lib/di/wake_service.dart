@@ -99,9 +99,12 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
   }
 
   /// Switches the service on or off. Without a learned voice it cannot be
-  /// switched on (`false`, WP50 Nachtrag).
+  /// switched on (`false`, WP50 Nachtrag) when the templates path is the one
+  /// that listens; the installed classifier model needs no voice (WP140).
   Future<bool> setEnabled({required bool enabled}) async {
-    if (enabled && (await ref.read(wakeSpeakersProvider.future)).isEmpty) {
+    if (enabled &&
+        ref.read(wakeNeedsVoiceProvider) &&
+        (await ref.read(wakeSpeakersProvider.future)).isEmpty) {
       return false;
     }
     if (!ref.mounted) return false;

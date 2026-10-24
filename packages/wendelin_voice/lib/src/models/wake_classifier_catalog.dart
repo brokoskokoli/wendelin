@@ -99,16 +99,13 @@ abstract final class WakeClassifierCatalog {
 /// values of WP133 (threshold 0.98 for phone and station, direct from 0.999).
 /// Change them here only.
 abstract final class WakeClassifierRules {
-  /// Windows (80 ms each) a score in the band is held to find the peak of the
-  /// event; a score at or above `acceptFrom` decides at once, a fall below the
-  /// peak ends the hold early.
-  static const holdWindows = 5;
-
-  /// The hold ends after this many consecutive windows below the peak
-  /// (`CandidateWakeEngine.dropsToEnd`): one dip between two high windows
-  /// (0.9917, 0.9892, 0.998) must not end it. Measured in WP129 on real
-  /// recordings, see `docs/testing/m5/wp129.md`.
-  static const dropsToEnd = 2;
+  /// WP141: observation time from the first window in the band
+  /// (`CandidateWakeEngine.holdDuration`, inclusive: the window at +0.8 s
+  /// still counts). A score at or above `acceptFrom` decides at once, falls
+  /// do not end the hold, otherwise the peak decides at the end. Analysis of
+  /// the s1 curves (WP137): 95 % of the calls reach their maximum 0.44-0.64 s
+  /// after the first window at 0.98, all within 0.80 s.
+  static const holdWindow = Duration(milliseconds: 800);
 
   /// Stage 2: audio before the hit that is transcribed (the listener default,
   /// `WakeWordListener.verifyWindow`). Provisional like the band; WP133
@@ -153,7 +150,7 @@ abstract final class WakeClassifierRules {
   static const silenceFloorRms = 50.0;
 
   /// Look-back of the silence floor: the classifier decides after the word
-  /// (window 1.3 s, hold up to 0.4 s), so the word must still be in memory.
+  /// (window 1.3 s, hold up to 0.8 s), so the word must still be in memory.
   static const silenceFloorMemory = Duration(milliseconds: 2000);
 
   /// The silence floor of the engine (`CandidateWakeEngine.silenceFloor`),

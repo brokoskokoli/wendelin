@@ -14,16 +14,19 @@ import '../text/spoken_answer.dart';
 import '../text/voice_texts.dart';
 import '../tts/speech_queue.dart';
 import '../wake/wake_verifier.dart' show stripWakeWord;
+import 'barge_detector_sync.dart';
 import 'conversation.dart';
 import 'endpointer.dart';
 import 'open_question.dart';
 import 'speech_hold.dart';
+import 'stt_confidence_gate.dart';
 import 'voice_events.dart';
 import 'voice_pipeline_config.dart';
 
 export 'conversation.dart';
 export 'voice_pipeline_config.dart';
 part 'voice_pipeline_text.dart';
+part 'voice_pipeline_listen.dart';
 
 /// The voice pipeline (concept: Auslöser → Aufnahme mit VAD → STT → Agent →
 /// TTS) as a state machine:
@@ -118,7 +121,12 @@ final class VoicePipeline {
   Future<void> _agentDrained = Future.value();
   Future<void> _session = Future.value();
   Future<void> _listening = Future.value();
-  Future<void> _bargeOps = Future.value();
+  late final _barge = BargeDetectorSync(
+    detector: () => bargeInDetector,
+    enabled: () => config.bargeIn != BargeInMode.off,
+    state: () => _state,
+    onError: (e) => _emit(VoiceError(VoiceState.speaking, e)),
+  );
 
   /// Silence forced after the end of the wake word, so that its tail (the
   /// engine position is an estimate) is not mistaken for the request.
@@ -240,6 +248,7 @@ final class VoicePipeline {
     int? wakeEnd,
   }) async {
     var followUp = false;
+    var quietRejects = 0;
     // The wake word is cut from the first transcript (WP68).
     var stripWake = trigger?.source == TriggerKind.wakeWord;
     var pre = preRoll;
@@ -254,17 +263,7 @@ final class VoicePipeline {
     }
     while (true) {
       _setState(VoiceState.listening);
-      _emit(
-        VoiceListening(trigger: followUp ? null : trigger, followUp: followUp),
-      );
-      if (followUp) {
-        _emit(
-          VoiceFollowUpListening(
-            window: config.followUpWindow,
-            until: clock.now().add(config.followUpWindow),
-          ),
-        );
-      }
+      _announceListening(trigger, followUp);
       final endpoint = await _listen(
         gen,
         followUp
@@ -318,6 +317,14 @@ final class VoicePipeline {
       if (followUp && isClosingPhrase(transcript.text, config.closingPhrases)) {
         return _finish(gen, ConversationEndReason.closingPhrase);
       }
+      final gate = await _applyGate(gen, transcript, trigger, followUp);
+      final accepted = gate == SttGateAction.accept;
+      if (gate == SttGateAction.askAgain ||
+          (!accepted && ++quietRejects > config.maxQuietRejects)) {
+        return _finish(gen, ConversationEndReason.silence);
+      }
+      if (!accepted) continue; // keep listening in the same follow-up window
+      quietRejects = 0;
       _setState(VoiceState.thinking);
       final problem = await _answer(gen, transcript);
       if (gen != _gen) return;
@@ -360,33 +367,6 @@ final class VoicePipeline {
       preRollIsSpeech: s.kind == BargeInKind.speech,
       continued: true,
     );
-  }
-
-  /// Starts and stops the detector with the state, one operation after the
-  /// other: a stop never overtakes a start, a late start is stopped again.
-  void _syncBargeDetector(VoiceState s) {
-    final d = bargeInDetector;
-    if (d == null || config.bargeIn == BargeInMode.off) return;
-    if (s == VoiceState.speaking) {
-      _bargeOps = _bargeOps.then((_) async {
-        try {
-          await d.start();
-        } on Object catch (e) {
-          _emit(VoiceError(VoiceState.speaking, e));
-        }
-        if (_state != VoiceState.speaking && _state != VoiceState.thinking) {
-          await _stopDetector(d);
-        }
-      });
-    } else if (s != VoiceState.thinking) {
-      _bargeOps = _bargeOps.then((_) => _stopDetector(d));
-    }
-  }
-
-  Future<void> _stopDetector(BargeInDetector d) async {
-    try {
-      await d.stop();
-    } on Object catch (_) {}
   }
 
   /// Whether [text] is a stop command: only stop words and filler words,
@@ -435,7 +415,7 @@ final class VoicePipeline {
     // starts, else the device says "already running" (WP64).
     // A hanging detector must not block the recording for ever: after the
     // timeout we start anyway (a still busy microphone gives a clear error).
-    await _bargeOps.timeout(
+    await _barge.settled.timeout(
       bargeReleaseTimeout,
       onTimeout: () => diagnostics?.call('barge-wait-timeout'),
     );
@@ -744,7 +724,7 @@ final class VoicePipeline {
   void _setState(VoiceState s) {
     if (_state == s) return;
     _state = s;
-    _syncBargeDetector(s);
+    _barge.sync(s);
     if (!_states.isClosed) _states.add(s);
   }
 

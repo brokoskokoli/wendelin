@@ -6,6 +6,7 @@ import 'package:meta/meta.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as so;
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import 'sherpa_log_probs.dart';
 import 'sherpa_runtime.dart';
 import 'whisper_sherpa.dart';
 import 'whisper_stt.dart';
@@ -238,6 +239,7 @@ final class SherpaNemoEngine implements BlockingStt {
       return WhisperResult(
         text: r.text,
         language: files.engine == SttEngine.canary ? lang : r.lang,
+        meanLogProb: streamMeanLogProb(stream),
       );
     } finally {
       stream.free();

@@ -10,10 +10,11 @@
 //   WENDELIN_WAKE_MODELS / WENDELIN_WAKE_CLASSIFIER / WENDELIN_ORT_LIB
 //   WENDELIN_PARITY_FRAME=320   (Samples je Block; Gerät: 20 ms)
 //   WENDELIN_PARITY_SRC=pos_huawei,...  (optional, sonst alle vier)
-//   WENDELIN_PARITY_DROPS=1,2,99,2f100,2goff  (dropsToEnd je Engine, optional
+//   WENDELIN_PARITY_DROPS=1,2,99,2f100,2goff  (WP141: dropsToEnd gibt es nicht mehr, nur noch die
+//                                  Zahl vor f/goff als Bezeichner; optional
 //                                  Untergrenze der Stille-Sperre bzw. goff; ein Strom der Kette,
 //                                  je Wert ein Unterordner d<N> im Ausgabeordner;
-//                                  99 = Halten bis holdWindows)
+//                                  Halten immer holdWindow)
 //   WENDELIN_PARITY_SKIP=0      (führende Samples weglassen: verschiebt das
 //                                Raster gegenüber der Sprache, Phasenstreuung)
 import 'dart:convert';
@@ -159,10 +160,7 @@ void main() {
             features: _Replay(blocks),
             modelThreshold: band.verifyFrom,
             directThreshold: band.acceptFrom,
-            holdWindows: WakeClassifierRules.holdWindows,
-            dropsToEnd: n == null
-                ? WakeClassifierRules.dropsToEnd
-                : int.parse(RegExp(r'^\d+').firstMatch(n)![0]!),
+            holdDuration: WakeClassifierRules.holdWindow,
             silenceFloor: n == null
                 ? WakeClassifierRules.silenceFloor()
                 : floorFor(n),

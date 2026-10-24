@@ -20,6 +20,7 @@ final class FakeWhisperBackend implements WhisperBackend {
 
   String text;
   String? language;
+  double? meanLogProb;
   Object? error;
   final calls = <(int, String?)>[];
 
@@ -34,6 +35,7 @@ final class FakeWhisperBackend implements WhisperBackend {
     return WhisperResult(
       text: text,
       language: this.language ?? language ?? 'de',
+      meanLogProb: meanLogProb,
     );
   }
 
@@ -108,6 +110,25 @@ void main() {
       expect(en.confidence, 0.9);
     });
 
+    test('automatisch + Engine ohne Spracherkennung (lang leer): 0,9, '
+        'Gate lässt durch', () async {
+      final b = FakeWhisperBackend(text: 'Wie wird das Wetter', language: '');
+      final stt = WhisperSpeechToText(backend: b, modelId: 'parakeet-v3');
+      final t = await stt.transcribe(speech);
+      expect(t.language, isNull);
+      expect(t.confidence, 0.9);
+      const gate = SttConfidenceGate();
+      expect(gate.decide(t.confidence, followUp: true), SttGateAction.accept);
+      expect(
+        gate.decide(
+          t.confidence,
+          followUp: false,
+          source: TriggerKind.wakeWord,
+        ),
+        SttGateAction.accept,
+      );
+    });
+
     test(
       'Logzeile stt-lang: Sprache, Quelle, Konfidenz, nie der Text',
       () async {
@@ -136,6 +157,30 @@ void main() {
         expect(lines.join(), isNot(contains('lait')));
       },
     );
+
+    test('Logzeile stt-lang: lp nur mit Wert, ohne Wert kein Feld', () async {
+      final lines = <String>[];
+      voiceLogSink = lines.add;
+      final b = FakeWhisperBackend(text: 'Add milk', language: 'en');
+      final stt = WhisperSpeechToText(backend: b, modelId: 'm');
+      await stt.transcribe(speech);
+      b.meanLogProb = -0.4321;
+      await stt.transcribe(speech);
+      expect(lines[0], isNot(contains('lp=')));
+      expect(lines[1], contains('lp=-0.43'));
+      expect(lines[1], isNot(contains('milk')));
+    });
+
+    test('meanLogProbOf: Mittelwert von ys_log_probs, sonst null', () {
+      expect(meanLogProbOf('{"text":"a","ys_log_probs":[-0.5,-1.5]}'), -1.0);
+      expect(meanLogProbOf('{"text":"a"}'), isNull);
+      expect(meanLogProbOf('{"ys_log_probs":[]}'), isNull);
+      expect(meanLogProbOf('{"ys_log_probs":["x"]}'), isNull);
+      expect(meanLogProbOf('{"ys_log_probs":[-1,null]}'), isNull);
+      expect(meanLogProbOf('{"ys_log_probs":"x"}'), isNull);
+      expect(meanLogProbOf('kein json'), isNull);
+      expect(meanLogProbOf(null), isNull);
+    });
 
     test('Halluzination ergibt leeren Text ohne Konfidenz', () async {
       final b = FakeWhisperBackend(text: 'Untertitel der Amara.org-Community');
