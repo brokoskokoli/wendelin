@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP143; Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
+Stand: 2026-10-24 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP143 (danach WP145 in derselben Sitzung); Test-APK v0.1.0-rc2 beim Maintainer, rc3 folgt nach WP143; als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -96,6 +96,14 @@ Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt fü
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
 ## Nächste Schritte
+
+Stand 2026-10-24 (Orchestrator):
+1. WP143 mergen (v8a Stimmenset clean + Prüfer B), dann Release-Kandidat `v0.1.0-rc3` (Tag erst nach grünem Gate auf main), Testprotokoll der Runde ergänzen.
+2. WP145 nativer Speicher je Overlay (dieselbe Sitzung wie WP143), danach rc4.
+3. Gerätetest des Maintainers mit rc3/rc4 (Blöcke T24-*). Danach entscheiden: Stufe-1-Modell mit eigenem „Hey Wendelin“-Kopf (K115 wieder aufgreifen), Python-Tests von tool/train_wake_word/ in die CI.
+4. Offen aus M5/M6 (unverändert, nur mit Go): WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung (K99), WP132, WP138 (Gespräch).
+
+Ältere Reihenfolge M5 (bestätigt 2026-10-19, erledigt bzw. überholt):
 
 Reihenfolge M5 (bestätigt Maintainer 2026-10-19), je Schritt höchstens 2 Paket-Sitzungen; Pakete am Sprach-Controller (WP81b, WP92, WP93, WP103) nie gleichzeitig:
 

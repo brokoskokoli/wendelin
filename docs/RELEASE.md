@@ -107,3 +107,12 @@ Ablauf:
 4. Provider einrichten, Exporte importieren, Wake-Word und Sprecherprofile neu aufnehmen.
 
 Danach genügt jedes weitere Update über die APK desselben Schlüssels.
+
+## 8. Modell-Dateien als Release
+
+Eigene Modelle, z. B. das Wake-Word-Modell, liegen als eigene Releases `models-<art>-<stand>` (etwa `models-wake-v8a-clean`) mit `--latest=false`. Sie enthalten nur die Modelldatei und `SHA256SUMS`, keine Begleitdateien aus dem Training. Der Katalog der App (`packages/wendelin_voice/lib/src/models/`) zeigt auf die Download-URL und prüft die SHA-256. Neue Modelle bekommen ein neues Release, ein bestehendes wird nicht überschrieben.
+
+```bash
+gh release create models-wake-<stand> <modell>.onnx SHA256SUMS --target main --latest=false \
+  --title "Wake-Word-Modell <stand>" --notes "…"
+```
