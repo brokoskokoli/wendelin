@@ -1,5 +1,6 @@
 package app.wendelin
 
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -67,6 +68,13 @@ class AssistantActivity : WendelinActivity() {
         (placeholder?.parent as? ViewGroup)?.removeView(placeholder)
         placeholder = null
     }
+
+    // WP145: spawned from the process-wide group, not a fresh engine per opening; destroyed with
+    // the activity (an engine from provideFlutterEngine would otherwise outlive it).
+    override fun provideFlutterEngine(context: Context): FlutterEngine =
+        EngineGroups.forActivity(this, "assistantMain", "overlay")
+
+    override fun shouldDestroyEngineWithHost(): Boolean = true
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         VoiceLog.i("overlay-engine-ready after=${sinceCreate()}ms")
