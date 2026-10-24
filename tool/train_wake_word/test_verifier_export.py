@@ -13,7 +13,7 @@ import verifier_export as X  # noqa: E402
 
 DATA = os.path.join(HERE, "testdata")
 MU_PATH, PAR_PATH = os.path.join(DATA, "wake_verifier_b_mu.json"), os.path.join(DATA, "verifier_b_parity.json")
-FORBIDDEN = re.compile(r"huawei|handy|lizenz|licen[sc]e|cc-?by|cc0|nicht frei|\bfull\b|kokoro|piper|stimmname", re.I)
+MU_KEYS = {"name", "feature_version", "dims", "source", "cut", "mu"}
 
 
 def load(p):
@@ -56,9 +56,19 @@ class Export(unittest.TestCase):
         self.assertEqual((j["cut"]["pre_s"], j["cut"]["tail_s"], j["cut"]["norm_peak"]), (1.9, 0.85, 0.5))
         self.assertTrue(j["source"])
 
-    def test_keine_stimmnamen_oder_lizenzbegriffe(self):
-        for p in (MU_PATH, PAR_PATH, os.path.join(HERE, "verifier_export.py")):
-            self.assertIsNone(FORBIDDEN.search(open(p).read()), p)
+    def test_nur_neutrale_texte_in_den_ausgaben(self):
+        """Allowlist statt Sperrliste: mu-JSON hat genau die erwarteten Felder und als Herkunft den festen neutralen Text aus verifier_export;
+        die Paritaetsdatei enthaelt nur Texte, die woertlich in verifier_export.py stehen (keine von aussen eingelesenen Texte)."""
+        mu = load(MU_PATH)
+        self.assertEqual(set(mu), MU_KEYS)
+        self.assertEqual(mu["source"], X.SOURCE)
+        def strings(o):
+            if isinstance(o, dict): return [s for v in o.values() for s in strings(v)]
+            if isinstance(o, list): return [s for v in o for s in strings(v)]
+            return [o] if isinstance(o, str) else []
+        src = open(os.path.join(HERE, "verifier_export.py"), encoding="utf-8").read()
+        free = {t for t in strings(load(PAR_PATH)) if t not in src and not re.fullmatch(r"f\d+", t)}
+        self.assertEqual(free, set(), "freie Texte in der Paritaetsdatei")
 
     def test_export_schreibt_beide_dateien_und_lehnt_falsches_mu_ab(self):
         with tempfile.TemporaryDirectory() as d:
