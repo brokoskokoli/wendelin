@@ -10,6 +10,7 @@ import '../platform/channel_memory_trim.dart';
 import '../platform/voice/audio_playback.dart';
 import '../platform/voice/ducking_tts.dart';
 import '../platform/voice/engine_whisper.dart';
+import '../platform/voice/lazy_vad.dart';
 import '../platform/voice/record_audio_input.dart';
 import '../platform/voice/sherpa_tts.dart';
 import '../platform/voice/silero_vad.dart';
@@ -123,20 +124,29 @@ final voiceActivityDetectorProvider = FutureProvider<VoiceActivityDetector>((
     'Die Sprachaktivitätserkennung',
   );
   final service = await ref.watch(speechModelServiceProvider.future);
-  final watch = Stopwatch()..start();
-  final vad = SileroVoiceActivityDetector(
-    modelPath: '${service.directoryOf(model).path}/${model.files.single.name}',
+  final path = '${service.directoryOf(model).path}/${model.files.single.name}';
+  final vad = LazyVoiceActivityDetector(
     threshold: threshold,
+    open: () {
+      final watch = Stopwatch()..start();
+      final opened = SileroVoiceActivityDetector(
+        modelPath: path,
+        threshold: threshold,
+      );
+      voiceLog('model-load', {
+        'model': model.id,
+        'kind': 'vad',
+        'ms': watch.elapsed,
+      });
+      return opened;
+    },
+    close: (v) {
+      (v as SileroVoiceActivityDetector).dispose();
+      voiceLog('model-free', {'model': model.id, 'kind': 'vad'});
+    },
   );
-  voiceLog('model-load', {
-    'model': model.id,
-    'kind': 'vad',
-    'ms': watch.elapsed,
-  });
-  ref.onDispose(() {
-    vad.dispose();
-    voiceLog('model-free', {'model': model.id, 'kind': 'vad'});
-  });
+  vad.warm();
+  ref.onDispose(vad.dispose);
   return vad;
 });
 
@@ -476,9 +486,10 @@ final voiceComponentsProvider = FutureProvider<VoiceComponents>((ref) async {
   final whisper = await ref.watch(engineWhisperProvider.future);
   final sherpa = ref.watch(sherpaSynthesizerProvider);
   final speaker = ref.watch(speakerRecognizerProvider);
+  final vad = await ref.watch(voiceActivityDetectorProvider.future);
   return VoiceComponents(
     audio: ref.watch(audioInputProvider),
-    vad: await ref.watch(voiceActivityDetectorProvider.future),
+    vad: vad,
     // Names from the vault are corrected after recognition (WP33, B6).
     stt: CorrectingSpeechToText(
       await ref.watch(speechToTextProvider.future),
@@ -489,9 +500,15 @@ final voiceComponentsProvider = FutureProvider<VoiceComponents>((ref) async {
     config: await ref.watch(voicePipelineConfigProvider.future),
     bargeInDetector: ref.watch(bargeInDetectorProvider),
     speaker: speaker,
-    warmUp: whisper.warm,
+    warmUp: () async {
+      if (vad is LazyVoiceActivityDetector) vad.warm();
+      await whisper.warm();
+    },
     release: () async {
       await whisper.release(reason: 'idle');
+      // The overlay engine ends without disposing providers: free the
+      // detector here, the next frame opens it again (WP143).
+      if (vad is LazyVoiceActivityDetector) vad.release();
       await sherpa.dispose();
       // Also with the switch off: the model may be loaded by an enrollment.
       await ref.read(speakerIdentifierProvider).release();

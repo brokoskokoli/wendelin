@@ -3,6 +3,7 @@
 // frees the old one first, idle in the background frees it (WP30).
 
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +15,7 @@ import 'package:wendelin/di/speaker_providers.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/platform/channel_memory_trim.dart';
 import 'package:wendelin/platform/voice/engine_whisper.dart';
+import 'package:wendelin/platform/voice/lazy_vad.dart';
 import 'package:wendelin/platform/voice/pcm.dart';
 import 'package:wendelin/platform/voice/sherpa_tts.dart';
 import 'package:wendelin/platform/voice/whisper_stt.dart';
@@ -251,6 +253,7 @@ void main() {
       List<Override> extra = const [],
       bool keep = false,
       Set<String> installedModels = const {},
+      Override? vad,
     }) {
       final env = TestEnv(
         extraOverrides: [
@@ -258,9 +261,10 @@ void main() {
           whisperLoaderProvider.overrideWithValue((m, _) => process.load(m.id)),
           whisperDirectoryProvider.overrideWithValue(dir),
           memoryTrimSourceProvider.overrideWithValue(trim),
-          voiceActivityDetectorProvider.overrideWith(
-            (ref) async => FakeVoiceActivityDetector(),
-          ),
+          vad ??
+              voiceActivityDetectorProvider.overrideWith(
+                (ref) async => FakeVoiceActivityDetector(),
+              ),
           voiceReleaseDelayProvider.overrideWithValue(releaseDelay),
         ],
       );
@@ -302,6 +306,78 @@ void main() {
       );
       expect(t.text, 'ok whisper-small');
       expect(process.live, hasLength(1));
+    });
+
+    test('sechs Overlay-Zyklen: jedes Laden hat ein Freigeben, nie zwei '
+        'gleichzeitig (Whisper und Silero)', () async {
+      final app = engineContainer(model: 'whisper-base');
+      addTearDown(app.dispose);
+      await app.read(voiceComponentsProvider.future);
+      // The app keeps its own model; the overlay shares it (same size), so
+      // the overlay adds none.
+      var vadLive = 0;
+      var vadMax = 0;
+      var vadLoads = 0;
+      var vadFrees = 0;
+      for (var cycle = 0; cycle < 6; cycle++) {
+        final overlay = engineContainer(
+          model: 'whisper-base',
+          vad: voiceActivityDetectorProvider.overrideWith((ref) async {
+            final vad = LazyVoiceActivityDetector(
+              threshold: 0.5,
+              open: () {
+                vadLoads++;
+                vadMax = math.max(vadMax, ++vadLive);
+                return FakeVoiceActivityDetector();
+              },
+              close: (_) {
+                vadFrees++;
+                vadLive--;
+              },
+            )..warm();
+            // Like the real overlay engine, the container is never disposed
+            // (the engine just ends): ref.onDispose is not relied on.
+            return vad;
+          }),
+        );
+        // No addTearDown(dispose): the engine ends without disposing it.
+        final c = await overlay.read(activeVoiceProvider.future);
+        c!.vad.speechProbability(Int16List(512));
+        await overlay
+            .read(voiceControllerProvider.notifier)
+            .releaseModels(reason: 'overlay-close');
+        expect(vadLive, 0, reason: 'Zyklus $cycle: Silero frei');
+      }
+      expect(vadLoads, 6);
+      expect(vadFrees, vadLoads, reason: 'jedes Laden ein Freigeben');
+      expect(vadMax, 1, reason: 'nie zwei Silero gleichzeitig');
+      expect(process.live, hasLength(1), reason: 'nur das Modell der App');
+      expect(process.loads, 1);
+    });
+
+    test('sechs Overlay-Zyklen mit eigenem Whisper: Laden = Freigeben, '
+        'höchstens ein Modell', () async {
+      var live = 0;
+      var maxLive = 0;
+      final events = <String>[];
+      for (var cycle = 0; cycle < 6; cycle++) {
+        final overlay = engineContainer(model: 'whisper-small');
+        final c = await overlay.read(activeVoiceProvider.future);
+        maxLive = math.max(maxLive, process.live.length);
+        live = process.live.length;
+        events.add('live=$live');
+        await c!.stt.transcribe(Int16List(1600), language: 'de');
+        await overlay
+            .read(voiceControllerProvider.notifier)
+            .releaseModels(reason: 'overlay-close');
+        expect(process.live, isEmpty, reason: 'Zyklus $cycle');
+      }
+      expect(process.loads, 6);
+      expect(
+        process.events.where((e) => e.startsWith('freed ')).length,
+        process.loads,
+      );
+      expect(maxLive, 1);
     });
 
     test('Modellwechsel: danach genau ein Whisper (das neue)', () async {
