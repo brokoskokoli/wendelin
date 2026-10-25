@@ -105,8 +105,15 @@ final class FakeDirectory implements UsageAwareDirectory {
   final usage = <String, int>{};
   final watchers = <String, void Function()>{};
 
+  /// Runs while a `users` answer is on its way (a user leaves meanwhile).
+  void Function()? duringUsers;
+
   @override
-  Future<int> users(String modelId) async => usage[modelId] ?? 0;
+  Future<int> users(String modelId) async {
+    final answer = usage[modelId] ?? 0;
+    duringUsers?.call();
+    return answer;
+  }
 
   @override
   void markUse(String modelId) => usage[modelId] = (usage[modelId] ?? 0) + 1;
@@ -190,6 +197,30 @@ void main() {
         lines.singleWhere((l) => l.contains(' model-load ')),
         contains('live=1'),
       );
+    });
+
+    test('Nutzer geht, während die Antwort auf dem Weg ist: die Freigabe fragt '
+        'später erneut (WP146)', () async {
+      final app = EngineWhisper(
+        modelId: 'whisper-small',
+        load: () => process.load('whisper-small'),
+        directory: dir,
+        countLive: true,
+        recheck: Duration.zero,
+      );
+      final overlay = engine('whisper-small');
+      await app.warm();
+      await overlay.warm();
+      // The user's "left" arrives before the release has noted its wait.
+      dir.duringUsers = () {
+        dir.duringUsers = null;
+        dir.unmarkUse('whisper-small');
+      };
+      await app.release(reason: 'idle');
+      expect(process.live, hasLength(1), reason: 'Antwort war veraltet');
+      await pumpEventQueue();
+      expect(process.live, isEmpty);
+      expect(app.ownsModel, isFalse);
     });
 
     test('Besitzer gibt frei, solange das Overlay das Modell nutzt: erst '

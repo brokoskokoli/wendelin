@@ -116,6 +116,7 @@ final class EngineWhisper implements WhisperBackend {
     this.directory = const IsolateWhisperDirectory(),
     this.countLive = kDebugMode,
     Stopwatch Function()? stopwatch,
+    this.recheck = const Duration(seconds: 30),
   }) : _stopwatch = stopwatch ?? Stopwatch.new;
 
   /// Catalog id (`whisper-base`, `whisper-small`).
@@ -131,7 +132,12 @@ final class EngineWhisper implements WhisperBackend {
   /// process (`live=`, debug builds).
   final bool countLive;
 
+  /// How often a waiting release asks again for the users (a user that left
+  /// unnoticed: its message came in between, or it crashed).
+  final Duration recheck;
+
   final Stopwatch Function() _stopwatch;
+  Timer? _recheck;
 
   WhisperBackend? _own;
   Future<WhisperBackend>? _loading;
@@ -254,6 +260,8 @@ final class EngineWhisper implements WhisperBackend {
       if (_own == null) return; // freed meanwhile
       if (users > 0) {
         _deferred = reason;
+        _recheck?.cancel();
+        _recheck = Timer(recheck, _userLeft);
         voiceLog('model-release-deferred', {
           'model': modelId,
           'users': users,
@@ -263,6 +271,8 @@ final class EngineWhisper implements WhisperBackend {
       }
     }
     _deferred = null;
+    _recheck?.cancel();
+    _recheck = null;
     _released = true;
     final own = _own;
     _own = null;
