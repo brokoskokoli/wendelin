@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/voice_settings_providers.dart';
 import 'package:wendelin/platform/voice/nemo_sherpa.dart';
+import 'package:wendelin/platform/voice/whisper_registry.dart';
 import 'package:wendelin/platform/voice/whisper_sherpa.dart';
 import 'package:wendelin/platform/voice/whisper_stt.dart';
 import 'package:wendelin/platform/wake/device_wake_parts.dart';
@@ -167,6 +168,23 @@ void main() {
       expect(await v.confirm(_tone(900)), isTrue);
       expect(starts, 1);
       expect(backend.peak, inInclusiveRange(16300, 16400));
+    });
+
+    test('eigene Instanz: nichts wird mit der Befehlserkennung geteilt (WP146)', () async {
+      // The command recognizer shares its Parakeet through the registry
+      // (hotwords of the user, other engines borrow it); the verifier loads
+      // an own one with the wake word as hotword and neither publishes nor
+      // borrows, so check and command recognition cannot influence each other.
+      final backend = _Backend('Wendelin');
+      final v = LazyParakeetVerifier(
+        files: () async => _files,
+        idleRelease: const Duration(milliseconds: 10),
+        start: (_) async => backend,
+      );
+      expect(await v.confirm(_tone(900)), isTrue);
+      final id = SpeechModelCatalog.parakeetV3.id;
+      expect(await lookupSharedWhisper(id), isNull);
+      expect(await whisperUsers(id, 'none'), 0);
     });
 
     test('Freigabe nach der Haltezeit (fakeAsync)', () {
