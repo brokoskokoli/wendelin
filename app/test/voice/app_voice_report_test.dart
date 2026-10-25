@@ -1,0 +1,88 @@
+// WP146: the voice controller tells the wake-word service when the app
+// records or is about to, so the service does not open its microphone next to
+// it (two VOICE_RECOGNITION recordings degrade the app's audio).
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/voice_providers.dart';
+import 'package:wendelin/platform/assistant_platform.dart';
+import 'package:wendelin/voice/voice_components.dart';
+import 'package:wendelin/voice/voice_controller.dart';
+import 'package:wendelin_core/testing.dart';
+import 'package:wendelin_voice/testing.dart';
+import 'package:wendelin_voice/wendelin_voice.dart';
+
+import '../overlay/assistant_overlay_test.dart' show FakeAssistantPlatform;
+import '../support/test_env.dart';
+
+void main() {
+  late ProviderContainer c;
+  late FakeAssistantPlatform platform;
+
+  setUp(() {
+    platform = FakeAssistantPlatform();
+    final audio = FakeAudioInput(
+      frames: AudioFrames.pattern('S' * 10 + '.' * 40),
+      frameInterval: const Duration(milliseconds: 30),
+    );
+    final env = TestEnv(
+      providerConfig: scripted(FakeLlmProvider([ScriptedTurn.text('Sonnig.')])),
+      extraOverrides: [
+        voiceReadyProvider.overrideWithValue(true),
+        audioInputProvider.overrideWithValue(audio),
+        assistantPlatformProvider.overrideWithValue(platform),
+        activeVoiceProvider.overrideWith(
+          (ref) async => VoiceComponents(
+            audio: audio,
+            vad: FakeVoiceActivityDetector(),
+            stt: FakeSpeechToText([
+              Transcript(text: 'Wetter?', language: 'de'),
+            ]),
+            textToSpeech: (_) async => null,
+            config: const VoicePipelineConfig(),
+          ),
+        ),
+      ],
+    );
+    c = env.container();
+  });
+  tearDown(() => c.dispose());
+
+  VoiceController voice() => c.read(voiceControllerProvider.notifier);
+
+  test(
+    'Anfrage: aktiv beim Start, frei nach dem Ende (nur Wechsel gemeldet)',
+    () async {
+      c.read(voiceControllerProvider);
+      expect(await voice().start(TriggerKind.pushToTalk), isTrue);
+      expect(platform.appVoice.first, isTrue);
+      expect(platform.appVoice.last, isTrue);
+      await voice().whenIdle;
+      await voice().cancel();
+      expect(platform.appVoice.last, isFalse);
+      // Only changes are reported, never the same value twice in a row.
+      for (var i = 1; i < platform.appVoice.length; i++) {
+        expect(platform.appVoice[i], isNot(platform.appVoice[i - 1]));
+      }
+    },
+  );
+
+  test('Abbruch während der Vorbereitung meldet frei', () async {
+    c.read(voiceControllerProvider);
+    final started = voice().start(TriggerKind.pushToTalk);
+    await voice().cancel();
+    await started;
+    await voice().whenIdle;
+    expect(platform.appVoice.last, isFalse);
+    expect(platform.appVoice.where((b) => b).length, lessThanOrEqualTo(1));
+  });
+
+  test('Dispose während der Aufnahme meldet frei', () async {
+    c.read(voiceControllerProvider);
+    await voice().start(TriggerKind.pushToTalk);
+    expect(platform.appVoice.last, isTrue);
+    c.dispose();
+    expect(platform.appVoice.last, isFalse);
+    // tearDown disposes again: harmless.
+  });
+}

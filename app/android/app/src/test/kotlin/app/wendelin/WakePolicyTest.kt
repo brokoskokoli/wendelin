@@ -347,4 +347,33 @@ class WakePolicyTest {
         assertEquals("engine-failed", WakePolicy.failureReason("no-templates"))
         assertEquals("engine-failed", WakePolicy.failureReason(null))
     }
+
+    @Test
+    fun serviceMicWaitsWhileTheAppRecordsAndForTheQuietTimeAfter() {
+        AppVoice.reset()
+        assertEquals(0L, AppVoice.waitMs(1_000))
+        AppVoice.set("a", true, 1_000)
+        assertEquals(AppVoice.WAIT_FOR_APP, AppVoice.waitMs(1_500))
+        AppVoice.set("a", false, 2_000)
+        assertEquals(AppVoice.QUIET_MS, AppVoice.waitMs(2_000))
+        assertEquals(200L, AppVoice.waitMs(2_500))
+        assertEquals(0L, AppVoice.waitMs(2_700))
+        AppVoice.reset()
+    }
+
+    @Test
+    fun theAppIsActiveUntilEveryEngineEnded() {
+        AppVoice.reset()
+        AppVoice.set("overlay", true, 100)
+        AppVoice.set("main", true, 200)
+        AppVoice.set("overlay", false, 300)
+        assertTrue(AppVoice.active())
+        AppVoice.set("main", false, 400)
+        assertFalse(AppVoice.active())
+        assertEquals(AppVoice.QUIET_MS - 100, AppVoice.waitMs(500))
+        // An end of an engine that never started changes nothing.
+        AppVoice.set("ghost", false, 10_000)
+        assertEquals(0L, AppVoice.waitMs(10_000))
+        AppVoice.reset()
+    }
 }

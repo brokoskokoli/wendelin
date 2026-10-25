@@ -407,3 +407,47 @@ class WakeMicTap(private val keepBytes: Int = 3 * 16_000 * 2) {
         return all.copyOfRange(all.size - n, all.size)
     }
 }
+
+/**
+ * WP146: whether the app records or is about to (a voice request, its answer, a follow-up
+ * window), reported by every Dart engine of the process with its own [source]. The wake-word
+ * service does not open its microphone while this is on and for [QUIET_MS] after it ended: two
+ * `VOICE_RECOGNITION` recordings at once can degrade the app's audio (the conflict watcher closes
+ * the service only afterwards).
+ */
+object AppVoice {
+    const val QUIET_MS = 700L
+
+    private val sources = mutableSetOf<String>()
+    private var endedAt = Long.MIN_VALUE / 2
+
+    @Synchronized
+    fun set(source: String, active: Boolean, nowMs: Long) {
+        if (active) {
+            sources.add(source)
+        } else if (sources.remove(source) && sources.isEmpty()) {
+            endedAt = nowMs
+        }
+    }
+
+    @Synchronized
+    fun active(): Boolean = sources.isNotEmpty()
+
+    /**
+     * How long the service waits before it opens its microphone: 0 = now, [WAIT_FOR_APP] = the
+     * app records (ask again when it reports the end), else the rest of the quiet time in ms.
+     */
+    @Synchronized
+    fun waitMs(nowMs: Long): Long = when {
+        sources.isNotEmpty() -> WAIT_FOR_APP
+        else -> (endedAt + QUIET_MS - nowMs).coerceIn(0L, QUIET_MS)
+    }
+
+    const val WAIT_FOR_APP = -1L
+
+    @Synchronized
+    fun reset() {
+        sources.clear()
+        endedAt = Long.MIN_VALUE / 2
+    }
+}

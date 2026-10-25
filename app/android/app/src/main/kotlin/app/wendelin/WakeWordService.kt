@@ -33,6 +33,8 @@ class WakeWordService : Service() {
     private var resume: Runnable? = null
     private var handoffCheck: Runnable? = null
     private var overlapGuard: Runnable? = null
+    private var micWanted = false
+    private var micDue: Runnable? = null
     private var lastConflict: String? = null
 
     override fun onCreate() {
@@ -124,8 +126,13 @@ class WakeWordService : Service() {
     private fun onEngineCall(call: MethodCall) {
         when (call.method) {
             // While the hit's audio is collected, the microphone stays as it is (WP68).
-            "startMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) startMic()
-            "stopMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) stopMic()
+            "startMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) requestMic()
+            "stopMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) {
+                micWanted = false
+                micDue?.let { main.removeCallbacks(it) }
+                micDue = null
+                stopMic()
+            }
             "hit" -> onHit(call)
             "failed" -> {
                 val reported = call.argument<String>("reason")
@@ -134,6 +141,37 @@ class WakeWordService : Service() {
                 end(WakePolicy.failureReason(reported))
             }
         }
+    }
+
+    /**
+     * WP146: the engine wants the microphone. While the app records (or just did), it waits, so
+     * the service never records next to the app's microphone ([AppVoice]).
+     */
+    private fun requestMic() {
+        if (mic != null) return
+        micDue?.let { main.removeCallbacks(it) }
+        micDue = null
+        val wait = AppVoice.waitMs(System.currentTimeMillis())
+        if (wait == 0L) {
+            micWanted = false
+            startMic()
+            return
+        }
+        micWanted = true
+        VoiceLog.i("wake-mic-deferred app=${wait == AppVoice.WAIT_FOR_APP} waitMs=${wait.coerceAtLeast(0L)}")
+        if (wait > 0L) {
+            val due = Runnable {
+                micDue = null
+                if (micWanted && mic == null) requestMic()
+            }
+            micDue = due
+            main.postDelayed(due, wait)
+        }
+    }
+
+    /** The app's recording state changed (main thread): a waiting microphone may start now. */
+    private fun appVoiceChanged() {
+        if (micWanted && mic == null) requestMic()
     }
 
     private fun startMic() {
@@ -329,6 +367,9 @@ class WakeWordService : Service() {
         handoffCheck = null
         overlapGuard?.let { main.removeCallbacks(it) }
         overlapGuard = null
+        micDue?.let { main.removeCallbacks(it) }
+        micDue = null
+        micWanted = false
         watcher?.stop()
         watcher = null
         lastConflict = null
@@ -458,6 +499,13 @@ class WakeWordService : Service() {
                 s.onHit(MethodCall("hit", mapOf("kw" to "debug", "pcm" to ByteArray(32_000), "end" to 16_000)))
             }
             return true
+        }
+
+        /** WP146: an engine of the app reports that it records (or not); see [AppVoice]. */
+        fun onAppVoice(source: String, active: Boolean) {
+            AppVoice.set(source, active, System.currentTimeMillis())
+            val s = instance ?: return
+            s.main.post { s.appVoiceChanged() }
         }
 
         /** The assistant overlay was closed: the service listens again. */

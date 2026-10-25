@@ -102,6 +102,13 @@ final class FakeAssistantPlatform extends AssistantPlatform
         : WakeHandoffAudio(pcm: audio, wakeEnd: wakeEnd, capturedMs: 120);
   }
 
+  /// Reports of the voice controller to the wake-word service (WP146).
+  final appVoice = <bool>[];
+
+  @override
+  Future<void> appVoiceActive({required bool active}) async =>
+      appVoice.add(active);
+
   /// Takes with `keepOpen` (WP146) and ends of such a handoff.
   int wakeKeptOpen = 0;
   int wakeFinishes = 0;

@@ -15,6 +15,7 @@ import '../di/providers.dart';
 import '../di/sms_drafts.dart';
 import '../di/voice_providers.dart';
 import '../l10n/l10n.dart';
+import '../platform/assistant_platform.dart';
 import '../platform/voice/capture_profile_follower.dart';
 import '../platform/voice/ducking_tts.dart' show SpeechFocus;
 import '../platform/voice/record_audio_input.dart';
@@ -162,6 +163,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   Stopwatch? _wakeTake;
   // WP146: the hit whose service microphone still records, the answer of its
   // `finish` (started with the first frame of this microphone) and that frame.
+  bool _reportedBusy = false;
   WakePreRoll? _handoff;
   Future<WakeTail?>? _tailFuture;
   int? _firstFrameAtMs;
@@ -191,6 +193,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   @override
   VoiceUiState build() {
     _focus = ref.read(speechFocusProvider);
+    final platform = ref.read(assistantPlatformProvider);
     final trim = ref.read(memoryTrimSourceProvider).levels.listen(onMemoryTrim);
     ref
       ..listen(
@@ -218,10 +221,22 @@ final class VoiceController extends Notifier<VoiceUiState> {
       // settings changed) are picked up at the next start (_pipelineFor).
       ..listen(demoModeProvider, (_, _) => unawaited(_reset()))
       ..onDispose(() {
+        if (_reportedBusy) unawaited(platform.appVoiceActive(active: false));
+        _reportedBusy = false;
         unawaited(trim.cancel());
         _releaseTimer?.cancel();
         unawaited(_reset());
       });
+    // WP146: the wake-word service keeps its microphone closed while the app
+    // records or is about to (request, answer, follow-up window). (A short
+    // `false` between preparing and listening is covered by the service's
+    // quiet time.)
+    listenSelf((_, next) {
+      final busy = next.active || next.followUp;
+      if (busy == _reportedBusy) return;
+      _reportedBusy = busy;
+      unawaited(platform.appVoiceActive(active: busy));
+    });
     return const VoiceUiState();
   }
 

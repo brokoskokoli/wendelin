@@ -44,7 +44,11 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
         channel.setMethodCallHandler(this)
     }
 
+    /** This engine in [AppVoice] (one per channel). */
+    private val voiceSource = "ch" + System.identityHashCode(this)
+
     fun dispose() {
+        WakeWordService.onAppVoice(voiceSource, false)
         channel.setMethodCallHandler(null)
     }
 
@@ -116,6 +120,11 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
             }
             "setRecognizerConfig" -> {
                 RecognizerConfig.fromArgs(call.arguments as? Map<*, *>).save(activity)
+                result.success(null)
+            }
+            "appVoiceActive" -> {
+                // WP146: the service keeps its microphone closed while the app records.
+                WakeWordService.onAppVoice(voiceSource, call.argument<Boolean>("active") == true)
                 result.success(null)
             }
             "hasWakeHandoff" -> result.success(WakeHandoff.pending())

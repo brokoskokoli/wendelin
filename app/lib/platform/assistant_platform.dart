@@ -135,6 +135,13 @@ class AssistantPlatform {
     );
   }
 
+  /// Tells the wake-word service whether this app records or is about to (a
+  /// voice request, its answer, a follow-up window, WP146): the service keeps
+  /// its microphone closed meanwhile and for a short time after.
+  Future<void> appVoiceActive({required bool active}) async {
+    await _invoke<void>('appVoiceActive', {'active': active});
+  }
+
   /// Ends a handoff taken with `keepOpen` (WP146): the service stops its
   /// microphone and returns what it recorded since the take, with the time of
   /// its last sample; `null` if nothing was kept open.
