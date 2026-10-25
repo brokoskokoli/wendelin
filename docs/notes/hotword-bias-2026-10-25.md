@@ -109,6 +109,15 @@ Je Schnittversatz (Wake mit Pause bzw. ohne Pause, plain, clean+noisy), nur hw30
 | hw0 s3.0 | 0/1 / 0/1 | 9/20 / 0/20 | 9/20 / 0/20 |
 | hw50 s3.0 | 0/1 / 0/1 | 17/20 / 0/20 | 18/20 / 0/20 |
 
+## Nachmessung Wake-Pfad mit Bonus 0,5 / 1,0 / 1,5 (Review Runde 2)
+
+Frage: Erkennt der gewählte Bonus 1,0 Reste des Weckworts (Schnittversatz -400/-200/0/+200 ms) seltener als „Wendelin“, sodass `stripWakeWord` nicht greift? Aufruf: `hotword-bias-wake --counts 300 --scores 0.5,1.0,1.5` (beam immer dabei), gleiche Fixtures wie oben, 20 Befehle, je Zelle n = 40. Die Tabelle „Weckwort erkannt“ ergänzt das Werkzeug; das echte `stripWakeWord` lief auf den gespeicherten Transkripten (Wake plain, clean + noisy).
+
+- Eingefügte Namen: 0 % in allen Spalten für beam, s0,5, s1,0, s1,5 (je 0/20 bis 0/320).
+- „Wendelin“ wörtlich im Transkript: 0/40 in jeder Zelle, auch ohne Hotwords (beam). `stripWakeWord` greift in 0/320 je Konfiguration, ebenfalls gleich zu beam.
+- Deutung: Der Bonus ändert hier nichts, weil nach dem Schnitt kein vollständiges Wort mehr im Audio liegt. Bei -400 ms bleibt ein Bruchstück („Dillin“, „Silling“, „The Lynn“, „Silent“; Abstand zu „wendelin“ 3 oder mehr), bei -200 ms und später nichts. Mit Pause steht stattdessen ein Füllwort („Mm.“, „Then.“) als eigener Satz vor dem Befehl. Beides bleibt mit `stripWakeWord` stehen, mit beam genauso wie mit 1,0. Das Risiko liegt damit am Schnittpunkt der Übergabe, nicht am Bonus; ob es am Gerät auftritt, zeigen `relisten reason=wake-only` und der Text vor dem Befehl (offen, Gerätebeleg).
+- Plausibilität: Die Nullrate für „Wendelin“ ist kein Fehler des Bonus, sondern folgt aus dem Versuchsaufbau (Wort geschnitten). Sie sagt nichts darüber, wie oft ein vollständig erhaltenes Weckwort erkannt wird (dort wirkt der Bonus, siehe Sanity-Zeile in `wake-word-station-spike.md`). Synthetische Stimmen, n = 40 je Zelle (Wilson-Obergrenze bei 0/40: 9 %).
+
 ## Deutung
 
 - Ohne Hotwords (greedy und beam) erscheint in keiner Bedingung ein Listenname; bei Stille und Rauschen bleibt greedy leer. Die Beam-Suche selbst ist nicht die Ursache: gleiche WER wie greedy, nur leicht mehr Leerausgaben bei Rauschen.

@@ -735,8 +735,8 @@ def cmd_hotword_bias_wake(a):
         for scen, segs in wake_variants(it, 31 + k):
             jobs.append((scen, it, segs))
     cfgs = [("beam", dict(method="beam", n=0, score=0.0))]
-    for n in (0, 50, 300):
-        for sc in (1.5, 3.0):
+    for n in [int(x) for x in a.counts.split(",")]:
+        for sc in [float(x) for x in a.scores.split(",")]:
             cfgs.append((f"hw{n} s{sc}", dict(method="hw", n=n, score=sc)))
     out = dict(rows={}, hyps={}, n_cmds=len(items))
     for label, cfg in cfgs:
@@ -782,6 +782,17 @@ def hbw_markdown(out):
             for path in ("np", "p"):
                 L.append(f"| {label} | {path} | " + " | ".join(
                     agg(out["rows"][label], lambda p, o=o, path=path: p[0] == path and p[1] == str(o) and p[2] == "plain") for o in WAKE_OFFSETS) + " |")
+    L += ["", "Weckwort „Wendelin“ im Transkript erkannt (Wake mit Schnitt, plain, clean+noisy; Trefferrate je Schnittversatz):", "",
+          "| Konfiguration | Pfad | -400 | -200 | 0 | +200 |", "|---|---|--:|--:|--:|--:|"]
+    def wend(rows, pred):
+        ks = [k for k in rows if pred(k.split("/"))]
+        n = sum(rows[k]["n"] for k in ks); i = sum(rows[k]["wend"] for k in ks)
+        lo, hi = wilson(i, n)
+        return f"{100 * i / max(n, 1):.0f}% ({i}/{n}; {100 * lo:.0f}-{100 * hi:.0f})"
+    for label, rows in out["rows"].items():
+        for path in ("np", "p"):
+            L.append(f"| {label} | {path} | " + " | ".join(
+                wend(rows, lambda p, o=o, path=path: p[0] == path and p[1] == str(o) and p[2] == "plain") for o in WAKE_OFFSETS) + " |")
     return "\n".join(L)
 
 
@@ -824,6 +835,8 @@ def main():
     w.add_argument("--threads", type=int, default=4)
     w.add_argument("--cache", default=os.path.join(os.environ.get("TMPDIR", "/tmp"), "wp146-hb"))
     w.add_argument("--out", default="hotword-bias-wake.json")
+    w.add_argument("--counts", default="0,50,300", help="Anzahl erfundener Kontakte, kommagetrennt")
+    w.add_argument("--scores", default="1.5,3.0", help="Hotword-Boni, kommagetrennt")
     t = sub.add_parser("table")
     t.add_argument("--stt"); t.add_argument("--tts")
     a = ap.parse_args()
