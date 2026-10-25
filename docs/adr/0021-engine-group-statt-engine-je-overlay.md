@@ -1,6 +1,6 @@
 # ADR 0021 – Engine-Group statt Flutter-Engine je Overlay (WP145)
 
-Status: vorgeschlagen · 2026-10-24
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-24
 
 ## Kontext
 Messung WP143 (Emulator, Debug-Build): Silero 30× laden/freigeben und Whisper 15× laden/freigeben sind flach, 20× Overlay öffnen und schließen lässt den Native Heap um rund 4,2 MB je Öffnung ohne Plateau wachsen, Java, Objekte und Activities bleiben flach. Jedes Overlay (`AssistantActivity`, `StationActivity`) startete über den Standardweg von `FlutterActivity` eine neue Engine in einer **eigenen** `FlutterEngineGroup`. Zunächst war das als Ursache des Wachstums vermutet.

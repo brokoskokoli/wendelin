@@ -1,6 +1,6 @@
 # ADR 0019 – NEAR AI Cloud als zweiter TEE-Anbieter mit E2EE inkl. Tools (WP75)
 
-Status: vorgeschlagen · 2026-10-15
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-15
 
 ## Kontext
 Phala v2 (ADR 0018) verschlüsselt nur Nachrichtentexte bis zum Gateway; `tools`, `tool_choice` und Tool-Aufrufe bleiben Klartext unter dem gepinnten TLS. Die NEAR AI Cloud (`cloud-api.near.ai`) verschlüsselt mit dem Header `X-Encrypt-All-Fields: true` alles bis ins Modell-TEE, auch Tools. Spike und Recherche: `docs/notes/near-spike.md`, `docs/notes/e2ee-alternatives.md`. Alle Aussagen unten zum Wire sind am 2026-10-15 gegen den echten Dienst gemessen (nicht-streamend und streamend, mit Tool-Aufruf), nicht nur der Doku entnommen.

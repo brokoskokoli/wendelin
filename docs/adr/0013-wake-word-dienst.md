@@ -1,6 +1,6 @@
 # ADR 0013 – Wake-Word-Dienst (Android)
 
-Status: vorgeschlagen · 2026-10-14
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-14
 
 ## Kontext
 K29 beschreibt die zweistufige Erkennung (WP44, WP60): Stufe 1 ist die openWakeWord-Merkmalskette mit den persönlichen Vorlagen aller eingelernten Sprecher, Stufe 2 die Whisper-Nachprüfung. WP50 Teil a bringt sie als Dauerdienst auf Android. Randbedingungen: Android 14+ verlangt für Mikrofon-Dienste den Typ `microphone` und einen sichtbaren Kontext beim Start, der Dienst soll in der Ruhe unter 200 MB bleiben (K14 c), ein Neustart ohne App-Aufruf soll ihn mit der Assistentenrolle zurückholen (Entscheidung Maintainer 5), Standard ist „nur beim Laden“ (Entscheidung 7).

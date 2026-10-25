@@ -1,6 +1,6 @@
 # ADR 0012 – Nutzerdefinierte Integrationen und App-Erkennung in der App
 
-Status: vorgeschlagen · 2026-10-13
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-13
 
 ## Kontext
 Bis M2 sind alle Integrationen eingebaut: `IntegrationSpec` in `builtInIntegrationSpecs` (ADR 0004 §5), eine feste Menge, die beim Start registriert wird. M3 bringt zwei Wege, die der Nutzer selbst anlegt (Konzept „Erweiterungswege“): MCP-Server (WP27) und HTTP-Tools (WP28). Ihre Anzahl und ihre Tools ändern sich zur Laufzeit, sie haben Secrets, und sie können mit eingebauten Tools kollidieren. Damit WP27 und WP28 parallel arbeiten können, legt WP25 den gemeinsamen Erweiterungspunkt fest.

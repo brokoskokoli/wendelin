@@ -1,6 +1,6 @@
 # ADR 0004 – App-Verdrahtung (`app/`)
 
-Status: vorgeschlagen · 2026-10-13
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-13
 
 ## Kontext
 WP08 verdrahtet die reinen Dart-Pakete in der Flutter-App: Datenbank, Secrets, Plattform-Ports, Tool-Registry, Provider, Agent-Schleife, Audit-Log und Hauptbildschirm. Einige Punkte lassen Konzept und Paket-ADRs offen.

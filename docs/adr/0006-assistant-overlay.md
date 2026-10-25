@@ -1,6 +1,6 @@
 # ADR 0006 – Standard-Assistent, Overlay, Push-to-talk, Vault-Zugriff (`app/` + Kotlin)
 
-Status: vorgeschlagen · 2026-10-13
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-13
 
 ## Kontext
 WP18 macht Wendelin zum Android-Standard-Assistenten, baut das Assistenten-Overlay laut `docs/design/screens/overlay`, schaltet Push-to-talk im Hauptbildschirm frei und gibt der Obsidian-Integration (WP16) einen SAF-Vault auf dem Gerät. Die Sprach-Plattform (sherpa-onnx, Aufnahme, TTS) entsteht parallel in WP17.

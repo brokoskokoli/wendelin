@@ -1,6 +1,6 @@
 # ADR 0010 – MCP-Client (`packages/wendelin_mcp/`)
 
-Status: vorgeschlagen · 2026-10-13
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-13
 
 ## Kontext
 Das Konzept („MCP-Integration“) verlangt einen eigenen MCP-Client, damit Tools von Remote-Servern mit jedem LLM-Provider funktionieren: jeder Server wird eine Integration in derselben `ToolRegistry`. M3 ist fertig, wenn ein MCP-Server auf dem Homeserver über Tailscale Tools liefert. Offen waren Paketschnitt, Transport, Lebensdauer der Verbindung, Umgang mit Server-Annotationen, Undo und Netzziele.

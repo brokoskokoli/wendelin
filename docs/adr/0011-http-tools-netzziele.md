@@ -1,6 +1,6 @@
 # ADR 0011 – HTTP-Tools und Netzziele
 
-Status: vorgeschlagen · 2026-10-13
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-13
 
 ## Kontext
 Mit HTTP-Tools (WP23, Konzept „Erweiterungswege 1“) definiert der Nutzer eigene Tools aus Methode, URL-Vorlage, Headern, Body und Anmeldung. Das Modell füllt die Argumente. Daraus folgen drei Risiken:

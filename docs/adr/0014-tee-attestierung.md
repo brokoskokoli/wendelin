@@ -1,6 +1,6 @@
 # ADR 0014 – TEE-Attestierung: Vertrauensanker, Prüfstufen, Status
 
-Status: vorgeschlagen · 2026-10-14 (WP46, Grundlage: Spike WP43, `docs/notes/attestation-spike-2026-10-14.md`)
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-14 (WP46, Grundlage: Spike WP43, `docs/notes/attestation-spike-2026-10-14.md`)
 
 ## Kontext
 TEE-Provider (Phala/RedPill) sollen nur genutzt werden, wenn die Enklave geprüft ist (Konzept „TEE-Provider und Attestierung“, K2, K23). Die Prüfung besteht aus kryptografischen Schritten (TDX-Quote, Ed25519, Hashes) und aus Protokolllogik (Bindung, Frische, Pinning, Status). WP46 baut die Logik in Dart gegen einen Port, WP47 liefert die Krypto in Rust.
