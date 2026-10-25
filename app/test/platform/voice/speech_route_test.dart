@@ -11,8 +11,11 @@ import 'package:wendelin/platform/channel_audio_focus_port.dart';
 import 'package:wendelin/platform/voice/audio_playback.dart';
 import 'package:wendelin/platform/voice/ducking_tts.dart';
 import 'package:wendelin/platform/voice/pcm.dart';
+import 'package:wendelin/platform/voice/record_audio_input.dart';
 import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
+
+import '../../support/fake_microphone.dart';
 
 final class _Focus implements AudioFocusPort {
   final log = <String>[];
@@ -58,6 +61,25 @@ final class _SlowRoute implements SpeechRoutePort {
 
   @override
   Future<void> leave() async => log.add('leave');
+}
+
+final class _HangingLeave implements SpeechRoutePort {
+  _HangingLeave(this.log);
+  final List<String> log;
+
+  @override
+  Future<String?> enter() async => 'speaker';
+
+  @override
+  Future<void> leave() => Completer<void>().future;
+}
+
+final class _ThrowingLeave implements SpeechRoutePort {
+  @override
+  Future<String?> enter() async => 'speaker';
+
+  @override
+  Future<void> leave() async => throw StateError('leave');
 }
 
 final class _Tts implements TextToSpeech {
@@ -508,6 +530,118 @@ void main() {
       expect(await port.enter(), isNull);
       expect(await port.audioMode(), isNull);
       await port.leave();
+    });
+  });
+
+  // WP146 (Folgerunde): Der Gesprächston wurde erst nach der Haltezeit
+  // (1,5 s) und ohne Warten zurückgesetzt; die Folgeaufnahme startete im
+  // Kommunikationsmodus.
+  group('Folgeaufnahme nach der Antwort', () {
+    late FakePcmRecorder rec;
+    late List<String> atStart;
+    late RecordAudioInput mic;
+
+    void open(SpeechFocus f, {SpeechRoutePort? slow}) {
+      rec = FakePcmRecorder();
+      atStart = [];
+      mic = RecordAudioInput(rec, f.settle, () async {
+        atStart = List.of(events);
+        return events.contains('leave') ? 0 : 3;
+      });
+      mic.start().listen((_) {});
+    }
+
+    test('Antwort fertig: Pfad ist zurück, bevor das Mikrofon öffnet', () {
+      fakeAsync((async) {
+        final f = build();
+        final g = f.generation;
+        f.begin();
+        async.flushMicrotasks();
+        f.end(g);
+        open(f);
+        async.flushMicrotasks();
+        expect(rec.starts, 1);
+        expect(atStart, ['enter', 'leave']);
+        expect(
+          logLines.any((l) => l.contains('mic-start') && l.contains('mode=0')),
+          isTrue,
+        );
+        async.elapse(const Duration(seconds: 5));
+        expect(events, ['enter', 'leave'], reason: 'kein zweites leave');
+        unawaited(mic.stop());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('Satz läuft noch (Barge-in): Pfad bleibt', () {
+      fakeAsync((async) {
+        final f = build();
+        f.begin();
+        async.flushMicrotasks();
+        open(f);
+        async.flushMicrotasks();
+        expect(rec.starts, 1);
+        expect(atStart, ['enter']);
+        unawaited(mic.stop());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('Antwort noch in Arbeit (busy): Pfad bleibt', () {
+      fakeAsync((async) {
+        final f = build();
+        final g = f.generation;
+        f.begin();
+        async.flushMicrotasks();
+        f.busy = true;
+        f.end(g);
+        open(f);
+        async.flushMicrotasks();
+        expect(atStart, ['enter']);
+        unawaited(mic.stop());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('Rückgabe hängt: Mikrofon startet nach der Frist trotzdem', () {
+      fakeAsync((async) {
+        final f = SpeechFocus(
+          focus,
+          route: _HangingLeave(events),
+          communication: () async => true,
+        );
+        final g = f.generation;
+        f.begin();
+        async.flushMicrotasks();
+        f.end(g);
+        open(f);
+        async.flushMicrotasks();
+        expect(rec.starts, 0, reason: 'wartet auf die Rückgabe');
+        async.elapse(f.settleTimeout);
+        async.flushMicrotasks();
+        expect(rec.starts, 1);
+        unawaited(mic.stop());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('Rückgabe wirft: Mikrofon startet trotzdem', () {
+      fakeAsync((async) {
+        final f = SpeechFocus(
+          focus,
+          route: _ThrowingLeave(),
+          communication: () async => true,
+        );
+        final g = f.generation;
+        f.begin();
+        async.flushMicrotasks();
+        f.end(g);
+        open(f);
+        async.flushMicrotasks();
+        expect(rec.starts, 1);
+        unawaited(mic.stop());
+        async.flushMicrotasks();
+      });
     });
   });
 }

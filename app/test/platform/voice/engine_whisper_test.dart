@@ -180,6 +180,16 @@ void main() {
       countLive: true,
     );
 
+    test('Ergebnis nennt die Instanz: own beim Besitzer, shared beim Entleiher '
+        '(WP146)', () async {
+      final app = engine('whisper-small');
+      final overlay = engine('whisper-small');
+      await app.warm();
+      await overlay.warm();
+      expect((await app.transcribe(samples)).diag.instance, 'own');
+      expect((await overlay.transcribe(samples)).diag.instance, 'shared');
+    });
+
     test('zwei Engines (App, Overlay): ein Modell, geteilt', () async {
       final app = engine('whisper-small');
       final overlay = engine('whisper-small');

@@ -222,7 +222,12 @@ WakeFeatureExtractor Function() _featuresFactory(
 /// Stage 2 on Whisper; `null` while Whisper is not loaded.
 final wakeVerifierProvider = FutureProvider<WakeVerifier?>((ref) async {
   try {
-    return TranscriptWakeVerifier(await ref.watch(speechToTextProvider.future));
+    final stt = await ref.watch(speechToTextProvider.future);
+    // The name shows in the test which recognizer decided (WP146).
+    return TranscriptWakeVerifier(
+      stt,
+      kind: stt.info.name.startsWith('Parakeet') ? 'parakeet' : 'whisper',
+    );
   } on Object {
     return null;
   }

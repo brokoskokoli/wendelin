@@ -23,6 +23,10 @@ abstract final class AppSettings {
   /// text (`0.05` default, `0.00`, `-0.05`).
   static final bargeMargin = SettingKey.string('debug.bargeMargin');
 
+  /// Developer setting (WP146, hidden): bonus of the hint terms (contact
+  /// names) in the recognizer as text (`0.5`, `1.0` default, `1.5`).
+  static final hotwordsBonus = SettingKey.string('debug.hotwordsBonus');
+
   /// WP118 (K88, „Erweitert“): speak the answer in the call path
   /// (`MODE_IN_COMMUNICATION`, `USAGE_VOICE_COMMUNICATION`) for a better echo
   /// cancellation; off by default.

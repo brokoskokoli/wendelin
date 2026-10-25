@@ -15,6 +15,7 @@ final class WhisperResult {
     required this.text,
     this.language = '',
     this.meanLogProb,
+    this.diag = const SttRunDiag(),
   });
 
   /// Recognized text as returned by the model.
@@ -28,21 +29,131 @@ final class WhisperResult {
   /// sherpa-onnx), `null` if the model does not report it. Only logged
   /// (`stt-lang lp=`), never used to block (WP140).
   final double? meanLogProb;
+
+  /// Numbers and codes about the run for the log (WP146), see [SttRunDiag].
+  final SttRunDiag diag;
+
+  /// The same result, with [diag] replaced.
+  WhisperResult withDiag(SttRunDiag diag) => WhisperResult(
+    text: text,
+    language: language,
+    meanLogProb: meanLogProb,
+    diag: diag,
+  );
+}
+
+/// What the log line of a transcription says about the run beside the text
+/// (WP146). Numbers and codes only: how many hint terms were configured and
+/// found, never which.
+@immutable
+final class SttRunDiag {
+  /// Creates the diagnostics; unknown values stay `null`.
+  const SttRunDiag({
+    this.minLogProb,
+    this.decoding,
+    this.hotwords,
+    this.hotwordsScore,
+    this.hotwordHits,
+    this.owner,
+    this.instance,
+  });
+
+  /// Smallest log probability of one output token (a single wrong token
+  /// shows here, the mean hides it).
+  final double? minLogProb;
+
+  /// `greedy` or `beam` (`modified_beam_search`).
+  final String? decoding;
+
+  /// Number of hotwords the model was loaded with.
+  final int? hotwords;
+
+  /// Hotword bonus the model was loaded with.
+  final double? hotwordsScore;
+
+  /// Number of hotwords found in the raw text (a count, never the term).
+  final int? hotwordHits;
+
+  /// Engine (`app`, `overlay`, `recognizer`, `wake`) whose isolate ran the
+  /// model.
+  final String? owner;
+
+  /// `own` (the caller's model) or `shared` (another engine's model).
+  final String? instance;
+
+  /// The same with [instance] set.
+  SttRunDiag withInstance(String instance) => SttRunDiag(
+    minLogProb: minLogProb,
+    decoding: decoding,
+    hotwords: hotwords,
+    hotwordsScore: hotwordsScore,
+    hotwordHits: hotwordHits,
+    owner: owner,
+    instance: instance,
+  );
+
+  /// The same with [owner] set.
+  SttRunDiag withOwner(String owner) => SttRunDiag(
+    minLogProb: minLogProb,
+    decoding: decoding,
+    hotwords: hotwords,
+    hotwordsScore: hotwordsScore,
+    hotwordHits: hotwordHits,
+    owner: owner,
+    instance: instance,
+  );
+
+  /// Message form for the isolate boundary.
+  List<Object?> toList() => [
+    minLogProb,
+    decoding,
+    hotwords,
+    hotwordsScore,
+    hotwordHits,
+    owner,
+  ];
+
+  /// Reads [toList]; anything else gives the empty value.
+  static SttRunDiag fromList(Object? v) => switch (v) {
+    [
+      final double? min,
+      final String? dec,
+      final int? hw,
+      final double? score,
+      final int? hits,
+      final String? owner,
+    ] =>
+      SttRunDiag(
+        minLogProb: min,
+        decoding: dec,
+        hotwords: hw,
+        hotwordsScore: score,
+        hotwordHits: hits,
+        owner: owner,
+      ),
+    _ => const SttRunDiag(),
+  };
 }
 
 /// Mean of the `ys_log_probs` in the result JSON of sherpa-onnx, `null`
 /// when the field is missing, empty, not numeric or the JSON is invalid.
-double? meanLogProbOf(String? json) {
+double? meanLogProbOf(String? json) => logProbsOf(json)?.mean;
+
+/// Mean and smallest `ys_log_probs` of the result JSON (`null` as for
+/// [meanLogProbOf]).
+({double mean, double min})? logProbsOf(String? json) {
   if (json == null) return null;
   try {
     final probs = (jsonDecode(json) as Map<String, Object?>)['ys_log_probs'];
     if (probs is! List || probs.isEmpty) return null;
     var sum = 0.0;
+    var min = double.infinity;
     for (final p in probs) {
       if (p is! num) return null;
       sum += p;
+      if (p < min) min = p.toDouble();
     }
-    return sum / probs.length;
+    return (mean: sum / probs.length, min: min);
   } on Object {
     return null;
   }
@@ -178,6 +289,7 @@ final class WhisperSpeechToText implements SpeechToText {
     );
     onTiming?.call(timing);
     final text = cleanWhisperText(raw.text);
+    final d = raw.diag;
     final detected = primaryLanguage(raw.language);
     final lang = fixed ?? (languages.contains(detected) ? detected : null);
     final confidence = text.isEmpty
@@ -201,6 +313,17 @@ final class WhisperSpeechToText implements SpeechToText {
       'detected': detected.isEmpty ? null : detected,
       'conf': confidence,
       'lp': raw.meanLogProb,
+      // WP146: which instance and settings produced the text (numbers and
+      // codes only).
+      'min': d.minLogProb,
+      'audio': timing.audio,
+      'ms': timing.compute,
+      'inst': d.instance ?? 'own',
+      'owner': d.owner,
+      'dec': d.decoding,
+      'hw': d.hotwords,
+      'hws': d.hotwordsScore,
+      'hits': d.hotwordHits,
     });
     if (text.isEmpty) return Transcript(text: '', language: lang);
     return Transcript(text: text, language: lang, confidence: confidence);

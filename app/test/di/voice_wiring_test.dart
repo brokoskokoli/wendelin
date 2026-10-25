@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/core_providers.dart';
 import 'package:wendelin/di/home_assistant.dart';
 import 'package:wendelin/di/startup.dart';
@@ -117,6 +118,61 @@ void main() {
       expect(terms, contains('Wendelin'));
     },
   );
+
+  group('Entwickler-Einstellung Bonus Hinweisbegriffe (WP146)', () {
+    Future<double?> loadedScore(String? setting) async {
+      final storage = openInMemoryStorage();
+      addTearDown(storage.close);
+      if (setting != null) {
+        await storage.settings.set(AppSettings.hotwordsBonus, setting);
+      }
+      double? seen;
+      final c = ProviderContainer(
+        overrides: [
+          storageProvider.overrideWithValue(storage),
+          haStoreProvider.overrideWithValue(
+            SecretStoreHa(InMemorySecretStore()),
+          ),
+          sttBackendStarterProvider.overrideWithValue((
+            model,
+            dir, {
+            hintTerms = const [],
+            hotwordsScore = -1,
+            fallbackLanguage = 'de',
+          }) async {
+            seen = hotwordsScore;
+            return _NoBackend();
+          }),
+        ],
+      );
+      addTearDown(c.dispose);
+      await c.read(whisperLoaderProvider)(SpeechModelCatalog.parakeetV3, '/x');
+      return seen;
+    }
+
+    test('Standard 1,0, gewählter Wert geht an den Erkenner', () async {
+      expect(await loadedScore(null), 1.0);
+      expect(await loadedScore('0.5'), 0.5);
+      expect(await loadedScore('1.5'), 1.5);
+    });
+
+    test('unbekannter Wert: Standard', () async {
+      expect(await loadedScore('9.9'), 1.0);
+    });
+
+    test('Wechsel baut den Erkenner neu (Provider-Abhängigkeit)', () async {
+      final storage = openInMemoryStorage();
+      addTearDown(storage.close);
+      final c = ProviderContainer(
+        overrides: [storageProvider.overrideWithValue(storage)],
+      );
+      addTearDown(c.dispose);
+      expect(await c.read(hotwordsBonusProvider.future), 1.0);
+      await storage.settings.set(AppSettings.hotwordsBonus, '1.5');
+      c.invalidate(hotwordsBonusProvider);
+      expect(await c.read(hotwordsBonusProvider.future), 1.5);
+    });
+  });
 
   group('installedSherpaVoices', () {
     late Directory root;

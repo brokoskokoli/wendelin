@@ -3,6 +3,7 @@ part of 'voice_pipeline.dart';
 /// Announcing the listening phase and the confidence gate (WP140).
 extension VoicePipelineListen on VoicePipeline {
   void _announceListening(TriggerEvent? trigger, bool followUp) {
+    _listenLog.followUp = followUp;
     _emit(
       VoiceListening(trigger: followUp ? null : trigger, followUp: followUp),
     );
@@ -90,10 +91,16 @@ extension VoicePipelineListen on VoicePipeline {
     void Function(Endpoint?) end,
     void Function(Object) fail,
     Completer<Endpoint?> done,
+    void Function() onFirstFrame,
   ) {
+    var first = true;
     final sub = audio.start().listen(
       (frame) {
         if (done.isCompleted || frame.isEmpty) return;
+        if (first) {
+          first = false;
+          onFirstFrame();
+        }
         levels.add(frame);
         try {
           final e = endpointer.add(frame, speech: vad.isSpeech(frame));
@@ -198,4 +205,54 @@ final class _LevelLog {
 
   static int _db(double v) =>
       v < 1 ? -99 : (20 * math.log(v / 32768) / math.ln10).round();
+}
+
+/// Diagnostic numbers of the recordings (WP146): when the answer ended and
+/// how long the microphone took to deliver the first frame.
+final class _ListenLog {
+  /// When the answer stopped being spoken (null: none yet).
+  DateTime? speakEnded;
+
+  /// Whether the next recording is a follow-up one.
+  bool followUp = false;
+
+  /// Starts the log of one recording (read at its start).
+  _RecordingLog start(void Function(String)? sink, Clock clock) =>
+      _RecordingLog(sink, clock, followUp, speakEnded);
+}
+
+/// The log lines `listen-open` and `listen-end` of one recording (numbers
+/// only).
+final class _RecordingLog {
+  _RecordingLog(this._sink, this._clock, this._follow, this._speakEnded)
+    : _opening = Stopwatch()..start();
+
+  final void Function(String)? _sink;
+  final Clock _clock;
+  final bool _follow;
+  final DateTime? _speakEnded;
+  final Stopwatch _opening;
+
+  /// The first frame arrived: how long after the end of the answer (words
+  /// spoken meanwhile are lost) and after the start of the recording.
+  void opened() {
+    final at = _speakEnded;
+    final since = at == null ? -1 : _clock.now().difference(at).inMilliseconds;
+    _sink?.call(
+      'listen-open follow=$_follow sinceSpeak=$since '
+      'openMs=${_opening.elapsedMilliseconds}',
+    );
+  }
+
+  /// The recording ended with [result].
+  void ended(Endpoint? result) {
+    final ms = result == null
+        ? 0
+        : samplesToDuration(result.pcm.length).inMilliseconds;
+    _sink?.call(
+      'listen-end follow=$_follow kind=${result?.kind.name} '
+      'reason=${result?.reason.name} '
+      'lead=${result?.speechStart?.inMilliseconds ?? -1} ms=$ms',
+    );
+  }
 }

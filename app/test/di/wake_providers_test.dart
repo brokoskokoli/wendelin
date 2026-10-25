@@ -9,6 +9,7 @@ import 'package:wendelin/voice/wake/wake_barge_in.dart';
 import 'package:wendelin/voice/wake/wake_storage.dart';
 import 'package:wendelin/voice/wake/wake_template_audit.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
+import 'package:wendelin_voice/fakes.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../support/test_env.dart';
@@ -188,6 +189,34 @@ void main() {
       ),
     );
   });
+
+  test(
+    'Prüfer im Ausprobieren trägt den Namen des Erkenners (WP146)',
+    () async {
+      for (final (engine, kind) in [
+        ('Parakeet (sherpa-onnx)', 'parakeet'),
+        ('Whisper (sherpa-onnx)', 'whisper'),
+      ]) {
+        final env = TestEnv(
+          extraOverrides: [
+            speechToTextProvider.overrideWith(
+              (ref) async => FakeSpeechToText(
+                const [],
+                SpeechToTextEngineInfo(
+                  name: engine,
+                  languages: const {'de'},
+                  model: 'm',
+                ),
+              ),
+            ),
+          ],
+        );
+        final c = env.container();
+        addTearDown(c.dispose);
+        expect((await c.read(wakeVerifierProvider.future))!.kind, kind);
+      }
+    },
+  );
 
   test('Prüfer fehlt ohne Whisper (null statt Absturz)', () async {
     final env = TestEnv();

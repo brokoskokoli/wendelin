@@ -51,7 +51,7 @@ STT = {
                               f=("encoder.int8.onnx", "decoder.int8.onnx", "tokens.txt")),
 }
 GTCRN = "gtcrn_simple.onnx"
-HOTWORDS_SCORE = 3.0
+HOTWORDS_SCORE = 1.0                             # = defaultHotwordsScore (WP146)
 
 LONG = {
     "de": ("Anna", "Bitte lege morgen früh um halb acht einen Termin mit dem Zahnarzt in meinem Kalender an, erinnere mich "

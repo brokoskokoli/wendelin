@@ -294,7 +294,7 @@ void main() {
       final c = await pumpWake(tester, env, const WakeWordScreen());
       final sw = find.descendant(
         of: find.ancestor(
-          of: find.text('Nachprüfung mit Whisper'),
+          of: find.text('Nachprüfung (Stufe 2)'),
           matching: find.byType(InkWell),
         ),
         matching: find.byType(WSwitch),
@@ -342,7 +342,7 @@ void main() {
       await store.saveSpeakers(const [WakeSpeaker(id: 'a', name: 'Anna')]);
       await pumpWake(tester, env, const WakeWordScreen());
       expect(find.text('9 Aufnahmen · Schwelle 0.90'), findsOneWidget);
-      expect(find.textContaining('Prüfer'), findsNothing);
+      expect(find.textContaining('Neu einlernen für den Prüfer'), findsNothing);
     });
 
     testWidgets('Sprecherverwaltung: listen, neu einlernen, einzeln löschen', (
@@ -553,6 +553,44 @@ void main() {
       expect(find.textContaining('Nachprüfung: bestätigt'), findsOneWidget);
       expect(find.textContaining('Nachprüfung: nicht bestätigt'), findsWidgets);
       expect(find.textContaining('höchste Ähnlichkeit 1.00'), findsOneWidget);
+    });
+
+    for (final (kind, name) in [
+      ('b', 'Prüfer B'),
+      ('parakeet', 'Parakeet'),
+      ('whisper', 'Whisper'),
+    ]) {
+      testWidgets('Nachprüfung nennt den Prüfer: $kind (WP146)', (
+        tester,
+      ) async {
+        final env = wakeEnv(
+          audio: SilentSeconds(10),
+          verifier: FakeWakeVerifier(kind: kind),
+          vector: (end) => v([1, 0, 0, 0]),
+        );
+        await pumpWake(tester, env, WakeTestScreen(speakers: [templates('a')]));
+        await until(tester, find.textContaining('Kandidat ·'), many: true);
+        await seconds(tester, 8);
+        expect(
+          find.textContaining('Nachprüfung: bestätigt (Prüfer: $name)'),
+          findsWidgets,
+        );
+      });
+    }
+
+    testWidgets('unbekannter Prüfer: nur das Ergebnis, keine Klammer', (
+      tester,
+    ) async {
+      final env = wakeEnv(
+        audio: SilentSeconds(10),
+        verifier: FakeWakeVerifier(),
+        vector: (end) => v([1, 0, 0, 0]),
+      );
+      await pumpWake(tester, env, WakeTestScreen(speakers: [templates('a')]));
+      await until(tester, find.textContaining('Kandidat ·'), many: true);
+      await seconds(tester, 8);
+      expect(find.textContaining('Nachprüfung: bestätigt ·'), findsWidgets);
+      expect(find.textContaining('(Prüfer:'), findsNothing);
     });
 
     testWidgets('ohne Whisper: „nicht möglich“ statt stiller Bestätigung', (

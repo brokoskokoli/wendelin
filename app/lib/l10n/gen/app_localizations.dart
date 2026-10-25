@@ -8235,6 +8235,18 @@ abstract class AppLocalizations {
   /// **'Erweitert: Unterbrechen'**
   String get bargeDebugTitle;
 
+  /// No description provided for @hotwordsBonusHelp.
+  ///
+  /// In de, this message translates to:
+  /// **'Wie stark Namen aus deinen Kontakten und Begriffen bei der Spracherkennung bevorzugt werden. Höher: Namen werden öfter getroffen, dafür tauchen sie auch in Rauschen oder abgeschnittenem Ton auf. Niedriger: weniger falsche Namen. Der Erkenner wird beim Wechsel neu geladen.'**
+  String get hotwordsBonusHelp;
+
+  /// No description provided for @hotwordsBonusTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Bonus Hinweisbegriffe'**
+  String get hotwordsBonusTitle;
+
   /// No description provided for @micAllowTitle.
   ///
   /// In de, this message translates to:
@@ -8886,13 +8898,13 @@ abstract class AppLocalizations {
   /// No description provided for @wakeServiceSectionWhisper.
   ///
   /// In de, this message translates to:
-  /// **'Nachprüfung mit Whisper'**
+  /// **'Nachprüfung (Stufe 2)'**
   String get wakeServiceSectionWhisper;
 
   /// No description provided for @wakeServiceSectionWhisperDetail.
   ///
   /// In de, this message translates to:
-  /// **'Wendelin hört nur zu, wenn Whisper „Wendelin“ bestätigt. Schalte es aus, wenn es mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.'**
+  /// **'Wendelin hört nur zu, wenn die Nachprüfung „Wendelin“ bestätigt. Sie umfasst die ganze Stufe 2: Prüfer B, Parakeet oder Whisper, je nachdem, was eingelernt und geladen ist. Schalte sie aus, wenn sie mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.'**
   String get wakeServiceSectionWhisperDetail;
 
   /// No description provided for @wakeTestAgo.
@@ -8919,6 +8931,12 @@ abstract class AppLocalizations {
   /// **'Nachprüfung: bestätigt'**
   String get wakeTestConfirmed;
 
+  /// No description provided for @wakeTestDecidedBy.
+  ///
+  /// In de, this message translates to:
+  /// **'{v} (Prüfer: {who})'**
+  String wakeTestDecidedBy(String v, String who);
+
   /// No description provided for @wakeTestFailed.
   ///
   /// In de, this message translates to:
@@ -8928,7 +8946,7 @@ abstract class AppLocalizations {
   /// No description provided for @wakeTestIntro.
   ///
   /// In de, this message translates to:
-  /// **'Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme, „bestätigt“ die Nachprüfung mit Whisper.'**
+  /// **'Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme, „bestätigt“ die Nachprüfung (Stufe 2); in Klammern steht, welcher Prüfer entschieden hat.'**
   String get wakeTestIntro;
 
   /// No description provided for @wakeTestListening.
@@ -8976,8 +8994,26 @@ abstract class AppLocalizations {
   /// No description provided for @wakeTestUnavailable.
   ///
   /// In de, this message translates to:
-  /// **'Nachprüfung: nicht möglich (kein Whisper)'**
+  /// **'Nachprüfung: nicht möglich (Erkenner nicht geladen)'**
   String get wakeTestUnavailable;
+
+  /// No description provided for @wakeTestVerifierB.
+  ///
+  /// In de, this message translates to:
+  /// **'Prüfer B'**
+  String get wakeTestVerifierB;
+
+  /// No description provided for @wakeTestVerifierParakeet.
+  ///
+  /// In de, this message translates to:
+  /// **'Parakeet'**
+  String get wakeTestVerifierParakeet;
+
+  /// No description provided for @wakeTestVerifierWhisper.
+  ///
+  /// In de, this message translates to:
+  /// **'Whisper'**
+  String get wakeTestVerifierWhisper;
 
   /// No description provided for @wakeTestVerifying.
   ///

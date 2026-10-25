@@ -88,7 +88,21 @@ final speechFocusProvider = Provider<SpeechFocus>((ref) {
 
 /// Microphone as [AudioInput] (16 kHz mono PCM).
 final audioInputProvider = Provider<AudioInput>(
-  (ref) => RecordAudioInput(ref.watch(microphoneProvider)),
+  (ref) => RecordAudioInput(
+    ref.watch(microphoneProvider),
+    // WP146: the follow-up recording opens after the call path of the
+    // answer is given back; `mic-start` logs AudioManager.mode (only with
+    // the setting „Antwort als Gesprächston“, otherwise the mode is always
+    // normal and the channel is not asked).
+    () => ref.read(speechFocusProvider).settle(),
+    () async {
+      final on = await ref
+          .read(storageProvider)
+          .settings
+          .get(AppSettings.speechCommunication);
+      return on == true ? ChannelSpeechRoutePort().audioMode() : null;
+    },
+  ),
 );
 
 /// WP123: the last seconds of the pipeline's capture (warm start of the
@@ -169,6 +183,27 @@ final voiceActivityDetectorProvider = FutureProvider<VoiceActivityDetector>((
   return vad;
 });
 
+/// Choices of the developer setting `debug.hotwordsBonus` (WP146); the first
+/// is the default (the same as [defaultHotwordsScore]).
+const hotwordsBonusChoices = ['1.0', '0.5', '1.5'];
+
+/// Bonus of the hint terms in the recognizer (WP146, developer setting).
+/// Changing it builds the recognizer again (invalidate this provider).
+final hotwordsBonusProvider = FutureProvider<double>((ref) async {
+  String? text;
+  try {
+    text = await ref
+        .read(storageProvider)
+        .settings
+        .get(AppSettings.hotwordsBonus);
+  } on Object {
+    // Unreadable setting: the default (the developer choice is optional).
+  }
+  return hotwordsBonusChoices.contains(text)
+      ? double.parse(text!)
+      : defaultHotwordsScore;
+});
+
 /// Loads an own Whisper model of [model] from [directory] (tests replace
 /// it with a counting fake).
 typedef WhisperModelLoader = Future<WhisperBackend> Function(
@@ -200,6 +235,7 @@ final whisperLoaderProvider = Provider<WhisperModelLoader>(
         hintTerms: model.supportsHotwords
             ? await ref.read(hintTermsProvider.future)
             : const [],
+        hotwordsScore: await ref.read(hotwordsBonusProvider.future),
         // Canary cannot detect the language: it falls back to the app's.
         fallbackLanguage: ref.read(languageProvider),
       ),
@@ -223,6 +259,8 @@ final engineWhisperProvider = FutureProvider<EngineWhisper>((ref) async {
   // hotwords), only for a model that takes them.
   if (model.supportsHotwords) {
     await ref.watch(hintTermsProvider.selectAsync((t) => t.join('\n')));
+    // Developer setting: another bonus loads the recognizer again (WP146).
+    await ref.watch(hotwordsBonusProvider.future);
   }
   final load = ref.watch(whisperLoaderProvider);
   final whisper = EngineWhisper(

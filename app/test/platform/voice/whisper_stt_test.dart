@@ -21,6 +21,7 @@ final class FakeWhisperBackend implements WhisperBackend {
   String text;
   String? language;
   double? meanLogProb;
+  SttRunDiag diag = const SttRunDiag();
   Object? error;
   final calls = <(int, String?)>[];
 
@@ -36,6 +37,7 @@ final class FakeWhisperBackend implements WhisperBackend {
       text: text,
       language: this.language ?? language ?? 'de',
       meanLogProb: meanLogProb,
+      diag: diag,
     );
   }
 
@@ -169,6 +171,97 @@ void main() {
       expect(lines[0], isNot(contains('lp=')));
       expect(lines[1], contains('lp=-0.43'));
       expect(lines[1], isNot(contains('milk')));
+    });
+
+    test('Logzeile stt-lang: Instanz, Hotwords, Decoding, min-lp, Dauer; nur '
+        'Zahlen und Codes, nie ein Begriff (WP146)', () async {
+      final lines = <String>[];
+      voiceLogSink = lines.add;
+      final b = FakeWhisperBackend(text: 'Ruf Kunigunde Geheimhorn an')
+        ..meanLogProb = -0.5
+        ..diag = const SttRunDiag(
+          minLogProb: -2.25,
+          decoding: 'beam',
+          hotwords: 300,
+          hotwordsScore: 1.0,
+          hotwordHits: 1,
+          owner: 'app',
+          instance: 'shared',
+        );
+      final stt = WhisperSpeechToText(backend: b, modelId: 'parakeet-v3');
+      await stt.transcribe(speech, language: 'de');
+      final line = lines.single;
+      for (final part in [
+        'min=-2.25',
+        'inst=shared',
+        'owner=app',
+        'dec=beam',
+        'hw=300',
+        'hws=1.00',
+        'hits=1',
+        'lp=-0.50',
+      ]) {
+        expect(line, contains(' $part'));
+      }
+      expect(line, matches(RegExp(r' audio=\d+ ms=\d+ ')));
+      // Positive list: event name, then key=number|code pairs.
+      expect(
+        line,
+        matches(
+          RegExp(r'^Wendelin/voice: stt-lang engine=\w+( \w+=[-\w.]+)+$'),
+        ),
+      );
+      expect(line, isNot(contains('Kunigunde')));
+      expect(line, isNot(contains('Geheimhorn')));
+    });
+
+    test(
+      'Logzeile stt-lang ohne Angaben: Instanz own, keine leeren Felder',
+      () async {
+        final lines = <String>[];
+        voiceLogSink = lines.add;
+        final stt = WhisperSpeechToText(
+          backend: FakeWhisperBackend(),
+          modelId: 'm',
+        );
+        await stt.transcribe(speech, language: 'de');
+        expect(lines.single, contains(' inst=own'));
+        for (final f in [
+          ' min=',
+          ' dec=',
+          ' hw=',
+          ' hws=',
+          ' hits=',
+          ' owner=',
+        ]) {
+          expect(lines.single, isNot(contains(f)));
+        }
+      },
+    );
+
+    test('logProbsOf: Mittelwert und kleinster Wert', () {
+      expect(logProbsOf('{"ys_log_probs":[-0.5,-2.5,-0.5]}'), (
+        mean: -1.1666666666666667,
+        min: -2.5,
+      ));
+      expect(logProbsOf('{"ys_log_probs":[]}'), isNull);
+      expect(logProbsOf(null), isNull);
+    });
+
+    test('SttRunDiag: Nachrichtenform hin und zurück', () {
+      const d = SttRunDiag(
+        minLogProb: -1.5,
+        decoding: 'beam',
+        hotwords: 3,
+        hotwordsScore: 1.0,
+        hotwordHits: 2,
+        owner: 'overlay',
+      );
+      final back = SttRunDiag.fromList(d.withOwner('app').toList());
+      expect(back.owner, 'app');
+      expect(back.hotwords, 3);
+      expect(back.minLogProb, -1.5);
+      expect(SttRunDiag.fromList('kaputt').decoding, isNull);
     });
 
     test('meanLogProbOf: Mittelwert von ys_log_probs, sonst null', () {

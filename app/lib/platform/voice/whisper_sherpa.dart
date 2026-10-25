@@ -8,6 +8,7 @@ import 'package:meta/meta.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as so;
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../voice/voice_log.dart' show voiceLogEngine;
 import 'isolate_exit.dart';
 import 'sherpa_log_probs.dart';
 import 'sherpa_runtime.dart';
@@ -129,10 +130,12 @@ final class SherpaWhisperEngine implements BlockingStt {
       stream.acceptWaveform(samples: samples, sampleRate: 16000);
       _recognizer.decode(stream);
       final r = _recognizer.getResult(stream);
+      final lp = streamLogProbs(stream);
       return WhisperResult(
         text: r.text,
         language: r.lang,
-        meanLogProb: streamMeanLogProb(stream),
+        meanLogProb: lp?.mean,
+        diag: SttRunDiag(minLogProb: lp?.min, decoding: 'greedy'),
       );
     } finally {
       stream.free();
@@ -173,6 +176,7 @@ final class IsolateWhisperBackend implements WhisperBackend {
       files,
       threads,
       sherpaLibraryDir,
+      voiceLogEngine,
     ), debugName: 'whisper');
     final events = StreamIterator(replies);
     await events.moveNext();
@@ -209,11 +213,12 @@ final class IsolateWhisperBackend implements WhisperBackend {
       ));
       await _replies.moveNext();
       final reply = _replies.current;
-      if (reply is (String, String, double?)) {
+      if (reply is (String, String, double?, List<Object?>)) {
         return WhisperResult(
           text: reply.$1,
           language: reply.$2,
           meanLogProb: reply.$3,
+          diag: SttRunDiag.fromList(reply.$4),
         );
       }
       throw StateError('Whisper-Isolat: $reply');
@@ -241,8 +246,8 @@ final class IsolateWhisperBackend implements WhisperBackend {
     await _isolate.awaitExit(grace: exitGrace);
   }
 
-  static void _main((SendPort, SttSpec, int?, String?) args) {
-    final (out, spec, threads, libraryDir) = args;
+  static void _main((SendPort, SttSpec, int?, String?, String) args) {
+    final (out, spec, threads, libraryDir, owner) = args;
     sherpaLibraryDir = libraryDir;
     final BlockingStt engine;
     try {
@@ -261,15 +266,20 @@ final class IsolateWhisperBackend implements WhisperBackend {
             bytes.asFloat32List(),
             language: message.$2,
           );
-          out.send((r.text, r.language, r.meanLogProb));
+          out.send((
+            r.text,
+            r.language,
+            r.meanLogProb,
+            r.diag.withOwner(owner).toList(),
+          ));
         } on Object catch (e) {
           out.send('$e');
         }
       } else if (isSharedWhisperRequest(message)) {
-        answerSharedWhisper(
-          message! as List<Object?>,
-          (samples, language) => engine.transcribe(samples, language: language),
-        );
+        answerSharedWhisper(message! as List<Object?>, (samples, language) {
+          final r = engine.transcribe(samples, language: language);
+          return r.withDiag(r.diag.withOwner(owner));
+        });
       } else if (message == null) {
         engine.dispose();
         inbox.close();

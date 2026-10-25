@@ -4846,6 +4846,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get bargeDebugTitle => 'Avancé : interruption';
 
   @override
+  String get hotwordsBonusHelp =>
+      'À quel point les noms de vos contacts et les termes sont favorisés par la reconnaissance vocale. Plus haut : les noms sont mieux reconnus, mais apparaissent aussi dans le bruit ou un son coupé. Plus bas : moins de faux noms. Le module de reconnaissance se recharge au changement.';
+
+  @override
+  String get hotwordsBonusTitle => 'Bonus des termes indices';
+
+  @override
   String get micAllowTitle => 'Autoriser le microphone ?';
 
   @override
@@ -5253,11 +5260,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get wakeServiceSectionWhen => 'Quand écouter ?';
 
   @override
-  String get wakeServiceSectionWhisper => 'Vérification avec Whisper';
+  String get wakeServiceSectionWhisper => 'Vérification (étape 2)';
 
   @override
   String get wakeServiceSectionWhisperDetail =>
-      'Wendelin n’écoute que si Whisper confirme « Wendelin ». Désactivez-le s’il est trop strict pour votre voix ; il y aura alors plus de faux déclenchements.';
+      'Wendelin n’écoute que si la vérification confirme « Wendelin ». Elle couvre toute l’étape 2 : vérificateur B, Parakeet ou Whisper, selon ce qui est enregistré et chargé. Désactivez-la si elle est trop stricte pour votre voix ; il y aura alors plus de faux déclenchements.';
 
   @override
   String wakeTestAgo(String v, int inSeconds) {
@@ -5278,13 +5285,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get wakeTestConfirmed => 'Vérification : confirmée';
 
   @override
+  String wakeTestDecidedBy(String v, String who) {
+    return '$v (vérificateur : $who)';
+  }
+
+  @override
   String wakeTestFailed(Object error) {
     return 'Échec : $error';
   }
 
   @override
   String get wakeTestIntro =>
-      'Dites « Wendelin ». Les détections s’affichent ici sans que l’overlay s’ouvre. « Candidat » est la voix, « confirmé » la vérification avec Whisper.';
+      'Dites « Wendelin ». Les détections s’affichent ici sans que l’overlay s’ouvre. « Candidat » est la voix, « confirmé » la vérification (étape 2) ; entre parenthèses, le vérificateur qui a décidé.';
 
   @override
   String get wakeTestListening => 'À l’écoute';
@@ -5309,7 +5321,16 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeTestUnavailable =>
-      'Vérification : impossible (pas de Whisper)';
+      'Vérification : impossible (module non chargé)';
+
+  @override
+  String get wakeTestVerifierB => 'vérificateur B';
+
+  @override
+  String get wakeTestVerifierParakeet => 'Parakeet';
+
+  @override
+  String get wakeTestVerifierWhisper => 'Whisper';
 
   @override
   String get wakeTestVerifying => 'Vérification en cours …';

@@ -312,6 +312,36 @@ void main() {
       });
     });
 
+    test('WP146: listen-open/-end je Runde, Folgerunde mit Abstand', () {
+      fakeAsync((async) {
+        final h = H(transcripts: ['Eins', 'Zwei'])..pipeline.start();
+        h.until(async, () => h.agent.inputs.length == 2);
+        final line = RegExp(r'^[a-z-]+( \w+=(-?\d+|true|false|[a-z-]+))*$');
+        final lines = h.diag
+            .where(
+              (l) => l.startsWith('listen-open') || l.startsWith('listen-end'),
+            )
+            .toList();
+        for (final l in lines) {
+          expect(l, matches(line), reason: 'nur Zahlen und Codes');
+        }
+        final opens = lines.where((l) => l.startsWith('listen-open')).toList();
+        final ends = lines.where((l) => l.startsWith('listen-end')).toList();
+        expect(opens.first, startsWith('listen-open follow=false '));
+        expect(opens.first, contains('sinceSpeak=-1'));
+        expect(
+          ends.first,
+          startsWith('listen-end follow=false kind=utterance'),
+        );
+        final follow = opens.firstWhere((l) => l.contains('follow=true'));
+        final since = int.parse(
+          RegExp(r'sinceSpeak=(-?\d+)').firstMatch(follow)![1]!,
+        );
+        expect(since, greaterThanOrEqualTo(0));
+        expect(ends.any((l) => l.startsWith('listen-end follow=true')), isTrue);
+      });
+    });
+
     test('Modus aus: keine Gesprächsereignisse', () {
       fakeAsync((async) {
         final h = H(config: const VoicePipelineConfig())..pipeline.start();

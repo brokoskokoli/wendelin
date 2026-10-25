@@ -39,16 +39,8 @@ extension VoicePipelineRecord on VoicePipeline {
     bool preRollRest,
     bool holdMic,
   ) async {
-    await previous;
-    // The barge-in detector shares the microphone: it must have released
-    // it (stop is queued with the state change) before this recording
-    // starts, else the device says "already running" (WP64).
-    // A hanging detector must not block the recording for ever: after the
-    // timeout we start anyway (a still busy microphone gives a clear error).
-    await _barge.settled.timeout(
-      VoicePipeline.bargeReleaseTimeout,
-      onTimeout: () => diagnostics?.call('barge-wait-timeout'),
-    );
+    final log = _listenLog.start(diagnostics, clock);
+    await _awaitMicFree(previous);
     if (gen != _gen) return null;
     final endpointer = Endpointer(limits);
     final done = Completer<Endpoint?>();
@@ -85,7 +77,16 @@ extension VoicePipelineRecord on VoicePipeline {
       }
       if (!done.isCompleted) {
         _micHeld = false;
-        sub = _openMic(endpointer, limits, levels, guards, end, fail, done);
+        sub = _openMic(
+          endpointer,
+          limits,
+          levels,
+          guards,
+          end,
+          fail,
+          done,
+          log.opened,
+        );
       }
     } on Object catch (error) {
       fail(error);
@@ -99,11 +100,26 @@ extension VoicePipelineRecord on VoicePipeline {
       g.cancel();
     }
     levels.flush();
+    log.ended(result);
     await _stopOrHoldMic(held && sub == null);
     // Not awaited: for a finished stream `cancel` returns a shared root-zone
     // future, and there is nothing left to wait for.
     unawaited(sub?.cancel());
     return result;
+  }
+
+  /// Waits for the previous recording and the barge-in detector.
+  Future<void> _awaitMicFree(Future<void> previous) async {
+    await previous;
+    // The barge-in detector shares the microphone: it must have released
+    // it (stop is queued with the state change) before this recording
+    // starts, else the device says "already running" (WP64).
+    // A hanging detector must not block the recording for ever: after the
+    // timeout we start anyway (a still busy microphone gives a clear error).
+    await _barge.settled.timeout(
+      VoicePipeline.bargeReleaseTimeout,
+      onTimeout: () => diagnostics?.call('barge-wait-timeout'),
+    );
   }
 
   /// Stops the microphone after a recording; also without a subscription an

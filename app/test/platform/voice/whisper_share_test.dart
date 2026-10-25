@@ -21,6 +21,14 @@ void _worker(SendPort out) {
           text: '${samples.length} Samples',
           language: language ?? 'de',
           meanLogProb: samples.length == 1600 ? -0.25 : null,
+          diag: samples.length == 1600
+              ? const SttRunDiag(
+                  minLogProb: -3,
+                  decoding: 'beam',
+                  hotwords: 7,
+                  owner: 'app',
+                )
+              : const SttRunDiag(),
         );
       });
     } else if (message == 'exit') {
@@ -56,6 +64,11 @@ void main() {
     expect(r.text, '1600 Samples');
     expect(r.language, 'fr');
     expect(r.meanLogProb, -0.25);
+    // WP146: the owner's settings reach the borrower in the answer.
+    expect(r.diag.minLogProb, -3);
+    expect(r.diag.decoding, 'beam');
+    expect(r.diag.hotwords, 7);
+    expect(r.diag.owner, 'app');
     expect((await remote.transcribe(Float32List(16))).meanLogProb, isNull);
     expect((await remote.transcribe(Float32List(16))).language, 'de');
     await expectLater(

@@ -120,6 +120,7 @@ final class VoicePipeline {
   // The microphone was kept open after a decision inside the pre-roll
   // (WP146): the live audio is the continuation of a possible re-listen.
   bool _micHeld = false;
+  final _listenLog = _ListenLog();
   Endpointer? _endpointer;
   SpeechQueue? _queue;
   bool _agentRunning = false;
@@ -262,11 +263,8 @@ final class VoicePipeline {
     var preRest = false; // WP146: after "only the wake word"
     if (config.conversationMode) {
       _convOpen = true;
-      if (continued) {
-        _rounds++; // the interrupted request counts as a round
-      } else {
-        _rounds = 0;
-      }
+      // The interrupted request counts as a round.
+      _rounds = continued ? _rounds + 1 : 0;
     }
     while (true) {
       _setState(VoiceState.listening);
@@ -589,6 +587,7 @@ final class VoicePipeline {
 
   void _setState(VoiceState s) {
     if (_state == s) return;
+    if (_state == VoiceState.speaking) _listenLog.speakEnded = clock.now();
     _state = s;
     _barge.sync(s);
     if (!_states.isClosed) _states.add(s);

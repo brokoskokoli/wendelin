@@ -218,10 +218,22 @@ final class RecordPcmRecorder implements PcmRecorder {
 /// `VoiceException(unavailable)` on the frame stream.
 final class RecordAudioInput implements ProfiledAudioInput {
   /// Creates the input.
-  RecordAudioInput([PcmRecorder? recorder])
-    : _recorder = recorder ?? RecordPcmRecorder();
+  ///
+  /// [beforeStart] runs before every recording opens the microphone (WP146:
+  /// the spoken answer gives the call path back first, see
+  /// `SpeechFocus.settle`); [audioMode] reads `AudioManager.mode` for the
+  /// `mic-start` log line.
+  RecordAudioInput([
+    PcmRecorder? recorder,
+    Future<void> Function()? beforeStart,
+    Future<int?> Function()? audioMode,
+  ]) : _recorder = recorder ?? RecordPcmRecorder(),
+       _beforeStart = beforeStart,
+       _audioMode = audioMode;
 
   final PcmRecorder _recorder;
+  final Future<void> Function()? _beforeStart;
+  final Future<int?> Function()? _audioMode;
   StreamController<Int16List>? _out;
   // Cancelled via a local copy in _finish() and stop().
   // ignore: cancel_subscriptions
@@ -271,6 +283,9 @@ final class RecordAudioInput implements ProfiledAudioInput {
   Future<void> _begin(StreamController<Int16List> out) async {
     await _stopping;
     try {
+      // The follow-up recording must not start in the call path of the
+      // answer (WP146).
+      await _beforeStart?.call();
       if (!await _recorder.hasPermission(request: false)) {
         throw const VoiceException(
           VoiceErrorKind.permissionDenied,
@@ -278,7 +293,10 @@ final class RecordAudioInput implements ProfiledAudioInput {
         );
       }
       final bytes = await _recorder.startStream(_profile);
-      voiceLog('mic-start', {'profile': _profile});
+      voiceLog('mic-start', {
+        'profile': _profile,
+        'mode': await _audioMode?.call(),
+      });
       if (!identical(_out, out)) {
         // stop() came first.
         await _recorder.stop();

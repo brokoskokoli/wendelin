@@ -28,6 +28,7 @@ final class WakeTestEvent {
     required this.similarity,
     required this.speakerId,
     required this.confirmation,
+    this.decidedBy,
   });
 
   /// Position in the stream.
@@ -42,13 +43,19 @@ final class WakeTestEvent {
   /// Stage 2.
   final WakeConfirmation confirmation;
 
-  /// A copy with [confirmation].
-  WakeTestEvent withConfirmation(WakeConfirmation c) => WakeTestEvent(
-    at: at,
-    similarity: similarity,
-    speakerId: speakerId,
-    confirmation: c,
-  );
+  /// `WakeVerifier.kind` of the recognizer that decided stage 2 (`b`,
+  /// `parakeet`, `whisper`); `null` while pending or when none decided.
+  final String? decidedBy;
+
+  /// A copy with [confirmation] and the verifier that [decidedBy].
+  WakeTestEvent withConfirmation(WakeConfirmation c, {String? decidedBy}) =>
+      WakeTestEvent(
+        at: at,
+        similarity: similarity,
+        speakerId: speakerId,
+        confirmation: c,
+        decidedBy: decidedBy,
+      );
 }
 
 /// „Jetzt ausprobieren“ (WP60): listens, shows every stage-1 candidate
@@ -200,16 +207,19 @@ class WakeTester extends ChangeNotifier {
 
   Future<void> _confirm(_Due d, Int16List pcm) async {
     WakeConfirmation result;
+    String? by;
     try {
       result = await verifier!.confirm(pcm)
           ? WakeConfirmation.confirmed
           : WakeConfirmation.rejected;
+      // After the call: a preferring verifier names the one that answered.
+      by = verifier!.kind;
     } on Object {
       result = WakeConfirmation.unavailable;
     }
     final i = _events.indexOf(d.event);
     if (i < 0) return;
-    _events[i] = d.event.withConfirmation(result);
+    _events[i] = d.event.withConfirmation(result, decidedBy: by);
     notifyListeners();
   }
 

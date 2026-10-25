@@ -224,7 +224,10 @@ final class EngineWhisper implements WhisperBackend {
     _deferred = null;
     final backend = await _backend();
     try {
-      return await backend.transcribe(samples, language: language);
+      final r = await backend.transcribe(samples, language: language);
+      return r.withDiag(
+        r.diag.withInstance(identical(backend, _own) ? 'own' : 'shared'),
+      );
     } on VoiceException catch (e) {
       // Only the model of another engine is replaced (it may be gone).
       if (identical(backend, _own) || e.kind != VoiceErrorKind.unavailable) {
@@ -233,7 +236,8 @@ final class EngineWhisper implements WhisperBackend {
       voiceLog('model-owner-gone', {'model': modelId});
     }
     final own = await _loadOwn();
-    return own.transcribe(samples, language: language);
+    final r = await own.transcribe(samples, language: language);
+    return r.withDiag(r.diag.withInstance('own'));
   }
 
   /// Frees the own model (if any); a later [warm] or [transcribe] loads

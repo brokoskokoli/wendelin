@@ -43,17 +43,17 @@ bool _resolved = false;
   return _symbols;
 }
 
-/// Mean log probability of the tokens `stream` decoded ([meanLogProbOf]),
-/// `null` if the library or model does not report it. Never throws: the
-/// value is only logged (WP140).
-double? streamMeanLogProb(so.OfflineStream stream) {
+/// Mean and smallest log probability of the tokens `stream` decoded
+/// ([logProbsOf]), `null` if the library or model does not report it. Never
+/// throws: the values are only logged (WP140, WP146).
+({double mean, double min})? streamLogProbs(so.OfflineStream stream) {
   try {
     final sym = _resolve();
     if (sym == null || stream.ptr == nullptr) return null;
     final json = sym.read(stream.ptr.cast<Void>());
     if (json == nullptr) return null;
     try {
-      return meanLogProbOf(json.toDartString());
+      return logProbsOf(json.toDartString());
     } finally {
       sym.free(json);
     }

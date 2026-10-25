@@ -178,7 +178,11 @@ final class FakeWakeFeatureExtractor implements WakeSequenceExtractor {
 /// [WakeVerifier] answering from a script (default: confirms).
 final class FakeWakeVerifier implements WakeEnrollVerifier {
   /// Creates the fake; [answer] decides per call (1-based number).
-  FakeWakeVerifier({this.answer, this.delay = Duration.zero});
+  FakeWakeVerifier({
+    this.answer,
+    this.delay = Duration.zero,
+    this.kind = 'fake',
+  });
 
   /// Decides the result for call number n; default `true`.
   bool Function(int n)? answer;
@@ -197,7 +201,7 @@ final class FakeWakeVerifier implements WakeEnrollVerifier {
   final List<Int16List> calls = [];
 
   @override
-  String get kind => 'fake';
+  final String kind;
 
   @override
   Future<bool> confirm(Int16List pcm) async {

@@ -40,7 +40,7 @@ void answerSharedWhisper(
     ]:
       try {
         final r = run(audio.materialize().asFloat32List(), language);
-        reply.send(['ok', r.text, r.language, r.meanLogProb]);
+        reply.send(['ok', r.text, r.language, r.meanLogProb, r.diag.toList()]);
       } on Object catch (e) {
         reply.send(['error', '$e']);
       }
@@ -126,6 +126,19 @@ final class RemoteWhisperBackend implements WhisperBackend {
         );
       }
       return switch (answer) {
+        [
+          'ok',
+          final String text,
+          final String lang,
+          final double? lp,
+          final List<Object?> diag,
+        ] =>
+          WhisperResult(
+            text: text,
+            language: lang,
+            meanLogProb: lp,
+            diag: SttRunDiag.fromList(diag),
+          ),
         ['ok', final String text, final String lang, final double? lp] =>
           WhisperResult(text: text, language: lang, meanLogProb: lp),
         ['ok', final String text, final String lang] => WhisperResult(
