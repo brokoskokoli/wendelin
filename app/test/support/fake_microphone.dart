@@ -28,6 +28,9 @@ final class FakePcmRecorder implements PcmRecorder {
   final profiles = <CaptureProfile>[];
   int starts = 0;
   int stops = 0;
+
+  /// Chunks emitted so far (all streams).
+  int sent = 0;
   // ignore: close_sinks
   StreamController<Uint8List>? _ctrl;
   Timer? _timer;
@@ -57,6 +60,7 @@ final class FakePcmRecorder implements PcmRecorder {
     var n = 0;
     _timer = Timer.periodic(period, (_) {
       ctrl.add(Uint8List.fromList(List.generate(chunk, (i) => (n + i) & 0xff)));
+      sent++;
       n += chunk;
     });
     return ctrl.stream;

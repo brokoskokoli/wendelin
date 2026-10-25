@@ -274,7 +274,12 @@ final class VoiceController extends Notifier<VoiceUiState> {
     final pipeline = _pipelineFor(components);
     state = state.copyWith(preparing: false);
     final bridged = _wake.kept(preRoll) ? await _wake.close(preRoll) : preRoll;
-    if (!ref.mounted || cancels != _cancels) return false;
+    if (!ref.mounted || cancels != _cancels) {
+      // Cancelled while close waited for the first frame: [cancel] found
+      // `preparing` already false and did not stop the early microphone.
+      await primed.stop();
+      return false;
+    }
     return _run(pipeline, kind, bridged);
   }
 

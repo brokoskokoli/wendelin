@@ -12,7 +12,9 @@ import '../../support/fake_microphone.dart';
 import '../../ui/helpers.dart';
 
 void main() {
-  test('MeteredAudioInput reicht detach an die Eingabe durch', () async {
+  testWidgets('MeteredAudioInput reicht detach an die Eingabe durch', (
+    tester,
+  ) async {
     final input = RecordAudioInput(
       FakePcmRecorder(),
       null,
@@ -22,15 +24,18 @@ void main() {
     final metered = MeteredAudioInput(input, BargeMeter(threshold: 0.7));
     final frames = <Int16List>[];
     final sub = metered.start().listen(frames.add);
-    await Future<void>.delayed(const Duration(milliseconds: 30));
+    await pumpUntil(tester, () => frames.length >= 2);
     final end = metered.detach();
     expect(end, isNotNull);
     expect(input.isRunning, isFalse, reason: 'die Eingabe ist frei');
     final n = frames.length;
-    await Future<void>.delayed(const Duration(milliseconds: 30));
-    expect(frames.length, greaterThan(n), reason: 'Frames kommen weiter');
-    await end!();
-    await sub.cancel();
+    await pumpUntil(
+      tester,
+      () => frames.length > n,
+      reason: 'Frames kommen weiter',
+    );
+    await tester.runAsync(end!);
+    await tester.runAsync(sub.cancel);
   });
 
   test('Eingabe ohne Ablösen: null (der Aufrufer stoppt wie bisher)', () {
@@ -51,9 +56,9 @@ void main() {
     expect(lazy.endTail(), isNull);
   });
 
-  test(
+  testWidgets(
     'Lazy: Vorlauf geht durch, danach startet das nächste Mal wieder',
-    () async {
+    (tester) async {
       final events = <bool>[];
       final recorder = FakePcmRecorder();
       final lazy = LazyWakeBargeInDetector(
@@ -77,22 +82,26 @@ void main() {
           ),
         ),
       );
-      await lazy.start();
-      await Future<void>.delayed(const Duration(milliseconds: 30));
+      await tester.runAsync(lazy.start);
+      await pumpUntil(tester, () => recorder.sent >= 2);
       expect(lazy.beginTail(), isTrue);
       expect(events, [true, false], reason: 'hört nicht mehr mit');
-      await Future<void>.delayed(const Duration(milliseconds: 30));
+      final seen = recorder.sent;
+      await pumpUntil(tester, () => recorder.sent >= seen + 2);
       final tail = lazy.endTail();
       expect(tail, isNotNull);
       expect(tail!.pcm, isNotEmpty);
-      await Future<void>.delayed(const Duration(milliseconds: 30));
-      expect(recorder.running, isFalse, reason: 'keine zweite Aufnahme bleibt');
+      await pumpUntil(
+        tester,
+        () => !recorder.running,
+        reason: 'keine zweite Aufnahme bleibt',
+      );
       expect(lazy.isRunning, isFalse);
-      await lazy.start();
+      await tester.runAsync(lazy.start);
       expect(lazy.isRunning, isTrue, reason: 'nächste Antwort: wieder aktiv');
       expect(recorder.running, isFalse, reason: 'die Eingabe wurde getauscht');
-      await lazy.stop();
-      await lazy.dispose();
+      await tester.runAsync(lazy.stop);
+      await tester.runAsync(lazy.dispose);
     },
   );
 
