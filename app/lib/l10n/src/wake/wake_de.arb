@@ -324,7 +324,7 @@
     }
   },
   "wakeTestConfirmed": "Nachprüfung: bestätigt",
-  "wakeTestDecidedBy": "{v} (Prüfer: {who})",
+  "wakeTestDecidedBy": "{v} (Befehlserkennung: {who})",
   "@wakeTestDecidedBy": {
     "placeholders": {
       "v": {
@@ -343,7 +343,7 @@
       }
     }
   },
-  "wakeTestIntro": "Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme, „bestätigt“ die Nachprüfung (Stufe 2); in Klammern steht, welcher Prüfer entschieden hat.",
+  "wakeTestIntro": "Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme. „Bestätigt“ heißt: Die Befehlserkennung (Parakeet oder Whisper) hat „Wendelin“ gehört. Das ist nicht die Nachprüfung (Stufe 2) des Dienstes; sie kann strenger sein.",
   "wakeTestListening": "Hört zu",
   "wakeTestMicPreparing": "Mikrofon wird vorbereitet …",
   "wakeTestNoHit": "Noch kein Treffer.",
@@ -352,7 +352,6 @@
   "wakeTestStopped": "Angehalten",
   "wakeTestTitle": "Ausprobieren",
   "wakeTestUnavailable": "Nachprüfung: nicht möglich (Erkenner nicht geladen)",
-  "wakeTestVerifierB": "Prüfer B",
   "wakeTestVerifierParakeet": "Parakeet",
   "wakeTestVerifierWhisper": "Whisper",
   "wakeTestVerifying": "Nachprüfung läuft …",

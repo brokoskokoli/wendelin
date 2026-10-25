@@ -149,7 +149,7 @@
   "wakeTestBest": "{v} · highest similarity {v2}",
   "wakeTestCandidate": "Candidate · similarity {v}",
   "wakeTestConfirmed": "Verification: confirmed",
-  "wakeTestDecidedBy": "{v} (verifier: {who})",
+  "wakeTestDecidedBy": "{v} (command recognizer: {who})",
   "@wakeTestDecidedBy": {
     "placeholders": {
       "v": {
@@ -161,7 +161,7 @@
     }
   },
   "wakeTestFailed": "Failed: {error}",
-  "wakeTestIntro": "Say “Wendelin”. Hits appear here without the overlay opening. “Candidate” is the voice, “confirmed” the verification (stage 2); the brackets name the verifier that decided.",
+  "wakeTestIntro": "Say “Wendelin”. Hits appear here without the overlay opening. “Candidate” is the voice. “Confirmed” means the command recognizer (Parakeet or Whisper) heard “Wendelin”. That is not the service’s verification (stage 2); it can be stricter.",
   "wakeTestListening": "Listening",
   "wakeTestMicPreparing": "Preparing the microphone …",
   "wakeTestNoHit": "No hit yet.",
@@ -170,7 +170,6 @@
   "wakeTestStopped": "Stopped",
   "wakeTestTitle": "Try it",
   "wakeTestUnavailable": "Verification: not possible (recognizer not loaded)",
-  "wakeTestVerifierB": "verifier B",
   "wakeTestVerifierParakeet": "Parakeet",
   "wakeTestVerifierWhisper": "Whisper",
   "wakeTestVerifying": "Verification running …",

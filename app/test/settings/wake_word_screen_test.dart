@@ -556,7 +556,6 @@ void main() {
     });
 
     for (final (kind, name) in [
-      ('b', 'Prüfer B'),
       ('parakeet', 'Parakeet'),
       ('whisper', 'Whisper'),
     ]) {
@@ -572,11 +571,26 @@ void main() {
         await until(tester, find.textContaining('Kandidat ·'), many: true);
         await seconds(tester, 8);
         expect(
-          find.textContaining('Nachprüfung: bestätigt (Prüfer: $name)'),
+          find.textContaining('Nachprüfung: bestätigt (Befehlserkennung: $name)'),
           findsWidgets,
         );
       });
     }
+
+    testWidgets('Prüfer B steht im Test nie als Entscheider (WP146)', (
+      tester,
+    ) async {
+      final env = wakeEnv(
+        audio: SilentSeconds(10),
+        verifier: FakeWakeVerifier(kind: 'b'),
+        vector: (end) => v([1, 0, 0, 0]),
+      );
+      await pumpWake(tester, env, WakeTestScreen(speakers: [templates('a')]));
+      await until(tester, find.textContaining('Kandidat ·'), many: true);
+      await seconds(tester, 8);
+      expect(find.textContaining('Prüfer'), findsNothing);
+      expect(find.textContaining('(Befehlserkennung:'), findsNothing);
+    });
 
     testWidgets('unbekannter Prüfer: nur das Ergebnis, keine Klammer', (
       tester,
@@ -590,7 +604,7 @@ void main() {
       await until(tester, find.textContaining('Kandidat ·'), many: true);
       await seconds(tester, 8);
       expect(find.textContaining('Nachprüfung: bestätigt ·'), findsWidgets);
-      expect(find.textContaining('(Prüfer:'), findsNothing);
+      expect(find.textContaining('(Befehlserkennung:'), findsNothing);
     });
 
     testWidgets('ohne Whisper: „nicht möglich“ statt stiller Bestätigung', (

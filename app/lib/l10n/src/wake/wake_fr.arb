@@ -149,7 +149,7 @@
   "wakeTestBest": "{v} · similarité maximale {v2}",
   "wakeTestCandidate": "Candidat · similarité {v}",
   "wakeTestConfirmed": "Vérification : confirmée",
-  "wakeTestDecidedBy": "{v} (vérificateur : {who})",
+  "wakeTestDecidedBy": "{v} (reconnaissance des commandes : {who})",
   "@wakeTestDecidedBy": {
     "placeholders": {
       "v": {
@@ -161,7 +161,7 @@
     }
   },
   "wakeTestFailed": "Échec : {error}",
-  "wakeTestIntro": "Dites « Wendelin ». Les détections s’affichent ici sans que l’overlay s’ouvre. « Candidat » est la voix, « confirmé » la vérification (étape 2) ; entre parenthèses, le vérificateur qui a décidé.",
+  "wakeTestIntro": "Dites « Wendelin ». Les détections s’affichent ici sans que l’overlay s’ouvre. « Candidat » est la voix. « Confirmé » signifie que la reconnaissance des commandes (Parakeet ou Whisper) a entendu « Wendelin ». Ce n’est pas la vérification (étape 2) du service ; elle peut être plus stricte.",
   "wakeTestListening": "À l’écoute",
   "wakeTestMicPreparing": "Préparation du microphone …",
   "wakeTestNoHit": "Pas encore de détection.",
@@ -170,7 +170,6 @@
   "wakeTestStopped": "Arrêté",
   "wakeTestTitle": "Essayer",
   "wakeTestUnavailable": "Vérification : impossible (module non chargé)",
-  "wakeTestVerifierB": "vérificateur B",
   "wakeTestVerifierParakeet": "Parakeet",
   "wakeTestVerifierWhisper": "Whisper",
   "wakeTestVerifying": "Vérification en cours …",

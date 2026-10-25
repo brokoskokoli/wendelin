@@ -5286,7 +5286,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String wakeTestDecidedBy(String v, String who) {
-    return '$v (vérificateur : $who)';
+    return '$v (reconnaissance des commandes : $who)';
   }
 
   @override
@@ -5296,7 +5296,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeTestIntro =>
-      'Dites « Wendelin ». Les détections s’affichent ici sans que l’overlay s’ouvre. « Candidat » est la voix, « confirmé » la vérification (étape 2) ; entre parenthèses, le vérificateur qui a décidé.';
+      'Dites « Wendelin ». Les détections s’affichent ici sans que l’overlay s’ouvre. « Candidat » est la voix. « Confirmé » signifie que la reconnaissance des commandes (Parakeet ou Whisper) a entendu « Wendelin ». Ce n’est pas la vérification (étape 2) du service ; elle peut être plus stricte.';
 
   @override
   String get wakeTestListening => 'À l’écoute';
@@ -5322,9 +5322,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get wakeTestUnavailable =>
       'Vérification : impossible (module non chargé)';
-
-  @override
-  String get wakeTestVerifierB => 'vérificateur B';
 
   @override
   String get wakeTestVerifierParakeet => 'Parakeet';

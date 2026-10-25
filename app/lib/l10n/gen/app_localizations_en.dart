@@ -5230,7 +5230,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String wakeTestDecidedBy(String v, String who) {
-    return '$v (verifier: $who)';
+    return '$v (command recognizer: $who)';
   }
 
   @override
@@ -5240,7 +5240,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeTestIntro =>
-      'Say “Wendelin”. Hits appear here without the overlay opening. “Candidate” is the voice, “confirmed” the verification (stage 2); the brackets name the verifier that decided.';
+      'Say “Wendelin”. Hits appear here without the overlay opening. “Candidate” is the voice. “Confirmed” means the command recognizer (Parakeet or Whisper) heard “Wendelin”. That is not the service’s verification (stage 2); it can be stricter.';
 
   @override
   String get wakeTestListening => 'Listening';
@@ -5266,9 +5266,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get wakeTestUnavailable =>
       'Verification: not possible (recognizer not loaded)';
-
-  @override
-  String get wakeTestVerifierB => 'verifier B';
 
   @override
   String get wakeTestVerifierParakeet => 'Parakeet';

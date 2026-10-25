@@ -5256,7 +5256,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String wakeTestDecidedBy(String v, String who) {
-    return '$v (Prüfer: $who)';
+    return '$v (Befehlserkennung: $who)';
   }
 
   @override
@@ -5266,7 +5266,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get wakeTestIntro =>
-      'Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme, „bestätigt“ die Nachprüfung (Stufe 2); in Klammern steht, welcher Prüfer entschieden hat.';
+      'Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme. „Bestätigt“ heißt: Die Befehlserkennung (Parakeet oder Whisper) hat „Wendelin“ gehört. Das ist nicht die Nachprüfung (Stufe 2) des Dienstes; sie kann strenger sein.';
 
   @override
   String get wakeTestListening => 'Hört zu';
@@ -5292,9 +5292,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get wakeTestUnavailable =>
       'Nachprüfung: nicht möglich (Erkenner nicht geladen)';
-
-  @override
-  String get wakeTestVerifierB => 'Prüfer B';
 
   @override
   String get wakeTestVerifierParakeet => 'Parakeet';

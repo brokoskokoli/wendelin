@@ -21,10 +21,11 @@ String confirmationText(AppLocalizations l, WakeConfirmation c) => switch (c) {
   WakeConfirmation.unavailable => l.wakeTestUnavailable,
 };
 
-/// Name of the stage 2 recognizer [kind] (`WakeVerifier.kind`), `null` for
-/// an unknown one.
+/// Name of the command recognizer [kind] (`WakeVerifier.kind`) that heard the
+/// word in the test, `null` for an unknown one. The test runs on the command
+/// recognizer, not on the service's stage 2 (verifier B, hw2): „b“ never
+/// shows here (WP146).
 String? verifierName(AppLocalizations l, String? kind) => switch (kind) {
-  'b' => l.wakeTestVerifierB,
   'parakeet' => l.wakeTestVerifierParakeet,
   'whisper' => l.wakeTestVerifierWhisper,
   _ => null,

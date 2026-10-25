@@ -8934,7 +8934,7 @@ abstract class AppLocalizations {
   /// No description provided for @wakeTestDecidedBy.
   ///
   /// In de, this message translates to:
-  /// **'{v} (Prüfer: {who})'**
+  /// **'{v} (Befehlserkennung: {who})'**
   String wakeTestDecidedBy(String v, String who);
 
   /// No description provided for @wakeTestFailed.
@@ -8946,7 +8946,7 @@ abstract class AppLocalizations {
   /// No description provided for @wakeTestIntro.
   ///
   /// In de, this message translates to:
-  /// **'Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme, „bestätigt“ die Nachprüfung (Stufe 2); in Klammern steht, welcher Prüfer entschieden hat.'**
+  /// **'Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme. „Bestätigt“ heißt: Die Befehlserkennung (Parakeet oder Whisper) hat „Wendelin“ gehört. Das ist nicht die Nachprüfung (Stufe 2) des Dienstes; sie kann strenger sein.'**
   String get wakeTestIntro;
 
   /// No description provided for @wakeTestListening.
@@ -8996,12 +8996,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Nachprüfung: nicht möglich (Erkenner nicht geladen)'**
   String get wakeTestUnavailable;
-
-  /// No description provided for @wakeTestVerifierB.
-  ///
-  /// In de, this message translates to:
-  /// **'Prüfer B'**
-  String get wakeTestVerifierB;
 
   /// No description provided for @wakeTestVerifierParakeet.
   ///
