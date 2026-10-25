@@ -28,7 +28,7 @@ BEFUNDE:
 
 ## Urteilsdatei (maschinenlesbar)
 
-Der Reviewer legt sein Urteil als Datei ab: `../james-wt/handoff/<wp>-review.md` (z. B. wp110-review.md), beim Re-Review `<wp>-review2.md`, dann `-review3.md`. Die Datei beginnt mit genau diesem Kopf (eine Angabe je Zeile, `Schlüssel: Wert`, danach beliebiger Text, am besten das Ergebnis oben):
+Der Reviewer legt sein Urteil als Datei ab: `../james-wt/reviews/<wp>-review.md` (z. B. wp110-review.md; aus einem Worktree heraus liegt der Ordner `reviews/` neben dem Worktree, also `../reviews/`). Dauerhafter Ablageort: `tool/cleanup_wt.sh` löscht dort nichts und verschiebt Urteile, die noch in `handoff/` liegen, nach `reviews/`, beim Re-Review `<wp>-review2.md`, dann `-review3.md`. Die Datei beginnt mit genau diesem Kopf (eine Angabe je Zeile, `Schlüssel: Wert`, danach beliebiger Text, am besten das Ergebnis oben):
 
 ```
 URTEIL: FREIGABE | NACHBESSERN
@@ -40,4 +40,4 @@ BEFUNDE: bestaetigung=0 fail-closed=1 dispose=0 negativtest=2 texte=0 doku=0 ber
 - `RUNDE`: 1 beim ersten Review, 2 beim Re-Review usw. (passt zur Dateinummer).
 - `MUTATIONEN: <getestet>/<überlebt>`; überlebende Mutationen sind zugleich Befunde (meist `negativtest`).
 - `BEFUNDE`: Anzahl der Blocker/Muss/Soll-Befunde je Kategorie; fehlt eine Kategorie, gilt 0.
-- `dart run tool/review_stats.dart [ordner]` (Standard: der Ordner handoff neben dem Repo) liest alle `*-review*.md` und nennt die Quote „beim ersten Review sauber“ (Runde 1 mit FREIGABE), die Befunde je Kategorie und die Mutationsbilanz. Selbsttest: `tool/src/review_stats.dart` in `dart run tool/self_test.dart`.
+- `dart run tool/review_stats.dart [ordner]` (Standard: der Ordner `reviews` neben dem Hauptcheckout, auch aus einem Worktree gefunden) liest alle `*-review*.md` und nennt die Quote „beim ersten Review sauber“ (Runde 1 mit FREIGABE), die Befunde je Kategorie und die Mutationsbilanz. Selbsttest: `tool/src/review_stats.dart` in `dart run tool/self_test.dart`.

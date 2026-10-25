@@ -1,5 +1,5 @@
 // Auswertung der Urteilsdateien des Reviewers (WP110, Format in
-// docs/work-packages/REVIEW.md): `../james-wt/handoff/<wp>-review[N].md`.
+// docs/work-packages/REVIEW.md): `../james-wt/reviews/<wp>-review[N].md`.
 import 'dart:io';
 
 /// Kategorien der Befunde (Schlüssel der Coder-Checkliste plus `sonstiges`).
@@ -112,3 +112,27 @@ Map<String, String> readReviews(String dir) => {
     if (RegExp(r'-review\d*\.md$').hasMatch(f.path))
       f.uri.pathSegments.last: f.readAsStringSync(),
 };
+
+/// Standardordner der Urteile: `<Hauptcheckout>/../james-wt/reviews`.
+///
+/// Der Hauptcheckout ist das Elternverzeichnis des gemeinsamen Git-Ordners
+/// (`git rev-parse --git-common-dir`), das gilt im Hauptcheckout wie in jedem
+/// Worktree. [git] liefert die Ausgabe oder `null` bei einem Fehler; außerhalb
+/// eines Repos gilt `../james-wt/reviews` relativ zum Arbeitsverzeichnis.
+String defaultReviewsDir(String? Function(List<String> args) git) {
+  final common = git([
+    'rev-parse',
+    '--path-format=absolute',
+    '--git-common-dir',
+  ]);
+  if (common == null || common.isEmpty) return '../james-wt/reviews';
+  final trimmed = common.endsWith('/')
+      ? common.substring(0, common.length - 1)
+      : common;
+  final gitDir = trimmed.lastIndexOf('/');
+  if (gitDir <= 0) return '../james-wt/reviews';
+  final main = trimmed.substring(0, gitDir);
+  final parent = main.lastIndexOf('/');
+  if (parent < 0) return '../james-wt/reviews';
+  return '${main.substring(0, parent)}/james-wt/reviews';
+}
