@@ -228,6 +228,27 @@ void main() {
     });
   });
 
+  test('wake-strip: speechMs endet an der ersten Pause im Vorlauf', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [ScriptedTurn.text('Licht an.')],
+        transcripts: const [Transcript(text: 'Wendelin schalte das Licht an')],
+      );
+      h.fakeAudio.script(AudioFrames.pattern('.' * 30, frame: frame));
+      final pre = cat([
+        speech(wakeMs),
+        speech(300),
+        quiet(300),
+        speech(300),
+        quiet(900),
+      ]);
+      h.pipeline.start(trigger: wake(pre, wakeEnd));
+      settle(async);
+      final line = h.diagnostics.singleWhere((d) => d.startsWith('wake-strip'));
+      expect(line, contains('speechMs=180 removed=true'));
+    });
+  });
+
   test('wakeStripLog: entfernt, Rest leer, zu lang', () {
     expect(
       wakeStripLog('Wendelin mach Licht', 'mach Licht', speechMs: 5),
