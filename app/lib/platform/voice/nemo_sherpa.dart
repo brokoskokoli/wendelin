@@ -216,6 +216,9 @@ final class SherpaNemoEngine implements BlockingStt {
   late final so.OfflineRecognizer _recognizer;
   late String _language;
 
+  /// The hotwords of the model (lower case), only for counting hits.
+  late final List<String> _hotwordTerms = hotwordTermsOf(files.hotwords);
+
   /// The sherpa-onnx configuration for [language].
   /// The sherpa-onnx configuration for [language].
   so.OfflineRecognizerConfig config(String language) =>
@@ -236,10 +239,18 @@ final class SherpaNemoEngine implements BlockingStt {
       stream.acceptWaveform(samples: samples, sampleRate: 16000);
       _recognizer.decode(stream);
       final r = _recognizer.getResult(stream);
+      final lp = streamLogProbs(stream);
       return WhisperResult(
         text: r.text,
         language: files.engine == SttEngine.canary ? lang : r.lang,
-        meanLogProb: streamMeanLogProb(stream),
+        meanLogProb: lp?.mean,
+        diag: SttRunDiag(
+          minLogProb: lp?.min,
+          decoding: files.hotwords == null ? 'greedy' : 'beam',
+          hotwords: _hotwordTerms.length,
+          hotwordsScore: files.hotwords?.score,
+          hotwordHits: countHotwordHits(r.text, _hotwordTerms),
+        ),
       );
     } finally {
       stream.free();
@@ -292,4 +303,27 @@ so.OfflineRecognizerConfig nemoRecognizerConfig(
     hotwordsFile: hotwords?.file ?? '',
     hotwordsScore: hotwords?.score ?? defaultHotwordsScore,
   );
+}
+
+/// The terms of the hotwords file of [hotwords] in lower case (none without
+/// hotwords or if the file cannot be read).
+List<String> hotwordTermsOf(NemoHotwords? hotwords) {
+  if (hotwords == null) return const [];
+  try {
+    return [
+      for (final line in File(hotwords.file).readAsLinesSync())
+        if (line.trim().isNotEmpty) line.trim().toLowerCase(),
+    ];
+  } on Object {
+    return const [];
+  }
+}
+
+/// How many of [terms] (lower case) occur in [text] as whole words: a count
+/// for the log, never the terms themselves.
+int countHotwordHits(String text, List<String> terms) {
+  if (terms.isEmpty) return 0;
+  final padded =
+      ' ${text.toLowerCase().replaceAll(RegExp(r'[^\p{L}\p{N}]+', unicode: true), ' ')} ';
+  return terms.where((t) => padded.contains(' $t ')).length;
 }

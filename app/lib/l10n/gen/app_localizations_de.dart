@@ -4819,6 +4819,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get bargeDebugTitle => 'Erweitert: Unterbrechen';
 
   @override
+  String get hotwordsBonusHelp =>
+      'Wie stark Namen aus deinen Kontakten und Begriffen bei der Spracherkennung bevorzugt werden. Höher: Namen werden öfter getroffen, dafür tauchen sie auch in Rauschen oder abgeschnittenem Ton auf. Niedriger: weniger falsche Namen. Der Erkenner wird beim Wechsel neu geladen.';
+
+  @override
+  String get hotwordsBonusTitle => 'Bonus Hinweisbegriffe';
+
+  @override
   String get micAllowTitle => 'Mikrofon erlauben?';
 
   @override
@@ -5223,11 +5230,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get wakeServiceSectionWhen => 'Wann zuhören?';
 
   @override
-  String get wakeServiceSectionWhisper => 'Nachprüfung mit Whisper';
+  String get wakeServiceSectionWhisper => 'Nachprüfung (Stufe 2)';
 
   @override
   String get wakeServiceSectionWhisperDetail =>
-      'Wendelin hört nur zu, wenn Whisper „Wendelin“ bestätigt. Schalte es aus, wenn es mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.';
+      'Wendelin hört nur zu, wenn die Nachprüfung „Wendelin“ bestätigt. Sie umfasst die ganze Stufe 2: Prüfer B, Parakeet oder Whisper, je nachdem, was eingelernt und geladen ist. Schalte sie aus, wenn sie mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.';
 
   @override
   String wakeTestAgo(String v, int inSeconds) {
@@ -5248,13 +5255,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get wakeTestConfirmed => 'Nachprüfung: bestätigt';
 
   @override
+  String wakeTestDecidedBy(String v, String who) {
+    return '$v (Befehlserkennung: $who)';
+  }
+
+  @override
   String wakeTestFailed(Object error) {
     return 'Gescheitert: $error';
   }
 
   @override
   String get wakeTestIntro =>
-      'Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme, „bestätigt“ die Nachprüfung mit Whisper.';
+      'Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme. „Bestätigt“ heißt: Die Befehlserkennung (Parakeet oder Whisper) hat „Wendelin“ gehört. Das ist nicht die Nachprüfung (Stufe 2) des Dienstes; sie kann strenger sein.';
 
   @override
   String get wakeTestListening => 'Hört zu';
@@ -5278,7 +5290,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get wakeTestTitle => 'Ausprobieren';
 
   @override
-  String get wakeTestUnavailable => 'Nachprüfung: nicht möglich (kein Whisper)';
+  String get wakeTestUnavailable =>
+      'Nachprüfung: nicht möglich (Erkenner nicht geladen)';
+
+  @override
+  String get wakeTestVerifierParakeet => 'Parakeet';
+
+  @override
+  String get wakeTestVerifierWhisper => 'Whisper';
 
   @override
   String get wakeTestVerifying => 'Nachprüfung läuft …';

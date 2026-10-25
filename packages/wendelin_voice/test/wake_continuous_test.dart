@@ -49,8 +49,139 @@ void main() {
       // 4 Chunks Rand (stille) + 26 Sprach- + 27 Stille-Chunks; das Wake Word
       // (600 ms = 9600 Samples) ist nicht dabei.
       expect(h.stt.calls.single.samples, 57 * 480);
+      // Endpoint inside the pre-roll: the microphone is not needed (WP146).
+      expect(h.fakeAudio.startCount, 0);
     });
   });
+
+  test('nur Weckwort im ersten Segment: der Rest des Pre-Rolls wird '
+      'weiter eingespeist, kein Mikrofon (WP146)', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [ScriptedTurn.text('Licht an.')],
+        transcripts: const [
+          Transcript(text: 'Hey Wendelin.'),
+          Transcript(text: 'Mach das Licht an'),
+        ],
+      );
+      // Stage 2 took its time: the request was spoken meanwhile.
+      final pre = cat([speech(600), quiet(1000), speech(900), quiet(900)]);
+      expect(h.pipeline.start(trigger: wake(pre, 200 * 16)), isTrue);
+      settle(async);
+      expect(h.stt.calls, hasLength(2));
+      expect(h.recording.inputs.single.text, 'Mach das Licht an');
+      // Request of 900 ms plus end silence, not the wake word or the pause.
+      expect(h.stt.calls.last.samples, inInclusiveRange(30 * 480, 70 * 480));
+      expect(h.fakeAudio.startCount, 0);
+      expect(
+        h.diagnostics.where((d) => d.startsWith('relisten reason=wake-only')),
+        hasLength(1),
+      );
+    });
+  });
+
+  test('nur Weckwort, Anfrage nicht im Pre-Roll: der Rest läuft durch, danach live (WP146)', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [ScriptedTurn.text('Licht an.')],
+        transcripts: const [
+          Transcript(text: 'Wendelin.'),
+          Transcript(text: 'Mach das Licht an'),
+        ],
+      );
+      h.fakeAudio.script(
+        AudioFrames.pattern('${'.' * 10}${'S' * 20}${'.' * 30}', frame: frame),
+      );
+      final pre = cat([speech(600), quiet(1000)]);
+      h.pipeline.start(trigger: wake(pre, 200 * 16));
+      settle(async);
+      expect(h.stt.calls, hasLength(2));
+      expect(h.fakeAudio.startCount, 1);
+    });
+  });
+
+  test('nur Weckwort, Befehl über das Ende des Vorlaufs hinaus: das früh '
+      'geöffnete Mikrofon bleibt offen, nichts geht verloren (WP146)', () {
+    runFake((async) {
+      // Like the primed microphone: it records from before the pipeline
+      // starts and replays what it buffered.
+      final mic = _HeldMic(AudioFrames.pattern('S' * 20, frame: frame));
+      final h = Harness(
+        turns: [ScriptedTurn.text('Licht an.')],
+        transcripts: const [
+          Transcript(text: 'Wendelin.'),
+          Transcript(text: 'Mach das Licht an'),
+        ],
+        audio: mic,
+      );
+      // The pre-roll ends after the wake word and a pause: decided inside it.
+      final pre = cat([speech(600), quiet(1000)]);
+      h.pipeline.start(trigger: wake(pre, 200 * 16));
+      settle(async);
+      expect(h.stt.calls, hasLength(2));
+      // The request the microphone heard meanwhile is in the second pass.
+      expect(
+        h.stt.calls.last.samples,
+        greaterThanOrEqualTo(20 * 480),
+        reason: 'gepufferte Sprache nicht verworfen',
+      );
+      expect(mic.lostSamples, 0);
+      expect(mic.running, isFalse, reason: 'am Ende gestoppt');
+    });
+  });
+
+  test('Pegel-Log: nur Zahlen, pro Sekunde (WP146)', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [ScriptedTurn.text('Ok.')],
+        transcripts: const [Transcript(text: 'Wie spät ist es')],
+      );
+      h.fakeAudio.script(
+        AudioFrames.pattern('${'S' * 40}${'.' * 30}', frame: frame),
+      );
+      h.pipeline.start();
+      settle(async);
+      final levels = h.diagnostics.where((d) => d.startsWith('mic-level'));
+      expect(levels, isNotEmpty);
+      for (final l in levels) {
+        expect(
+          l,
+          matches(RegExp(r'^mic-level s=\d+ rms=-?\d+ peak=-?\d+ zero=\d+$')),
+        );
+      }
+    });
+  });
+
+  test(
+    'Diagnose-Zeilen der Übergabe: nur Zahlen und Codes, kein Text (WP146)',
+    () {
+      runFake((async) {
+        final h = Harness(
+          turns: [ScriptedTurn.text('Geheimantwort.')],
+          transcripts: const [
+            Transcript(text: 'Hey Xylophon.'),
+            Transcript(text: 'Mach das Geheimlicht an'),
+          ],
+        );
+        final pre = cat([speech(600), quiet(1000), speech(900), quiet(900)]);
+        h.pipeline.start(trigger: wake(pre, 200 * 16));
+        settle(async);
+        expect(
+          h.diagnostics.where(
+            (d) => d.startsWith('relisten') || d.startsWith('preroll-fed'),
+          ),
+          isNotEmpty,
+        );
+        // Positive list: event name, then key=number|bool pairs.
+        final allowed = RegExp(r'^[a-z-]+( \w+=(-?\d+|true|false|[a-z-]+))*$');
+        for (final d in h.diagnostics) {
+          expect(d, matches(allowed));
+          expect(d, isNot(contains('Xylophon')));
+          expect(d, isNot(contains('Geheim')));
+        }
+      });
+    },
+  );
 
   test('mit Pause nach dem Wake Word: gleiche Anfrage', () {
     runFake((async) {
@@ -72,6 +203,71 @@ void main() {
       // Anfrage vollständig (600 ms = 20 Frames Sprache).
       expect(h.stt.calls.single.samples, greaterThan(20 * 480));
     });
+  });
+
+  test('wake-strip: Zahlen zum Rest des Weckworts, nie Text (WP146)', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [ScriptedTurn.text('Licht an.')],
+        transcripts: const [
+          Transcript(text: 'Dillin schalte das Geheimlicht an'),
+        ],
+      );
+      h.fakeAudio.script(AudioFrames.pattern('.' * 30, frame: frame));
+      final pre = cat([speech(wakeMs), speech(900), quiet(900)]);
+      h.pipeline.start(trigger: wake(pre, wakeEnd));
+      settle(async);
+      final line = h.diagnostics.singleWhere((d) => d.startsWith('wake-strip'));
+      // Pre-roll from the wake end: 4 chunks margin, then 26 speech chunks.
+      expect(
+        line,
+        'wake-strip speechMs=780 removed=false firstLen=6 firstDist=5 '
+        'tailDist=2 restWords=5',
+      );
+      expect(line, isNot(contains('Geheim')));
+    });
+  });
+
+  test('wake-strip: speechMs endet an der ersten Pause im Vorlauf', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [ScriptedTurn.text('Licht an.')],
+        transcripts: const [Transcript(text: 'Wendelin schalte das Licht an')],
+      );
+      h.fakeAudio.script(AudioFrames.pattern('.' * 30, frame: frame));
+      final pre = cat([
+        speech(wakeMs),
+        speech(300),
+        quiet(300),
+        speech(300),
+        quiet(900),
+      ]);
+      h.pipeline.start(trigger: wake(pre, wakeEnd));
+      settle(async);
+      final line = h.diagnostics.singleWhere((d) => d.startsWith('wake-strip'));
+      expect(line, contains('speechMs=180 removed=true'));
+    });
+  });
+
+  test('wakeStripLog: entfernt, Rest leer, zu lang', () {
+    expect(
+      wakeStripLog('Wendelin mach Licht', 'mach Licht', speechMs: 5),
+      'wake-strip speechMs=5 removed=true firstLen=4 firstDist=99 tailDist=4 '
+      'restWords=2',
+    );
+    expect(
+      wakeStripLog('Wendelin', '', speechMs: -1),
+      'wake-strip speechMs=-1 removed=true firstLen=0 firstDist=-1 '
+      'tailDist=-1 restWords=0',
+    );
+    expect(
+      wakeStripLog('Lin mach', 'Lin mach', speechMs: 0),
+      contains('removed=false firstLen=3 firstDist=99 tailDist=0'),
+    );
+    expect(
+      wakeStripLog('x', 'Donaudampfschifffahrt', speechMs: 0),
+      contains('firstDist=99 tailDist=99'),
+    );
   });
 
   test('nur „Wendelin“: das Overlay wartet auf die Anfrage', () {
@@ -239,4 +435,34 @@ void main() {
       expect(speechAfterWakeWord(louder, 1000 * 16), isTrue);
     });
   });
+}
+
+/// An open microphone with buffered [frames] that are replayed on [start]; a
+/// [stop] before drops them (like a restarted microphone).
+final class _HeldMic implements AudioInput {
+  _HeldMic(this._frames);
+
+  final List<Int16List> _frames;
+  bool running = true;
+  int lostSamples = 0;
+
+  @override
+  bool get isRunning => running;
+
+  @override
+  Stream<Int16List> start() {
+    if (!running) return const Stream.empty();
+    final frames = List.of(_frames);
+    _frames.clear();
+    return Stream.fromIterable(frames);
+  }
+
+  @override
+  Future<void> stop() async {
+    running = false;
+    for (final f in _frames) {
+      lostSamples += f.length;
+    }
+    _frames.clear();
+  }
 }

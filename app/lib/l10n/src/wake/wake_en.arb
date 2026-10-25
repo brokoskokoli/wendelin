@@ -5,6 +5,8 @@
   "bargeDebugHelpMargin": "The threshold sets how exactly a word has to match. Higher (0.05, default): fewer false alarms, but your word is missed more often. Lower (0.00 or -0.05): the word is recognized more easily, but there are more false alarms.",
   "bargeDebugHelpRecognition": "Recognition, without AEC: no echo cancellation. Your word arrives clearly, but the running announcement often drowns it out, and Wendelin can hear itself.",
   "bargeDebugHelpRecognitionAec": "Recognition + AEC: like the default, but with the speech recognition microphone. Helps on devices where the default microphone dampens your word too much.",
+  "hotwordsBonusHelp": "How strongly names from your contacts and terms are favoured in speech recognition. Higher: names are hit more often, but also show up in noise or cut-off audio. Lower: fewer false names. The recognizer reloads when you change it.",
+  "hotwordsBonusTitle": "Hint term bonus",
   "bargeDebugIntro": "Sets how sensitively “Wendelin” is recognized during the answer. The change applies from the next spoken answer.",
   "bargeDebugMicCommunication": "Communication + AEC (default)",
   "bargeDebugMicDuring": "Microphone during the answer",
@@ -141,14 +143,25 @@
   "wakeServiceSectionStatus": "Status",
   "wakeServiceSectionToEnroll": "Start training",
   "wakeServiceSectionWhen": "When to listen?",
-  "wakeServiceSectionWhisper": "Verification with Whisper",
-  "wakeServiceSectionWhisperDetail": "Wendelin only listens if Whisper confirms “Wendelin”. Turn it off if it is too strict for your voice; there will be more false triggers then.",
+  "wakeServiceSectionWhisper": "Verification (stage 2)",
+  "wakeServiceSectionWhisperDetail": "Wendelin only listens if the verification confirms “Wendelin”. It covers the whole of stage 2: verifier B, Parakeet or Whisper, depending on what is enrolled and loaded. Turn it off if it is too strict for your voice; there will be more false triggers then.",
   "wakeTestAgo": "{v} · {inSeconds} s",
   "wakeTestBest": "{v} · highest similarity {v2}",
   "wakeTestCandidate": "Candidate · similarity {v}",
   "wakeTestConfirmed": "Verification: confirmed",
+  "wakeTestDecidedBy": "{v} (command recognizer: {who})",
+  "@wakeTestDecidedBy": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      },
+      "who": {
+        "type": "String"
+      }
+    }
+  },
   "wakeTestFailed": "Failed: {error}",
-  "wakeTestIntro": "Say “Wendelin”. Hits appear here without the overlay opening. “Candidate” is the voice, “confirmed” the verification with Whisper.",
+  "wakeTestIntro": "Say “Wendelin”. Hits appear here without the overlay opening. “Candidate” is the voice. “Confirmed” means the command recognizer (Parakeet or Whisper) heard “Wendelin”. That is not the service’s verification (stage 2); it can be stricter.",
   "wakeTestListening": "Listening",
   "wakeTestMicPreparing": "Preparing the microphone …",
   "wakeTestNoHit": "No hit yet.",
@@ -156,7 +169,9 @@
   "wakeTestRejected": "Verification: not confirmed",
   "wakeTestStopped": "Stopped",
   "wakeTestTitle": "Try it",
-  "wakeTestUnavailable": "Verification: not possible (no Whisper)",
+  "wakeTestUnavailable": "Verification: not possible (recognizer not loaded)",
+  "wakeTestVerifierParakeet": "Parakeet",
+  "wakeTestVerifierWhisper": "Whisper",
   "wakeTestVerifying": "Verification running …",
   "wakeWordActionsFor": "Actions for {v}",
   "wakeWordCalibrate": "Calibrate (30 min, recommended)",

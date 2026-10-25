@@ -5,6 +5,8 @@
   "bargeDebugHelpMargin": "Le seuil détermine la précision avec laquelle un mot doit correspondre. Plus haut (0,05, par défaut) : moins de fausses alertes, mais votre mot est plus souvent manqué. Plus bas (0,00 ou -0,05) : le mot est reconnu plus facilement, mais il y a plus de fausses alertes.",
   "bargeDebugHelpRecognition": "Reconnaissance, sans AEC : pas d’annulation d’écho. Votre mot arrive clairement, mais l’annonce en cours le couvre souvent, et Wendelin peut s’entendre.",
   "bargeDebugHelpRecognitionAec": "Reconnaissance + AEC : comme par défaut, mais avec le microphone de la reconnaissance vocale. Utile sur les appareils où le microphone par défaut atténue trop votre mot.",
+  "hotwordsBonusHelp": "À quel point les noms de vos contacts et les termes sont favorisés par la reconnaissance vocale. Plus haut : les noms sont mieux reconnus, mais apparaissent aussi dans le bruit ou un son coupé. Plus bas : moins de faux noms. Le module de reconnaissance se recharge au changement.",
+  "hotwordsBonusTitle": "Bonus des termes indices",
   "bargeDebugIntro": "Règle la sensibilité avec laquelle « Wendelin » est reconnu pendant la réponse. La modification s’applique à partir de la prochaine réponse parlée.",
   "bargeDebugMicCommunication": "Communication + AEC (par défaut)",
   "bargeDebugMicDuring": "Microphone pendant la réponse",
@@ -141,14 +143,25 @@
   "wakeServiceSectionStatus": "État",
   "wakeServiceSectionToEnroll": "Lancer l’entraînement",
   "wakeServiceSectionWhen": "Quand écouter ?",
-  "wakeServiceSectionWhisper": "Vérification avec Whisper",
-  "wakeServiceSectionWhisperDetail": "Wendelin n’écoute que si Whisper confirme « Wendelin ». Désactivez-le s’il est trop strict pour votre voix ; il y aura alors plus de faux déclenchements.",
+  "wakeServiceSectionWhisper": "Vérification (étape 2)",
+  "wakeServiceSectionWhisperDetail": "Wendelin n’écoute que si la vérification confirme « Wendelin ». Elle couvre toute l’étape 2 : vérificateur B, Parakeet ou Whisper, selon ce qui est enregistré et chargé. Désactivez-la si elle est trop stricte pour votre voix ; il y aura alors plus de faux déclenchements.",
   "wakeTestAgo": "{v} · {inSeconds} s",
   "wakeTestBest": "{v} · similarité maximale {v2}",
   "wakeTestCandidate": "Candidat · similarité {v}",
   "wakeTestConfirmed": "Vérification : confirmée",
+  "wakeTestDecidedBy": "{v} (reconnaissance des commandes : {who})",
+  "@wakeTestDecidedBy": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      },
+      "who": {
+        "type": "String"
+      }
+    }
+  },
   "wakeTestFailed": "Échec : {error}",
-  "wakeTestIntro": "Dites « Wendelin ». Les détections s’affichent ici sans que l’overlay s’ouvre. « Candidat » est la voix, « confirmé » la vérification avec Whisper.",
+  "wakeTestIntro": "Dites « Wendelin ». Les détections s’affichent ici sans que l’overlay s’ouvre. « Candidat » est la voix. « Confirmé » signifie que la reconnaissance des commandes (Parakeet ou Whisper) a entendu « Wendelin ». Ce n’est pas la vérification (étape 2) du service ; elle peut être plus stricte.",
   "wakeTestListening": "À l’écoute",
   "wakeTestMicPreparing": "Préparation du microphone …",
   "wakeTestNoHit": "Pas encore de détection.",
@@ -156,7 +169,9 @@
   "wakeTestRejected": "Vérification : non confirmée",
   "wakeTestStopped": "Arrêté",
   "wakeTestTitle": "Essayer",
-  "wakeTestUnavailable": "Vérification : impossible (pas de Whisper)",
+  "wakeTestUnavailable": "Vérification : impossible (module non chargé)",
+  "wakeTestVerifierParakeet": "Parakeet",
+  "wakeTestVerifierWhisper": "Whisper",
   "wakeTestVerifying": "Vérification en cours …",
   "wakeWordActionsFor": "Actions pour {v}",
   "wakeWordCalibrate": "Calibrer (30 min, recommandé)",

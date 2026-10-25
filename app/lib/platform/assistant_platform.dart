@@ -115,14 +115,42 @@ class AssistantPlatform {
   /// gap-free), once; `null` if the overlay was opened by a button (WP50,
   /// WP68). Taking it ends the service's recording: the caller opens its own
   /// microphone right after.
-  Future<WakeHandoffAudio?> takeWakeHandoff() async {
-    final raw = await _invoke<Map<Object?, Object?>>('takeWakeHandoff');
+  ///
+  /// With [keepOpen] (WP146) the service keeps recording after the take until
+  /// [finishWakeHandoff]: the caller opens its microphone, waits for its first
+  /// frame and only then finishes, so there is no hole between the two.
+  Future<WakeHandoffAudio?> takeWakeHandoff({bool keepOpen = false}) async {
+    final raw = await _invoke<Map<Object?, Object?>>('takeWakeHandoff', {
+      'keepOpen': keepOpen,
+    });
     if (raw == null) return null;
     final bytes = raw['pcm'];
     if (bytes is! Uint8List) return null;
     return WakeHandoffAudio(
       pcm: PcmBytesDecoder().convert(bytes),
       wakeEnd: (raw['wakeEnd'] as num?)?.toInt(),
+      capturedMs: (raw['capturedMs'] as num?)?.toInt() ?? 0,
+      lastSampleAtMs: (raw['lastSampleAt'] as num?)?.toInt(),
+    );
+  }
+
+  /// Tells the wake-word service whether this app records or is about to (a
+  /// voice request, its answer, a follow-up window, WP146): the service keeps
+  /// its microphone closed meanwhile and for a short time after.
+  Future<void> appVoiceActive({required bool active}) async {
+    await _invoke<void>('appVoiceActive', {'active': active});
+  }
+
+  /// Ends a handoff taken with `keepOpen` (WP146): the service stops its
+  /// microphone and returns what it recorded since the take, with the time of
+  /// its last sample; `null` if nothing was kept open.
+  Future<WakeHandoffAudio?> finishWakeHandoff() async {
+    final raw = await _invoke<Map<Object?, Object?>>('finishWakeHandoff');
+    if (raw == null) return null;
+    final bytes = raw['pcm'];
+    if (bytes is! Uint8List) return null;
+    return WakeHandoffAudio(
+      pcm: PcmBytesDecoder().convert(bytes),
       capturedMs: (raw['capturedMs'] as num?)?.toInt() ?? 0,
       lastSampleAtMs: (raw['lastSampleAt'] as num?)?.toInt(),
     );

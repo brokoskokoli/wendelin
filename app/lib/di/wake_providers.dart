@@ -219,10 +219,16 @@ WakeFeatureExtractor Function() _featuresFactory(
   });
 }
 
-/// Stage 2 on Whisper; `null` while Whisper is not loaded.
+/// The test's check on the command recognizer (Parakeet or Whisper); not the
+/// service's stage 2 (verifier B). `null` while it is not loaded.
 final wakeVerifierProvider = FutureProvider<WakeVerifier?>((ref) async {
   try {
-    return TranscriptWakeVerifier(await ref.watch(speechToTextProvider.future));
+    final stt = await ref.watch(speechToTextProvider.future);
+    // The test names the command recognizer that heard the word (WP146).
+    return TranscriptWakeVerifier(
+      stt,
+      kind: stt.info.name.startsWith('Parakeet') ? 'parakeet' : 'whisper',
+    );
   } on Object {
     return null;
   }

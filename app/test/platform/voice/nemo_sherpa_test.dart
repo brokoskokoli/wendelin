@@ -96,7 +96,7 @@ void main() {
       expect(c.model.numThreads, 2);
     });
 
-    test('Transducer mit Hotwords: modified_beam_search, Score 3.0, bpe', () {
+    test('Transducer mit Hotwords: modified_beam_search, Score 1.0, bpe', () {
       final c = nemoRecognizerConfig(
         files(
           hw: const NemoHotwords(file: '/h', bpeVocab: '/v'),
@@ -106,7 +106,7 @@ void main() {
       );
       expect(c.decodingMethod, 'modified_beam_search');
       expect(c.hotwordsFile, '/h');
-      expect(c.hotwordsScore, 3.0);
+      expect(c.hotwordsScore, 1.0);
       expect(c.model.modelingUnit, 'bpe');
       expect(c.model.bpeVocab, '/v');
     });
@@ -159,7 +159,7 @@ void main() {
       expect(File(hw.file).readAsStringSync(), 'Wendelin\nKüche\n');
       expect(File(hw.bpeVocab).readAsStringSync(), startsWith('<unk>\t0\n'));
       expect(File(hw.bpeVocab).readAsStringSync(), isNot(contains('<blk>')));
-      expect(hw.score, 3.0);
+      expect(hw.score, 1.0);
     });
 
     test('nichts Buchstabierbares: null, keine Dateien', () {
@@ -182,6 +182,24 @@ void main() {
       File('$d/tokens.txt').writeAsStringSync(tokensText);
       return d;
     }
+
+    test(
+      'Standard-Bonus 1.0 für alle Hinweisbegriffe, auch Wendelin (WP146)',
+      () {
+        parakeetDir();
+        expect(defaultHotwordsScore, 1.0);
+        final f = resolveNemoFiles(
+          parakeet,
+          dir.path,
+          hintTerms: ['Wendelin', 'Küche'],
+        )!;
+        expect(f.hotwords!.score, 1.0);
+        expect(
+          nemoRecognizerConfig(f, language: 'de', threads: 2).hotwordsScore,
+          1.0,
+        );
+      },
+    );
 
     test('Parakeet: die Namen kommen als Hotwords im Erkenner an', () {
       parakeetDir();
@@ -235,6 +253,32 @@ void main() {
 
     test('fehlendes Modell: null', () {
       expect(resolveNemoFiles(parakeet, dir.path), isNull);
+    });
+  });
+
+  group('Hotword-Zählung fürs Log (WP146)', () {
+    test('Treffer als ganze Wörter, nur die Anzahl', () {
+      const terms = ['wendelin', 'küche'];
+      expect(countHotwordHits('Hey Wendelin, mach die Küche an.', terms), 2);
+      expect(countHotwordHits('Wendelinchen', terms), 0);
+      expect(countHotwordHits('Wendelin Wendelin', terms), 1);
+      expect(countHotwordHits('Wendelin', const []), 0);
+    });
+
+    test('Begriffe aus der Datei, ohne Hotwords oder Datei: leer', () {
+      final f = File('${dir.path}/h.txt')
+        ..writeAsStringSync('Wendelin\n\nKüche\n');
+      expect(hotwordTermsOf(NemoHotwords(file: f.path, bpeVocab: '/v')), [
+        'wendelin',
+        'küche',
+      ]);
+      expect(hotwordTermsOf(null), isEmpty);
+      expect(
+        hotwordTermsOf(
+          const NemoHotwords(file: '/gibt/es/nicht', bpeVocab: '/v'),
+        ),
+        isEmpty,
+      );
     });
   });
 

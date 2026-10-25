@@ -38,6 +38,9 @@ final class SpeechFocus {
   /// switch succeeded).
   bool get routed => _routed;
 
+  /// How long [settle] waits for the call path to come back.
+  final Duration settleTimeout = const Duration(seconds: 1);
+
   /// How long the focus stays after the answer ended (and nobody is busy).
   final Duration hold;
 
@@ -107,6 +110,33 @@ final class SpeechFocus {
     _routed = false;
     voiceLog('speech-route', {'mode': 'normal', 'device': 'restored'});
     unawaited(_route?.leave());
+  }
+
+  /// WP146: the next recording is about to open the microphone. Gives the
+  /// call path back now and waits for it (at most [settleTimeout], then the
+  /// microphone opens anyway), unless the answer is still going on (a
+  /// barge-in recording during the answer keeps the path). Before, the path
+  /// went back only after [hold] and unawaited, so the follow-up recording
+  /// started in `MODE_IN_COMMUNICATION`.
+  Future<void> settle() async {
+    if (!_entered || _active > 0 || _busy) return;
+    final route = _route;
+    _entered = false;
+    _routed = false;
+    voiceLog('speech-route', {'mode': 'normal', 'device': 'restored'});
+    if (route == null) return;
+    // Bounded: a hanging platform call must not block the microphone. The
+    // timer is cancelled when the call returns (no pending timer left).
+    final limit = Completer<void>();
+    final timer = Timer(settleTimeout, limit.complete);
+    try {
+      await Future.any([route.leave(), limit.future]);
+    } on Object {
+      // Failure: record anyway (the answer's path is not worth a lost
+      // request).
+    } finally {
+      timer.cancel();
+    }
   }
 
   /// The sentence ended or failed: gives the focus back after [hold] unless

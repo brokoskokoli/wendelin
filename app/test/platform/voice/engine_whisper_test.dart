@@ -18,6 +18,7 @@ import 'package:wendelin/platform/voice/engine_whisper.dart';
 import 'package:wendelin/platform/voice/pcm.dart';
 import 'package:wendelin/platform/voice/sherpa_tts.dart';
 import 'package:wendelin/platform/voice/whisper_stt.dart';
+import 'package:wendelin/ui/overlay/overlay_teardown.dart';
 import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin/voice/voice_log.dart';
@@ -75,7 +76,7 @@ final class FakeBackend implements WhisperBackend {
 
 /// [WhisperDirectory] of the fake process. A model whose engine ended
 /// without withdrawing it ([gone]) does not answer any more.
-final class FakeDirectory implements WhisperDirectory {
+final class FakeDirectory implements UsageAwareDirectory {
   FakeDirectory(this.process);
 
   final FakeProcess process;
@@ -100,6 +101,35 @@ final class FakeDirectory implements WhisperDirectory {
 
   @override
   int liveModels() => process.live.length;
+
+  final usage = <String, int>{};
+  final watchers = <String, void Function()>{};
+
+  /// Runs while a `users` answer is on its way (a user leaves meanwhile).
+  void Function()? duringUsers;
+
+  @override
+  Future<int> users(String modelId) async {
+    final answer = usage[modelId] ?? 0;
+    duringUsers?.call();
+    return answer;
+  }
+
+  @override
+  void markUse(String modelId) => usage[modelId] = (usage[modelId] ?? 0) + 1;
+
+  @override
+  void unmarkUse(String modelId) {
+    usage[modelId] = (usage[modelId] ?? 1) - 1;
+    watchers[modelId]?.call();
+  }
+
+  @override
+  void watchUsers(String modelId, void Function() onLeft) =>
+      watchers[modelId] = onLeft;
+
+  @override
+  void unwatchUsers(String modelId) => watchers.remove(modelId);
 }
 
 final class _Remote implements WhisperBackend {
@@ -150,6 +180,16 @@ void main() {
       countLive: true,
     );
 
+    test('Ergebnis nennt die Instanz: own beim Besitzer, shared beim Entleiher '
+        '(WP146)', () async {
+      final app = engine('whisper-small');
+      final overlay = engine('whisper-small');
+      await app.warm();
+      await overlay.warm();
+      expect((await app.transcribe(samples)).diag.instance, 'own');
+      expect((await overlay.transcribe(samples)).diag.instance, 'shared');
+    });
+
     test('zwei Engines (App, Overlay): ein Modell, geteilt', () async {
       final app = engine('whisper-small');
       final overlay = engine('whisper-small');
@@ -168,6 +208,116 @@ void main() {
         contains('live=1'),
       );
     });
+
+    test('Nutzer geht, während die Antwort auf dem Weg ist: die Freigabe fragt '
+        'später erneut (WP146)', () async {
+      final app = EngineWhisper(
+        modelId: 'whisper-small',
+        load: () => process.load('whisper-small'),
+        directory: dir,
+        countLive: true,
+        recheck: Duration.zero,
+      );
+      final overlay = engine('whisper-small');
+      await app.warm();
+      await overlay.warm();
+      // The user's "left" arrives before the release has noted its wait.
+      dir.duringUsers = () {
+        dir.duringUsers = null;
+        dir.unmarkUse('whisper-small');
+      };
+      await app.release(reason: 'idle');
+      expect(process.live, hasLength(1), reason: 'Antwort war veraltet');
+      await pumpEventQueue();
+      expect(process.live, isEmpty);
+      expect(app.ownsModel, isFalse);
+    });
+
+    test('Besitzer gibt frei, solange das Overlay das Modell nutzt: erst '
+        'nach dem Overlay (WP146)', () async {
+      final app = engine('whisper-small');
+      final overlay = engine('whisper-small');
+      await app.warm();
+      await overlay.warm();
+      await app.release(reason: 'idle');
+      // The model stays: the overlay keeps using it, no second copy.
+      expect(process.live, hasLength(1));
+      expect(app.ownsModel, isTrue);
+      expect(
+        lines.singleWhere((l) => l.contains(' model-release-deferred ')),
+        allOf(contains('users=1'), contains('reason=idle')),
+      );
+      expect(
+        lines.singleWhere((l) => l.contains(' model-release-deferred ')),
+        matches(
+          RegExp(
+            r'^Wendelin/voice: model-release-deferred engine=\w+ '
+            r'model=[\w-]+ users=\d+ reason=[\w-]+$',
+          ),
+        ),
+      );
+      final r = await overlay.transcribe(samples, language: 'de');
+      expect(r.text, 'ok whisper-small');
+      expect(process.loads, 1);
+      // The overlay closes: the waiting release runs.
+      await overlay.release(reason: 'overlay-close');
+      await pumpEventQueue();
+      expect(process.live, isEmpty);
+      expect(app.ownsModel, isFalse);
+      expect(
+        lines.singleWhere((l) => l.contains(' model-free ')),
+        contains('reason=idle'),
+      );
+    });
+
+    test(
+      'Engine-Ende (dispose) gibt immer frei, auch mit Nutzer (WP146)',
+      () async {
+        final app = engine('whisper-small');
+        final overlay = engine('whisper-small');
+        await app.warm();
+        await overlay.warm();
+        await app.dispose();
+        expect(process.live, isEmpty);
+      },
+    );
+
+    test('Neuaufbau (replaced) gibt nicht frei, solange das Overlay das Modell '
+        'nutzt; erst nach ihm (WP146)', () async {
+      final app = engine('whisper-small');
+      final overlay = engine('whisper-small');
+      await app.warm();
+      await overlay.warm();
+      await app.release(reason: 'replaced');
+      expect(process.live, hasLength(1));
+      final r = await overlay.transcribe(samples, language: 'de');
+      expect(r.text, 'ok whisper-small');
+      expect(process.loads, 1);
+      expect(lines.any((l) => l.contains(' model-owner-gone ')), isFalse);
+      await overlay.release(reason: 'overlay-close');
+      await pumpEventQueue();
+      expect(process.live, isEmpty);
+      expect(
+        lines.singleWhere((l) => l.contains(' model-free ')),
+        contains('reason=replaced'),
+      );
+    });
+
+    test(
+      'Nutzung wieder aufgenommen: die wartende Freigabe entfällt (WP146)',
+      () async {
+        final app = engine('whisper-small');
+        final overlay = engine('whisper-small');
+        await app.warm();
+        await overlay.warm();
+        await app.release(reason: 'idle');
+        await app.warm();
+        await overlay.release();
+        await pumpEventQueue();
+        expect(process.live, hasLength(1));
+        expect(app.ownsModel, isTrue);
+      },
+    );
 
     test('gleichzeitiges Vorwärmen lädt nur einmal', () async {
       final app = engine('whisper-small');
@@ -432,6 +582,30 @@ void main() {
       await comps.warmUp!();
       expect(live, 1, reason: 'Silero wieder offen');
       expect(process.live, hasLength(1));
+    });
+
+    test('Neuaufbau des Providers, solange das Overlay das Modell nutzt: das '
+        'Overlay behält es (WP146)', () async {
+      final app = engineContainer(model: 'whisper-base');
+      addTearDown(app.dispose);
+      final overlay = engineContainer(model: 'whisper-base');
+      addTearDown(overlay.dispose);
+      await app.read(speechToTextProvider.future);
+      final o = await overlay.read(voiceComponentsProvider.future);
+      await app
+          .read(voiceSettingsProvider.notifier)
+          .change((s) => s.copyWith(sttModel: 'whisper-small'));
+      await app.read(speechToTextProvider.future);
+      await pumpEventQueue();
+      final base = process.live.where((b) => b.modelId == 'whisper-base');
+      expect(base, hasLength(1), reason: 'Overlay nutzt es noch');
+      final loadsBefore = process.loads;
+      final t = await o.stt.transcribe(
+        AudioFrames.pattern('S' * 20)
+            .reduce((a, b) => Int16List.fromList([...a, ...b])),
+      );
+      expect(t.text, 'ok whisper-base');
+      expect(process.loads, loadsBefore, reason: 'kein eigenes Laden');
     });
 
     test('Modellwechsel: danach genau ein Whisper (das neue)', () async {
@@ -725,7 +899,8 @@ void main() {
       addTearDown(overlay.dispose);
       await app.read(voiceComponentsProvider.future);
       final o = await overlay.read(voiceComponentsProvider.future);
-      app.dispose();
+      // The engine of the owner ends (overlay teardown): frees at once.
+      await tearDownOverlayEngine(app);
       await untilTrue(() => process.live.isEmpty);
       expect(process.live, isEmpty);
       final t = await o.stt.transcribe(

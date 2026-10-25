@@ -21,6 +21,23 @@ String confirmationText(AppLocalizations l, WakeConfirmation c) => switch (c) {
   WakeConfirmation.unavailable => l.wakeTestUnavailable,
 };
 
+/// Name of the command recognizer [kind] (`WakeVerifier.kind`) that heard the
+/// word in the test, `null` for an unknown one. The test runs on the command
+/// recognizer, not on the service's stage 2 (verifier B, hw2): „b“ never
+/// shows here (WP146).
+String? verifierName(AppLocalizations l, String? kind) => switch (kind) {
+  'parakeet' => l.wakeTestVerifierParakeet,
+  'whisper' => l.wakeTestVerifierWhisper,
+  _ => null,
+};
+
+/// The confirmation of [e] with the recognizer that decided.
+String confirmationDetail(AppLocalizations l, WakeTestEvent e) {
+  final text = confirmationText(l, e.confirmation);
+  final name = verifierName(l, e.decidedBy);
+  return name == null ? text : l.wakeTestDecidedBy(text, name);
+}
+
 /// „Jetzt ausprobieren“ (WP60): shows every candidate and, apart from it,
 /// whether Whisper confirmed it. The overlay does not open. The test always
 /// runs stage 2, whatever the setting for everyday use says.
@@ -118,7 +135,7 @@ class _WakeTestScreenState extends ConsumerState<WakeTestScreen>
                 SettingsRow(
                   title: context.l10n.wakeTestCandidate(_fmt(e.similarity)),
                   detail: context.l10n.wakeTestAgo(
-                    confirmationText(context.l10n, e.confirmation),
+                    confirmationDetail(context.l10n, e),
                     e.at.inSeconds,
                   ),
                 ),

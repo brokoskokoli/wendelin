@@ -12,6 +12,8 @@
   "bargeDebugHelpMargin": "Die Schwelle legt fest, wie genau ein Wort passen muss. Höher (0,05, Standard): weniger Fehlalarme, dafür wird dein Wort öfter überhört. Niedriger (0,00 oder -0,05): das Wort wird leichter erkannt, dafür gibt es mehr Fehlalarme.",
   "bargeDebugHelpRecognition": "Erkennung, ohne AEC: keine Echo-Unterdrückung. Dein Wort kommt klar an, aber die laufende Ansage übertönt es oft, und Wendelin kann sich selbst hören.",
   "bargeDebugHelpRecognitionAec": "Erkennung + AEC: wie Standard, aber mit dem Mikrofon der Spracherkennung. Hilft auf Geräten, bei denen das Standard-Mikrofon dein Wort zu stark dämpft.",
+  "hotwordsBonusHelp": "Wie stark Namen aus deinen Kontakten und Begriffen bei der Spracherkennung bevorzugt werden. Höher: Namen werden öfter getroffen, dafür tauchen sie auch in Rauschen oder abgeschnittenem Ton auf. Niedriger: weniger falsche Namen. Der Erkenner wird beim Wechsel neu geladen.",
+  "hotwordsBonusTitle": "Bonus Hinweisbegriffe",
   "bargeDebugIntro": "Damit stellst du ein, wie empfindlich „Wendelin“ während der Antwort erkannt wird. Die Änderung gilt ab der nächsten gesprochenen Antwort.",
   "bargeDebugMicCommunication": "Kommunikation + AEC (Standard)",
   "bargeDebugMicDuring": "Mikrofon während der Antwort",
@@ -289,8 +291,8 @@
   "wakeServiceSectionStatus": "Status",
   "wakeServiceSectionToEnroll": "Zum Einlernen",
   "wakeServiceSectionWhen": "Wann zuhören?",
-  "wakeServiceSectionWhisper": "Nachprüfung mit Whisper",
-  "wakeServiceSectionWhisperDetail": "Wendelin hört nur zu, wenn Whisper „Wendelin“ bestätigt. Schalte es aus, wenn es mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.",
+  "wakeServiceSectionWhisper": "Nachprüfung (Stufe 2)",
+  "wakeServiceSectionWhisperDetail": "Wendelin hört nur zu, wenn die Nachprüfung „Wendelin“ bestätigt. Sie umfasst die ganze Stufe 2: Prüfer B, Parakeet oder Whisper, je nachdem, was eingelernt und geladen ist. Schalte sie aus, wenn sie mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.",
   "wakeTestAgo": "{v} · {inSeconds} s",
   "@wakeTestAgo": {
     "placeholders": {
@@ -322,6 +324,17 @@
     }
   },
   "wakeTestConfirmed": "Nachprüfung: bestätigt",
+  "wakeTestDecidedBy": "{v} (Befehlserkennung: {who})",
+  "@wakeTestDecidedBy": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      },
+      "who": {
+        "type": "String"
+      }
+    }
+  },
   "wakeTestFailed": "Gescheitert: {error}",
   "@wakeTestFailed": {
     "placeholders": {
@@ -330,7 +343,7 @@
       }
     }
   },
-  "wakeTestIntro": "Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme, „bestätigt“ die Nachprüfung mit Whisper.",
+  "wakeTestIntro": "Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme. „Bestätigt“ heißt: Die Befehlserkennung (Parakeet oder Whisper) hat „Wendelin“ gehört. Das ist nicht die Nachprüfung (Stufe 2) des Dienstes; sie kann strenger sein.",
   "wakeTestListening": "Hört zu",
   "wakeTestMicPreparing": "Mikrofon wird vorbereitet …",
   "wakeTestNoHit": "Noch kein Treffer.",
@@ -338,7 +351,9 @@
   "wakeTestRejected": "Nachprüfung: nicht bestätigt",
   "wakeTestStopped": "Angehalten",
   "wakeTestTitle": "Ausprobieren",
-  "wakeTestUnavailable": "Nachprüfung: nicht möglich (kein Whisper)",
+  "wakeTestUnavailable": "Nachprüfung: nicht möglich (Erkenner nicht geladen)",
+  "wakeTestVerifierParakeet": "Parakeet",
+  "wakeTestVerifierWhisper": "Whisper",
   "wakeTestVerifying": "Nachprüfung läuft …",
   "wakeWordActionsFor": "Aktionen für {v}",
   "@wakeWordActionsFor": {

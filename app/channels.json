@@ -28,7 +28,9 @@
           "returns": "none"
         },
         "hasWakeHandoff": {"args": [], "returns": "value"},
-        "takeWakeHandoff": {"args": [], "returns": "map"},
+        "takeWakeHandoff": {"args": ["keepOpen"], "returns": "map"},
+        "finishWakeHandoff": {"args": [], "returns": "map"},
+        "appVoiceActive": {"args": ["active"], "returns": "none"},
         "releaseHost": {"args": [], "returns": "value"},
         "teardownDone": {"args": [], "returns": "none"},
         "finish": {"args": [], "returns": "value"}

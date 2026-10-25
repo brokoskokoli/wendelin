@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:wendelin_core/wendelin_core.dart';
@@ -235,6 +236,25 @@ String stripWakeWord(
     }
   }
   return transcript.trim();
+}
+
+/// Diagnosis line `wake-strip` (WP146), numbers and flags only, never text:
+/// whether [stripWakeWord] removed something ([rest] shorter than the
+/// transcript), the length of the first word of [rest] and its edit distance
+/// to „wendelin“ (`firstDist`) and the smallest to the endings „delin“ and
+/// „lin“ (`tailDist`); 99 means too different in length, -1 no word.
+/// A small distance with `removed=false` is a left-over of the wake word.
+String wakeStripLog(String transcript, String rest, {required int speechMs}) {
+  final all = transcript.trim();
+  final words = rest.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
+  final first = words.isEmpty
+      ? ''
+      : foldForMatch(words.first).replaceAll(' ', '');
+  int d(String s) => first.isEmpty ? -1 : _distance(first, s);
+  final tail = first.isEmpty ? -1 : math.min(d('delin'), d('lin'));
+  return 'wake-strip speechMs=$speechMs removed=${rest.trim().length < all.length} '
+      'firstLen=${first.length} firstDist=${d('wendelin')} tailDist=$tail '
+      'restWords=${words.length}';
 }
 
 int _distance(String a, String b) {

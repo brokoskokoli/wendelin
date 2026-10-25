@@ -28,8 +28,27 @@ abstract interface class WhisperDirectory {
   int liveModels();
 }
 
+/// A [WhisperDirectory] that knows who uses a shared model (WP146): the owner
+/// does not free it while another engine still uses it.
+abstract interface class UsageAwareDirectory implements WhisperDirectory {
+  /// Number of other engines that use the model [modelId] of this one.
+  Future<int> users(String modelId);
+
+  /// This engine starts using the model of another engine.
+  void markUse(String modelId);
+
+  /// This engine stops using it (the owner is told).
+  void unmarkUse(String modelId);
+
+  /// The owner hears when a user leaves.
+  void watchUsers(String modelId, void Function() onLeft);
+
+  /// Ends [watchUsers].
+  void unwatchUsers(String modelId);
+}
+
 /// [WhisperDirectory] on the `IsolateNameServer` (`whisper_registry.dart`).
-final class IsolateWhisperDirectory implements WhisperDirectory {
+final class IsolateWhisperDirectory implements UsageAwareDirectory {
   /// Creates the directory.
   const IsolateWhisperDirectory();
 
@@ -55,6 +74,22 @@ final class IsolateWhisperDirectory implements WhisperDirectory {
 
   @override
   int liveModels() => liveWhisperCount();
+
+  @override
+  Future<int> users(String modelId) => whisperUsers(modelId, voiceLogEngine);
+
+  @override
+  void markUse(String modelId) => markWhisperUse(voiceLogEngine, modelId);
+
+  @override
+  void unmarkUse(String modelId) => unmarkWhisperUse(voiceLogEngine, modelId);
+
+  @override
+  void watchUsers(String modelId, void Function() onLeft) =>
+      watchWhisperUsers(modelId, onLeft);
+
+  @override
+  void unwatchUsers(String modelId) => unwatchWhisperUsers(modelId);
 }
 
 // Release of the last own model of this engine: a new one only loads after
@@ -81,6 +116,7 @@ final class EngineWhisper implements WhisperBackend {
     this.directory = const IsolateWhisperDirectory(),
     this.countLive = kDebugMode,
     Stopwatch Function()? stopwatch,
+    this.recheck = const Duration(seconds: 30),
   }) : _stopwatch = stopwatch ?? Stopwatch.new;
 
   /// Catalog id (`whisper-base`, `whisper-small`).
@@ -96,11 +132,25 @@ final class EngineWhisper implements WhisperBackend {
   /// process (`live=`, debug builds).
   final bool countLive;
 
+  /// How often a waiting release asks again for the users (a user that left
+  /// unnoticed: its message came in between, or it crashed).
+  final Duration recheck;
+
   final Stopwatch Function() _stopwatch;
+  Timer? _recheck;
 
   WhisperBackend? _own;
   Future<WhisperBackend>? _loading;
   bool _released = false;
+  // This engine uses the model of another engine (marked in the directory).
+  bool _borrowing = false;
+  // A release that waits for the users of the own model to leave.
+  String? _deferred;
+
+  UsageAwareDirectory? get _usage {
+    final d = directory;
+    return d is UsageAwareDirectory ? d : null;
+  }
 
   /// Whether this engine holds its own model (tests, debug counter).
   bool get ownsModel => _own != null;
@@ -108,6 +158,7 @@ final class EngineWhisper implements WhisperBackend {
   /// Makes sure a model is ready: another engine's or an own one.
   Future<void> warm() async {
     _released = false;
+    _deferred = null;
     await _backend();
   }
 
@@ -118,6 +169,10 @@ final class EngineWhisper implements WhisperBackend {
     if (loading != null) return loading;
     final shared = await directory.lookup(modelId);
     if (shared != null) {
+      if (!_borrowing) {
+        _borrowing = true;
+        _usage?.markUse(modelId);
+      }
       voiceLog('model-share', {'model': modelId});
       return shared;
     }
@@ -140,6 +195,7 @@ final class EngineWhisper implements WhisperBackend {
       }
       _own = backend;
       directory.publish(modelId, backend);
+      _usage?.watchUsers(modelId, _userLeft);
       voiceLog('model-load', {
         'model': modelId,
         'ms': watch.elapsed,
@@ -165,9 +221,13 @@ final class EngineWhisper implements WhisperBackend {
     String? language,
   }) async {
     _released = false;
+    _deferred = null;
     final backend = await _backend();
     try {
-      return await backend.transcribe(samples, language: language);
+      final r = await backend.transcribe(samples, language: language);
+      return r.withDiag(
+        r.diag.withInstance(identical(backend, _own) ? 'own' : 'shared'),
+      );
     } on VoiceException catch (e) {
       // Only the model of another engine is replaced (it may be gone).
       if (identical(backend, _own) || e.kind != VoiceErrorKind.unavailable) {
@@ -176,12 +236,47 @@ final class EngineWhisper implements WhisperBackend {
       voiceLog('model-owner-gone', {'model': modelId});
     }
     final own = await _loadOwn();
-    return own.transcribe(samples, language: language);
+    final r = await own.transcribe(samples, language: language);
+    return r.withDiag(r.diag.withInstance('own'));
   }
 
   /// Frees the own model (if any); a later [warm] or [transcribe] loads
   /// again. Returns when it is gone.
-  Future<void> release({String reason = 'release'}) async {
+  ///
+  /// While another engine uses the model (the overlay), an idle release waits
+  /// until it has left (WP146), also for `replaced` (the provider is rebuilt
+  /// while the overlay still uses the model). Only [dispose] (the engine
+  /// ends, its isolate goes with it) frees at once.
+  Future<void> release({String reason = 'release'}) =>
+      _release(reason, force: false);
+
+  Future<void> _release(String reason, {required bool force}) async {
+    if (_borrowing) {
+      _borrowing = false;
+      _usage?.unmarkUse(modelId);
+    }
+    final usage = _usage;
+    if (!force && _own != null && usage != null) {
+      // Another engine (the overlay) still uses this model: freeing it now
+      // would make it load its own copy (WP146). The last user to leave
+      // triggers the release.
+      final users = await usage.users(modelId);
+      if (_own == null) return; // freed meanwhile
+      if (users > 0) {
+        _deferred = reason;
+        _recheck?.cancel();
+        _recheck = Timer(recheck, _userLeft);
+        voiceLog('model-release-deferred', {
+          'model': modelId,
+          'users': users,
+          'reason': reason,
+        });
+        return;
+      }
+    }
+    _deferred = null;
+    _recheck?.cancel();
+    _recheck = null;
     _released = true;
     final own = _own;
     _own = null;
@@ -200,6 +295,7 @@ final class EngineWhisper implements WhisperBackend {
       }
       return;
     }
+    _usage?.unwatchUsers(modelId);
     directory.withdraw(modelId, own);
     final watch = _stopwatch()..start();
     final freed = _freed = own.dispose();
@@ -213,6 +309,13 @@ final class EngineWhisper implements WhisperBackend {
     });
   }
 
+  // A user of the model left: the release that waited for it runs now.
+  void _userLeft() {
+    final reason = _deferred;
+    if (reason == null) return;
+    unawaited(_release(reason, force: false));
+  }
+
   @override
-  Future<void> dispose() => release(reason: 'dispose');
+  Future<void> dispose() => _release('dispose', force: true);
 }

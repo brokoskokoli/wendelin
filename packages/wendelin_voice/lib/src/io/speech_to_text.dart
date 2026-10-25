@@ -36,6 +36,14 @@ final class Transcript {
     speaker: speaker,
   );
 
+  /// Copy with [text] replaced.
+  Transcript withText(String text) => Transcript(
+    text: text,
+    language: language,
+    confidence: confidence,
+    speaker: speaker,
+  );
+
   @override
   bool operator ==(Object other) =>
       other is Transcript &&

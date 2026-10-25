@@ -31,7 +31,10 @@ class WakeWordService : Service() {
     private var watcher: WakeConflictWatcher? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var resume: Runnable? = null
-    private var handoffCheck: Runnable? = null
+    private val handoffCheck = TimedGuard(main)
+    private val hitFlow = WakeHitFlow(this, main, handoffCheck, ::stopMic) { engine?.send("overlayClosed", null) }
+    private val overlapGuard = TimedGuard(main)
+    private val micDeferral = WakeMicDeferral(main, hasMic = { mic != null }, startMic = ::startMic)
     private var lastConflict: String? = null
 
     override fun onCreate() {
@@ -123,8 +126,11 @@ class WakeWordService : Service() {
     private fun onEngineCall(call: MethodCall) {
         when (call.method) {
             // While the hit's audio is collected, the microphone stays as it is (WP68).
-            "startMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) startMic()
-            "stopMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) stopMic()
+            "startMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) micDeferral.request()
+            "stopMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) {
+                micDeferral.clear()
+                stopMic()
+            }
             "hit" -> onHit(call)
             "failed" -> {
                 val reported = call.argument<String>("reason")
@@ -224,69 +230,7 @@ class WakeWordService : Service() {
             StationState.active,
         )
         VoiceLog.i("wake-hit route=${route.name.lowercase()}")
-        if (route == HitRoute.CHAT) askChat() else openOverlay()
-    }
-
-    /** WP93: the main engine decides (it checks again); no answer in time means the overlay. */
-    private fun askChat() {
-        ChatHitArbiter(
-            scheduler = object : HitScheduler {
-                override fun postDelayed(delayMs: Long, task: Runnable) {
-                    main.postDelayed(task, delayMs)
-                }
-
-                override fun cancel(task: Runnable) = main.removeCallbacks(task)
-            },
-            openOverlay = {
-                VoiceLog.i("wake-hit chat=refused-or-timeout")
-                openOverlay()
-            },
-            chatAccepted = {
-                VoiceLog.i("wake-hit chat=accepted")
-                armHandoffCheck()
-            },
-        ).begin { done -> WakeChannel.askHit(done) }
-    }
-
-    private fun openOverlay() {
-        wakeScreen()
-        if (!WendelinVoiceInteractionService.show()) {
-            VoiceLog.i("wake-hit show=failed")
-            WakeHandoff.clear()
-            stopMic()
-            engine?.send("overlayClosed", null)
-            return
-        }
-        armHandoffCheck()
-    }
-
-    /** The overlay (or chat) takes the audio when it starts; if it never does, listen again. */
-    private fun armHandoffCheck() {
-        handoffCheck?.let { main.removeCallbacks(it) }
-        val check = Runnable {
-            if (WakeHandoff.pending()) {
-                VoiceLog.i("wake-hit overlay=missing")
-                WakeHandoff.clear()
-                stopMic()
-                ChatState.owned = false
-                engine?.send("overlayClosed", null)
-            }
-        }
-        handoffCheck = check
-        main.postDelayed(check, HANDOFF_TIMEOUT_MS)
-    }
-
-    /**
-     * Turns the screen on for the overlay (a hit with the screen off): the overlay has no frame
-     * to draw otherwise. The device stays locked; the lock screen path of WP53 applies.
-     */
-    @Suppress("DEPRECATION")
-    private fun wakeScreen() {
-        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        pm.newWakeLock(
-            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-            "wendelin:wake-screen",
-        ).acquire(SCREEN_ON_MS)
+        if (route == HitRoute.CHAT) hitFlow.askChat() else hitFlow.openOverlay()
     }
 
     private fun pauseForAnHour() {
@@ -324,8 +268,9 @@ class WakeWordService : Service() {
     private fun release() {
         resume?.let { main.removeCallbacks(it) }
         resume = null
-        handoffCheck?.let { main.removeCallbacks(it) }
-        handoffCheck = null
+        handoffCheck.disarm()
+        overlapGuard.disarm()
+        micDeferral.clear()
         watcher?.stop()
         watcher = null
         lastConflict = null
@@ -338,22 +283,52 @@ class WakeWordService : Service() {
         wakeLock = null
     }
 
+    /**
+     * WP146: the app took the hit's audio but the service keeps recording until the app's own
+     * microphone has delivered its first frame ([finishHandoff]); a guard ends it if that never
+     * happens.
+     */
+    private fun handoffKept() {
+        handoffCheck.disarm()
+        overlapGuard.arm(OVERLAP_GUARD_MS) {
+            VoiceLog.i("wake-handoff overlap=timeout")
+            closeMicForHandoff()
+            // What was collected stays for `finishHandoff`.
+            WakeHandoff.stopCapture()
+            stopMic()
+        }
+    }
+
+    /**
+     * WP146: the app's microphone delivers: the service stops now (no second `AudioRecord`
+     * from here on) and returns what it recorded since the take.
+     */
+    private fun finishHandoff(): WakeHandoff.Taken? {
+        overlapGuard.disarm()
+        closeMicForHandoff()
+        val tail = WakeHandoff.finish()
+        stopMic()
+        return tail
+    }
+
     /** The overlay took the hit's audio: it opens the microphone now. */
     private fun handoffTaken() {
-        handoffCheck?.let { main.removeCallbacks(it) }
-        handoffCheck = null
+        handoffCheck.disarm()
         stopMic()
     }
 
     /** The overlay is gone (or never came): Dart may listen again. */
     private fun overlayClosed() {
-        if (WakeHandoff.pending()) {
-            // Never taken: the kept microphone closes, Dart opens it again.
+        overlapGuard.disarm()
+        if (WakeHandoff.pending() || WakeHandoff.capturing()) {
+            // Never taken (or never finished): the kept microphone closes, Dart opens it again.
             WakeHandoff.clear()
             stopMic()
         }
-        handoffCheck?.let { main.removeCallbacks(it) }
-        handoffCheck = null
+        // What the guard stopped collected stays for `finishHandoff`; nobody comes for it now
+        // (up to 15 s of audio must not linger).
+        WakeHandoff.clear()
+        handoffCheck.disarm()
         engine?.send("overlayClosed", null)
     }
 
@@ -374,8 +349,11 @@ class WakeWordService : Service() {
         const val EXTRA_SOURCE = "source"
         const val EXTRA_REASON = "reason"
         private const val HOUR_MS = 60 * 60 * 1000L
-        private const val HANDOFF_TIMEOUT_MS = 15_000L
-        private const val SCREEN_ON_MS = 10_000L
+        const val HANDOFF_TIMEOUT_MS = 15_000L
+
+        /** Longest time the service records next to the app's microphone opening (WP146). */
+        const val OVERLAP_GUARD_MS = 2_500L
+        const val SCREEN_ON_MS = 10_000L
 
         // Stops the user did not ask for: they leave the „Wieder einschalten“ hint.
         private val UNWANTED = setOf("engine-failed", "no-role")
@@ -397,6 +375,14 @@ class WakeWordService : Service() {
             instance?.handoffTaken()
         }
 
+        /** WP146: taken with the capture kept open (the service records until [finishHandoff]). */
+        fun onHandoffKept() {
+            instance?.handoffKept()
+        }
+
+        /** WP146: the app's microphone is up; stops the service and returns the audio since the take. */
+        fun finishHandoff(): WakeHandoff.Taken? = instance?.finishHandoff() ?: WakeHandoff.finish()
+
         /**
          * Debug builds only (WP93, device tests): a hit with a second of silence as pre-roll, as
          * if the engine had confirmed the wake word. `false` if the service is not running.
@@ -408,6 +394,13 @@ class WakeWordService : Service() {
                 s.onHit(MethodCall("hit", mapOf("kw" to "debug", "pcm" to ByteArray(32_000), "end" to 16_000)))
             }
             return true
+        }
+
+        /** WP146: an engine of the app reports that it records (or not); see [AppVoice]. */
+        fun onAppVoice(source: String, active: Boolean) {
+            AppVoice.set(source, active, System.currentTimeMillis())
+            val s = instance ?: return
+            s.main.post { s.micDeferral.appVoiceChanged() }
         }
 
         /** The assistant overlay was closed: the service listens again. */

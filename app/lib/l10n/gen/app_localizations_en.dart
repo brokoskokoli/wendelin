@@ -4793,6 +4793,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bargeDebugTitle => 'Advanced: interrupting';
 
   @override
+  String get hotwordsBonusHelp =>
+      'How strongly names from your contacts and terms are favoured in speech recognition. Higher: names are hit more often, but also show up in noise or cut-off audio. Lower: fewer false names. The recognizer reloads when you change it.';
+
+  @override
+  String get hotwordsBonusTitle => 'Hint term bonus';
+
+  @override
   String get micAllowTitle => 'Allow the microphone?';
 
   @override
@@ -5197,11 +5204,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wakeServiceSectionWhen => 'When to listen?';
 
   @override
-  String get wakeServiceSectionWhisper => 'Verification with Whisper';
+  String get wakeServiceSectionWhisper => 'Verification (stage 2)';
 
   @override
   String get wakeServiceSectionWhisperDetail =>
-      'Wendelin only listens if Whisper confirms “Wendelin”. Turn it off if it is too strict for your voice; there will be more false triggers then.';
+      'Wendelin only listens if the verification confirms “Wendelin”. It covers the whole of stage 2: verifier B, Parakeet or Whisper, depending on what is enrolled and loaded. Turn it off if it is too strict for your voice; there will be more false triggers then.';
 
   @override
   String wakeTestAgo(String v, int inSeconds) {
@@ -5222,13 +5229,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wakeTestConfirmed => 'Verification: confirmed';
 
   @override
+  String wakeTestDecidedBy(String v, String who) {
+    return '$v (command recognizer: $who)';
+  }
+
+  @override
   String wakeTestFailed(Object error) {
     return 'Failed: $error';
   }
 
   @override
   String get wakeTestIntro =>
-      'Say “Wendelin”. Hits appear here without the overlay opening. “Candidate” is the voice, “confirmed” the verification with Whisper.';
+      'Say “Wendelin”. Hits appear here without the overlay opening. “Candidate” is the voice. “Confirmed” means the command recognizer (Parakeet or Whisper) heard “Wendelin”. That is not the service’s verification (stage 2); it can be stricter.';
 
   @override
   String get wakeTestListening => 'Listening';
@@ -5252,7 +5264,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wakeTestTitle => 'Try it';
 
   @override
-  String get wakeTestUnavailable => 'Verification: not possible (no Whisper)';
+  String get wakeTestUnavailable =>
+      'Verification: not possible (recognizer not loaded)';
+
+  @override
+  String get wakeTestVerifierParakeet => 'Parakeet';
+
+  @override
+  String get wakeTestVerifierWhisper => 'Whisper';
 
   @override
   String get wakeTestVerifying => 'Verification running …';

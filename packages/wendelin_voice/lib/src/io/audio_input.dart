@@ -25,6 +25,18 @@ abstract interface class AudioInput {
   Future<void> stop();
 }
 
+/// An [AudioInput] whose running recording can go on in the background while
+/// the next one starts (WP146): the barge-in recording keeps listening
+/// until the follow-up recording delivers its first frame.
+abstract interface class DetachableAudioInput implements AudioInput {
+  /// Lets the running recording continue: [isRunning] is false afterwards
+  /// and [start] opens a second, new recording. The frames of the detached
+  /// one still arrive on the stream returned by the earlier [start]. Returns
+  /// the function that ends it (idempotent), or `null` if nothing runs or a
+  /// recording is detached already (then the caller stops as usual).
+  Future<void> Function()? detach();
+}
+
 /// Duration of [samples] samples at [AudioInput.sampleRate].
 Duration samplesToDuration(int samples) =>
     Duration(microseconds: samples * 1000000 ~/ AudioInput.sampleRate);

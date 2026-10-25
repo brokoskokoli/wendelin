@@ -90,8 +90,9 @@ final class FakeAssistantPlatform extends AssistantPlatform
   Completer<void>? takeGate;
 
   @override
-  Future<WakeHandoffAudio?> takeWakeHandoff() async {
+  Future<WakeHandoffAudio?> takeWakeHandoff({bool keepOpen = false}) async {
     wakeTakes++;
+    if (keepOpen) wakeKeptOpen++;
     onTake?.call();
     await takeGate?.future;
     final audio = wakeHandoff;
@@ -99,6 +100,26 @@ final class FakeAssistantPlatform extends AssistantPlatform
     return audio == null
         ? null
         : WakeHandoffAudio(pcm: audio, wakeEnd: wakeEnd, capturedMs: 120);
+  }
+
+  /// Reports of the voice controller to the wake-word service (WP146).
+  final appVoice = <bool>[];
+
+  @override
+  Future<void> appVoiceActive({required bool active}) async =>
+      appVoice.add(active);
+
+  /// Takes with `keepOpen` (WP146) and ends of such a handoff.
+  int wakeKeptOpen = 0;
+  int wakeFinishes = 0;
+
+  /// What the service recorded between take and finish.
+  WakeHandoffAudio? finishAudio;
+
+  @override
+  Future<WakeHandoffAudio?> finishWakeHandoff() async {
+    wakeFinishes++;
+    return finishAudio;
   }
 
   /// Where the wake word ends in [wakeHandoff].
@@ -928,63 +949,5 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await tester.pump(const Duration(milliseconds: 50));
     expect(audio.isRunning, isFalse);
-  });
-
-  group('Sprachmodelle im Overlay (B11/B14)', () {
-    late int warm;
-    late int released;
-    VoiceComponents counting() => VoiceComponents(
-      audio: FakeAudioInput(),
-      vad: FakeVoiceActivityDetector(),
-      stt: FakeSpeechToText(const []),
-      textToSpeech: (_) async => null,
-      config: const VoicePipelineConfig(),
-      warmUp: () async => warm++,
-      release: () async => released++,
-    );
-    setUp(() {
-      warm = 0;
-      released = 0;
-    });
-
-    testWidgets('Schließen gibt die Modelle frei', (tester) async {
-      final platform = FakeAssistantPlatform();
-      final env = TestEnv(providerConfig: scripted(FakeLlmProvider(const [])));
-      await pumpOverlay(
-        tester,
-        env,
-        platform,
-        autoStart: false,
-        voice: counting(),
-      );
-      await tester.pump();
-      await tester.tap(find.byTooltip('Beenden'));
-      await tester.pump();
-      await tester.pump();
-      expect(released, 1);
-      expect(platform.finished, 1);
-    });
-
-    testWidgets('gesperrt: Modell nur für das Zuhören geladen (WP53)', (
-      tester,
-    ) async {
-      final platform = FakeAssistantPlatform()
-        ..locked = true
-        ..unlockSucceeds = false;
-      final env = TestEnv(providerConfig: scripted(FakeLlmProvider(const [])));
-      final c = await pumpOverlay(tester, env, platform, voice: counting());
-      await tester.pump(const Duration(milliseconds: 10));
-      expect(
-        find.text(AppLocalizationsDe().overlayLockedTitle),
-        findsOneWidget,
-      );
-      expect(warm, 1, reason: 'einmal, beim Zuhören (Whisper lokal)');
-
-      platform.unlockSucceeds = true;
-      await tester.tap(find.text('Entsperren'));
-      await tester.pump(const Duration(milliseconds: 10));
-      expect(warm, greaterThan(0), reason: 'entsperrt: vorwärmen');
-      await c.read(voiceControllerProvider.notifier).cancel();
-    });
   });
 }

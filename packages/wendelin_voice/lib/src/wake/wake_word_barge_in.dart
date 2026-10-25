@@ -1,8 +1,12 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:wendelin_core/wendelin_core.dart';
+
 import '../io/audio_input.dart';
 import '../io/barge_in_detector.dart';
+import 'barge_clip.dart';
+import 'barge_tail_collector.dart';
 import 'barge_verifier.dart';
 import 'keyword_spec.dart';
 import 'pre_roll_buffer.dart';
@@ -17,7 +21,10 @@ import 'wake_word_engine.dart';
 /// (the engine stays open for the next [start]; [dispose] closes it)
 /// so the owner can switch the capture profile back to speech recognition
 /// (`VOICE_RECOGNITION`) before the follow-up window opens (WP51 „Offen“).
-final class WakeWordBargeInDetector implements BargeInDetector {
+///
+/// With a [DetachableAudioInput] it is also a [BargeTailSource] (WP146).
+final class WakeWordBargeInDetector
+    implements BargeInDetector, BargeTailSource {
   /// Creates the detector.
   WakeWordBargeInDetector({
     required this.audio,
@@ -33,7 +40,18 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     this.verifyTimeout = const Duration(seconds: 6),
     this.onCandidate,
     this.onVerdict,
+    this.clock = const SystemClock(),
+    this.tailMax = const Duration(seconds: 3),
   });
+
+  /// Time source of the tail's idle time.
+  final Clock clock;
+
+  /// The longest the recording goes on after the answer (WP146). The
+  /// follow-up microphone opened in 0.5 to 1 s on the device (the call path
+  /// of the answer is given back first, at most 1 s); a recording that has
+  /// no first frame after 3 s failed, and two recordings must never stay on.
+  final Duration tailMax;
 
   /// Stage 2 (WP113, K84): with a [verifier] a hit of the engine is only a
   /// candidate. The audio of the last [clip] goes to the verifier and the
@@ -127,6 +145,11 @@ final class WakeWordBargeInDetector implements BargeInDetector {
   Future<void> _chain = Future.value();
   Future<void> _lifecycle = Future.value();
 
+  // Tail after the answer (WP146) and the function that ends the detached
+  // recording.
+  late final _tail = BargeTailCollector(clock, tailMax);
+  Future<void> Function()? _detached;
+
   @override
   Stream<BargeInSignal> get signals => _signals.stream;
 
@@ -168,13 +191,17 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     if (pcm != null && pcm.isNotEmpty && e is WarmableWakeEngine) {
       // The live frames queue behind it (same chain), none is lost.
       _chain = _warmUp(e, pcm, gen);
-      final guard = _speechEnd(pcm) + durationToSamples(warmSpan) - pcm.length;
+      final guard =
+          speechEnd(pcm, minLevel) + durationToSamples(warmSpan) - pcm.length;
       _ignoreUntil = guard > 0 ? guard : 0;
     }
-    _sub = audio.start().listen(
-      (f) => _chain = _chain.then((_) => _onFrame(f, gen)),
-      onError: (Object _) => unawaited(stop()),
-    );
+    _sub = audio.start().listen((f) {
+      if (_tail.active) {
+        _tail.add(f);
+      } else {
+        _chain = _chain.then((_) => _onFrame(f, gen));
+      }
+    }, onError: (Object _) => unawaited(stop()));
     _running = true;
   });
 
@@ -194,7 +221,8 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     if (gen != _generation) return;
     if (verifier != null) {
       _ring.add(frame);
-      _trackLevel(frame);
+      final loud = speechEnd(frame, minLevel);
+      if (loud > 0) _lastLoud = _fed + loud;
     }
     _fed += frame.length;
     final hits = await engine.accept(frame);
@@ -262,68 +290,15 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     }
   }
 
-  // Notes the end of the last block of [frame] that reaches [minLevel].
-  void _trackLevel(Int16List frame) {
-    const block = 320;
-    for (var i = 0; i < frame.length; i += block) {
-      final end = i + block < frame.length ? i + block : frame.length;
-      var sum = 0.0;
-      for (var j = i; j < end; j++) {
-        sum += frame[j] * frame[j];
-      }
-      if (sum / (end - i) >= minLevel * minLevel) _lastLoud = _fed + end;
-    }
-  }
-
-  /// End (sample index) of the last block of [pcm] that reaches [minLevel].
-  int _speechEnd(Int16List pcm) {
-    const block = 320;
-    var last = 0;
-    for (var i = 0; i < pcm.length; i += block) {
-      final end = i + block < pcm.length ? i + block : pcm.length;
-      var sum = 0.0;
-      for (var j = i; j < end; j++) {
-        sum += pcm[j] * pcm[j];
-      }
-      if (sum / (end - i) >= minLevel * minLevel) last = end;
-    }
-    return last;
-  }
-
-  /// The last [clip] of the ring, ending shortly after the last loud block
-  /// instead of at "now": a late stage 1 hit (the check starts after
-  /// [settle]) must not push the word out of the clip (device finding
-  /// 2026-10-22). Speech up to now: the clip ends now.
-  Int16List _clipEndingAtSpeech() {
-    final all = _ring.snapshot();
-    final first = _fed - all.length;
-    // Trailing silence = settle (device finding 2026-10-22): Whisper needs
-    // quiet after a short word to recognise it; the end stays
-    // min(now, _lastLoud + settle).
-    final tail = durationToSamples(settle);
-    var end = all.length;
-    if (_lastLoud + tail - first < end) end = _lastLoud + tail - first;
-    if (end <= 0) return all; // loud block left the ring: quiet, skipped
-    final n = durationToSamples(clip);
-    return Int16List.sublistView(all, end > n ? end - n : 0, end);
-  }
-
-  bool _quiet(Int16List pcm) {
-    const block = 320;
-    for (var i = 0; i < pcm.length; i += block) {
-      final end = i + block < pcm.length ? i + block : pcm.length;
-      var sum = 0.0;
-      for (var j = i; j < end; j++) {
-        sum += pcm[j] * pcm[j];
-      }
-      if (sum / (end - i) >= minLevel * minLevel) return false;
-    }
-    return true;
-  }
-
   Future<void> _verify(BargeVerifier v, BargeInKeyword cand, int gen) async {
-    final pcm = _clipEndingAtSpeech();
-    if (_quiet(pcm)) {
+    final pcm = clipEndingAtSpeech(
+      _ring.snapshot(),
+      fed: _fed,
+      lastLoud: _lastLoud,
+      settle: settle,
+      clip: clip,
+    );
+    if (speechEnd(pcm, minLevel) == 0) {
       // Nothing to recognize (background similarity): no recognizer run.
       onVerdict?.call(const BargeVerdict('skip', null, 'silent'), 0);
       return;
@@ -389,9 +364,45 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     _deferredScore = _pendingScore = 0;
     final sub = _sub;
     _sub = null;
+    final detached = _detached;
+    _detached = null;
+    _tail.clear();
     await sub?.cancel();
-    await audio.stop();
+    // A detached recording is not the input's current one: end that one.
+    if (detached != null) {
+      await detached();
+    } else {
+      await audio.stop();
+    }
   });
+
+  @override
+  bool beginTail() {
+    final input = audio;
+    if (!_running || _tail.active || input is! DetachableAudioInput) {
+      return false;
+    }
+    final end = input.detach();
+    if (end == null) return false;
+    _detached = end;
+    // Pending candidates and checks are void: nobody speaks to an answer
+    // that is over, and the engine gets no more frames.
+    _generation++;
+    _pendingAt = -1;
+    _pendingKind = _deferredKind = null;
+    _deferredScore = _pendingScore = 0;
+    _tail.begin(() => unawaited(stop()));
+    return true;
+  }
+
+  @override
+  BargeTail? endTail() {
+    if (!_tail.active) return null;
+    final tail = _tail.take();
+    // The recording ends now; `stop` ends the detached one.
+    unawaited(stop());
+    return tail;
+  }
 
   /// Stops and closes the engine for good.
   Future<void> dispose() async {

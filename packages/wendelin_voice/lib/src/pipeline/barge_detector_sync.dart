@@ -12,7 +12,12 @@ class BargeDetectorSync {
     required this.enabled,
     required this.state,
     required this.onError,
+    this.wantTail,
   });
+
+  /// Whether leaving `speaking` for `listening` hands over to a follow-up
+  /// recording (the detector then keeps recording, see [BargeTailSource]).
+  final bool Function()? wantTail;
 
   final BargeInDetector? Function() detector;
   final bool Function() enabled;
@@ -40,7 +45,15 @@ class BargeDetectorSync {
         }
       });
     } else if (s != VoiceState.thinking) {
-      _ops = _ops.then((_) => _stop(d));
+      final tail = s == VoiceState.listening && (wantTail?.call() ?? false);
+      _ops = _ops.then((_) async {
+        if (tail &&
+            d is BargeTailSource &&
+            (d as BargeTailSource).beginTail()) {
+          return;
+        }
+        await _stop(d);
+      });
     }
   }
 

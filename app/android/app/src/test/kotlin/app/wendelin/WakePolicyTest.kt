@@ -2,6 +2,7 @@ package app.wendelin
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -262,6 +263,40 @@ class WakePolicyTest {
     }
 
     @Test
+    fun theCaptureStaysOpenAfterTheTakeUntilFinishWp146() {
+        WakeHandoff.clear()
+        fun chunk(i: Int) = ByteArray(960) { n -> if (n % 2 == 0) i.toByte() else 0 }
+        WakeHandoff.put(chunk(99), 100, 400)
+        WakeHandoff.beginCapture(chunk(1))
+        val taken = WakeHandoff.takeKeepingOpen(200)!!
+        // pre-roll + what was collected until the take, exactly once
+        assertEquals(960 * 2, taken.pcm.size)
+        assertFalse(WakeHandoff.pending())
+        // the service keeps recording: the chunks go to the tail, not to the (taken) pre-roll
+        assertTrue(WakeHandoff.capturing())
+        WakeHandoff.append(chunk(2), 1000)
+        WakeHandoff.append(chunk(3), 1030)
+        val tail = WakeHandoff.finish()!!
+        assertEquals(960 * 2, tail.pcm.size)
+        assertEquals(2, tail.pcm[0].toInt())
+        assertEquals(3, tail.pcm[960].toInt())
+        assertEquals(1030L, tail.lastSampleAtMs)
+        // finished: nothing more is collected, a second finish has nothing
+        assertFalse(WakeHandoff.capturing())
+        WakeHandoff.append(chunk(4), 1060)
+        assertNull(WakeHandoff.finish())
+    }
+
+    @Test
+    fun aStaleHitIsNotKeptOpenWp146() {
+        WakeHandoff.clear()
+        WakeHandoff.put(ByteArray(2), 100)
+        WakeHandoff.beginCapture(ByteArray(0))
+        assertNull(WakeHandoff.takeKeepingOpen(100 + WakeHandoff.MAX_AGE_MS + 1))
+        assertFalse(WakeHandoff.capturing())
+    }
+
+    @Test
     fun aStaleCaptureFlagDoesNotMakeTheWakeWordDeaf() {
         // Service ended during a handover: release() clears the hit, the flag is gone.
         WakeHandoff.clear()
@@ -312,5 +347,64 @@ class WakePolicyTest {
         assertEquals("modelMissing", WakePolicy.failureReason("modelMissing"))
         assertEquals("engine-failed", WakePolicy.failureReason("no-templates"))
         assertEquals("engine-failed", WakePolicy.failureReason(null))
+    }
+
+    @Test
+    fun serviceMicWaitsWhileTheAppRecordsAndForTheQuietTimeAfter() {
+        AppVoice.reset()
+        assertEquals(0L, AppVoice.waitMs(1_000))
+        AppVoice.set("a", true, 1_000)
+        assertEquals(AppVoice.WAIT_FOR_APP, AppVoice.waitMs(1_500))
+        AppVoice.set("a", false, 2_000)
+        assertEquals(AppVoice.QUIET_MS, AppVoice.waitMs(2_000))
+        assertEquals(200L, AppVoice.waitMs(2_500))
+        assertEquals(0L, AppVoice.waitMs(2_700))
+        AppVoice.reset()
+    }
+
+    @Test
+    fun theAppIsActiveUntilEveryEngineEnded() {
+        AppVoice.reset()
+        AppVoice.set("overlay", true, 100)
+        AppVoice.set("main", true, 200)
+        AppVoice.set("overlay", false, 300)
+        assertTrue(AppVoice.active(300))
+        AppVoice.set("main", false, 400)
+        assertFalse(AppVoice.active(400))
+        assertEquals(AppVoice.QUIET_MS - 100, AppVoice.waitMs(500))
+        // An end of an engine that never started changes nothing.
+        AppVoice.set("ghost", false, 10_000)
+        assertEquals(0L, AppVoice.waitMs(10_000))
+        AppVoice.reset()
+    }
+
+    @Test
+    fun aHangingActiveReportStopsCountingAfterTheCap() {
+        AppVoice.reset()
+        AppVoice.set("main", true, 1_000)
+        assertEquals(AppVoice.WAIT_FOR_APP, AppVoice.waitMs(1_000 + AppVoice.MAX_ACTIVE_MS - 1))
+        // Never reported the end: the service listens again, after the quiet time.
+        val capEnd = 1_000 + AppVoice.MAX_ACTIVE_MS
+        assertFalse(AppVoice.active(capEnd))
+        assertEquals(AppVoice.QUIET_MS, AppVoice.waitMs(capEnd))
+        assertEquals(0L, AppVoice.waitMs(capEnd + AppVoice.QUIET_MS))
+        // A new report renews the time of an engine.
+        AppVoice.reset()
+        AppVoice.set("main", true, 0)
+        AppVoice.set("main", true, 100_000)
+        assertTrue(AppVoice.active(100_000 + AppVoice.MAX_ACTIVE_MS - 1))
+        AppVoice.reset()
+    }
+
+    @Test
+    fun clearDropsWhatTheGuardStoppedCollecting() {
+        WakeHandoff.clear()
+        WakeHandoff.put(ByteArray(3200), 100)
+        assertNotNull(WakeHandoff.takeKeepingOpen(200))
+        WakeHandoff.append(ByteArray(3200), 250)
+        WakeHandoff.stopCapture()
+        // The overlay closed without `finish`: the rest does not linger.
+        WakeHandoff.clear()
+        assertNull(WakeHandoff.finish())
     }
 }

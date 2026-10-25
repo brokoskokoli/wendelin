@@ -127,7 +127,13 @@ void main() {
       await voice().suspend(); // paused / hidden
       // At once, not through the silence timeout of the window.
       expect(audio.isRunning, isFalse, reason: 'Mikrofon sofort aus');
-      expect(log.any((l) => l.contains('reason=silence')), isFalse);
+      // The window does not end through the silence timeout (the diagnostic
+      // line `listen-end` of the cut recording may say so; only the end of
+      // the conversation counts).
+      expect(
+        log.any((l) => l.contains('conv-exit') && l.contains('reason=silence')),
+        isFalse,
+      );
       await voice().whenIdle;
       expect(c.read(voiceControllerProvider).followUp, isFalse);
       expect(c.read(voiceControllerProvider).active, isFalse);

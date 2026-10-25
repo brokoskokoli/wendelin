@@ -1,8 +1,13 @@
 import 'bpe_encoder.dart';
 
-/// Default hotword score of the Parakeet decoder (WP102: 3.0 made the name
-/// „Wendelin“ come out right; lower scores cost less on other sentences).
-const defaultHotwordsScore = 3.0;
+/// Hotword score of the command recognizer's Parakeet decoder, for all hint
+/// terms (WP146, decision of the maintainer 2026-10-25). WP102 had 3.0 for
+/// the name „Wendelin“; measured with 300 contacts, 3.0 inserted names into
+/// damaged audio and noise (up to 18 % per wake scenario, text in 19 of 20
+/// noise runs, `docs/notes/hotword-bias-2026-10-25.md`), 1.0 inserted none.
+/// The wake word check (stage 2) keeps its own score
+/// (`WakeClassifierRules.parakeetHotwordsScore`).
+const defaultHotwordsScore = 1.0;
 
 /// The hotwords file for sherpa-onnx (`hotwordsFile`, with
 /// `modelingUnit: 'bpe'` and `bpeVocab` from [buildBpeVocab]): one name per

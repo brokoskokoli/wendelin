@@ -106,7 +106,7 @@ final class BargeMeter {
 }
 
 /// [AudioInput] that reports every frame to [meter].
-final class MeteredAudioInput implements AudioInput {
+final class MeteredAudioInput implements DetachableAudioInput {
   /// Wraps [inner].
   MeteredAudioInput(this.inner, this.meter);
 
@@ -127,6 +127,13 @@ final class MeteredAudioInput implements AudioInput {
 
   @override
   Future<void> stop() => inner.stop();
+
+  // Frames of the detached recording still arrive on the stream of [start].
+  @override
+  Future<void> Function()? detach() => switch (inner) {
+    final DetachableAudioInput d => d.detach(),
+    _ => null,
+  };
 }
 
 /// [WakeWordEngine] that times [inner] per frame for [meter].

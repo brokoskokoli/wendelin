@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../di/app_settings.dart';
 import '../../di/core_providers.dart';
+import '../../di/voice_providers.dart';
 import '../../di/wake_providers.dart';
 import '../../l10n/l10n.dart';
 import '../../platform/voice/record_audio_input.dart';
@@ -58,6 +59,7 @@ class _State extends ConsumerState<BargeDebugSheet> {
   SpeechCapture _source = SpeechCapture.communication;
   String _margin = bargeMarginChoices.first;
   bool _communication = false;
+  String _bonus = hotwordsBonusChoices.first;
 
   @override
   void initState() {
@@ -70,8 +72,10 @@ class _State extends ConsumerState<BargeDebugSheet> {
     final source = await s.get(AppSettings.bargeSource);
     final margin = await s.get(AppSettings.bargeMargin);
     final comm = await s.get(AppSettings.speechCommunication);
+    final bonus = await s.get(AppSettings.hotwordsBonus);
     if (!mounted) return;
     setState(() {
+      if (hotwordsBonusChoices.contains(bonus)) _bonus = bonus!;
       _communication = comm ?? false;
       _source = SpeechCapture.parse(source);
       if (bargeMarginChoices.contains(margin)) _margin = margin!;
@@ -91,6 +95,38 @@ class _State extends ConsumerState<BargeDebugSheet> {
       if (margin != null) _margin = margin;
     });
   }
+
+  Future<void> _setBonus(String value) async {
+    await ref
+        .read(storageProvider)
+        .settings
+        .set(AppSettings.hotwordsBonus, value);
+    // The recognizer is built again with the new bonus.
+    ref.invalidate(hotwordsBonusProvider);
+    if (!mounted) return;
+    setState(() => _bonus = value);
+  }
+
+  /// WP146: developer setting, bonus of the hint terms.
+  List<Widget> _bonusSection(BuildContext context) => [
+    Text(context.l10n.hotwordsBonusTitle, style: WText.label),
+    Wrap(
+      spacing: WSpace.s,
+      children: [
+        for (final b in hotwordsBonusChoices)
+          ChoiceChip(
+            label: Text(
+              b == hotwordsBonusChoices.first
+                  ? context.l10n.bargeDebugDefaultSuffix(b.replaceAll('.', ','))
+                  : b.replaceAll('.', ','),
+            ),
+            selected: _bonus == b,
+            onSelected: (_) => _setBonus(b),
+          ),
+      ],
+    ),
+    Text(context.l10n.hotwordsBonusHelp, style: WText.detail),
+  ];
 
   Future<void> _setCommunication(bool value) async {
     await ref
@@ -163,6 +199,7 @@ class _State extends ConsumerState<BargeDebugSheet> {
                 : _reset,
             child: Text(context.l10n.reset),
           ),
+          ..._bonusSection(context),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(context.l10n.speechCommunicationTitle),

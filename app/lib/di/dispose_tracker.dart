@@ -26,6 +26,15 @@ final class DisposeTracker {
     _pending.add(guarded);
   }
 
+  /// Whether the engine ends (the container is disposed for good, not a
+  /// provider rebuilt): a model may then be freed even though another engine
+  /// still uses it (its isolate goes with the engine, WP146).
+  bool get ending => _ending;
+  bool _ending = false;
+
+  /// Marks the end of the engine; set before the container is disposed.
+  void markEnding() => _ending = true;
+
   /// Completes when everything tracked so far (and what it starts) is done.
   Future<void> drain() async {
     while (_pending.isNotEmpty) {

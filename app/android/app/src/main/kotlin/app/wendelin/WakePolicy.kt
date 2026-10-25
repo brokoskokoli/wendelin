@@ -319,6 +319,47 @@ object WakeHandoff {
         }
     }
 
+    /**
+     * WP146: like [take], but the capture stays open. What the service records from now on is
+     * collected for [finish], so the app's own microphone can open and deliver its first frame
+     * before the service stops: no hole between the two recordings. `null` (and the capture
+     * ends) if none or stale.
+     */
+    @Synchronized
+    fun takeKeepingOpen(nowMs: Long): Taken? {
+        val p = pcm
+        pcm = null
+        val extra = tail.toByteArray()
+        tail = java.io.ByteArrayOutputStream()
+        if (p == null || nowMs - at > MAX_AGE_MS) {
+            capturing = false
+            return null
+        }
+        return Taken(p + extra, wakeEnd, extra.size / 2 * 1000L / 16_000, lastSampleAt)
+    }
+
+    /**
+     * WP146: ends a capture kept open by [takeKeepingOpen]; returns what was recorded since (the
+     * `pcm` of the result, `wakeEnd` 0) with the time of its last sample. `null` if no capture
+     * was open.
+     */
+    @Synchronized
+    fun finish(): Taken? {
+        val was = capturing || tail.size() > 0
+        val extra = tail.toByteArray()
+        val last = lastSampleAt
+        capturing = false
+        tail = java.io.ByteArrayOutputStream()
+        lastSampleAt = 0L
+        return if (was) Taken(extra, 0, extra.size / 2 * 1000L / 16_000, last) else null
+    }
+
+    /** WP146: no more audio is collected (the microphone closed), what was collected stays for [finish]. */
+    @Synchronized
+    fun stopCapture() {
+        capturing = false
+    }
+
     /** Whether a hit waits for the overlay. */
     @Synchronized
     fun pending(): Boolean = pcm != null
@@ -364,5 +405,75 @@ class WakeMicTap(private val keepBytes: Int = 3 * 16_000 * 2) {
         val all = java.io.ByteArrayOutputStream().also { out -> recent.forEach { out.write(it) } }.toByteArray()
         val n = minOf(missing, all.size.toLong()).toInt()
         return all.copyOfRange(all.size - n, all.size)
+    }
+}
+
+/**
+ * WP146: whether the app records or is about to (a voice request, its answer, a follow-up
+ * window), reported by every Dart engine of the process with its own [source]. The wake-word
+ * service does not open its microphone while this is on and for [QUIET_MS] after it ended: two
+ * `VOICE_RECOGNITION` recordings at once can degrade the app's audio (the conflict watcher closes
+ * the service only afterwards).
+ */
+object AppVoice {
+    const val QUIET_MS = 700L
+
+    /**
+     * Fail-safe: a source that reported "active" and never "inactive" (hanging phase, lost call)
+     * stops counting after this long, else the service would stay deaf. Longer than a request
+     * with a long answer and the follow-up window.
+     */
+    const val MAX_ACTIVE_MS = 180_000L
+
+    private val sources = mutableMapOf<String, Long>()
+    private var endedAt = Long.MIN_VALUE / 2
+
+    @Synchronized
+    fun set(source: String, active: Boolean, nowMs: Long) {
+        if (active) {
+            // Reporting again renews the time (a new request of the same engine).
+            sources[source] = nowMs
+        } else if (sources.remove(source) != null && sources.isEmpty()) {
+            endedAt = nowMs
+        }
+    }
+
+    @Synchronized
+    fun active(nowMs: Long): Boolean {
+        prune(nowMs)
+        return sources.isNotEmpty()
+    }
+
+    /**
+     * How long the service waits before it opens its microphone: 0 = now, [WAIT_FOR_APP] = the
+     * app records (ask again when it reports the end, at the latest after [MAX_ACTIVE_MS]), else
+     * the rest of the quiet time in ms.
+     */
+    @Synchronized
+    fun waitMs(nowMs: Long): Long {
+        prune(nowMs)
+        return when {
+            sources.isNotEmpty() -> WAIT_FOR_APP
+            else -> (endedAt + QUIET_MS - nowMs).coerceIn(0L, QUIET_MS)
+        }
+    }
+
+    const val WAIT_FOR_APP = -1L
+
+    private fun prune(nowMs: Long) {
+        val it = sources.entries.iterator()
+        while (it.hasNext()) {
+            val e = it.next()
+            if (nowMs - e.value >= MAX_ACTIVE_MS) {
+                it.remove()
+                endedAt = e.value + MAX_ACTIVE_MS
+            }
+        }
+    }
+
+    @Synchronized
+    fun reset() {
+        sources.clear()
+        endedAt = Long.MIN_VALUE / 2
     }
 }
