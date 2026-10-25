@@ -7,7 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/platform/assistant_platform.dart';
 import 'package:wendelin/voice/voice_components.dart';
+import 'package:wendelin/voice/app_voice_reporter.dart';
 import 'package:wendelin/voice/voice_controller.dart';
+import 'package:wendelin/voice/voice_ui_state.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
@@ -84,5 +86,25 @@ void main() {
     c.dispose();
     expect(platform.appVoice.last, isFalse);
     // tearDown disposes again: harmless.
+  });
+
+  test('Folgefenster (inaktiv, aber offen) meldet aktiv, Ende meldet frei', () {
+    final reporter = AppVoiceReporter(platform);
+    final until = DateTime.utc(2026, 10, 25, 12);
+    reporter
+      ..update(const VoiceUiState(preparing: true))
+      // The follow-up window between two recordings: not `active`, but the
+      // next recording follows (WP146, wake-resume between them).
+      ..update(
+        VoiceUiState(
+          followUpUntil: until,
+          followUpWindow: const Duration(seconds: 5),
+        ),
+      );
+    expect(platform.appVoice, [true]);
+    reporter.update(const VoiceUiState());
+    expect(platform.appVoice, [true, false]);
+    reporter.dispose();
+    expect(platform.appVoice, [true, false]);
   });
 }
