@@ -116,6 +116,9 @@ final class VoicePipeline {
   bool _speechFailed = false;
 
   void Function(Endpoint?)? _endListening;
+  // The microphone was kept open after a decision inside the pre-roll
+  // (WP146): the live audio is the continuation of a possible re-listen.
+  bool _micHeld = false;
   Endpointer? _endpointer;
   SpeechQueue? _queue;
   bool _agentRunning = false;
@@ -234,6 +237,7 @@ final class VoicePipeline {
   void _abortActivities() {
     final end = _endListening;
     if (end != null) end(null);
+    _releaseHeldMic();
     if (_agentRunning) agent.cancel();
     final q = _queue;
     _queue = null;
@@ -275,6 +279,7 @@ final class VoicePipeline {
         preRollIsSpeech: preRollIsSpeech,
         wakeEnd: preWakeEnd,
         preRollRest: preRest,
+        holdMic: stripWake && !followUp && pre != null,
       );
       if (gen != _gen) return;
       if (endpoint == null) return _finish(gen, ConversationEndReason.error);
@@ -299,6 +304,7 @@ final class VoicePipeline {
         }
         transcript = transcript.withText(rest);
       }
+      _releaseHeldMic();
       if (transcript.text.trim().isEmpty) {
         if (!followUp) {
           await _nothingUnderstood(gen, null, language: transcript.language);
@@ -339,6 +345,7 @@ final class VoicePipeline {
 
   void _finish(int gen, [ConversationEndReason? reason]) {
     if (gen != _gen) return;
+    _releaseHeldMic();
     if (reason != null) _endConversation(reason);
     _setState(VoiceState.idle);
   }
@@ -387,6 +394,7 @@ final class VoicePipeline {
     bool preRollIsSpeech = false,
     int? wakeEnd,
     bool preRollRest = false,
+    bool holdMic = false,
   }) {
     final previous = _listening;
     final run = _listenAfter(
@@ -397,6 +405,7 @@ final class VoicePipeline {
       preRollIsSpeech,
       wakeEnd,
       preRollRest,
+      holdMic,
     );
     _listening = run.then((_) {});
     return run;
@@ -410,6 +419,7 @@ final class VoicePipeline {
     bool preRollIsSpeech,
     int? wakeEnd,
     bool preRollRest,
+    bool holdMic,
   ) async {
     await previous;
     // The barge-in detector shares the microphone: it must have released
@@ -435,6 +445,7 @@ final class VoicePipeline {
     }
 
     StreamSubscription<Int16List>? sub;
+    var held = false;
     final guards = <Timer>[];
     final levels = _LevelLog(diagnostics);
     _endListening = end;
@@ -450,8 +461,12 @@ final class VoicePipeline {
           preRollRest,
         );
         if (early != null) end(early);
+        // "Only the wake word" may follow: the early opened microphone keeps
+        // buffering, the next recording continues with what it heard.
+        held = holdMic && early != null;
       }
       if (!done.isCompleted) {
+        _micHeld = false;
         sub = _openMic(endpointer, limits, levels, guards, end, fail, done);
       }
     } on Object catch (error) {
@@ -469,7 +484,12 @@ final class VoicePipeline {
     try {
       // Also without a subscription: an early opened microphone must close
       // when the pre-roll decided (WP146).
-      if (audio.isRunning) await audio.stop();
+      if (held && sub == null && audio.isRunning) {
+        _micHeld = true;
+      } else if (audio.isRunning) {
+        _micHeld = false;
+        await audio.stop();
+      }
     } on Object catch (error) {
       _emit(VoiceError(VoiceState.listening, error));
     }
@@ -477,6 +497,13 @@ final class VoicePipeline {
     // future, and there is nothing left to wait for.
     unawaited(sub?.cancel());
     return result;
+  }
+
+  /// Stops a microphone that was kept open for a re-listen (WP146).
+  void _releaseHeldMic() {
+    if (!_micHeld) return;
+    _micHeld = false;
+    unawaited(audio.stop());
   }
 
   Future<Transcript?> _transcribe(int gen, Int16List pcm) async {

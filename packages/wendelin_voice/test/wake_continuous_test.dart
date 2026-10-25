@@ -100,6 +100,36 @@ void main() {
     });
   });
 
+  test('nur Weckwort, Befehl über das Ende des Vorlaufs hinaus: das früh '
+      'geöffnete Mikrofon bleibt offen, nichts geht verloren (WP146)', () {
+    runFake((async) {
+      // Like the primed microphone: it records from before the pipeline
+      // starts and replays what it buffered.
+      final mic = _HeldMic(AudioFrames.pattern('S' * 20, frame: frame));
+      final h = Harness(
+        turns: [ScriptedTurn.text('Licht an.')],
+        transcripts: const [
+          Transcript(text: 'Wendelin.'),
+          Transcript(text: 'Mach das Licht an'),
+        ],
+        audio: mic,
+      );
+      // The pre-roll ends after the wake word and a pause: decided inside it.
+      final pre = cat([speech(600), quiet(1000)]);
+      h.pipeline.start(trigger: wake(pre, 200 * 16));
+      settle(async);
+      expect(h.stt.calls, hasLength(2));
+      // The request the microphone heard meanwhile is in the second pass.
+      expect(
+        h.stt.calls.last.samples,
+        greaterThanOrEqualTo(20 * 480),
+        reason: 'gepufferte Sprache nicht verworfen',
+      );
+      expect(mic.lostSamples, 0);
+      expect(mic.running, isFalse, reason: 'am Ende gestoppt');
+    });
+  });
+
   test('Pegel-Log: nur Zahlen, pro Sekunde (WP146)', () {
     runFake((async) {
       final h = Harness(
@@ -340,4 +370,34 @@ void main() {
       expect(speechAfterWakeWord(louder, 1000 * 16), isTrue);
     });
   });
+}
+
+/// An open microphone with buffered [frames] that are replayed on [start]; a
+/// [stop] before drops them (like a restarted microphone).
+final class _HeldMic implements AudioInput {
+  _HeldMic(this._frames);
+
+  final List<Int16List> _frames;
+  bool running = true;
+  int lostSamples = 0;
+
+  @override
+  bool get isRunning => running;
+
+  @override
+  Stream<Int16List> start() {
+    if (!running) return const Stream.empty();
+    final frames = List.of(_frames);
+    _frames.clear();
+    return Stream.fromIterable(frames);
+  }
+
+  @override
+  Future<void> stop() async {
+    running = false;
+    for (final f in _frames) {
+      lostSamples += f.length;
+    }
+    _frames.clear();
+  }
 }
