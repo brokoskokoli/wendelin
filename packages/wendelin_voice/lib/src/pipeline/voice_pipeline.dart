@@ -28,6 +28,7 @@ export 'conversation.dart';
 export 'voice_pipeline_config.dart';
 part 'voice_pipeline_text.dart';
 part 'voice_pipeline_listen.dart';
+part 'voice_pipeline_record.dart';
 
 /// The voice pipeline (concept: Auslöser → Aufnahme mit VAD → STT → Agent →
 /// TTS) as a state machine:
@@ -258,7 +259,7 @@ final class VoicePipeline {
     var stripWake = trigger?.source == TriggerKind.wakeWord;
     var pre = preRoll;
     var preWakeEnd = wakeEnd;
-    var preRest = false; // pre-roll rest after "only the wake word" (WP146)
+    var preRest = false; // WP146: after "only the wake word"
     if (config.conversationMode) {
       _convOpen = true;
       if (continued) {
@@ -284,7 +285,6 @@ final class VoicePipeline {
       if (gen != _gen) return;
       if (endpoint == null) return _finish(gen, ConversationEndReason.error);
       if (endpoint.kind == EndpointKind.nothing) {
-        // The follow-up window just closes quietly.
         if (!followUp) await _nothingUnderstood(gen, endpoint.reason);
         return _finish(gen, ConversationEndReason.silence);
       }
@@ -295,8 +295,7 @@ final class VoicePipeline {
         stripWake = false;
         final rest = stripWakeWord(transcript.text);
         if (rest.isEmpty && transcript.text.trim().isNotEmpty) {
-          // Only the wake word: the rest of the pre-roll (the request, spoken
-          // while stage 2 checked) is fed next, then the live microphone.
+          // Only the wake word: feed the pre-roll rest, then the live mic.
           pre = _preRollLeft(pre, preWakeEnd, endpoint.elapsed);
           preWakeEnd = pre == null ? null : 0;
           preRest = pre != null;
@@ -383,128 +382,6 @@ final class VoicePipeline {
     fillerWords: config.fillerWords,
     stopPhrases: config.stopPhrases,
   );
-
-  /// Records one utterance. Recordings are serialized: a new one waits
-  /// until the previous (e.g. just cancelled) one has stopped the
-  /// microphone, and each only clears its own hooks.
-  Future<Endpoint?> _listen(
-    int gen,
-    EndpointConfig limits, {
-    Int16List? preRoll,
-    bool preRollIsSpeech = false,
-    int? wakeEnd,
-    bool preRollRest = false,
-    bool holdMic = false,
-  }) {
-    final previous = _listening;
-    final run = _listenAfter(
-      previous,
-      gen,
-      limits,
-      preRoll,
-      preRollIsSpeech,
-      wakeEnd,
-      preRollRest,
-      holdMic,
-    );
-    _listening = run.then((_) {});
-    return run;
-  }
-
-  Future<Endpoint?> _listenAfter(
-    Future<void> previous,
-    int gen,
-    EndpointConfig limits,
-    Int16List? preRoll,
-    bool preRollIsSpeech,
-    int? wakeEnd,
-    bool preRollRest,
-    bool holdMic,
-  ) async {
-    await previous;
-    // The barge-in detector shares the microphone: it must have released
-    // it (stop is queued with the state change) before this recording
-    // starts, else the device says "already running" (WP64).
-    // A hanging detector must not block the recording for ever: after the
-    // timeout we start anyway (a still busy microphone gives a clear error).
-    await _barge.settled.timeout(
-      bargeReleaseTimeout,
-      onTimeout: () => diagnostics?.call('barge-wait-timeout'),
-    );
-    if (gen != _gen) return null;
-    final endpointer = Endpointer(limits);
-    final done = Completer<Endpoint?>();
-    void end(Endpoint? e) {
-      if (!done.isCompleted) done.complete(e);
-    }
-
-    void fail(Object error) {
-      if (done.isCompleted) return;
-      _emit(VoiceError(VoiceState.listening, error));
-      end(null);
-    }
-
-    StreamSubscription<Int16List>? sub;
-    var held = false;
-    final guards = <Timer>[];
-    final levels = _LevelLog(diagnostics);
-    _endListening = end;
-    _endpointer = endpointer;
-    try {
-      vad.reset();
-      if (preRoll != null) {
-        final early = _feedPreRollLogged(
-          endpointer,
-          preRoll,
-          preRollIsSpeech,
-          wakeEnd,
-          preRollRest,
-        );
-        if (early != null) end(early);
-        // "Only the wake word" may follow: the early opened microphone keeps
-        // buffering, the next recording continues with what it heard.
-        held = holdMic && early != null;
-      }
-      if (!done.isCompleted) {
-        _micHeld = false;
-        sub = _openMic(endpointer, limits, levels, guards, end, fail, done);
-      }
-    } on Object catch (error) {
-      fail(error);
-    }
-    final result = await done.future;
-    if (identical(_endpointer, endpointer)) {
-      _endListening = null;
-      _endpointer = null;
-    }
-    for (final g in guards) {
-      g.cancel();
-    }
-    levels.flush();
-    try {
-      // Also without a subscription: an early opened microphone must close
-      // when the pre-roll decided (WP146).
-      if (held && sub == null && audio.isRunning) {
-        _micHeld = true;
-      } else if (audio.isRunning) {
-        _micHeld = false;
-        await audio.stop();
-      }
-    } on Object catch (error) {
-      _emit(VoiceError(VoiceState.listening, error));
-    }
-    // Not awaited: for a finished stream `cancel` returns a shared root-zone
-    // future, and there is nothing left to wait for.
-    unawaited(sub?.cancel());
-    return result;
-  }
-
-  /// Stops a microphone that was kept open for a re-listen (WP146).
-  void _releaseHeldMic() {
-    if (!_micHeld) return;
-    _micHeld = false;
-    unawaited(audio.stop());
-  }
 
   Future<Transcript?> _transcribe(int gen, Int16List pcm) async {
     _setState(VoiceState.transcribing);

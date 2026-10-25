@@ -210,13 +210,11 @@ final class VoiceController extends Notifier<VoiceUiState> {
     if (state.active || ref.read(agentControllerProvider).running) {
       return false;
     }
-    // Models are installed (WP18 review: no permission question without
-    // them). The microphone opens right away and buffers while the models
-    // load; without the permission it does not record (the input checks
-    // it), and the explanation may come up meanwhile.
+    // Models are installed (WP18 review). The microphone opens right away
+    // and buffers while they load; without the permission it does not record
+    // (the input checks it), the explanation may come up meanwhile.
     final cancels = _cancels;
-    // The microphone of the loaded components, or (first use) the device
-    // microphone they will get.
+    // The loaded components' microphone, or (first use) the device one.
     final primed = _primedFor(
       ref.read(activeVoiceProvider).value?.audio ??
           ref.read(audioInputProvider),
@@ -228,8 +226,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       clearHint: true,
       clearError: true,
     );
-    // The hit's earlier recording ends right before this microphone opens
-    // (WP68), nothing is lost. (No await without a pre-roll: same order.)
+    // The hit's recording ends right before this microphone opens (WP68).
     final preRoll = takePreRoll == null ? null : await takePreRoll();
     if (!ref.mounted) return false;
     if (cancels != _cancels) {
