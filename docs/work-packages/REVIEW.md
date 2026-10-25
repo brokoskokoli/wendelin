@@ -28,7 +28,7 @@ BEFUNDE:
 
 ## Urteilsdatei (maschinenlesbar)
 
-Der Reviewer legt sein Urteil als Datei ab: `../james-wt/reviews/<wp>-review.md` (z. B. wp110-review.md; aus einem Worktree heraus liegt der Ordner `reviews/` neben dem Worktree, also `../reviews/`). Dauerhafter Ablageort: `tool/cleanup_wt.sh` löscht dort nichts und verschiebt Urteile, die noch in `handoff/` liegen, nach `reviews/`, beim Re-Review `<wp>-review2.md`, dann `-review3.md`. Die Datei beginnt mit genau diesem Kopf (eine Angabe je Zeile, `Schlüssel: Wert`, danach beliebiger Text, am besten das Ergebnis oben):
+Der Reviewer legt sein Urteil als Datei ab: `../james-wt/reviews/<wp>-review.md` (z. B. wp110-review.md; aus einem Worktree heraus liegt der Ordner reviews neben dem Worktree). Das ist der dauerhafte Ablageort: `tool/cleanup_wt.sh` löscht dort nichts und verschiebt Urteile, die noch im Ordner handoff liegen, nach reviews, beim Re-Review `<wp>-review2.md`, dann `-review3.md`. Die Datei beginnt mit genau diesem Kopf (eine Angabe je Zeile, `Schlüssel: Wert`, danach beliebiger Text, am besten das Ergebnis oben):
 
 ```
 URTEIL: FREIGABE | NACHBESSERN

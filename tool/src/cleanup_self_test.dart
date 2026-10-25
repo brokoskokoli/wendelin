@@ -375,7 +375,7 @@ void _verdicts(SelfCheck t, _Env c) {
         !c.exists('$wt/handoff/wp18-review2.md') &&
         !c.exists('$wt/handoff/wp18.md') &&
         !c.exists('$wt/handoff/wp18-log.txt') &&
-        File('$wt/reviews/wp18-review.md').readAsStringSync() == verdict &&
+        _read('$wt/reviews/wp18-review.md') == verdict &&
         File('$wt/reviews/wp18-review2.md').existsSync() &&
         File('$wt/reviews/wp5-review.md').existsSync(),
     'nach --apply: Urteile in reviews/ erhalten, Rest weg: ${res.stderr}',
@@ -395,7 +395,7 @@ void _verdicts(SelfCheck t, _Env c) {
   t.isTrue(
     res.exitCode != 0 &&
         c.snapshot() == before &&
-        File('$wt/reviews/wp19-review.md').readAsStringSync() == 'anders\n',
+        _read('$wt/reviews/wp19-review.md') == 'anders\n',
     'abweichendes Urteil in reviews/: nichts überschrieben, nichts gelöscht',
   );
   // Standardordner von review_stats: relativ zum Hauptcheckout, nicht zum cwd.
@@ -410,3 +410,6 @@ void _verdicts(SelfCheck t, _Env c) {
     'Standardordner ohne Git',
   );
 }
+
+String _read(String p) =>
+    File(p).existsSync() ? File(p).readAsStringSync() : '';

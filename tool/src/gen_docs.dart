@@ -3,6 +3,8 @@
 // Hinweis, sie nicht von Hand zu ändern.
 import 'dart:io';
 
+import 'gen_docs_tables.dart';
+
 const _head =
     '<!-- ERZEUGT von tool/gen_docs.dart (tool/regen_generated.sh). '
     'Nicht von Hand ändern. -->\n\n';
@@ -11,6 +13,8 @@ const _head =
 Map<String, String> generateDocs([String root = '.']) => {
   'docs/architecture/generated/packages.md': _packages(root),
   'docs/architecture/generated/integrations.md': _integrations(root),
+  'docs/architecture/generated/ports.md': _ports(root),
+  'docs/architecture/generated/channels.md': _channels(root),
   'docs/testing/m5/README.md': _m5Index(root),
 };
 
@@ -56,6 +60,57 @@ String _packages(String root) {
     final d = (deps.toList()..sort()).map((e) => '`$e`').join(', ');
     b.writeln('| `$n` | $desc | ${d.isEmpty ? '–' : d} |');
   }
+  return b.toString();
+}
+
+String _ports(String root) {
+  final sources = <String, String>{};
+  for (final top in ['packages', 'app/lib']) {
+    final d = Directory('$root/$top');
+    if (!d.existsSync()) continue;
+    for (final f in d.listSync(recursive: true)) {
+      if (f is! File || !f.path.endsWith('.dart')) continue;
+      final rel = f.path.substring(root.length + 1);
+      // Nur Produktivcode (inkl. Fakes in lib/), keine Tests, Builds, erzeugten Dateien.
+      if (!RegExp(r'^(packages/[^/]+/lib|app/lib)/').hasMatch(rel) ||
+          rel.contains('/generated/') ||
+          rel.contains('/.dart_tool/') ||
+          rel.endsWith('.g.dart') ||
+          rel.endsWith('.freezed.dart')) {
+        continue;
+      }
+      sources[rel] = f.readAsStringSync();
+    }
+  }
+  return (StringBuffer(_head)
+        ..writeln('# Ports und ihre Implementierer (erzeugt)')
+        ..writeln()
+        ..writeln(
+          'Alle `abstract interface class` mit Namensendung `Port`, `Api`, '
+          '`Secrets` oder `Store` unter `packages/*/lib` und `app/lib`. '
+          'Implementierer sind Klassen mit `implements`/`extends`/`with` auf '
+          'den Port (direkt, nicht über Zwischenklassen). Als Fake gelten '
+          'Klassen und Dateien mit `Fake`/`InMemory`/`Recording` bzw. '
+          '`fake(s)`/`testing` im Namen. Erklärungen und Ports mit anderem '
+          'Namensmuster: [ports.md](../ports.md).',
+        )
+        ..writeln()
+        ..write(portsTable(scanPorts(sources))))
+      .toString();
+}
+
+String _channels(String root) {
+  final b = StringBuffer(_head)
+    ..writeln('# Plattformkanäle (erzeugt)')
+    ..writeln()
+    ..writeln(
+      'Aus `app/channels.json`: je Kanal die Dart- und Kotlin-Dateien und '
+      'die Methoden mit Argumentschlüsseln. Der Abgleich mit dem Quelltext '
+      'ist Aufgabe von `tool/check_channels.dart`; Hintergrund: '
+      '[channels.md](../channels.md).',
+    )
+    ..writeln()
+    ..write(channelsTable(_read(root, 'app/channels.json')));
   return b.toString();
 }
 

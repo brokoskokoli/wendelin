@@ -1,0 +1,10 @@
+# Bestand des Bezeichner-Checks (tool/check_docs.dart, WP147): CamelCase-
+# Bezeichner in Backticks unter docs/architecture/ (ohne generated/), die im
+# Code (Dart, Kotlin, Rust) nicht vorkommen.
+#
+# Format: <doc>#<bezeichner>: <anzahl>  # Grund
+# Die Liste schrumpft nur. Neue Treffer sind in der Doku zu korrigieren, nicht
+# hier einzutragen; ein Eintrag, der nicht mehr zutrifft, wird vom Check zum
+# Entfernen gemeldet (`dart run tool/check_docs.dart --update-baseline`).
+# Zum Start leer: der einzige Altbestand (voice.md#requestMic) wurde in der
+# Doku korrigiert.
