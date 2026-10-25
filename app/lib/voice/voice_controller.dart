@@ -273,7 +273,11 @@ final class VoiceController extends Notifier<VoiceUiState> {
     if (!identical(components.audio, primed.inner)) await primed.stop();
     final pipeline = _pipelineFor(components);
     state = state.copyWith(preparing: false);
-    final bridged = await _wake.close(preRoll);
+    // (No await without a kept-open hit: the state change and the start of the
+    // pipeline stay in one step, as before WP146.)
+    final bridged = preRoll?.finish == null
+        ? preRoll
+        : await _wake.close(preRoll);
     if (!ref.mounted || cancels != _cancels) return false;
     return _run(pipeline, kind, bridged);
   }
@@ -341,7 +345,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
     }
     // The microphone of the pipeline opens only now: the service stops at
     // once (as before WP146), the hole stays.
-    preRoll = await _wake.close(preRoll);
+    if (preRoll?.finish != null) preRoll = await _wake.close(preRoll);
     return _run(pipeline, kind, preRoll);
   }
 
