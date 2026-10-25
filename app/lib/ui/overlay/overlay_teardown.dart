@@ -28,6 +28,7 @@ Future<void> tearDownOverlayEngine(
   try {
     final tracker = container.read(disposeTrackerProvider);
     final storage = container.read(storageProvider);
+    tracker.markEnding();
     container.dispose();
     await (() async {
       await tracker.drain();

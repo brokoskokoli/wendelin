@@ -18,6 +18,7 @@ import 'package:wendelin/platform/voice/engine_whisper.dart';
 import 'package:wendelin/platform/voice/pcm.dart';
 import 'package:wendelin/platform/voice/sherpa_tts.dart';
 import 'package:wendelin/platform/voice/whisper_stt.dart';
+import 'package:wendelin/ui/overlay/overlay_teardown.dart';
 import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin/voice/voice_log.dart';
@@ -230,6 +231,27 @@ void main() {
         expect(process.live, isEmpty);
       },
     );
+
+    test('Neuaufbau (replaced) gibt nicht frei, solange das Overlay das Modell '
+        'nutzt; erst nach ihm (WP146)', () async {
+      final app = engine('whisper-small');
+      final overlay = engine('whisper-small');
+      await app.warm();
+      await overlay.warm();
+      await app.release(reason: 'replaced');
+      expect(process.live, hasLength(1));
+      final r = await overlay.transcribe(samples, language: 'de');
+      expect(r.text, 'ok whisper-small');
+      expect(process.loads, 1);
+      expect(lines.any((l) => l.contains(' model-owner-gone ')), isFalse);
+      await overlay.release(reason: 'overlay-close');
+      await pumpEventQueue();
+      expect(process.live, isEmpty);
+      expect(
+        lines.singleWhere((l) => l.contains(' model-free ')),
+        contains('reason=replaced'),
+      );
+    });
 
     test(
       'Nutzung wieder aufgenommen: die wartende Freigabe entfällt (WP146)',
@@ -510,6 +532,30 @@ void main() {
       await comps.warmUp!();
       expect(live, 1, reason: 'Silero wieder offen');
       expect(process.live, hasLength(1));
+    });
+
+    test('Neuaufbau des Providers, solange das Overlay das Modell nutzt: das '
+        'Overlay behält es (WP146)', () async {
+      final app = engineContainer(model: 'whisper-base');
+      addTearDown(app.dispose);
+      final overlay = engineContainer(model: 'whisper-base');
+      addTearDown(overlay.dispose);
+      await app.read(speechToTextProvider.future);
+      final o = await overlay.read(voiceComponentsProvider.future);
+      await app
+          .read(voiceSettingsProvider.notifier)
+          .change((s) => s.copyWith(sttModel: 'whisper-small'));
+      await app.read(speechToTextProvider.future);
+      await pumpEventQueue();
+      final base = process.live.where((b) => b.modelId == 'whisper-base');
+      expect(base, hasLength(1), reason: 'Overlay nutzt es noch');
+      final loadsBefore = process.loads;
+      final t = await o.stt.transcribe(
+        AudioFrames.pattern('S' * 20)
+            .reduce((a, b) => Int16List.fromList([...a, ...b])),
+      );
+      expect(t.text, 'ok whisper-base');
+      expect(process.loads, loadsBefore, reason: 'kein eigenes Laden');
     });
 
     test('Modellwechsel: danach genau ein Whisper (das neue)', () async {
@@ -803,7 +849,8 @@ void main() {
       addTearDown(overlay.dispose);
       await app.read(voiceComponentsProvider.future);
       final o = await overlay.read(voiceComponentsProvider.future);
-      app.dispose();
+      // The engine of the owner ends (overlay teardown): frees at once.
+      await tearDownOverlayEngine(app);
       await untilTrue(() => process.live.isEmpty);
       expect(process.live, isEmpty);
       final t = await o.stt.transcribe(

@@ -234,10 +234,11 @@ final class EngineWhisper implements WhisperBackend {
   /// again. Returns when it is gone.
   ///
   /// While another engine uses the model (the overlay), an idle release waits
-  /// until it has left (WP146). `replaced` (model change, the engine ends)
-  /// frees at once.
+  /// until it has left (WP146), also for `replaced` (the provider is rebuilt
+  /// while the overlay still uses the model). Only [dispose] (the engine
+  /// ends, its isolate goes with it) frees at once.
   Future<void> release({String reason = 'release'}) =>
-      _release(reason, force: reason == 'replaced');
+      _release(reason, force: false);
 
   Future<void> _release(String reason, {required bool force}) async {
     if (_borrowing) {

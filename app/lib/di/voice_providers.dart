@@ -231,8 +231,15 @@ final engineWhisperProvider = FutureProvider<EngineWhisper>((ref) async {
     directory: ref.watch(whisperDirectoryProvider),
   );
   // Model change or new download: the old model is freed before the new
-  // one loads (EngineWhisper waits for it).
-  onDisposeTracked(ref, () => whisper.release(reason: 'replaced'));
+  // one loads (EngineWhisper waits for it), but not while the overlay still
+  // uses it (WP146). Only the end of the engine frees at once.
+  final tracker = ref.read(disposeTrackerProvider);
+  onDisposeTracked(
+    ref,
+    () => tracker.ending
+        ? whisper.dispose()
+        : whisper.release(reason: 'replaced'),
+  );
   await whisper.warm();
   return whisper;
 });
