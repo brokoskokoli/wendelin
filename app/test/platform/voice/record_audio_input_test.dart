@@ -142,4 +142,88 @@ void main() {
     expect(rec.running, isFalse);
     expect(input.isRunning, isFalse);
   });
+
+  group('Ablösen der laufenden Aufnahme (WP146)', () {
+    late FakePcmRecorder first, second;
+    late RecordAudioInput input;
+
+    setUp(() {
+      first = FakePcmRecorder();
+      second = FakePcmRecorder();
+      input = RecordAudioInput(first, null, null, () => second);
+    });
+
+    Future<void> pause() =>
+        Future<void>.delayed(const Duration(milliseconds: 30));
+
+    test(
+      'die abgelöste Aufnahme liefert weiter, die neue läuft daneben',
+      () async {
+        input.useProfile(CaptureProfile.speechOutput);
+        var old = 0, fresh = 0;
+        final oldSub = input.start().listen((f) => old += f.length);
+        await pause();
+        final end = input.detach();
+        expect(end, isNotNull);
+        expect(input.isRunning, isFalse);
+        final before = old;
+        final freshSub = input.start().listen((f) => fresh += f.length);
+        await pause();
+        expect(old, greaterThan(before), reason: 'läuft weiter');
+        expect(fresh, greaterThan(0));
+        expect(first.profiles, [CaptureProfile.speechOutput]);
+        expect(second.profiles, [CaptureProfile.recognition]);
+        expect(first.running && second.running, isTrue, reason: 'kurz zwei');
+        await end!();
+        expect(first.stops, 1);
+        expect(first.running, isFalse);
+        expect(second.running, isTrue, reason: 'die neue bleibt unberührt');
+        expect(input.isRunning, isTrue);
+        await end(); // idempotent
+        expect(first.stops, 1);
+        await oldSub.cancel();
+        await freshSub.cancel();
+        await input.stop();
+      },
+    );
+
+    test('ohne zweiten Recorder oder ohne Aufnahme: null', () async {
+      expect(RecordAudioInput(first).detach(), isNull);
+      expect(input.detach(), isNull);
+      final sub = RecordAudioInput(first).start().listen((_) {});
+      await sub.cancel();
+    });
+
+    test('nur eine abgelöste Aufnahme zugleich', () async {
+      final s1 = input.start().listen((_) {});
+      await pause();
+      final end = input.detach()!;
+      final s2 = input.start().listen((_) {});
+      await pause();
+      expect(input.detach(), isNull, reason: 'die erste läuft noch');
+      await end();
+      expect(input.detach(), isNotNull, reason: 'danach wieder möglich');
+      await s1.cancel();
+      await s2.cancel();
+      await input.stop();
+    });
+
+    test(
+      'Fehler der abgelösten Aufnahme beendet sie, die neue läuft',
+      () async {
+        final s1 = input.start().listen((_) {}, onError: (Object _) {});
+        await pause();
+        final end = input.detach()!;
+        final s2 = input.start().listen((_) {});
+        await pause();
+        await first.endFromPlatform();
+        await pause();
+        expect(input.isRunning, isTrue);
+        await end(); // nichts mehr zu tun, wirft nicht
+        await s1.cancel();
+        await s2.cancel();
+        await input.stop();
+      },
+    );
+  });
 }

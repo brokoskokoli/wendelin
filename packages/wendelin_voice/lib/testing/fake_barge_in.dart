@@ -14,14 +14,57 @@ import '../src/io/barge_in_detector.dart';
 /// detector (`WakeWordBargeInDetector`): [start] opens it, [stop] releases
 /// it after [stopDelay]. Whoever records meanwhile gets the "already
 /// running" error of the device.
-final class FakeBargeInDetector implements BargeInDetector, SpokenTextSink {
+///
+/// With [tail] it is a [BargeTailSource] (WP146): [beginTail] keeps it
+/// recording and [endTail] hands over [tail] (with [tailIdle]).
+final class FakeBargeInDetector
+    implements BargeInDetector, SpokenTextSink, BargeTailSource {
   /// Creates a fake detector.
   FakeBargeInDetector({
     this.startDelay = Duration.zero,
     this.audio,
     this.stopDelay = Duration.zero,
     this.hangOnStop = false,
-  });
+    List<Int16List>? tail,
+    this.tailIdle = Duration.zero,
+  }) : tail = tail == null ? null : _join(tail);
+
+  static Int16List _join(List<Int16List> frames) {
+    final out = <int>[for (final f in frames) ...f];
+    return Int16List.fromList(out);
+  }
+
+  /// What [endTail] returns (`null`: [beginTail] is refused).
+  final Int16List? tail;
+
+  /// Time since the last tail frame.
+  final Duration tailIdle;
+
+  bool _tailing = false;
+
+  /// Whether it records on for the follow-up microphone.
+  bool get isTailing => _tailing;
+
+  /// Number of [beginTail] / [endTail] calls that did something.
+  int tailBegun = 0, tailEnded = 0;
+
+  @override
+  bool beginTail() {
+    if (!_running || tail == null || _tailing) return false;
+    _tailing = true;
+    tailBegun++;
+    return true;
+  }
+
+  @override
+  BargeTail? endTail() {
+    if (!_tailing) return null;
+    _tailing = false;
+    tailEnded++;
+    _running = false;
+    stopCount++;
+    return (pcm: tail!, idle: tailIdle);
+  }
 
   /// Shared microphone held while running (`null`: not used).
   final AudioInput? audio;
@@ -82,6 +125,7 @@ final class FakeBargeInDetector implements BargeInDetector, SpokenTextSink {
   Future<void> stop() async {
     if (!_running) return;
     _running = false;
+    _tailing = false;
     stopCount++;
     if (hangOnStop) await Completer<void>().future;
     final mic = audio;

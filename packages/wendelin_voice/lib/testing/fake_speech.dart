@@ -34,6 +34,9 @@ final class FakeSpeechToText implements SpeechToText {
   /// Lengths (samples) and languages of all calls.
   final calls = <({int samples, String? language})>[];
 
+  /// The audio of all calls (copies).
+  final pcms = <Int16List>[];
+
   /// Thrown by the next [transcribe] call (then cleared).
   Object? nextError;
 
@@ -56,6 +59,7 @@ final class FakeSpeechToText implements SpeechToText {
   @override
   Future<Transcript> transcribe(Int16List pcm, {String? language}) async {
     calls.add((samples: pcm.length, language: language));
+    pcms.add(Int16List.fromList(pcm));
     if (language != null && !info.languages.contains(language)) {
       throw VoiceException(
         VoiceErrorKind.unsupportedLanguage,

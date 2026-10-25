@@ -13,6 +13,7 @@ extension VoicePipelineRecord on VoicePipeline {
     int? wakeEnd,
     bool preRollRest = false,
     bool holdMic = false,
+    bool tail = false,
   }) {
     final previous = _listening;
     final run = _listenAfter(
@@ -24,6 +25,7 @@ extension VoicePipelineRecord on VoicePipeline {
       wakeEnd,
       preRollRest,
       holdMic,
+      tail,
     );
     _listening = run.then((_) {});
     return run;
@@ -38,6 +40,7 @@ extension VoicePipelineRecord on VoicePipeline {
     int? wakeEnd,
     bool preRollRest,
     bool holdMic,
+    bool tail,
   ) async {
     final log = _listenLog.start(diagnostics, clock);
     await _awaitMicFree(previous);
@@ -77,16 +80,12 @@ extension VoicePipelineRecord on VoicePipeline {
       }
       if (!done.isCompleted) {
         _micHeld = false;
-        sub = _openMic(
-          endpointer,
-          limits,
-          levels,
-          guards,
-          end,
-          fail,
-          done,
-          log.opened,
-        );
+        sub = _openMic(endpointer, limits, levels, guards, end, fail, done, (
+          first,
+        ) {
+          log.opened();
+          return tail ? _bridgeBargeTail(endpointer, first) : null;
+        });
       }
     } on Object catch (error) {
       fail(error);
@@ -100,6 +99,8 @@ extension VoicePipelineRecord on VoicePipeline {
       g.cancel();
     }
     levels.flush();
+    // Whatever happened: the barge-in recording does not outlive this one.
+    if (tail) _endBargeTail();
     log.ended(result);
     await _stopOrHoldMic(held && sub == null);
     // Not awaited: for a finished stream `cancel` returns a shared root-zone

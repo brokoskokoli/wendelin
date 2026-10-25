@@ -91,17 +91,19 @@ final audioInputProvider = Provider<AudioInput>(
   (ref) => RecordAudioInput(
     ref.watch(microphoneProvider),
     // WP146: the follow-up recording opens after the call path of the
-    // answer is given back; `mic-start` logs AudioManager.mode (only with
-    // the setting „Antwort als Gesprächston“, otherwise the mode is always
-    // normal and the channel is not asked).
+    // answer is given back; `mic-start` logs AudioManager.mode (always: the
+    // channel answers `null` where there is none, e.g. in tests).
     () => ref.read(speechFocusProvider).settle(),
-    () async {
-      final on = await ref
-          .read(storageProvider)
-          .settings
-          .get(AppSettings.speechCommunication);
-      return on == true ? ChannelSpeechRoutePort().audioMode() : null;
-    },
+    () => ChannelSpeechRoutePort().audioMode(),
+    // WP146: a second recorder, so the barge-in recording can go on until
+    // the follow-up recording has its first frame.
+    () => RecordPcmRecorder(
+      null,
+      () async => SpeechCapture.parse(
+        await ref.read(storageProvider).settings.get(AppSettings.bargeSource),
+      ),
+      ref.read(audioFocusPortProvider),
+    ),
   ),
 );
 

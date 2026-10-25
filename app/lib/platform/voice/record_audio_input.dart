@@ -210,34 +210,54 @@ final class RecordPcmRecorder implements PcmRecorder {
   }
 }
 
+/// One recording of [RecordAudioInput]: its recorder, frame stream and
+/// subscription.
+final class _Take {
+  _Take(this.recorder, this.out);
+
+  final PcmRecorder recorder;
+  final StreamController<Int16List> out;
+  // Cancelled via a local copy in _finish(), stop() and the end of a
+  // detached recording.
+  // ignore: cancel_subscriptions
+  StreamSubscription<Uint8List>? sub;
+}
+
 /// Microphone as [AudioInput]: 16 kHz mono 16-bit PCM from [PcmRecorder].
 ///
 /// [start] checks the permission without asking (the app asks first with
 /// an explanation, see `ensureMicrophoneAccess`), so a missing permission
 /// becomes `VoiceException(permissionDenied)`; any other failure is
 /// `VoiceException(unavailable)` on the frame stream.
-final class RecordAudioInput implements ProfiledAudioInput {
+///
+/// With a second recorder ([spare]) the running recording can be detached
+/// (WP146, [DetachableAudioInput]): it goes on in the background and the next
+/// [start] uses the other recorder. At most one is detached at a time.
+final class RecordAudioInput
+    implements ProfiledAudioInput, DetachableAudioInput {
   /// Creates the input.
   ///
   /// [beforeStart] runs before every recording opens the microphone (WP146:
   /// the spoken answer gives the call path back first, see
   /// `SpeechFocus.settle`); [audioMode] reads `AudioManager.mode` for the
-  /// `mic-start` log line.
+  /// `mic-start` log line; [spare] makes the second recorder for [detach].
   RecordAudioInput([
     PcmRecorder? recorder,
     Future<void> Function()? beforeStart,
     Future<int?> Function()? audioMode,
+    PcmRecorder Function()? spare,
   ]) : _recorder = recorder ?? RecordPcmRecorder(),
        _beforeStart = beforeStart,
-       _audioMode = audioMode;
+       _audioMode = audioMode,
+       _makeSpare = spare;
 
-  final PcmRecorder _recorder;
+  PcmRecorder _recorder;
+  PcmRecorder? _spare;
+  final PcmRecorder Function()? _makeSpare;
   final Future<void> Function()? _beforeStart;
   final Future<int?> Function()? _audioMode;
-  StreamController<Int16List>? _out;
-  // Cancelled via a local copy in _finish() and stop().
-  // ignore: cancel_subscriptions
-  StreamSubscription<Uint8List>? _sub;
+  _Take? _take;
+  _Take? _detached;
   Future<void> _stopping = Future.value();
 
   CaptureProfile _profile = CaptureProfile.recognition;
@@ -247,7 +267,7 @@ final class RecordAudioInput implements ProfiledAudioInput {
   CaptureProfile? _pending;
 
   @override
-  bool get isRunning => _out != null;
+  bool get isRunning => _take != null;
 
   @override
   CaptureProfile get profile => _profile;
@@ -265,7 +285,7 @@ final class RecordAudioInput implements ProfiledAudioInput {
 
   @override
   Stream<Int16List> start() {
-    if (_out != null) {
+    if (_take != null) {
       voiceLog('mic-busy', {'profile': _profile});
       throw const VoiceException(
         VoiceErrorKind.busy,
@@ -274,51 +294,90 @@ final class RecordAudioInput implements ProfiledAudioInput {
     }
     _profile = _pending ?? _profile;
     _pending = null;
-    final out = StreamController<Int16List>();
-    _out = out;
-    unawaited(_begin(out));
-    return out.stream;
+    final take = _Take(_recorder, StreamController<Int16List>());
+    _take = take;
+    unawaited(_begin(take));
+    return take.out.stream;
   }
 
-  Future<void> _begin(StreamController<Int16List> out) async {
+  @override
+  Future<void> Function()? detach() {
+    final take = _take;
+    if (take == null || take.sub == null || _detached != null) return null;
+    final spare = _spare ??= _makeSpare?.call();
+    if (spare == null) return null;
+    _detached = take;
+    _take = null;
+    _spare = take.recorder;
+    _recorder = spare;
+    // What is recorded next is a command, never the speech output.
+    _profile = CaptureProfile.recognition;
+    _pending = null;
+    voiceLog('mic-detach');
+    return () => _endDetached(take);
+  }
+
+  Future<void> _endDetached(_Take take) async {
+    if (!identical(_detached, take)) return;
+    _detached = null;
+    final sub = take.sub;
+    take.sub = null;
+    unawaited(sub?.cancel());
+    try {
+      await take.recorder.stop();
+    } on Object {
+      // Already stopped by the platform.
+    }
+    if (!take.out.isClosed) unawaited(take.out.close());
+    voiceLog('mic-detach-end');
+  }
+
+  Future<void> _begin(_Take take) async {
     await _stopping;
     try {
       // The follow-up recording must not start in the call path of the
       // answer (WP146).
       await _beforeStart?.call();
-      if (!await _recorder.hasPermission(request: false)) {
+      if (!await take.recorder.hasPermission(request: false)) {
         throw const VoiceException(
           VoiceErrorKind.permissionDenied,
           'Wendelin darf das Mikrofon nicht benutzen.',
         );
       }
-      final bytes = await _recorder.startStream(_profile);
-      voiceLog('mic-start', {
-        'profile': _profile,
-        'mode': await _audioMode?.call(),
-      });
-      if (!identical(_out, out)) {
+      // Asked before the start, awaited after it: a channel that never
+      // answers (tests, no plugin) must not keep stop() from ending this take.
+      final mode = _audioMode?.call();
+      final bytes = await take.recorder.startStream(_profile);
+      final profile = _profile;
+      if (!identical(_take, take)) {
         // stop() came first.
-        await _recorder.stop();
+        await take.recorder.stop();
         return;
       }
       final decoder = PcmBytesDecoder();
-      _sub = bytes.listen(
+      take.sub = bytes.listen(
         (chunk) {
           final frame = decoder.convert(chunk);
-          if (frame.isNotEmpty && !out.isClosed) out.add(frame);
+          if (frame.isNotEmpty && !take.out.isClosed) take.out.add(frame);
         },
-        onError: (Object e) => _fail(out, e),
-        onDone: () => _stopping = _finish(out),
+        onError: (Object e) => _fail(take, e),
+        onDone: () => _stopping = _finish(take),
       );
+      Object? audioMode;
+      try {
+        audioMode = await mode;
+      } on Object {
+        // The log line must not end a running recording.
+      }
+      voiceLog('mic-start', {'profile': profile, 'mode': audioMode});
     } on Object catch (e) {
-      _fail(out, e);
+      _fail(take, e);
     }
   }
 
-  void _fail(StreamController<Int16List> out, Object e) {
-    if (!out.isClosed) {
-      out.addError(
+  void _fail(_Take take, Object e) {
+    if (!take.out.isClosed) {
+      take.out.addError(
         e is VoiceException
             ? e
             : VoiceException(
@@ -332,48 +391,46 @@ final class RecordAudioInput implements ProfiledAudioInput {
     }
     // The platform may still be recording (an error does not always end
     // the stream): stop it, and let a new start wait for that.
-    _stopping = _finish(out, stopRecorder: true);
+    _stopping = _finish(take, stopRecorder: true);
   }
 
-  Future<void> _finish(
-    StreamController<Int16List> out, {
-    bool stopRecorder = false,
-  }) async {
+  Future<void> _finish(_Take take, {bool stopRecorder = false}) async {
     // The stream ended by itself (nobody called stop()): the recorder and its
     // focus still have to be given back.
-    final ended = identical(_out, out);
-    if (ended) _out = null;
-    final sub = _sub;
-    _sub = null;
+    final ended = identical(_take, take) || identical(_detached, take);
+    if (identical(_take, take)) _take = null;
+    if (identical(_detached, take)) _detached = null;
+    final sub = take.sub;
+    take.sub = null;
     await sub?.cancel();
     if (stopRecorder || ended) {
       try {
-        await _recorder.stop();
+        await take.recorder.stop();
       } on Object {
         // Nothing to stop any more.
       }
     }
-    if (!out.isClosed) await out.close();
+    if (!take.out.isClosed) await take.out.close();
   }
 
   @override
   Future<void> stop() {
-    final out = _out;
-    if (out == null) return _stopping;
-    _out = null;
+    final take = _take;
+    if (take == null) return _stopping;
+    _take = null;
     voiceLog('mic-stop');
     return _stopping = () async {
-      final sub = _sub;
-      _sub = null;
+      final sub = take.sub;
+      take.sub = null;
       // Not awaited: a cancelled stream answers with a shared root-zone
       // future; the recorder stop below is what ends the recording.
       unawaited(sub?.cancel());
       try {
-        await _recorder.stop();
+        await take.recorder.stop();
       } on Object {
         // Already stopped by the platform; the stream ends anyway.
       }
-      if (!out.isClosed) unawaited(out.close());
+      if (!take.out.isClosed) unawaited(take.out.close());
     }();
   }
 }

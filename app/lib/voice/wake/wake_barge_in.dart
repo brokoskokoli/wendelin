@@ -26,7 +26,8 @@ const candidateWakeMargin = -0.05;
 /// 0.35, where FLEURS speech alone gives 88 candidates per hour (0.45: 30).
 const candidateWakeFloor = 0.45;
 
-final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
+final class LazyWakeBargeInDetector
+    implements BargeInDetector, SpokenTextSink, BargeTailSource {
   /// Creates the detector on [audio] (the capture profile follows the
   /// pipeline state, see `CaptureProfileFollower`).
   LazyWakeBargeInDetector({
@@ -40,6 +41,7 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
     this.marginOverride,
     this.diagInterval = const Duration(seconds: 1),
     this.verifySettle = const Duration(milliseconds: 800),
+    this.tailMax = const Duration(seconds: 3),
   });
 
   /// Microphone shared with the pipeline.
@@ -90,6 +92,9 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
   /// Wait after a candidate until the check starts (the word is over).
   final Duration verifySettle;
 
+  /// How long the detached recording runs without a follow-up (WP146).
+  final Duration tailMax;
+
   /// Interval of the `barge-diag` lines while listening.
   final Duration diagInterval;
 
@@ -112,7 +117,8 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
 
   @override
   Future<void> start() async {
-    if (_running) return;
+    // A tail that ended on its own (time out) left the inner detector idle.
+    if (_running && _inner?.isRunning != false) return;
     _running = true;
     if (_inner == null && !_empty) {
       final sets = await templates();
@@ -174,6 +180,7 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
       engine: MeteredEngine(engine, meter),
       verifier: verifier?.call(() => _recentSpoken),
       warm: warm,
+      tailMax: tailMax,
       settle: verifySettle,
       // Scores and kind only; the word itself stays out of the log.
       onCandidate: (kind, {required busy}) => voiceLog('barge-cand', {
@@ -193,6 +200,23 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
       _signals.add(signal);
     });
     return inner;
+  }
+
+  // WP146: see `BargeTailSource`; without an engine there is no recording.
+  @override
+  bool beginTail() {
+    final begun = _inner?.beginTail() ?? false;
+    // Nothing is detected any more: the „hört mit“ ring goes off.
+    if (begun) onListening?.call(on: false);
+    return begun;
+  }
+
+  @override
+  BargeTail? endTail() {
+    final tail = _inner?.endTail();
+    // The inner detector ends its recording itself; this one follows.
+    if (tail != null) unawaited(stop());
+    return tail;
   }
 
   @override

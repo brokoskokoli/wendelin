@@ -132,7 +132,12 @@ final class VoicePipeline {
     enabled: () => config.bargeIn != BargeInMode.off,
     state: () => _state,
     onError: (e) => _emit(VoiceError(VoiceState.speaking, e)),
+    wantTail: () => _tailNext,
   );
+
+  // The next `listening` follows an answer: the barge-in recording goes on
+  // until the follow-up microphone has its first frame (WP146).
+  bool _tailNext = false;
 
   /// Silence forced after the end of the wake word, so that its tail (the
   /// engine position is an estimate) is not mistaken for the request.
@@ -229,23 +234,6 @@ final class VoicePipeline {
     await drained;
   }
 
-  void _onTrigger(TriggerEvent e) {
-    if (_state != VoiceState.idle) {
-      unawaited(cancel(VoiceCancelReason.retrigger));
-    }
-    start(trigger: e);
-  }
-
-  void _abortActivities() {
-    final end = _endListening;
-    if (end != null) end(null);
-    _releaseHeldMic();
-    if (_agentRunning) agent.cancel();
-    final q = _queue;
-    _queue = null;
-    if (q != null) unawaited(q.stop());
-  }
-
   Future<void> _run(
     int gen, {
     TriggerEvent? trigger,
@@ -267,6 +255,7 @@ final class VoicePipeline {
       _rounds = continued ? _rounds + 1 : 0;
     }
     while (true) {
+      _tailNext = followUp;
       _setState(VoiceState.listening);
       _announceListening(trigger, followUp);
       final endpoint = await _listen(
@@ -279,6 +268,7 @@ final class VoicePipeline {
         wakeEnd: preWakeEnd,
         preRollRest: preRest,
         holdMic: stripWake && !followUp && pre != null,
+        tail: followUp,
       );
       if (gen != _gen) return;
       if (endpoint == null) return _finish(gen, ConversationEndReason.error);
@@ -308,12 +298,7 @@ final class VoicePipeline {
         }
         return _finish(gen, ConversationEndReason.silence);
       }
-      if (isStopWord(transcript.text)) {
-        // Where the stop came from (WP73), never the text.
-        diagnostics?.call(
-          'stop-word source=transcript first=${!followUp && trigger != null}',
-        );
-        await cancel(VoiceCancelReason.stopWord);
+      if (await _stopWord(transcript, first: !followUp && trigger != null)) {
         return;
       }
       if (followUp && isClosingPhrase(transcript.text, config.closingPhrases)) {

@@ -1,7 +1,38 @@
 part of 'voice_pipeline.dart';
 
+/// The longest hole between the barge-in tail and the first frame of the
+/// follow-up microphone that is filled with silence (WP146); the opening
+/// took ~0.5 s on the device, more than twice that is a measuring error.
+const _bargeTailHoleMax = Duration(milliseconds: 1000);
+
 /// Announcing the listening phase and the confidence gate (WP140).
 extension VoicePipelineListen on VoicePipeline {
+  void _onTrigger(TriggerEvent e) {
+    if (_state != VoiceState.idle) {
+      unawaited(cancel(VoiceCancelReason.retrigger));
+    }
+    start(trigger: e);
+  }
+
+  void _abortActivities() {
+    final end = _endListening;
+    if (end != null) end(null);
+    _releaseHeldMic();
+    if (_agentRunning) agent.cancel();
+    final q = _queue;
+    _queue = null;
+    if (q != null) unawaited(q.stop());
+  }
+
+  /// A spoken stop word ends the session (WP73: log where it came from,
+  /// never the text).
+  Future<bool> _stopWord(Transcript transcript, {required bool first}) async {
+    if (!isStopWord(transcript.text)) return false;
+    diagnostics?.call('stop-word source=transcript first=$first');
+    await cancel(VoiceCancelReason.stopWord);
+    return true;
+  }
+
   void _announceListening(TriggerEvent? trigger, bool followUp) {
     _listenLog.followUp = followUp;
     _emit(
@@ -91,7 +122,7 @@ extension VoicePipelineListen on VoicePipeline {
     void Function(Endpoint?) end,
     void Function(Object) fail,
     Completer<Endpoint?> done,
-    void Function() onFirstFrame,
+    Endpoint? Function(Int16List first) onFirstFrame,
   ) {
     var first = true;
     final sub = audio.start().listen(
@@ -99,7 +130,11 @@ extension VoicePipelineListen on VoicePipeline {
         if (done.isCompleted || frame.isEmpty) return;
         if (first) {
           first = false;
-          onFirstFrame();
+          final early = onFirstFrame(frame);
+          if (early != null) {
+            end(early);
+            return;
+          }
         }
         levels.add(frame);
         try {
@@ -127,6 +162,65 @@ extension VoicePipelineListen on VoicePipeline {
         ),
       );
     return sub;
+  }
+
+  /// Ends the barge-in recording that went on after the answer, unused.
+  void _endBargeTail() {
+    _tailSource?.endTail();
+  }
+
+  BargeTailSource? get _tailSource => switch (bargeInDetector) {
+    final BargeTailSource s => s,
+    _ => null,
+  };
+
+  /// The follow-up microphone has its [first] frame (WP146): the audio the
+  /// barge-in recording collected since the end of the answer leads the
+  /// recording, marked by the VAD. The recordings overlap: the end of the
+  /// tail that the first frame repeats is cut, a hole that remains is
+  /// silence (at most [_bargeTailHoleMax]; more is not a handover hole).
+  /// The barge-in recording ends here. Logs numbers only (`bridge-tail`).
+  Endpoint? _bridgeBargeTail(Endpointer endpointer, Int16List first) {
+    final tail = _tailSource?.endTail();
+    if (_tailSource == null) return null;
+    if (tail == null) {
+      diagnostics?.call('bridge-tail got=none');
+      return null;
+    }
+    // The tail ends `idle` ago, the first frame covers the time since
+    // `firstLen` ago: positive = hole, negative = both hold the same audio.
+    final gap = tail.idle - samplesToDuration(first.length);
+    var audio = tail.pcm;
+    var trim = 0;
+    var silence = 0;
+    if (gap.isNegative) {
+      trim = durationToSamples(-gap).clamp(0, audio.length).toInt();
+      audio = Int16List.sublistView(audio, 0, audio.length - trim);
+    } else if (gap <= _bargeTailHoleMax) {
+      silence = durationToSamples(gap);
+    }
+    final lead = Int16List(audio.length + silence)..setAll(0, audio);
+    final early = lead.isEmpty
+        ? null
+        : _feedPreRoll(endpointer, lead, false, 0, margin: false);
+    diagnostics?.call(
+      'bridge-tail ms=${samplesToDuration(tail.pcm.length).inMilliseconds} '
+      'gap=${gap.inMilliseconds} '
+      'trim=${samplesToDuration(trim).inMilliseconds} '
+      'silence=${samplesToDuration(silence).inMilliseconds} '
+      'tailDb=${_LevelLog.db(_rms(audio))} '
+      'firstDb=${_LevelLog.db(_rms(first))} early=${early != null}',
+    );
+    return early;
+  }
+
+  static double _rms(Int16List pcm) {
+    if (pcm.isEmpty) return 0;
+    var sum = 0.0;
+    for (final s in pcm) {
+      sum += s * s;
+    }
+    return math.sqrt(sum / pcm.length);
   }
 
   /// Feeds the audio before the trigger in chunks of 30 ms. Without
@@ -194,7 +288,7 @@ final class _LevelLog {
   void _emit() {
     final rms = math.sqrt(_sum / _n);
     _log?.call(
-      'mic-level s=${_second++} rms=${_db(rms)} peak=${_db(_peak.toDouble())} '
+      'mic-level s=${_second++} rms=${db(rms)} peak=${db(_peak.toDouble())} '
       'zero=${(100 * _zero / _n).round()}',
     );
     _n = 0;
@@ -203,7 +297,7 @@ final class _LevelLog {
     _sum = 0;
   }
 
-  static int _db(double v) =>
+  static int db(double v) =>
       v < 1 ? -99 : (20 * math.log(v / 32768) / math.ln10).round();
 }
 

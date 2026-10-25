@@ -73,3 +73,25 @@ abstract interface class SpokenTextSink {
   /// [sentence] started playing.
   void spoke(String sentence);
 }
+
+/// What a [BargeTailSource] recorded after the answer: [pcm] from the end of
+/// the speech output on, [idle] = time since its last frame arrived.
+typedef BargeTail = ({Int16List pcm, Duration idle});
+
+/// A [BargeInDetector] that keeps recording after the answer until the
+/// follow-up recording has its first frame (WP146): the microphone needs
+/// ~0.5 s to open, speech in that time would be lost. The audio from the end
+/// of the answer on (not before: no echo of the own voice) leads the
+/// follow-up recording.
+abstract interface class BargeTailSource {
+  /// The answer ended and a follow-up recording follows: stops detecting,
+  /// keeps recording and collects. `false`: not possible (not running, input
+  /// cannot overlap); the caller stops the detector as usual.
+  bool beginTail();
+
+  /// Ends the collecting and the recording (at the first frame of the
+  /// follow-up recording, or when it failed). `null` if not collecting.
+  /// Never leaves a recording behind: the detector also ends it by itself
+  /// after a maximum time, and on [BargeInDetector.stop].
+  BargeTail? endTail();
+}
