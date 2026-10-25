@@ -114,6 +114,34 @@ void main() {
     },
   );
 
+  test(
+    'Modelle warm (Laden 0 ms): finish erst beim ersten Frame, Rest im Vorlauf',
+    () {
+      fakeAsync((async) {
+        final stt = RecordingStt('Wetter?');
+        container(load: () async => components(stt));
+        c
+          ..read(voiceControllerProvider)
+          ..read(agentControllerProvider);
+        unawaited(
+          voice().start(TriggerKind.pushToTalk, takePreRoll: () async => hit()),
+        );
+        async.elapse(const Duration(milliseconds: 10));
+        expect(audio.startCount, 1);
+        expect(finishes, 0, reason: 'das App-Mikrofon hat noch keinen Frame');
+        async.elapse(const Duration(milliseconds: 100));
+        expect(finishes, 1, reason: 'erster Frame da');
+        for (var i = 0; i < 100; i++) {
+          async.elapse(const Duration(milliseconds: 100));
+        }
+        expect(finishes, 1, reason: 'genau einmal');
+        final heard = stt.heard.single;
+        expect(heard.where((s) => s == 7), hasLength(800));
+        expect(heard.indexOf(7), greaterThan(heard.indexOf(3)));
+      });
+    },
+  );
+
   test('Abbruch während der Übernahme: Dienst-Aufnahme wird beendet', () async {
     container(load: () async => components(RecordingStt('x')));
     final take = Completer<WakePreRoll?>();

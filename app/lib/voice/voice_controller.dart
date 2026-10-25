@@ -270,7 +270,10 @@ final class VoiceController extends Notifier<VoiceUiState> {
     }
     // Only the device microphone is opened early; other components (demo,
     // tests) record from their own input.
-    if (!identical(components.audio, primed.inner)) await primed.stop();
+    if (!identical(components.audio, primed.inner)) {
+      await primed.stop();
+      _wake.noFrameExpected();
+    }
     final pipeline = _pipelineFor(components);
     state = state.copyWith(preparing: false);
     final bridged = _wake.kept(preRoll) ? await _wake.close(preRoll) : preRoll;
@@ -285,7 +288,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
     String? error, {
     bool clearHint = true,
   }) async {
-    unawaited(_wake.close(_wake.handoff));
+    unawaited(_wake.close(_wake.handoff, wait: false));
     await primed.stop();
     if (!ref.mounted) return false;
     state = state.copyWith(

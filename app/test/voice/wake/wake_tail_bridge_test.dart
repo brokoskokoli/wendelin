@@ -47,6 +47,36 @@ void main() {
     },
   );
 
+  test('ohne ersten Frame: der Rest wird am Ende des Dienst-Rests gemessen, '
+      'nicht an der Übernahme (WP146)', () {
+    final taken = WakePreRoll(
+      pcm: filled(1, 1600),
+      wakeEnd: 800,
+      lastSampleAtMs: 500,
+    );
+    final out = bridgeWakeTail(taken, (
+      pcm: filled(5, 1600),
+      lastSampleAtMs: 900,
+    ));
+    expect(out.lastSampleAtMs, 900);
+    final none = bridgeWakeTail(taken, (
+      pcm: filled(5, 1600),
+      lastSampleAtMs: null,
+    ));
+    expect(none.lastSampleAtMs, isNull);
+  });
+
+  test('mit gemessener Lücke: kein Rest-Zeitpunkt mehr (keine zweite '
+      'wake-gap-Zeile)', () {
+    final out = bridgeWakeTail(
+      WakePreRoll(pcm: filled(1, 1600), wakeEnd: 800, lastSampleAtMs: 500),
+      (pcm: filled(5, 1600), lastSampleAtMs: 1000),
+      firstFrameAtMs: 1130,
+      firstFrameSamples: 0,
+    );
+    expect(out.lastSampleAtMs, isNull);
+  });
+
   test('Lücke (positive): als Stille eingefügt, nicht verklebt', () {
     final out = bridgeWakeTail(
       pre(),

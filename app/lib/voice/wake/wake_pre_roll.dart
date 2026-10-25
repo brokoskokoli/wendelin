@@ -44,6 +44,10 @@ Future<WakePreRoll?> takeWakePreRoll({
   );
 }
 
+/// How long [WakeHandoffTracker.close] waits for the first frame of the app's
+/// microphone before it ends the service anyway (below the service's guard).
+const wakeFirstFrameWait = Duration(milliseconds: 2000);
+
 /// The longest hole that is filled with silence; a larger one is not a
 /// handover hole (WP146).
 const wakeHoleMax = Duration(milliseconds: 1500);
@@ -106,7 +110,9 @@ WakePreRoll bridgeWakeTail(
   return pre.withAudio(
     out,
     muteMicSamples: pre.muteMicSamples > added ? pre.muteMicSamples - added : 0,
-    lastSampleAtMs: null,
+    // After a measured gap the audio is continuous up to the first frame;
+    // without a first frame the first one is measured against the tail.
+    lastSampleAtMs: gap != null ? null : last,
   );
 }
 
@@ -146,7 +152,8 @@ final class WakePreRoll {
   /// kept open.
   final Future<WakeTail?> Function()? finish;
 
-  /// Copy with other audio and tone mute (the bridged pre-roll).
+  /// Copy with other audio, tone mute and [lastSampleAtMs] (the bridged
+  /// pre-roll; `null` = the audio reaches the microphone without a hole).
   WakePreRoll withAudio(
     Int16List pcm, {
     required int muteMicSamples,
@@ -155,7 +162,7 @@ final class WakePreRoll {
     pcm: pcm,
     wakeEnd: wakeEnd,
     muteMicSamples: muteMicSamples,
-    lastSampleAtMs: lastSampleAtMs ?? this.lastSampleAtMs,
+    lastSampleAtMs: lastSampleAtMs,
   );
 }
 
@@ -180,6 +187,7 @@ final class WakeHandoffTracker {
   WakePreRoll? handoff;
 
   Future<WakeTail?>? _tail;
+  Completer<void>? _frame;
 
   /// The hit's service microphone still records. Without it no `await`
   /// separates the state change from the pipeline start (as before WP146).
@@ -194,6 +202,7 @@ final class WakeHandoffTracker {
     _firstFrameAtMs = null;
     handoff = null;
     _tail = null;
+    _frame = null;
   }
 
   /// The hit is taken, before the microphone opens: its first frame is
@@ -203,6 +212,7 @@ final class WakeHandoffTracker {
   void begin(WakePreRoll? pre) {
     lastSampleAt = pre?.lastSampleAtMs;
     handoff = pre?.finish == null ? null : pre;
+    _frame = handoff == null ? null : Completer<void>();
     _take = pre == null ? null : (Stopwatch()..start());
   }
 
@@ -213,6 +223,8 @@ final class WakeHandoffTracker {
     _firstFrameAtMs = DateTime.now().millisecondsSinceEpoch;
     _firstFrameSamples = samples;
     _afterTakeMs = _take?.elapsedMilliseconds;
+    final seen = _frame;
+    if (seen != null && !seen.isCompleted) seen.complete();
     final kept = handoff?.finish;
     if (kept != null) {
       _tail ??= kept();
@@ -235,12 +247,26 @@ final class WakeHandoffTracker {
     _take = null;
   }
 
+  /// The early microphone is not used (other input): no first frame to wait
+  /// for.
+  void noFrameExpected() {
+    final seen = _frame;
+    if (seen != null && !seen.isCompleted) seen.complete();
+  }
+
   /// Ends the service's recording of a hit taken with `keepOpen` and returns
   /// the pre-roll with what it recorded meanwhile, joined to the first frame
-  /// of this microphone without a hole or doubled audio (WP146).
-  Future<WakePreRoll?> close(WakePreRoll? pre) async {
+  /// of this microphone without a hole or doubled audio (WP146). With the
+  /// early microphone ([wait]) it waits for its first frame (at most
+  /// [wakeFirstFrameWait]): when the models are warm it would otherwise stop
+  /// the service before the app records and the hole stays.
+  Future<WakePreRoll?> close(WakePreRoll? pre, {bool wait = true}) async {
     final finish = pre?.finish;
     if (pre == null || finish == null) return pre;
+    final seen = _frame;
+    if (wait && seen != null && !seen.isCompleted) {
+      await seen.future.timeout(wakeFirstFrameWait, onTimeout: () {});
+    }
     final tail = await (_tail ??= finish());
     handoff = null;
     _tail = null;
