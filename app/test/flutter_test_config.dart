@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:test_api/src/backend/invoker.dart' show Invoker;
 // ignore: implementation_imports
 import 'package:test_api/src/backend/state.dart' show Result;
+import 'package:wendelin/ui/overlay/assistant_overlay.dart';
 import 'package:wendelin/ui/theme/app_theme.dart';
 import 'package:wendelin/voice/voice_log.dart';
 
@@ -35,6 +36,9 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     ];
   });
   _bufferVoiceLog();
+  // The overlay tests read their container after the close (WP145 frees it
+  // for real in overlay_teardown_test.dart).
+  setUp(() => AssistantOverlayScreen.tearDownEngine = (_, _) async {});
   await testMain();
 }
 

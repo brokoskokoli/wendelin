@@ -29,6 +29,8 @@
         },
         "hasWakeHandoff": {"args": [], "returns": "value"},
         "takeWakeHandoff": {"args": [], "returns": "map"},
+        "releaseHost": {"args": [], "returns": "value"},
+        "teardownDone": {"args": [], "returns": "none"},
         "finish": {"args": [], "returns": "value"}
       },
       "toDart": {

@@ -18,6 +18,7 @@ import '../platform/attest/rust_sigstore_crypto.dart';
 import '../platform/attest/rust_snp_crypto.dart';
 import '../platform/channel_notifier.dart';
 import 'attestation_hub.dart';
+import 'dispose_tracker.dart';
 import 'preferences.dart';
 import 'providers.dart';
 
@@ -98,7 +99,7 @@ final Provider<AttestationHub> attestationHubProvider =
             ref.read(providerConfigProvider).asData?.value?.nameOf(id) ?? id,
         texts: () => uiTexts(ref),
       );
-      ref.onDispose(() => unawaited(hub.dispose()));
+      onDisposeTracked(ref, hub.dispose);
       return hub;
     });
 

@@ -5,11 +5,12 @@ import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/ui/overlay/assistant_overlay.dart';
 import 'package:wendelin_core/testing.dart';
+import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../screens/main_screen_test.dart' show pumpUntil;
 import '../support/test_env.dart';
-import '../voice/voice_controller_test.dart' show fakeVoice;
+import '../voice/voice_controller_test.dart' show fakeVoice, utterance;
 import 'assistant_overlay_test.dart'
     show FakeAssistantPlatform, overlaySample, pumpOverlay;
 
@@ -51,5 +52,73 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
     }
     expect(platform.finished, 1);
+  });
+
+  // Every way to close takes the same path (WP145): release the host first,
+  // then the teardown, then tell the host it may destroy the engine.
+  testWidgets('Schließen: Host frei, Teardown, dann teardownDone', (
+    tester,
+  ) async {
+    final platform = FakeAssistantPlatform();
+    AssistantOverlayScreen.tearDownEngine = (_, _) async =>
+        platform.calls.add('teardown');
+    await pumpOverlay(
+      tester,
+      TestEnv(providerConfig: scripted(FakeLlmProvider(const []))),
+      platform,
+    );
+    await platform.closeHandler!();
+    await tester.pump();
+    expect(platform.calls, ['releaseHost', 'teardown', 'teardownDone']);
+  });
+
+  testWidgets('Stopp: derselbe Schließweg', (tester) async {
+    final platform = await _stop(tester);
+    AssistantOverlayScreen.tearDownEngine = (_, _) async =>
+        platform.calls.add('teardown');
+    for (var i = 0; i < 20 && !platform.calls.contains('teardownDone'); i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(platform.calls, ['releaseHost', 'teardown', 'teardownDone']);
+  });
+
+  // The wake word service listens again as soon as the host is released: the
+  // overlay's microphone must be closed by then (mic stop before releaseHost).
+  testWidgets('Mikrofon ist beim Freigeben des Hosts schon zu', (tester) async {
+    final platform = FakeAssistantPlatform();
+    final audio = FakeAudioInput(
+      frames: utterance(),
+      frameInterval: const Duration(seconds: 30),
+    );
+    int? stopsAtRelease;
+    int? startsAtRelease;
+    platform.onReleaseHost = () {
+      stopsAtRelease = audio.stopCount;
+      startsAtRelease = audio.startCount;
+    };
+    await pumpOverlay(
+      tester,
+      TestEnv(providerConfig: scripted(FakeLlmProvider(const []))),
+      platform,
+      voice: fakeVoice(audio: audio),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(audio.startCount, 1, reason: 'Mikrofon war offen');
+    await platform.closeHandler!();
+    await tester.pump();
+    expect(startsAtRelease, 1);
+    expect(stopsAtRelease, 1, reason: 'Mikrofon zu, bevor der Host frei wird');
+  });
+
+  testWidgets('Host kann nicht halten: Teardown, dann finish', (tester) async {
+    final platform = FakeAssistantPlatform()..canRelease = false;
+    await pumpOverlay(
+      tester,
+      TestEnv(providerConfig: scripted(FakeLlmProvider(const []))),
+      platform,
+    );
+    await platform.closeHandler!();
+    await tester.pump();
+    expect(platform.calls, ['releaseHost', 'finish']);
   });
 }

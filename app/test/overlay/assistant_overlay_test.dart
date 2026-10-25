@@ -27,13 +27,15 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../support/host_calls.dart';
 import '../support/tee_app_support.dart';
 import '../support/test_env.dart';
 import '../ui/helpers.dart';
 import '../voice/voice_controller_test.dart' show fakeVoice, utterance;
 
 /// Stand-in for the Kotlin side of the assistant.
-final class FakeAssistantPlatform extends AssistantPlatform {
+final class FakeAssistantPlatform extends AssistantPlatform
+    with HostCallRecorder {
   bool locked = false;
   Completer<bool>? lockAnswer;
   bool unlockSucceeds = true;
@@ -43,7 +45,6 @@ final class FakeAssistantPlatform extends AssistantPlatform {
   /// Audio of a wake word hit that opened the overlay (WP50), taken once.
   Int16List? wakeHandoff;
   int unlockRequests = 0;
-  int finished = 0;
   int settingsOpened = 0;
   final _triggers = StreamController<void>.broadcast(sync: true);
 
@@ -102,12 +103,6 @@ final class FakeAssistantPlatform extends AssistantPlatform {
 
   /// Where the wake word ends in [wakeHandoff].
   int? wakeEnd;
-
-  @override
-  Future<bool> finish() async {
-    finished++;
-    return true;
-  }
 
   @override
   Future<bool> isDefaultAssistant() async => isDefault;

@@ -3,9 +3,6 @@ package app.wendelin
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import io.flutter.FlutterInjector
-import io.flutter.embedding.engine.FlutterEngine
-import io.flutter.embedding.engine.dart.DartExecutor
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
@@ -23,7 +20,8 @@ class RecognizerEngine(
     entrypoint: String = "recognizerMain",
     channelName: String = CHANNEL,
 ) {
-    private val engine = FlutterEngine(context.applicationContext)
+    // Spawned from the process-wide group (WP145): shares resources with the overlays' engines.
+    private val engine = EngineGroups.spawn(context, entrypoint, "recognizer")
     private val channel = MethodChannel(engine.dartExecutor.binaryMessenger, channelName)
     private val pending = mutableListOf<Pair<String, Any?>>()
     private val main = Handler(Looper.getMainLooper())
@@ -41,10 +39,6 @@ class RecognizerEngine(
             }
             result.success(null)
         }
-        val loader = FlutterInjector.instance().flutterLoader()
-        engine.dartExecutor.executeDartEntrypoint(
-            DartExecutor.DartEntrypoint(loader.findAppBundlePath(), entrypoint),
-        )
     }
 
     /** Whether Dart has started and answers. */

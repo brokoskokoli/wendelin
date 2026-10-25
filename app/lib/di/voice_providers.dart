@@ -24,6 +24,7 @@ import '../voice/voice_metrics.dart';
 import '../voice/wake/mic_tail.dart';
 import 'app_settings.dart';
 import 'core_providers.dart';
+import 'dispose_tracker.dart';
 import 'hint_term_providers.dart';
 import 'preferences.dart';
 import 'speaker_providers.dart';
@@ -231,7 +232,7 @@ final engineWhisperProvider = FutureProvider<EngineWhisper>((ref) async {
   );
   // Model change or new download: the old model is freed before the new
   // one loads (EngineWhisper waits for it).
-  ref.onDispose(() => unawaited(whisper.release(reason: 'replaced')));
+  onDisposeTracked(ref, () => whisper.release(reason: 'replaced'));
   await whisper.warm();
   return whisper;
 });
@@ -327,7 +328,7 @@ final sherpaSynthesizerProvider = Provider<SpeechSynthesizer>((ref) {
         v.id: v.files,
     },
   );
-  ref.onDispose(() => unawaited(synthesizer.dispose()));
+  onDisposeTracked(ref, synthesizer.dispose);
   return synthesizer;
 });
 
@@ -351,7 +352,7 @@ TextToSpeech createSherpaTts(
   final own = playback == null
       ? AudioplayersPlayback(null, () => ref.read(speechFocusProvider).routed)
       : null;
-  if (own != null) ref.onDispose(() => unawaited(own.dispose()));
+  if (own != null) onDisposeTracked(ref, own.dispose);
   final out = playback ?? own!;
   return SherpaTextToSpeech(
     installed: voices,

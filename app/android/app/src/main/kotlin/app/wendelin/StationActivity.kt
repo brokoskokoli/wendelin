@@ -13,6 +13,7 @@ import android.os.Bundle
 import android.view.WindowManager
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
+import io.flutter.embedding.engine.FlutterEngine
 
 /**
  * The station mode (WP99): a full-screen clock and information display with its own Flutter
@@ -85,6 +86,12 @@ class StationActivity : WendelinActivity(), SensorEventListener {
     override fun popSystemNavigator(): Boolean = true
 
     override fun getDartEntrypointFunctionName(): String = "stationMain"
+
+    // WP145: spawned from the process-wide group; destroyed with the activity.
+    override fun provideFlutterEngine(context: Context): FlutterEngine =
+        EngineGroups.forActivity(this, "stationMain", "station")
+
+    override fun shouldDestroyEngineWithHost(): Boolean = true
 
     // Back does not leave the station: ending asks to unlock.
     @Deprecated("Back never ends the station")

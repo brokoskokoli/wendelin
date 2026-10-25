@@ -9,6 +9,7 @@ import '../platform/voice/audio_playback.dart';
 import '../platform/voice/pcm.dart';
 import '../platform/wake/wake_platform.dart';
 import 'core_providers.dart';
+import 'dispose_tracker.dart';
 
 // Settings of the wake word page that only the app needs (WP50 part b);
 // switch and condition live in `wake_service.dart`.
@@ -55,7 +56,7 @@ const wakeToneMuteSamples = wakeToneSamples + 800;
 /// Short tone (660 Hz, 0.15 s) at a wake word hit (replaced in tests).
 final wakeConfirmToneProvider = Provider<Future<void> Function()>((ref) {
   final playback = AudioplayersPlayback();
-  ref.onDispose(() => unawaited(playback.dispose()));
+  onDisposeTracked(ref, playback.dispose);
   final samples = Int16List(wakeToneSamples);
   for (var i = 0; i < samples.length; i++) {
     final fade = math.min(1.0, math.min(i, samples.length - i) / 400);

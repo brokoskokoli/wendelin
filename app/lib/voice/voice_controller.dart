@@ -27,6 +27,7 @@ import 'locked_agent_run.dart';
 import 'primed_audio_input.dart';
 import 'voice_components.dart';
 import 'voice_log.dart';
+import 'voice_models_check.dart';
 import 'voice_ui_state.dart';
 import 'voice_usage.dart';
 
@@ -227,10 +228,11 @@ final class VoiceController extends Notifier<VoiceUiState> {
     _loaded = null;
     final demo = ref.read(demoModeProvider);
     var ready = !demo && ref.read(voiceReadyProvider);
-    if (!demo && !ready && !_modelsChecked()) {
+    if (!demo && !ready && !voiceModelsChecked(ref)) {
       // Fresh engine (overlay): the installed models are not checked yet;
       // look at the two needed ones only (the full check runs anyway).
-      ready = await _modelsInstalled();
+      ready = await voiceModelsInstalled(ref);
+      if (!ref.mounted) return false;
     }
     if (!ready) return _startAfterLoading(kind, prepare, takePreRoll);
     if (state.active || ref.read(agentControllerProvider).running) {
@@ -257,6 +259,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
     // The hit's earlier recording ends right before this microphone opens
     // (WP68), nothing is lost. (No await without a pre-roll: same order.)
     final preRoll = takePreRoll == null ? null : await takePreRoll();
+    if (!ref.mounted) return false;
     if (cancels != _cancels) {
       // Cancelled while taking the hit (WP93: the audio went elsewhere):
       // the microphone does not open.
@@ -269,14 +272,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
     // `afterTake`) and the opening of this microphone (`afterTake`).
     _wakeTake = preRoll == null ? null : (Stopwatch()..start());
     primed.prime();
-    if (!(await prepare?.call() ?? true)) {
-      await primed.stop();
-      state = state.copyWith(
-        preparing: false,
-        error: microphoneDeniedHint,
-        clearHint: true,
-      );
-      return false;
+    final allowed = await prepare?.call() ?? true;
+    if (!allowed || !ref.mounted) {
+      return _failStart(primed, allowed ? null : microphoneDeniedHint);
     }
     if (primed.failed) {
       // Permission granted just now: open the microphone again.
@@ -287,25 +285,19 @@ final class VoiceController extends Notifier<VoiceUiState> {
     try {
       components = await _loadComponents();
     } on Object catch (e) {
-      await primed.stop();
       voiceLog('start-failed', {'reason': 'load', 'error': errorCode(e)});
-      state = state.copyWith(
-        preparing: false,
-        error: voiceErrorText(uiTexts(ref), e),
-        clearHint: true,
-      );
-      return false;
+      final text = ref.mounted ? voiceErrorText(uiTexts(ref), e) : null;
+      return _failStart(primed, text);
     }
-    if (components == null || cancels != _cancels) {
-      await primed.stop();
+    if (components == null || cancels != _cancels || !ref.mounted) {
       voiceLog('start-failed', {
         'reason': components == null ? 'no-models' : 'cancelled',
       });
-      state = state.copyWith(
-        preparing: false,
-        error: components == null ? voiceUnavailableError : null,
+      return _failStart(
+        primed,
+        components == null ? voiceUnavailableError : null,
+        clearHint: false,
       );
-      return false;
     }
     // Only the device microphone is opened early; other components (demo,
     // tests) record from their own input.
@@ -315,30 +307,21 @@ final class VoiceController extends Notifier<VoiceUiState> {
     return _run(pipeline, kind, preRoll);
   }
 
-  /// Whether the installed state of the chosen Whisper and Silero is
-  /// known (a fresh engine checks it in the background first).
-  bool _modelsChecked() {
-    final states = ref.read(modelStatesProvider.notifier);
-    final stt =
-        ref.read(voiceSettingsProvider).value?.sttModel ??
-        const VoiceSettings().sttModel;
-    return states.of(stt).phase != ModelPhase.unknown &&
-        states.of(SpeechModelCatalog.sileroVad.id).phase != ModelPhase.unknown;
-  }
-
-  Future<bool> _modelsInstalled() async {
-    try {
-      final service = await ref.read(speechModelServiceProvider.future);
-      final catalog = ref.read(speechModelCatalogProvider);
-      final settings = await ref.read(voiceSettingsProvider.future);
-      for (final id in [settings.sttModel, SpeechModelCatalog.sileroVad.id]) {
-        final model = catalog.byId(id);
-        if (model == null || !await service.isInstalled(model)) return false;
-      }
-      return true;
-    } on Object {
-      return false;
-    }
+  /// The start failed after the microphone opened: closes it and shows
+  /// [error] (nothing if the container is gone already).
+  Future<bool> _failStart(
+    PrimedAudioInput primed,
+    String? error, {
+    bool clearHint = true,
+  }) async {
+    await primed.stop();
+    if (!ref.mounted) return false;
+    state = state.copyWith(
+      preparing: false,
+      error: error,
+      clearHint: clearHint,
+    );
+    return false;
   }
 
   Future<bool> _startAfterLoading(
@@ -353,18 +336,22 @@ final class VoiceController extends Notifier<VoiceUiState> {
       components = await _loadComponents();
     } on Object catch (e) {
       voiceLog('start-failed', {'reason': 'load', 'error': errorCode(e)});
+      if (!ref.mounted) return false;
       state = state.copyWith(
         error: voiceErrorText(uiTexts(ref), e),
         clearHint: true,
       );
       return false;
     }
+    if (!ref.mounted) return false;
     if (components == null) {
       voiceLog('start-failed', {'reason': 'no-models'});
       state = state.copyWith(error: voiceUnavailableError, clearHint: true);
       return false;
     }
-    if (!(await prepare?.call() ?? true)) {
+    final allowed = await prepare?.call() ?? true;
+    if (!ref.mounted) return false;
+    if (!allowed) {
       state = state.copyWith(error: microphoneDeniedHint, clearHint: true);
       return false;
     }
@@ -376,7 +363,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
     state = state.copyWith(trigger: kind, clearHint: true, clearError: true);
     final preRoll = takePreRoll == null ? null : await takePreRoll();
     // Cancelled while taking the hit (WP93): nothing starts.
-    if (cancels != _cancels) return false;
+    if (cancels != _cancels || !ref.mounted) return false;
     return _run(pipeline, kind, preRoll);
   }
 
@@ -458,8 +445,10 @@ final class VoiceController extends Notifier<VoiceUiState> {
     final tts = _promptTts;
     _promptTts = null;
     if (tts != null) await tts.stop();
+    if (!ref.mounted) return;
     if (state.preparing) {
       await _primed?.stop();
+      if (!ref.mounted) return;
       state = state.copyWith(preparing: false);
     }
     await _pipeline?.cancel();
@@ -471,7 +460,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   Future<void> suspend() async {
     final running = ref.read(agentControllerProvider).running;
     await cancel();
-    if (running) _agent.cancel();
+    if (running && ref.mounted) _agent.cancel();
   }
 
   /// The screen is visible (main screen, unlocked overlay): load the speech

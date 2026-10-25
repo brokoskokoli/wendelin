@@ -1,5 +1,6 @@
 package app.wendelin
 
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -12,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.Lifecycle
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 
 /**
  * The assistant overlay: a transparent window with its own Flutter engine running the Dart
@@ -68,9 +70,80 @@ class AssistantActivity : WendelinActivity() {
         placeholder = null
     }
 
+    // WP145: spawned from the process-wide group, not a fresh engine per opening; destroyed with
+    // the activity (an engine from provideFlutterEngine would otherwise outlive it).
+    override fun provideFlutterEngine(context: Context): FlutterEngine =
+        EngineGroups.forActivity(this, "assistantMain", "overlay")
+
+    // Held: the engine outlives the activity and is destroyed through the pool (EngineGroups).
+    override fun shouldDestroyEngineWithHost(): Boolean = !engineHeld
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         VoiceLog.i("overlay-engine-ready after=${sinceCreate()}ms")
         super.configureFlutterEngine(flutterEngine)
+        assistant?.onReleaseHost = { releaseHost() }
+        assistant?.onTeardownDone = { teardownDone() }
+    }
+
+    // WP145: the overlay ends at once, but Dart may still free native objects for seconds (a
+    // Whisper model that was loading). The activity finishes, the wake word listens again and a
+    // new assist opens a new activity with a new engine; this engine stays headless until Dart
+    // reports `teardownDone` or HOLD_MS ran out (EngineGroups).
+    private var engineHeld = false
+    private var heldEngine: FlutterEngine? = null
+    private var engineCleaned = false
+    private var teardownReported = false
+    private var wakeNotified = false
+
+    /** Dart closes the overlay: ends the activity now, keeps the engine. False if impossible. */
+    private fun releaseHost(): Boolean {
+        if (engineHeld) return true
+        val engine = flutterEngine ?: return false
+        if (!EngineGroups.hold(engine)) return false
+        engineHeld = true
+        heldEngine = engine
+        VoiceLog.i("overlay-release-host finishing=$isFinishing")
+        notifyWakeService()
+        if (!isFinishing) finish()
+        return true
+    }
+
+    private fun teardownDone() {
+        teardownReported = true
+        VoiceLog.i("overlay-teardown-done cleaned=$engineCleaned")
+        // Before the activity is detached the engine must stay; cleanUpFlutterEngine looks again.
+        if (engineCleaned) heldEngine?.let { e -> handler.post { EngineGroups.release(e) } }
+    }
+
+    private fun notifyWakeService() {
+        if (wakeNotified) return
+        wakeNotified = true
+        // The wake-word service listens again once the overlay is gone (WP50).
+        WakeWordService.onOverlayClosed()
+        VoiceLog.i("overlay-close-notified wake=onOverlayClosed")
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        super.cleanUpFlutterEngine(flutterEngine)
+        val engine = heldEngine ?: return
+        engineCleaned = true
+        // Our channels are gone with the activity; Dart still reports through this one.
+        MethodChannel(engine.dartExecutor.binaryMessenger, AssistantChannel.CHANNEL)
+            .setMethodCallHandler { call, result ->
+                if (call.method == "teardownDone") {
+                    VoiceLog.i("overlay-teardown-done cleaned=true late=true")
+                    // Reply first, destroy after: else "FlutterJNI was detached" in the log.
+                    result.success(null)
+                    handler.post { EngineGroups.release(engine) }
+                } else {
+                    result.notImplemented()
+                }
+            }
+        // The delegate still detaches the engine from the activity after this call: destroy later.
+        // Also marks the engine detached for the 14 s timeout (EnginePool.cleanedUp).
+        handler.post {
+            if (teardownReported) EngineGroups.release(engine) else EngineGroups.cleanedUp(engine)
+        }
     }
 
     override fun onFlutterUiDisplayed() {
@@ -110,8 +183,9 @@ class AssistantActivity : WendelinActivity() {
         )
         lastArrival = now
         AssistantArrivals.arrived()
-        // The late twin of the first start (cold start): no second request.
-        if (triggers) assistant?.trigger()
+        // The late twin of the first start (cold start): no second request. Not while the
+        // overlay closes: a new assist then opens a new activity.
+        if (triggers && !isFinishing && !engineHeld) assistant?.trigger()
     }
 
     companion object {
@@ -131,8 +205,7 @@ class AssistantActivity : WendelinActivity() {
         handler.removeCallbacksAndMessages(null)
         hidePlaceholder()
         VoiceLog.i("overlay-destroy finishing=$isFinishing")
-        // The wake-word service listens again once the overlay is gone (WP50).
-        if (isFinishing) WakeWordService.onOverlayClosed()
+        if (isFinishing) notifyWakeService()
         super.onDestroy()
     }
 
@@ -177,7 +250,8 @@ class AssistantActivity : WendelinActivity() {
         } else {
             channel.requestClose { how ->
                 VoiceLog.i("overlay-close by=$how finishing=$isFinishing")
-                if (!isFinishing) finish()
+                // Dart did not release the host itself (no answer, error): do it, else finish.
+                if (!releaseHost() && !isFinishing) finish()
             }
         }
     }
