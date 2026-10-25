@@ -274,9 +274,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
     final pipeline = _pipelineFor(components);
     state = state.copyWith(preparing: false);
     final bridged = _wake.kept(preRoll) ? await _wake.close(preRoll) : preRoll;
-    if (ref.mounted && cancels == _cancels)
-      return _run(pipeline, kind, bridged);
-    return _failStart(primed, null, clearHint: false); // cancel: mic still on
+    if (!ref.mounted || cancels != _cancels) return _failStart(primed, null);
+    return _run(pipeline, kind, bridged);
   }
 
   /// The start failed after the microphone opened: closes it and shows
