@@ -205,6 +205,50 @@ void main() {
     });
   });
 
+  test('wake-strip: Zahlen zum Rest des Weckworts, nie Text (WP146)', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [ScriptedTurn.text('Licht an.')],
+        transcripts: const [
+          Transcript(text: 'Dillin schalte das Geheimlicht an'),
+        ],
+      );
+      h.fakeAudio.script(AudioFrames.pattern('.' * 30, frame: frame));
+      final pre = cat([speech(wakeMs), speech(900), quiet(900)]);
+      h.pipeline.start(trigger: wake(pre, wakeEnd));
+      settle(async);
+      final line = h.diagnostics.singleWhere((d) => d.startsWith('wake-strip'));
+      // Pre-roll from the wake end: 4 chunks margin, then 26 speech chunks.
+      expect(
+        line,
+        'wake-strip speechMs=780 removed=false firstLen=6 firstDist=5 '
+        'tailDist=2 restWords=5',
+      );
+      expect(line, isNot(contains('Geheim')));
+    });
+  });
+
+  test('wakeStripLog: entfernt, Rest leer, zu lang', () {
+    expect(
+      wakeStripLog('Wendelin mach Licht', 'mach Licht', speechMs: 5),
+      'wake-strip speechMs=5 removed=true firstLen=4 firstDist=99 tailDist=4 '
+      'restWords=2',
+    );
+    expect(
+      wakeStripLog('Wendelin', '', speechMs: -1),
+      'wake-strip speechMs=-1 removed=true firstLen=0 firstDist=-1 '
+      'tailDist=-1 restWords=0',
+    );
+    expect(
+      wakeStripLog('Lin mach', 'Lin mach', speechMs: 0),
+      contains('removed=false firstLen=3 firstDist=99 tailDist=0'),
+    );
+    expect(
+      wakeStripLog('x', 'Donaudampfschifffahrt', speechMs: 0),
+      contains('firstDist=99 tailDist=99'),
+    );
+  });
+
   test('nur „Wendelin“: das Overlay wartet auf die Anfrage', () {
     runFake((async) {
       final h = Harness(

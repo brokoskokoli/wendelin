@@ -14,7 +14,7 @@ import '../speaker/speaker_match.dart';
 import '../text/spoken_answer.dart';
 import '../text/voice_texts.dart';
 import '../tts/speech_queue.dart';
-import '../wake/wake_verifier.dart' show stripWakeWord;
+import '../wake/wake_verifier.dart' show stripWakeWord, wakeStripLog;
 import 'barge_detector_sync.dart';
 import 'conversation.dart';
 import 'endpointer.dart';
@@ -281,7 +281,7 @@ final class VoicePipeline {
       if (transcript == null) return _finish(gen, ConversationEndReason.error);
       if (stripWake && !followUp) {
         stripWake = false;
-        final rest = stripWakeWord(transcript.text);
+        final rest = _stripWakeLogged(transcript.text);
         if (rest.isEmpty && transcript.text.trim().isNotEmpty) {
           // Only the wake word: feed the pre-roll rest, then the live mic.
           pre = _preRollLeft(pre, preWakeEnd, endpoint.elapsed);

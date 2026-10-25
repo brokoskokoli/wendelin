@@ -33,6 +33,15 @@ extension VoicePipelineListen on VoicePipeline {
     return true;
   }
 
+  /// [stripWakeWord] plus the `wake-strip` diagnosis (WP146, numbers only).
+  String _stripWakeLogged(String text) {
+    final rest = stripWakeWord(text);
+    final n = _listenLog.stripSpeechSamples;
+    final ms = n == null ? -1 : samplesToDuration(n).inMilliseconds;
+    diagnostics?.call(wakeStripLog(text, rest, speechMs: ms));
+    return rest;
+  }
+
   void _announceListening(TriggerEvent? trigger, bool followUp) {
     _listenLog.followUp = followUp;
     _emit(
@@ -241,12 +250,27 @@ extension VoicePipelineListen on VoicePipeline {
     final from = wakeEnd == null ? 0 : wakeEnd.clamp(0, preRoll.length);
     final marginEnd =
         from + (margin ? durationToSamples(VoicePipeline.wakeEndMargin) : 0);
+    // WP146 diagnosis: first run of speech after the wake word (to the first
+    // pause or the end of the pre-roll), only for the first feed.
+    var run = 0;
+    var inRun = false;
+    var runDone = false;
+    _listenLog.stripSpeechSamples = null;
     for (var i = from; i < preRoll.length; i += chunk) {
       final end = i + chunk < preRoll.length ? i + chunk : preRoll.length;
       final frame = Int16List.sublistView(preRoll, i, end);
       final speech = wakeEnd == null
           ? isSpeech
           : i >= marginEnd && frame.length == chunk && vad.isSpeech(frame);
+      if (wakeEnd != null && margin && !runDone) {
+        if (speech) {
+          inRun = true;
+          run += frame.length;
+        } else if (inRun) {
+          runDone = true;
+        }
+        _listenLog.stripSpeechSamples = run;
+      }
       final e = endpointer.add(frame, speech: speech);
       if (e != null) return e;
     }
@@ -309,6 +333,10 @@ final class _ListenLog {
 
   /// Whether the next recording is a follow-up one.
   bool followUp = false;
+
+  /// Samples of the first speech run after the wake word in the pre-roll
+  /// (`wake-strip` diagnosis); null when no pre-roll was fed.
+  int? stripSpeechSamples;
 
   /// Starts the log of one recording (read at its start).
   _RecordingLog start(void Function(String)? sink, Clock clock) =>
