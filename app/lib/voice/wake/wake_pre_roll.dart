@@ -97,8 +97,8 @@ WakePreRoll bridgeWakeTail(
     ..setAll(pre.pcm.length, audio);
   final added = audio.length + silence;
   voiceLog('wake-gap', {
-    if (gap != null) 'ms': gap,
-    if (afterTakeMs != null) 'afterTake': afterTakeMs,
+    'ms': ?gap,
+    'afterTake': ?afterTakeMs,
     'mode': 'overlap',
     'tail': samplesToDuration(tail.pcm.length),
     'trim': samplesToDuration(trim),

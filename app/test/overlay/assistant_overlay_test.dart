@@ -90,8 +90,9 @@ final class FakeAssistantPlatform extends AssistantPlatform
   Completer<void>? takeGate;
 
   @override
-  Future<WakeHandoffAudio?> takeWakeHandoff() async {
+  Future<WakeHandoffAudio?> takeWakeHandoff({bool keepOpen = false}) async {
     wakeTakes++;
+    if (keepOpen) wakeKeptOpen++;
     onTake?.call();
     await takeGate?.future;
     final audio = wakeHandoff;
@@ -99,6 +100,19 @@ final class FakeAssistantPlatform extends AssistantPlatform
     return audio == null
         ? null
         : WakeHandoffAudio(pcm: audio, wakeEnd: wakeEnd, capturedMs: 120);
+  }
+
+  /// Takes with `keepOpen` (WP146) and ends of such a handoff.
+  int wakeKeptOpen = 0;
+  int wakeFinishes = 0;
+
+  /// What the service recorded between take and finish.
+  WakeHandoffAudio? finishAudio;
+
+  @override
+  Future<WakeHandoffAudio?> finishWakeHandoff() async {
+    wakeFinishes++;
+    return finishAudio;
   }
 
   /// Where the wake word ends in [wakeHandoff].
