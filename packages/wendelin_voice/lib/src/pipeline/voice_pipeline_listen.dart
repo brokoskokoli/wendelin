@@ -39,6 +39,7 @@ extension VoicePipelineListen on VoicePipeline {
     final n = _listenLog.stripSpeechSamples;
     final ms = n == null ? -1 : samplesToDuration(n).inMilliseconds;
     diagnostics?.call(wakeStripLog(text, rest, speechMs: ms));
+    contentLog?.call('wake-strip', {'text': text, 'rest': rest});
     return rest;
   }
 
@@ -75,6 +76,11 @@ extension VoicePipelineListen on VoicePipeline {
       'stt-reject reason=low-conf conf=${transcript.confidence} '
       'mode=${followUp ? 'followup' : trigger?.source.name ?? 'none'}',
     );
+    contentLog?.call('stt-reject', {
+      'text': transcript.text,
+      'conf': transcript.confidence,
+      'action': gate.name,
+    });
     if (gate == SttGateAction.askAgain) {
       await _nothingUnderstood(gen, null, language: transcript.language);
     }

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
+import 'dev_log.dart';
 import 'voice_log.dart';
 
 /// Time line of one voice request for the `latency` log line (WP120).
@@ -13,7 +14,7 @@ import 'voice_log.dart';
 ///
 /// - `stt`: transcription ready.
 /// - `calls`, `tools`: number of model calls and tool calls.
-/// - `m<i>_req` / `m<i>_first` / `m<i>_done` (at most 4 calls): request of
+/// - `m<i>_req` / `m<i>_first` / `m<i>_done` (at most 4 calls, all in developer mode): request of
 ///   the model call handed over (after the transcript or after the last tool
 ///   result), first token (text, thinking or tool call), call finished
 ///   (usage reported).
@@ -176,7 +177,9 @@ final class LatencyTrace {
       'calls': _calls.length,
       'tools': _tools,
     };
-    for (var i = 0; i < _calls.length && i < maxCalls; i++) {
+    // Developer mode (WP148): every round, not only the first [maxCalls].
+    final shown = devLogEnabled ? _calls.length : maxCalls;
+    for (var i = 0; i < _calls.length && i < shown; i++) {
       f['m${i + 1}_req'] = _calls[i].req;
       f['m${i + 1}_first'] = _calls[i].first;
       f['m${i + 1}_done'] = _calls[i].done;

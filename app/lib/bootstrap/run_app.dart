@@ -8,6 +8,7 @@ import '../di/providers.dart';
 import '../di/startup.dart';
 import '../di/voice_providers.dart';
 import '../di/wake_providers.dart';
+import '../voice/dev_log.dart';
 import 'device_info.dart';
 
 /// Runs [app] in a `ProviderScope` with the overrides every engine needs
@@ -18,6 +19,7 @@ Future<void> runWendelinApp(
   Widget app, {
   List<Override> extra = const [],
 }) async {
+  devLogEnabled = startup.developerMode;
   final device = await loadDeviceInfo();
   runApp(
     ProviderScope(

@@ -1,0 +1,21 @@
+{
+  "developerModeActiveHint": "Mode développeur activé – journal étendu",
+  "developerModeOff": "Mode développeur désactivé",
+  "developerModeOn": "Mode développeur activé",
+  "developerModeStepsToOff": "Encore {n} appuis pour désactiver le mode développeur",
+  "@developerModeStepsToOff": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "developerModeStepsToOn": "Encore {n} appuis pour activer le mode développeur",
+  "@developerModeStepsToOn": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  }
+}

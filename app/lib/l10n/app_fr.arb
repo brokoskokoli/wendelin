@@ -399,6 +399,25 @@
   "confYesCall": "Appeler",
   "confYesSend": "Envoyer",
   "integrationsContactsRationale": "Wendelin a besoin d’accéder à tes contacts pour trouver les numéros par nom, ainsi qu’aux droits SMS et téléphone. Android te le demandera ensuite. Wendelin n’envoie jamais de SMS et n’appelle jamais sans que tu aies confirmé l’aperçu avec le nom et le numéro (en touchant l’écran ou en disant « oui »). Rien de tout cela ne marche appareil verrouillé. Sans le droit téléphone, Wendelin ouvre seulement le clavier d’appel.",
+  "developerModeActiveHint": "Mode développeur activé – journal étendu",
+  "developerModeOff": "Mode développeur désactivé",
+  "developerModeOn": "Mode développeur activé",
+  "developerModeStepsToOff": "Encore {n} appuis pour désactiver le mode développeur",
+  "@developerModeStepsToOff": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "developerModeStepsToOn": "Encore {n} appuis pour activer le mode développeur",
+  "@developerModeStepsToOn": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "batteryAllow": "Autoriser sans restriction",
   "batteryChecklistNote": "Android ne permet pas de lire ces paramètres. Il s’agit d’une liste de contrôle, pas d’un état.",
   "batteryHuaweiBody": "Réglez « Lancement des applications » pour Wendelin sur « Gérer manuellement » et autorisez le démarrage automatique, le démarrage secondaire et l’activité en arrière-plan.",

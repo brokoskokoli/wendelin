@@ -10,6 +10,7 @@ import 'package:test_api/src/backend/invoker.dart' show Invoker;
 import 'package:test_api/src/backend/state.dart' show Result;
 import 'package:wendelin/ui/overlay/assistant_overlay.dart';
 import 'package:wendelin/ui/theme/app_theme.dart';
+import 'package:wendelin/voice/dev_log.dart';
 import 'package:wendelin/voice/voice_log.dart';
 
 import 'support/golden_tolerance.dart';
@@ -50,6 +51,7 @@ void _bufferVoiceLog() {
   setUp(() {
     buffer.clear();
     voiceLogSink = buffer.add;
+    devLogEnabled = false;
   });
   tearDown(() {
     final result = Invoker.current?.liveTest.state.result;

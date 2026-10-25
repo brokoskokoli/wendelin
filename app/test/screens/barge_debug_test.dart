@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/core_providers.dart';
+import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/platform/voice/record_audio_input.dart';
 import 'package:wendelin/ui/settings/barge_debug_sheet.dart';
@@ -64,7 +65,7 @@ void main() {
   testWidgets('Bonus Hinweisbegriffe: Standard 1,0, Wahl wird gespeichert', (
     tester,
   ) async {
-    final env = TestEnv();
+    final env = TestEnv(startup: const StartupSettings(developerMode: true));
     setView(tester, const Size(390, 5000));
     await tester.pumpWidget(env.app(home: const VoiceScreen()));
     await settle(tester);

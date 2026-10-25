@@ -66,6 +66,28 @@ void main() {
       });
     });
 
+    test('contentLog (Entwicklermodus) bekommt den verworfenen Text, '
+        'diagnostics nie (WP148)', () {
+      runFake((async) {
+        final h = Harness(transcripts: [_t('Wetter', 0.18)]);
+        h.pipeline.start();
+        settle(async);
+        expect(h.content.single.$1, 'stt-reject');
+        expect(h.content.single.$2['text'], 'Wetter');
+        expect(h.content.single.$2['action'], 'askAgain');
+        expect(h.diagnostics.join(), isNot(contains('Wetter')));
+      });
+    });
+
+    test('angenommener Text erzeugt kein stt-reject im contentLog', () {
+      runFake((async) {
+        final h = Harness(transcripts: [_t('Wetter', 0.9)]);
+        h.pipeline.start();
+        settle(async);
+        expect(h.content.where((e) => e.$1 == 'stt-reject'), isEmpty);
+      });
+    });
+
     test('Push-to-Talk bei 0,45 geht durch (niedrigere Schwelle)', () {
       runFake((async) {
         final h = Harness(transcripts: [_t('Wetter', 0.45)]);

@@ -18,6 +18,7 @@ final class StartupSettings {
     this.onboardingDone = true,
     this.language = 'de',
     this.uiLanguage = 'system',
+    this.developerMode = false,
     this.assistant = const AssistantPrefs(),
     this.retentionDays = 30,
     this.toolPrefs = const ToolPrefs(),
@@ -48,6 +49,9 @@ final class StartupSettings {
 
   /// App UI language: `system`, `de`, `en`, `fr`.
   final String uiLanguage;
+
+  /// Developer mode (WP148).
+  final bool developerMode;
 
   /// Name and persona.
   final AssistantPrefs assistant;
@@ -97,6 +101,7 @@ final class StartupSettings {
       onboardingDone: await settings.get(AppSettings.onboardingDone) ?? false,
       language: await settings.get(AppSettings.language) ?? 'de',
       uiLanguage: await settings.get(AppSettings.uiLanguage) ?? 'system',
+      developerMode: await settings.get(AppSettings.developerMode) ?? false,
       assistant: AssistantPrefs(
         userName: await settings.get(AppSettings.userName),
         persona: await settings.get(AppSettings.persona),

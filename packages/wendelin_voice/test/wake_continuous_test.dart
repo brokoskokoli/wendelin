@@ -225,6 +225,10 @@ void main() {
         'tailDist=2 restWords=5',
       );
       expect(line, isNot(contains('Geheim')));
+      // Developer mode (WP148): the content goes to contentLog only.
+      final c = h.content.singleWhere((e) => e.$1 == 'wake-strip').$2;
+      expect(c['text'], 'Dillin schalte das Geheimlicht an');
+      expect(c['rest'], contains('Geheimlicht'));
     });
   });
 

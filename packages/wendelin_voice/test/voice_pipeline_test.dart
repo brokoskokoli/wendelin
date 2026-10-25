@@ -147,6 +147,7 @@ final class Harness {
       triggers: triggers,
       speaker: speaker,
       diagnostics: diagnostics.add,
+      contentLog: (event, fields) => content.add((event, fields)),
     );
     pipeline.states.listen(states.add);
     pipeline.events.listen(events.add);
@@ -164,6 +165,9 @@ final class Harness {
   final states = <VoiceState>[];
   final events = <VoiceEvent>[];
   final diagnostics = <String>[];
+
+  /// Events with content (developer mode, WP148).
+  final content = <(String, Map<String, Object?>)>[];
 
   List<T> eventsOf<T extends VoiceEvent>() => events.whereType<T>().toList();
 
