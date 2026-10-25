@@ -49,6 +49,76 @@ void main() {
       // 4 Chunks Rand (stille) + 26 Sprach- + 27 Stille-Chunks; das Wake Word
       // (600 ms = 9600 Samples) ist nicht dabei.
       expect(h.stt.calls.single.samples, 57 * 480);
+      // Endpoint inside the pre-roll: the microphone is not needed (WP146).
+      expect(h.fakeAudio.startCount, 0);
+    });
+  });
+
+  test('nur Weckwort im ersten Segment: der Rest des Pre-Rolls wird '
+      'weiter eingespeist, kein Mikrofon (WP146)', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [ScriptedTurn.text('Licht an.')],
+        transcripts: const [
+          Transcript(text: 'Hey Wendelin.'),
+          Transcript(text: 'Mach das Licht an'),
+        ],
+      );
+      // Stage 2 took its time: the request was spoken meanwhile.
+      final pre = cat([speech(600), quiet(1000), speech(900), quiet(900)]);
+      expect(h.pipeline.start(trigger: wake(pre, 200 * 16)), isTrue);
+      settle(async);
+      expect(h.stt.calls, hasLength(2));
+      expect(h.recording.inputs.single.text, 'Mach das Licht an');
+      // Request of 900 ms plus end silence, not the wake word or the pause.
+      expect(h.stt.calls.last.samples, inInclusiveRange(30 * 480, 70 * 480));
+      expect(h.fakeAudio.startCount, 0);
+      expect(
+        h.diagnostics.where((d) => d.startsWith('relisten reason=wake-only')),
+        hasLength(1),
+      );
+    });
+  });
+
+  test('nur Weckwort, Anfrage nicht im Pre-Roll: der Rest läuft durch, danach live (WP146)', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [ScriptedTurn.text('Licht an.')],
+        transcripts: const [
+          Transcript(text: 'Wendelin.'),
+          Transcript(text: 'Mach das Licht an'),
+        ],
+      );
+      h.fakeAudio.script(
+        AudioFrames.pattern('${'.' * 10}${'S' * 20}${'.' * 30}', frame: frame),
+      );
+      final pre = cat([speech(600), quiet(1000)]);
+      h.pipeline.start(trigger: wake(pre, 200 * 16));
+      settle(async);
+      expect(h.stt.calls, hasLength(2));
+      expect(h.fakeAudio.startCount, 1);
+    });
+  });
+
+  test('Pegel-Log: nur Zahlen, pro Sekunde (WP146)', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [ScriptedTurn.text('Ok.')],
+        transcripts: const [Transcript(text: 'Wie spät ist es')],
+      );
+      h.fakeAudio.script(
+        AudioFrames.pattern('${'S' * 40}${'.' * 30}', frame: frame),
+      );
+      h.pipeline.start();
+      settle(async);
+      final levels = h.diagnostics.where((d) => d.startsWith('mic-level'));
+      expect(levels, isNotEmpty);
+      for (final l in levels) {
+        expect(
+          l,
+          matches(RegExp(r'^mic-level s=\d+ rms=-?\d+ peak=-?\d+ zero=\d+$')),
+        );
+      }
     });
   });
 

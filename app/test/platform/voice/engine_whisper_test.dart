@@ -75,7 +75,7 @@ final class FakeBackend implements WhisperBackend {
 
 /// [WhisperDirectory] of the fake process. A model whose engine ended
 /// without withdrawing it ([gone]) does not answer any more.
-final class FakeDirectory implements WhisperDirectory {
+final class FakeDirectory implements UsageAwareDirectory {
   FakeDirectory(this.process);
 
   final FakeProcess process;
@@ -100,6 +100,28 @@ final class FakeDirectory implements WhisperDirectory {
 
   @override
   int liveModels() => process.live.length;
+
+  final usage = <String, int>{};
+  final watchers = <String, void Function()>{};
+
+  @override
+  Future<int> users(String modelId) async => usage[modelId] ?? 0;
+
+  @override
+  void markUse(String modelId) => usage[modelId] = (usage[modelId] ?? 0) + 1;
+
+  @override
+  void unmarkUse(String modelId) {
+    usage[modelId] = (usage[modelId] ?? 1) - 1;
+    watchers[modelId]?.call();
+  }
+
+  @override
+  void watchUsers(String modelId, void Function() onLeft) =>
+      watchers[modelId] = onLeft;
+
+  @override
+  void unwatchUsers(String modelId) => watchers.remove(modelId);
 }
 
 final class _Remote implements WhisperBackend {
@@ -168,6 +190,62 @@ void main() {
         contains('live=1'),
       );
     });
+
+    test('Besitzer gibt frei, solange das Overlay das Modell nutzt: erst '
+        'nach dem Overlay (WP146)', () async {
+      final app = engine('whisper-small');
+      final overlay = engine('whisper-small');
+      await app.warm();
+      await overlay.warm();
+      await app.release(reason: 'idle');
+      // The model stays: the overlay keeps using it, no second copy.
+      expect(process.live, hasLength(1));
+      expect(app.ownsModel, isTrue);
+      expect(
+        lines.singleWhere((l) => l.contains(' model-release-deferred ')),
+        allOf(contains('users=1'), contains('reason=idle')),
+      );
+      final r = await overlay.transcribe(samples, language: 'de');
+      expect(r.text, 'ok whisper-small');
+      expect(process.loads, 1);
+      // The overlay closes: the waiting release runs.
+      await overlay.release(reason: 'overlay-close');
+      await pumpEventQueue();
+      expect(process.live, isEmpty);
+      expect(app.ownsModel, isFalse);
+      expect(
+        lines.singleWhere((l) => l.contains(' model-free ')),
+        contains('reason=idle'),
+      );
+    });
+
+    test(
+      'Engine-Ende (dispose) gibt immer frei, auch mit Nutzer (WP146)',
+      () async {
+        final app = engine('whisper-small');
+        final overlay = engine('whisper-small');
+        await app.warm();
+        await overlay.warm();
+        await app.dispose();
+        expect(process.live, isEmpty);
+      },
+    );
+
+    test(
+      'Nutzung wieder aufgenommen: die wartende Freigabe entfällt (WP146)',
+      () async {
+        final app = engine('whisper-small');
+        final overlay = engine('whisper-small');
+        await app.warm();
+        await overlay.warm();
+        await app.release(reason: 'idle');
+        await app.warm();
+        await overlay.release();
+        await pumpEventQueue();
+        expect(process.live, hasLength(1));
+        expect(app.ownsModel, isTrue);
+      },
+    );
 
     test('gleichzeitiges Vorwärmen lädt nur einmal', () async {
       final app = engine('whisper-small');
