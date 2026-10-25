@@ -89,39 +89,7 @@ void docCheckChecks(SelfCheck t) {
     t.eq(errors(), <String>[], 'm5-Datei nach Korrektur ohne Befund');
     _deadPathInRuleDocs(t, put, errors);
     _identChecks(t, put, errors, root);
-    // Mutation: veraltete erzeugte Datei.
-    File('$root/docs/architecture/generated/packages.md')
-        .writeAsStringSync('x');
-    t.eq(staleGenerated(root), [
-      'docs/architecture/generated/packages.md',
-    ], 'veraltete erzeugte Datei');
-    t.isTrue(
-      errors().any((e) => e.contains('packages.md: veraltet')),
-      'check_docs meldet veraltete erzeugte Datei',
-    );
-    writeGenerated(root);
-    t.eq(errors(), <String>[], 'writeGenerated stellt her');
-
-    // Mutation: fehlende erzeugte Datei.
-    File('$root/docs/architecture/generated/integrations.md').deleteSync();
-    t.eq(staleGenerated(root), [
-      'docs/architecture/generated/integrations.md',
-    ], 'fehlende erzeugte Datei');
-    writeGenerated(root);
-
-    // Mutation: m5-Datei ohne Indexeintrag.
-    put('docs/testing/m5/wp2.md', '# WP2 Zwei\n');
-    t.eq(staleGenerated(root), [
-      'docs/testing/m5/README.md',
-    ], 'm5-Datei ohne Indexeintrag macht den Index veraltet');
-    writeGenerated(root);
-    t.isTrue(
-      File('$root/docs/testing/m5/README.md')
-          .readAsStringSync()
-          .contains('- [WP2 Zwei](wp2.md)'),
-      'Index nennt die neue Datei',
-    );
-    t.eq(errors(), <String>[], 'nach regen wieder ohne Befund');
+    _staleChecks(t, put, errors, root);
   } finally {
     tmp.deleteSync(recursive: true);
   }
@@ -149,6 +117,47 @@ void docCheckChecks(SelfCheck t) {
     !idx.resolvesLink('b.md', docDir: 'docs'),
     'kein Suffix-Treffer wie bei Pfadangaben',
   );
+}
+
+/// Veraltete, fehlende und nicht indexierte erzeugte Doku wird rot.
+void _staleChecks(
+  SelfCheck t,
+  void Function(String, String) put,
+  List<String> Function() errors,
+  String root,
+) {
+  // Mutation: veraltete erzeugte Datei.
+  File('$root/docs/architecture/generated/packages.md').writeAsStringSync('x');
+  t.eq(staleGenerated(root), [
+    'docs/architecture/generated/packages.md',
+  ], 'veraltete erzeugte Datei');
+  t.isTrue(
+    errors().any((e) => e.contains('packages.md: veraltet')),
+    'check_docs meldet veraltete erzeugte Datei',
+  );
+  writeGenerated(root);
+  t.eq(errors(), <String>[], 'writeGenerated stellt her');
+
+  // Mutation: fehlende erzeugte Datei.
+  File('$root/docs/architecture/generated/integrations.md').deleteSync();
+  t.eq(staleGenerated(root), [
+    'docs/architecture/generated/integrations.md',
+  ], 'fehlende erzeugte Datei');
+  writeGenerated(root);
+
+  // Mutation: m5-Datei ohne Indexeintrag.
+  put('docs/testing/m5/wp2.md', '# WP2 Zwei\n');
+  t.eq(staleGenerated(root), [
+    'docs/testing/m5/README.md',
+  ], 'm5-Datei ohne Indexeintrag macht den Index veraltet');
+  writeGenerated(root);
+  t.isTrue(
+    File('$root/docs/testing/m5/README.md')
+        .readAsStringSync()
+        .contains('- [WP2 Zwei](wp2.md)'),
+    'Index nennt die neue Datei',
+  );
+  t.eq(errors(), <String>[], 'nach regen wieder ohne Befund');
 }
 
 /// Ein toter Pfad in Regelquelle, Briefing, Agent-Definition und Review-Protokoll wird rot.
@@ -196,7 +205,7 @@ void _identChecks(
   t.eq(errors(), <String>[], 'Bestand in der Allowlist ist erlaubt');
   put('docs/architecture/idents.md', 'Nur `FooPort`.\n');
   t.isTrue(
-    errors().join().contains("GhostThing") &&
+    errors().join().contains('GhostThing') &&
         errors().join().contains(
           'Eintrag (1) aus tool/doc_ident_allowlist.yaml',
         ),
@@ -236,6 +245,7 @@ void _tableChecks(SelfCheck t) {
     ['BarApi', 'FooPort'],
     'nur Port-Namen auf interface-Klassen, sortiert nach Paket und Name',
   );
+  if (rows.every((r) => r.name != 'FooPort')) return;
   final foo = rows.firstWhere((r) => r.name == 'FooPort');
   t.eq(
     [for (final i in foo.impls) '${i.name}:${i.fake}'],

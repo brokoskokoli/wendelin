@@ -323,6 +323,10 @@ Future<void> _globalSteps(Gate gate, {required bool tooling}) async {
     'run',
     'tool/check_docs.dart',
   ], cacheSpec: all);
+  await gate.step('check_concept', 'dart', [
+    'run',
+    'tool/check_concept.dart',
+  ], cacheSpec: all);
   await gate.step('l10n aktuell', 'dart', [
     'run',
     'tool/l10n_merge.dart',

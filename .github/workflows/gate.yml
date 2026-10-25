@@ -62,7 +62,7 @@ jobs:
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "Matrix: $matrix"
 
-  # Nur Doku geändert: allein check_docs (die Pfade in der Agenten-Doku).
+  # Nur Doku geändert: allein check_docs (die Pfade in der Agenten-Doku) und check_concept (Konzept gegen STATUS und ADRs).
   docs-only:
     needs: scope
     if: needs.scope.outputs.docs_only == 'true'
@@ -72,6 +72,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1
       - run: dart run tool/check_docs.dart
+      - run: dart run tool/check_concept.dart
 
   packages:
     name: ${{ matrix.pkg }}${{ matrix.shards > 1 && format(' {0}/{1}', matrix.shard, matrix.shards) || '' }}

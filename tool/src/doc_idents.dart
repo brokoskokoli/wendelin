@@ -45,8 +45,9 @@ Map<String, int> unknownIdents(Map<String, String> docs, Set<String> code) {
   final out = <String, int>{};
   for (final e in docs.entries) {
     for (final id in camelIdents(e.value)) {
-      if (!code.contains(id))
+      if (!code.contains(id)) {
         out['${e.key}#$id'] = (out['${e.key}#$id'] ?? 0) + 1;
+      }
     }
   }
   return out;

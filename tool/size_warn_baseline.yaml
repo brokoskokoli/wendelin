@@ -94,7 +94,7 @@ tool/src/channel_check.dart: 712
 tool/src/channel_check.dart#checkChannels: 108
 tool/src/channel_self_test.dart#channelArgChecks: 137
 tool/src/channel_self_test.dart#channelChecks: 83
-tool/src/doc_check_self_test.dart#docCheckChecks: 124
+tool/src/doc_check_self_test.dart#docCheckChecks: 109
 tool/src/gate_cache.dart#sha256Hex: 124
 tool/src/gate_cache_self_test.dart: 693
 tool/src/gate_cache_self_test.dart#_attestScript: 122

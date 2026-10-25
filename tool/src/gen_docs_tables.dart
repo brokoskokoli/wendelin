@@ -64,8 +64,9 @@ List<PortRow> scanPorts(Map<String, String> sources) {
   for (final e in sources.entries) {
     for (final m in _interfaceDecl.allMatches(e.value)) {
       final n = m[1]!;
-      if (_portName.hasMatch(n) && !n.startsWith('_'))
+      if (_portName.hasMatch(n) && !n.startsWith('_')) {
         ports.putIfAbsent(n, () => e.key);
+      }
     }
   }
   final impls = {for (final n in ports.keys) n: <Implementer>[]};

@@ -1,0 +1,80 @@
+# Bestand der Konzept-Prüfungen (tool/check_concept.dart, WP147).
+#
+# Format: <art>/K<nr>: 1
+#   ref/K<nr>     bestätigter Eintrag des Änderungsprotokolls, dessen Nummer im
+#                 Konzepttext nicht in Klammern („(K12)“, „(offline, K7)“)
+#                 und in keiner ADR vorkommt.
+#   status/K<nr>  STATUS.md nennt für K<nr> „bestätigt“ oder „offen“, das Konzept
+#                 (Tabelle oder Archiv) hat einen anderen Status.
+# Die Liste schrumpft nur. Neue Treffer sind zu beheben (Verweis „(Knn)“ in den
+# betroffenen Konzeptabschnitt, Status angleichen), nicht einzutragen; ein
+# Eintrag, der nicht mehr zutrifft, wird zum Entfernen gemeldet
+# (`dart run tool/check_concept.dart --update-baseline`).
+ref/K5: 1
+ref/K12: 1
+ref/K17: 1
+ref/K18: 1
+ref/K19: 1
+ref/K20: 1
+ref/K21: 1
+ref/K22: 1
+ref/K25: 1
+ref/K26: 1
+ref/K27: 1
+ref/K30: 1
+ref/K31: 1
+ref/K32: 1
+ref/K33: 1
+ref/K34: 1
+ref/K35: 1
+ref/K36: 1
+ref/K38: 1
+ref/K39: 1
+ref/K40: 1
+ref/K41: 1
+ref/K42: 1
+ref/K43: 1
+ref/K44: 1
+ref/K45: 1
+ref/K46: 1
+ref/K48: 1
+ref/K49: 1
+ref/K50: 1
+ref/K51: 1
+ref/K52: 1
+ref/K53: 1
+ref/K54: 1
+ref/K55: 1
+ref/K56: 1
+ref/K57: 1
+ref/K58: 1
+ref/K60: 1
+ref/K61: 1
+ref/K65: 1
+ref/K66: 1
+ref/K67: 1
+ref/K68: 1
+ref/K69: 1
+ref/K70: 1
+ref/K71: 1
+ref/K72: 1
+ref/K73: 1
+ref/K74: 1
+ref/K75: 1
+ref/K76: 1
+ref/K77: 1
+ref/K78: 1
+ref/K79: 1
+ref/K80: 1
+ref/K84: 1
+ref/K86: 1
+ref/K88: 1
+ref/K89: 1
+ref/K92: 1
+ref/K94: 1
+ref/K99: 1
+ref/K100: 1
+ref/K101: 1
+ref/K103: 1
+ref/K107: 1
+ref/K108: 1
