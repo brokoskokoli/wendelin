@@ -206,6 +206,15 @@ void main() {
         lines.singleWhere((l) => l.contains(' model-release-deferred ')),
         allOf(contains('users=1'), contains('reason=idle')),
       );
+      expect(
+        lines.singleWhere((l) => l.contains(' model-release-deferred ')),
+        matches(
+          RegExp(
+            r'^Wendelin/voice: model-release-deferred engine=\w+ '
+            r'model=[\w-]+ users=\d+ reason=[\w-]+$',
+          ),
+        ),
+      );
       final r = await overlay.transcribe(samples, language: 'de');
       expect(r.text, 'ok whisper-small');
       expect(process.loads, 1);

@@ -122,6 +122,37 @@ void main() {
     });
   });
 
+  test(
+    'Diagnose-Zeilen der Übergabe: nur Zahlen und Codes, kein Text (WP146)',
+    () {
+      runFake((async) {
+        final h = Harness(
+          turns: [ScriptedTurn.text('Geheimantwort.')],
+          transcripts: const [
+            Transcript(text: 'Hey Xylophon.'),
+            Transcript(text: 'Mach das Geheimlicht an'),
+          ],
+        );
+        final pre = cat([speech(600), quiet(1000), speech(900), quiet(900)]);
+        h.pipeline.start(trigger: wake(pre, 200 * 16));
+        settle(async);
+        expect(
+          h.diagnostics.where(
+            (d) => d.startsWith('relisten') || d.startsWith('preroll-fed'),
+          ),
+          isNotEmpty,
+        );
+        // Positive list: event name, then key=number|bool pairs.
+        final allowed = RegExp(r'^[a-z-]+( \w+=(-?\d+|true|false|[a-z-]+))*$');
+        for (final d in h.diagnostics) {
+          expect(d, matches(allowed));
+          expect(d, isNot(contains('Xylophon')));
+          expect(d, isNot(contains('Geheim')));
+        }
+      });
+    },
+  );
+
   test('mit Pause nach dem Wake Word: gleiche Anfrage', () {
     runFake((async) {
       final h = Harness(
