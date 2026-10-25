@@ -120,10 +120,9 @@ class AssistantPlatform {
   /// [finishWakeHandoff]: the caller opens its microphone, waits for its first
   /// frame and only then finishes, so there is no hole between the two.
   Future<WakeHandoffAudio?> takeWakeHandoff({bool keepOpen = false}) async {
-    final raw = await _invoke<Map<Object?, Object?>>(
-      'takeWakeHandoff',
-      keepOpen ? {'keepOpen': true} : null,
-    );
+    final raw = await _invoke<Map<Object?, Object?>>('takeWakeHandoff', {
+      'keepOpen': keepOpen,
+    });
     if (raw == null) return null;
     final bytes = raw['pcm'];
     if (bytes is! Uint8List) return null;
