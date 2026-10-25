@@ -157,32 +157,29 @@ void main() {
     expect(finishes, 1);
   });
 
-  test(
-    'Abbruch während close auf den ersten Frame wartet: Mikrofon aus',
-    () {
-      fakeAsync((async) {
-        container(load: () async => components(RecordingStt('x')));
-        c
-          ..read(voiceControllerProvider)
-          ..read(agentControllerProvider);
-        bool? res;
-        unawaited(
-          voice()
-              .start(TriggerKind.pushToTalk, takePreRoll: () async => hit())
-              .then((v) => res = v),
-        );
-        async.elapse(const Duration(milliseconds: 10));
-        expect(audio.startCount, 1);
-        expect(finishes, 0, reason: 'close wartet noch auf den ersten Frame');
-        unawaited(voice().cancel());
-        async.elapse(const Duration(seconds: 5));
-        expect(res, isFalse);
-        expect(audio.isRunning, isFalse, reason: 'App-Mikrofon bleibt nicht an');
-        expect(audio.stopCount, greaterThan(0));
-        expect(finishes, 1);
-      });
-    },
-  );
+  test('Abbruch während close auf den ersten Frame wartet: Mikrofon aus', () {
+    fakeAsync((async) {
+      container(load: () async => components(RecordingStt('x')));
+      c
+        ..read(voiceControllerProvider)
+        ..read(agentControllerProvider);
+      bool? res;
+      unawaited(
+        voice()
+            .start(TriggerKind.pushToTalk, takePreRoll: () async => hit())
+            .then((v) => res = v),
+      );
+      async.elapse(const Duration(milliseconds: 10));
+      expect(audio.startCount, 1);
+      expect(finishes, 0, reason: 'close wartet noch auf den ersten Frame');
+      unawaited(voice().cancel());
+      async.elapse(const Duration(seconds: 5));
+      expect(res, isFalse);
+      expect(audio.isRunning, isFalse, reason: 'App-Mikrofon bleibt nicht an');
+      expect(audio.stopCount, greaterThan(0));
+      expect(finishes, 1);
+    });
+  });
 
   test('Laden scheitert: Dienst-Aufnahme wird trotzdem beendet', () async {
     container(

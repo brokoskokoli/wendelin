@@ -571,7 +571,9 @@ void main() {
         await until(tester, find.textContaining('Kandidat ·'), many: true);
         await seconds(tester, 8);
         expect(
-          find.textContaining('Nachprüfung: bestätigt (Befehlserkennung: $name)'),
+          find.textContaining(
+            'Nachprüfung: bestätigt (Befehlserkennung: $name)',
+          ),
           findsWidgets,
         );
       });

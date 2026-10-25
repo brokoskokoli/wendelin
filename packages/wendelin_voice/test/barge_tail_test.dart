@@ -187,4 +187,35 @@ void main() {
       expect(w.detector.isRunning, isFalse);
     });
   });
+
+  test(
+    'Abbruch während der Antwort der Folgerunde: Detektor wird gestoppt',
+    () {
+      fakeAsync((async) {
+        final w = W(tail: true)..pipeline.start();
+        async.flushMicrotasks();
+        w.audio.script(
+          AudioFrames.pattern('${'S' * 8}${'.' * 40}', frame: frame),
+        );
+        // Until the answer of the follow-up round is read aloud.
+        for (var i = 0; i < 2000 && w.agent.inputs.length < 2; i++) {
+          async.elapse(const Duration(milliseconds: 10));
+        }
+        for (
+          var i = 0;
+          i < 200 && w.pipeline.state != VoiceState.speaking;
+          i++
+        ) {
+          async.elapse(const Duration(milliseconds: 5));
+        }
+        expect(w.pipeline.state, VoiceState.speaking);
+        expect(w.detector.tailBegun, 1);
+        w.pipeline.cancel();
+        async.elapse(const Duration(seconds: 5));
+        expect(w.detector.tailBegun, 1, reason: 'keine zweite Folgeaufnahme');
+        expect(w.detector.isTailing, isFalse);
+        expect(w.detector.isRunning, isFalse);
+      });
+    },
+  );
 }
