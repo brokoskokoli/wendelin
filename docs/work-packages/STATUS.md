@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-24 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP145; Test-APK v0.1.0-rc3; als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: –; Test-APK v0.1.0-rc3, rc4 folgt; als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -91,7 +91,7 @@ Stand: 2026-10-24 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP145; Tes
 | WP141 | Wake Word: nach dem ersten Treffer bis 0,8 s weiter beobachten | gemergt (d25ec9dd) | K110-Nachtrag; offen: Versatzprobe des WP137-Prüfers vor dem Einbau, Ausreißer-Check verwirft im E2E 1/15 Einlern-Aufnahmen (WP140-Folgepunkt), Gerätetest leiser gedehnter Ruf und Latenz |
 | WP142 | Einlernen: weniger echte Rufe ablehnen | gemergt (c858edbc) | K116; HW abgelehnt: Parakeet 13,3 %, Whisper small 18,3 %, ruhig 0 %, Störer 0/880; offen: trennendes HW-Modell (Nachtraining), Gerätetest am Handy, Soll aus Review 2 |
 | WP143 | Wake Word in der App: v8a (clean) + Prüfer B | gemergt (f4ce6590) | K117; B 34 ms Median, ~300 MB PSS weniger, Silero-Leck behoben; offen: B-Schwelle aus einer Sitzung, B bei Rauschen strenger (Gerätetest mit TV), Prüfschritte von Hand (wp143.md), Engine-Leck → WP145 |
-| WP145 | Nativer Speicher wächst je Overlay | in Arbeit | Befund WP143; Entscheidung Maintainer: nach rc3, gleiche Sitzung |
+| WP145 | Nativer Speicher wächst je Overlay | gemergt (d3a71b8d) | K118, ADR 0021; Lade-Leck (~400 MB whisper beim Schließen während Laden) und Container-Teardown behoben, Engine-Group (Overlay öffnet ~1,4 → ~1,0 s); offen: Restzuwachs ~3,9 MB/Overlay am Emulator in Impeller-GLES (gfxstream), echte GLES-Geräte ungeprüft; Prüfschritt von Hand (wp145.md) |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
@@ -99,7 +99,7 @@ Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
 Stand 2026-10-24 (Orchestrator):
 1. WP143 mergen (v8a Stimmenset clean + Prüfer B), dann Release-Kandidat `v0.1.0-rc3` (Tag erst nach grünem Gate auf main), Testprotokoll der Runde ergänzen.
-2. WP145 nativer Speicher je Overlay (dieselbe Sitzung wie WP143), danach rc4.
+2. rc4 bauen (WP145 gemergt), Gerätetest rc4 mit wp145.md.
 3. Gerätetest des Maintainers mit rc3/rc4 (Blöcke T24-*). Danach entscheiden: Stufe-1-Modell mit eigenem „Hey Wendelin“-Kopf (K115 wieder aufgreifen), Python-Tests von tool/train_wake_word/ in die CI.
 4. Offen aus M5/M6 (unverändert, nur mit Go): WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung (K99), WP132, WP138 (Gespräch).
 
