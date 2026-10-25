@@ -5,7 +5,6 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../di/wake_settings.dart';
 import '../../platform/assistant_platform.dart';
-import '../voice_controller.dart';
 import '../voice_log.dart';
 
 /// Takes the audio of the wake word hit from the service and, if [tone] is
@@ -109,4 +108,145 @@ WakePreRoll bridgeWakeTail(
     muteMicSamples: pre.muteMicSamples > added ? pre.muteMicSamples - added : 0,
     lastSampleAtMs: null,
   );
+}
+
+/// What the service recorded between taking the hit and the first frame of the
+/// app's microphone (WP146), and when its last sample arrived.
+typedef WakeTail = ({Int16List pcm, int? lastSampleAtMs});
+
+/// What a wake word hit leaves for the recording (WP68): the audio from the
+/// end of the wake word on, gap-free up to the service's last sample
+/// ([lastSampleAtMs]), and how much of the first samples of the new
+/// microphone to silence (confirmation tone).
+final class WakePreRoll {
+  /// Creates the pre-roll.
+  const WakePreRoll({
+    required this.pcm,
+    this.wakeEnd,
+    this.muteMicSamples = 0,
+    this.lastSampleAtMs,
+    this.finish,
+  });
+
+  /// 16 kHz mono PCM.
+  final Int16List pcm;
+
+  /// Sample in [pcm] where the wake word ends.
+  final int? wakeEnd;
+
+  /// Samples of the new microphone to zero (tone).
+  final int muteMicSamples;
+
+  /// Wall clock (ms since epoch) of the last sample the service recorded; the
+  /// difference to the first sample of the new microphone is the hole.
+  final int? lastSampleAtMs;
+
+  /// WP146: the service still records (taken with `keepOpen`); calling this
+  /// stops it and returns what it recorded since, once. `null`: nothing is
+  /// kept open.
+  final Future<WakeTail?> Function()? finish;
+
+  /// Copy with other audio and tone mute (the bridged pre-roll).
+  WakePreRoll withAudio(
+    Int16List pcm, {
+    required int muteMicSamples,
+    int? lastSampleAtMs,
+  }) => WakePreRoll(
+    pcm: pcm,
+    wakeEnd: wakeEnd,
+    muteMicSamples: muteMicSamples,
+    lastSampleAtMs: lastSampleAtMs ?? this.lastSampleAtMs,
+  );
+}
+
+/// The hole in ms between the service's last sample (arrival of its last
+/// chunk) and the first sample of the new microphone: its first frame
+/// arrives [frameSamples] after the frame began (WP68).
+int wakeGapMs({
+  required int firstFrameAtMs,
+  required int frameSamples,
+  required int lastSampleAtMs,
+}) => firstFrameAtMs - frameSamples * 1000 ~/ 16000 - lastSampleAtMs;
+
+/// The state of one wake word hit between taking it and the first frame of
+/// the app's microphone (WP68, WP73, WP146): the hit with the still recording
+/// service, the answer of its `finish`, and the first frame for `wake-gap`.
+final class WakeHandoffTracker {
+  /// Wall clock of the service's last sample, as long as no first frame
+  /// has been measured against it.
+  int? lastSampleAt;
+
+  /// The hit whose service microphone still records (taken with `keepOpen`).
+  WakePreRoll? handoff;
+
+  Future<WakeTail?>? _tail;
+  Stopwatch? _take;
+  int? _firstFrameAtMs;
+  int? _firstFrameSamples;
+  int? _afterTakeMs;
+
+  /// A new start: forgets the previous hit.
+  void reset() {
+    _firstFrameAtMs = null;
+    handoff = null;
+    _tail = null;
+  }
+
+  /// The hit is taken, before the microphone opens: its first frame is
+  /// measured against [pre]. Splits the hole (WP73): service close /
+  /// hand-over (`ms` minus `afterTake`) and the opening of this microphone
+  /// (`afterTake`).
+  void begin(WakePreRoll? pre) {
+    lastSampleAt = pre?.lastSampleAtMs;
+    handoff = pre?.finish == null ? null : pre;
+    _take = pre == null ? null : (Stopwatch()..start());
+  }
+
+  /// The first frame of the app's microphone: the service stops now and
+  /// `wake-gap` is logged (numbers only; with a kept-open service when the
+  /// tail is bridged, see [close]).
+  void onFirstFrame(int samples) {
+    _firstFrameAtMs = DateTime.now().millisecondsSinceEpoch;
+    _firstFrameSamples = samples;
+    _afterTakeMs = _take?.elapsedMilliseconds;
+    final kept = handoff?.finish;
+    if (kept != null) {
+      _tail ??= kept();
+      lastSampleAt = null;
+    }
+    final last = lastSampleAt;
+    if (last != null && last > 0) {
+      // Hole between the service's last sample and the first sample of this
+      // microphone (WP68), without content.
+      voiceLog('wake-gap', {
+        'ms': wakeGapMs(
+          firstFrameAtMs: _firstFrameAtMs!,
+          frameSamples: samples,
+          lastSampleAtMs: last,
+        ),
+        'afterTake': ?_afterTakeMs,
+      });
+    }
+    lastSampleAt = null;
+    _take = null;
+  }
+
+  /// Ends the service's recording of a hit taken with `keepOpen` and returns
+  /// the pre-roll with what it recorded meanwhile, joined to the first frame
+  /// of this microphone without a hole or doubled audio (WP146).
+  Future<WakePreRoll?> close(WakePreRoll? pre) async {
+    final finish = pre?.finish;
+    if (pre == null || finish == null) return pre;
+    final tail = await (_tail ??= finish());
+    handoff = null;
+    _tail = null;
+    if (tail == null) return pre;
+    return bridgeWakeTail(
+      pre,
+      tail,
+      firstFrameAtMs: _firstFrameAtMs,
+      firstFrameSamples: _firstFrameSamples,
+      afterTakeMs: _afterTakeMs,
+    );
+  }
 }

@@ -254,9 +254,7 @@ final class VoicePipeline {
     var stripWake = trigger?.source == TriggerKind.wakeWord;
     var pre = preRoll;
     var preWakeEnd = wakeEnd;
-    // After „only the wake word“ the rest of the pre-roll is fed from its
-    // start (no wake word margin any more, WP146).
-    var preRest = false;
+    var preRest = false; // pre-roll rest after "only the wake word" (WP146)
     if (config.conversationMode) {
       _convOpen = true;
       if (continued) {
@@ -292,30 +290,14 @@ final class VoicePipeline {
         stripWake = false;
         final rest = stripWakeWord(transcript.text);
         if (rest.isEmpty && transcript.text.trim().isNotEmpty) {
-          // Only the wake word: wait for the request. What the pre-roll
-          // holds after the first segment (the request, spoken while stage 2
-          // checked the word, WP146) is fed next; only when it is used up
-          // the microphone is live.
-          final usedUp =
-              (preWakeEnd ?? 0) + durationToSamples(endpoint.elapsed);
-          final left = pre == null || usedUp >= pre.length
-              ? null
-              : Int16List.sublistView(pre, usedUp);
-          diagnostics?.call(
-            'relisten reason=wake-only preLeftMs='
-            '${left == null ? 0 : samplesToDuration(left.length).inMilliseconds}',
-          );
-          pre = left;
-          preWakeEnd = left == null ? null : 0;
-          preRest = left != null;
+          // Only the wake word: the rest of the pre-roll (the request, spoken
+          // while stage 2 checked) is fed next, then the live microphone.
+          pre = _preRollLeft(pre, preWakeEnd, endpoint.elapsed);
+          preWakeEnd = pre == null ? null : 0;
+          preRest = pre != null;
           continue;
         }
-        transcript = Transcript(
-          text: rest,
-          language: transcript.language,
-          confidence: transcript.confidence,
-          speaker: transcript.speaker,
-        );
+        transcript = transcript.withText(rest);
       }
       if (transcript.text.trim().isEmpty) {
         if (!followUp) {
@@ -460,54 +442,17 @@ final class VoicePipeline {
     try {
       vad.reset();
       if (preRoll != null) {
-        // The decision may fall inside the pre-roll (WP146): then the
-        // microphone is not needed at all.
-        final early = _feedPreRoll(
+        final early = _feedPreRollLogged(
           endpointer,
           preRoll,
           preRollIsSpeech,
           wakeEnd,
-          margin: !preRollRest,
-        );
-        diagnostics?.call(
-          'preroll-fed ms=${samplesToDuration(preRoll.length).inMilliseconds} '
-          'from=${samplesToDuration(wakeEnd ?? 0).inMilliseconds} '
-          'rest=$preRollRest early=${early != null}',
+          preRollRest,
         );
         if (early != null) end(early);
       }
       if (!done.isCompleted) {
-        sub = audio.start().listen(
-          (frame) {
-            if (done.isCompleted || frame.isEmpty) return;
-            levels.add(frame);
-            try {
-              final e = endpointer.add(frame, speech: vad.isSpeech(frame));
-              if (e != null) end(e);
-            } on Object catch (error) {
-              fail(error);
-            }
-          },
-          onError: fail,
-          onDone: () => end(endpointer.finish()),
-        );
-        // Safety nets in wall-clock time in case the microphone stops
-        // delivering frames: before speech after the no-speech timeout,
-        // otherwise after the maximum duration (each plus a grace period).
-        guards
-          ..add(
-            Timer(limits.noSpeechTimeout + config.listenGrace, () {
-              if (!endpointer.inSpeech) {
-                end(endpointer.finish(EndpointReason.noSpeech));
-              }
-            }),
-          )
-          ..add(
-            Timer(
-              limits.maxDuration + config.listenGrace,
-              () => end(endpointer.finish(EndpointReason.maxDuration)),
-            ),
-          );
+        sub = _openMic(endpointer, limits, levels, guards, end, fail, done);
       }
     } on Object catch (error) {
       fail(error);
@@ -532,35 +477,6 @@ final class VoicePipeline {
     // future, and there is nothing left to wait for.
     unawaited(sub?.cancel());
     return result;
-  }
-
-  /// Feeds the audio before the trigger in chunks of 30 ms. Without
-  /// [wakeEnd] all of it counts as [isSpeech]. With it (wake word, WP68) the
-  /// wake word itself is skipped, a short margin counts as silence and
-  /// everything after it goes through the VAD: the request may already be
-  /// in it, and the end-of-speech silence only counts from there.
-  ///
-  /// Returns the decision if it already falls inside the pre-roll.
-  Endpoint? _feedPreRoll(
-    Endpointer endpointer,
-    Int16List preRoll,
-    bool isSpeech,
-    int? wakeEnd, {
-    bool margin = true,
-  }) {
-    const chunk = 480;
-    final from = wakeEnd == null ? 0 : wakeEnd.clamp(0, preRoll.length);
-    final marginEnd = from + (margin ? durationToSamples(wakeEndMargin) : 0);
-    for (var i = from; i < preRoll.length; i += chunk) {
-      final end = i + chunk < preRoll.length ? i + chunk : preRoll.length;
-      final frame = Int16List.sublistView(preRoll, i, end);
-      final speech = wakeEnd == null
-          ? isSpeech
-          : i >= marginEnd && frame.length == chunk && vad.isSpeech(frame);
-      final e = endpointer.add(frame, speech: speech);
-      if (e != null) return e;
-    }
-    return null;
   }
 
   Future<Transcript?> _transcribe(int gen, Int16List pcm) async {
@@ -777,51 +693,4 @@ final class VoicePipeline {
   void _emit(VoiceEvent e) {
     if (!_events.isClosed) _events.add(e);
   }
-}
-
-/// Level statistics of one recording for the log (WP146): per second RMS and
-/// peak in dBFS and the share of digital silence (all-zero samples), numbers
-/// only. Tells a muted or doubled microphone from a bad recognition.
-final class _LevelLog {
-  _LevelLog(this._log);
-
-  final void Function(String event)? _log;
-  int _n = 0;
-  int _zero = 0;
-  int _peak = 0;
-  double _sum = 0;
-  int _second = 0;
-
-  void add(Int16List frame) {
-    if (_log == null) return;
-    for (final s in frame) {
-      final a = s < 0 ? -s : s;
-      if (a == 0) _zero++;
-      if (a > _peak) _peak = a;
-      _sum += s * s;
-    }
-    _n += frame.length;
-    if (_n >= 16000) _emit();
-  }
-
-  /// Writes the rest (less than a second) once at the end.
-  void flush() {
-    if (_n >= 1600) _emit();
-    _n = 0;
-  }
-
-  void _emit() {
-    final rms = math.sqrt(_sum / _n);
-    _log?.call(
-      'mic-level s=${_second++} rms=${_db(rms)} peak=${_db(_peak.toDouble())} '
-      'zero=${(100 * _zero / _n).round()}',
-    );
-    _n = 0;
-    _zero = 0;
-    _peak = 0;
-    _sum = 0;
-  }
-
-  static int _db(double v) =>
-      v < 1 ? -99 : (20 * math.log(v / 32768) / math.ln10).round();
 }
