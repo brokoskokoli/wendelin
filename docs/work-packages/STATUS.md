@@ -92,12 +92,14 @@ Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: –; Test-
 | WP142 | Einlernen: weniger echte Rufe ablehnen | gemergt (c858edbc) | K116; HW abgelehnt: Parakeet 13,3 %, Whisper small 18,3 %, ruhig 0 %, Störer 0/880; offen: trennendes HW-Modell (Nachtraining), Gerätetest am Handy, Soll aus Review 2 |
 | WP143 | Wake Word in der App: v8a (clean) + Prüfer B | gemergt (f4ce6590) | K117; B 34 ms Median, ~300 MB PSS weniger, Silero-Leck behoben; offen: B-Schwelle aus einer Sitzung, B bei Rauschen strenger (Gerätetest mit TV), Prüfschritte von Hand (wp143.md), Engine-Leck → WP145 |
 | WP145 | Nativer Speicher wächst je Overlay | gemergt (105e176e) | K118, ADR 0021; Lade-Leck (~400 MB whisper beim Schließen während Laden) und Container-Teardown behoben, Engine-Group (Overlay öffnet ~1,4 → ~1,0 s); offen: Restzuwachs ~3,9 MB/Overlay am Emulator in Impeller-GLES (gfxstream), echte GLES-Geräte ungeprüft; Prüfschritt von Hand (wp145.md) |
+| WP146 | Spracherkennung nach dem Wake Word unbrauchbar (Übergabelücke, verworfener Vorlauf, Modell-Freigabe unter dem Overlay, Mikrofon-Überlappung) | geplant | Gerätebefund Maintainer 2026-10-25, Go für Fix-Paket mit Diagnose-Logs |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
 ## Nächste Schritte
 
-Stand 2026-10-24 (Orchestrator):
+Stand 2026-10-25 (Orchestrator):
+0. WP146 (Erkennung nach dem Wake Word) vorziehen: Befund und Go des Maintainers vom 2026-10-25.
 1. WP143 mergen (v8a Stimmenset clean + Prüfer B), dann Release-Kandidat `v0.1.0-rc3` (Tag erst nach grünem Gate auf main), Testprotokoll der Runde ergänzen.
 2. rc4 bauen (WP145 gemergt), Gerätetest rc4 mit wp145.md.
 3. Gerätetest des Maintainers mit rc3/rc4 (Blöcke T24-*). Danach entscheiden: Stufe-1-Modell mit eigenem „Hey Wendelin“-Kopf (K115 wieder aufgreifen), Python-Tests von tool/train_wake_word/ in die CI.
