@@ -325,6 +325,9 @@ class WakeWordService : Service() {
             WakeHandoff.clear()
             stopMic()
         }
+        // What the guard stopped collected stays for `finishHandoff`; nobody comes for it now
+        // (up to 15 s of audio must not linger).
+        WakeHandoff.clear()
         handoffCheck.disarm()
         engine?.send("overlayClosed", null)
     }

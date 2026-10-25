@@ -2,6 +2,7 @@ package app.wendelin
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -367,13 +368,43 @@ class WakePolicyTest {
         AppVoice.set("overlay", true, 100)
         AppVoice.set("main", true, 200)
         AppVoice.set("overlay", false, 300)
-        assertTrue(AppVoice.active())
+        assertTrue(AppVoice.active(300))
         AppVoice.set("main", false, 400)
-        assertFalse(AppVoice.active())
+        assertFalse(AppVoice.active(400))
         assertEquals(AppVoice.QUIET_MS - 100, AppVoice.waitMs(500))
         // An end of an engine that never started changes nothing.
         AppVoice.set("ghost", false, 10_000)
         assertEquals(0L, AppVoice.waitMs(10_000))
         AppVoice.reset()
+    }
+
+    @Test
+    fun aHangingActiveReportStopsCountingAfterTheCap() {
+        AppVoice.reset()
+        AppVoice.set("main", true, 1_000)
+        assertEquals(AppVoice.WAIT_FOR_APP, AppVoice.waitMs(1_000 + AppVoice.MAX_ACTIVE_MS - 1))
+        // Never reported the end: the service listens again, after the quiet time.
+        val capEnd = 1_000 + AppVoice.MAX_ACTIVE_MS
+        assertFalse(AppVoice.active(capEnd))
+        assertEquals(AppVoice.QUIET_MS, AppVoice.waitMs(capEnd))
+        assertEquals(0L, AppVoice.waitMs(capEnd + AppVoice.QUIET_MS))
+        // A new report renews the time of an engine.
+        AppVoice.reset()
+        AppVoice.set("main", true, 0)
+        AppVoice.set("main", true, 100_000)
+        assertTrue(AppVoice.active(100_000 + AppVoice.MAX_ACTIVE_MS - 1))
+        AppVoice.reset()
+    }
+
+    @Test
+    fun clearDropsWhatTheGuardStoppedCollecting() {
+        WakeHandoff.clear()
+        WakeHandoff.put(ByteArray(3200), 100)
+        assertNotNull(WakeHandoff.takeKeepingOpen(200))
+        WakeHandoff.append(ByteArray(3200), 250)
+        WakeHandoff.stopCapture()
+        // The overlay closed without `finish`: the rest does not linger.
+        WakeHandoff.clear()
+        assertNull(WakeHandoff.finish())
     }
 }

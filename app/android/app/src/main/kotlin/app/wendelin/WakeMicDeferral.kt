@@ -25,14 +25,14 @@ internal class WakeMicDeferral(
         }
         wanted = true
         VoiceLog.i("wake-mic-deferred app=${wait == AppVoice.WAIT_FOR_APP} waitMs=${wait.coerceAtLeast(0L)}")
-        if (wait > 0L) {
-            val task = Runnable {
-                due = null
-                if (wanted && !hasMic()) request()
-            }
-            due = task
-            main.postDelayed(task, wait)
+        // While the app records the end is reported; the fallback ends a hanging report.
+        val delay = if (wait > 0L) wait else AppVoice.MAX_ACTIVE_MS
+        val task = Runnable {
+            due = null
+            if (wanted && !hasMic()) request()
         }
+        due = task
+        main.postDelayed(task, delay)
     }
 
     /** The app's recording state changed (main thread): a waiting microphone may start now. */

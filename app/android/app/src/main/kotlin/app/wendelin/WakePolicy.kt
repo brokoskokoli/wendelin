@@ -418,32 +418,58 @@ class WakeMicTap(private val keepBytes: Int = 3 * 16_000 * 2) {
 object AppVoice {
     const val QUIET_MS = 700L
 
-    private val sources = mutableSetOf<String>()
+    /**
+     * Fail-safe: a source that reported "active" and never "inactive" (hanging phase, lost call)
+     * stops counting after this long, else the service would stay deaf. Longer than a request
+     * with a long answer and the follow-up window.
+     */
+    const val MAX_ACTIVE_MS = 180_000L
+
+    private val sources = mutableMapOf<String, Long>()
     private var endedAt = Long.MIN_VALUE / 2
 
     @Synchronized
     fun set(source: String, active: Boolean, nowMs: Long) {
         if (active) {
-            sources.add(source)
-        } else if (sources.remove(source) && sources.isEmpty()) {
+            // Reporting again renews the time (a new request of the same engine).
+            sources[source] = nowMs
+        } else if (sources.remove(source) != null && sources.isEmpty()) {
             endedAt = nowMs
         }
     }
 
     @Synchronized
-    fun active(): Boolean = sources.isNotEmpty()
+    fun active(nowMs: Long): Boolean {
+        prune(nowMs)
+        return sources.isNotEmpty()
+    }
 
     /**
      * How long the service waits before it opens its microphone: 0 = now, [WAIT_FOR_APP] = the
-     * app records (ask again when it reports the end), else the rest of the quiet time in ms.
+     * app records (ask again when it reports the end, at the latest after [MAX_ACTIVE_MS]), else
+     * the rest of the quiet time in ms.
      */
     @Synchronized
-    fun waitMs(nowMs: Long): Long = when {
-        sources.isNotEmpty() -> WAIT_FOR_APP
-        else -> (endedAt + QUIET_MS - nowMs).coerceIn(0L, QUIET_MS)
+    fun waitMs(nowMs: Long): Long {
+        prune(nowMs)
+        return when {
+            sources.isNotEmpty() -> WAIT_FOR_APP
+            else -> (endedAt + QUIET_MS - nowMs).coerceIn(0L, QUIET_MS)
+        }
     }
 
     const val WAIT_FOR_APP = -1L
+
+    private fun prune(nowMs: Long) {
+        val it = sources.entries.iterator()
+        while (it.hasNext()) {
+            val e = it.next()
+            if (nowMs - e.value >= MAX_ACTIVE_MS) {
+                it.remove()
+                endedAt = e.value + MAX_ACTIVE_MS
+            }
+        }
+    }
 
     @Synchronized
     fun reset() {

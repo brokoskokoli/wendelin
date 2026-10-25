@@ -2,6 +2,7 @@
 // records or is about to, so the service does not open its microphone next to
 // it (two VOICE_RECOGNITION recordings degrade the app's audio).
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/voice_providers.dart';
@@ -106,5 +107,19 @@ void main() {
     expect(platform.appVoice, [true, false]);
     reporter.dispose();
     expect(platform.appVoice, [true, false]);
+  });
+
+  test('solange die App beschäftigt ist, wird "aktiv" wiederholt (Obergrenze '
+      'im Dienst); danach nicht mehr', () {
+    fakeAsync((async) {
+      final reporter = AppVoiceReporter(platform)
+        ..update(const VoiceUiState(preparing: true));
+      expect(platform.appVoice, [true]);
+      async.elapse(AppVoiceReporter.heartbeat * 3);
+      expect(platform.appVoice, [true, true, true, true]);
+      reporter.update(const VoiceUiState());
+      async.elapse(AppVoiceReporter.heartbeat * 3);
+      expect(platform.appVoice, [true, true, true, true, false]);
+    });
   });
 }
