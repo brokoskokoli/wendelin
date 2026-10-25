@@ -30,6 +30,7 @@ import 'voice_log.dart';
 import 'voice_models_check.dart';
 import 'voice_ui_state.dart';
 import 'voice_usage.dart';
+import 'wake/wake_pre_roll.dart' show bridgeWakeTail;
 
 export 'confirm_prompts.dart';
 export 'controller_agent_run.dart';
@@ -52,6 +53,10 @@ final voiceReleaseDelayProvider = Provider<Duration>(
   (ref) => const Duration(minutes: 2),
 );
 
+/// What the service recorded between taking the hit and the first frame of the
+/// app's microphone (WP146), and when its last sample arrived.
+typedef WakeTail = ({Int16List pcm, int? lastSampleAtMs});
+
 /// What a wake word hit leaves for the recording (WP68): the audio from the
 /// end of the wake word on, gap-free up to the service's last sample
 /// ([lastSampleAtMs]), and how much of the first samples of the new
@@ -63,6 +68,7 @@ final class WakePreRoll {
     this.wakeEnd,
     this.muteMicSamples = 0,
     this.lastSampleAtMs,
+    this.finish,
   });
 
   /// 16 kHz mono PCM.
@@ -77,6 +83,23 @@ final class WakePreRoll {
   /// Wall clock (ms since epoch) of the last sample the service recorded; the
   /// difference to the first sample of the new microphone is the hole.
   final int? lastSampleAtMs;
+
+  /// WP146: the service still records (taken with `keepOpen`); calling this
+  /// stops it and returns what it recorded since, once. `null`: nothing is
+  /// kept open.
+  final Future<WakeTail?> Function()? finish;
+
+  /// Copy with other audio and tone mute (the bridged pre-roll).
+  WakePreRoll withAudio(
+    Int16List pcm, {
+    required int muteMicSamples,
+    int? lastSampleAtMs,
+  }) => WakePreRoll(
+    pcm: pcm,
+    wakeEnd: wakeEnd,
+    muteMicSamples: muteMicSamples,
+    lastSampleAtMs: lastSampleAtMs ?? this.lastSampleAtMs,
+  );
 }
 
 /// The hole in ms between the service's last sample (arrival of its last
@@ -137,6 +160,13 @@ final class VoiceController extends Notifier<VoiceUiState> {
   Duration? _firstFrame;
   int? _wakeLastSampleAt;
   Stopwatch? _wakeTake;
+  // WP146: the hit whose service microphone still records, the answer of its
+  // `finish` (started with the first frame of this microphone) and that frame.
+  WakePreRoll? _handoff;
+  Future<WakeTail?>? _tailFuture;
+  int? _firstFrameAtMs;
+  int? _firstFrameSamples;
+  int? _afterTakeMs;
   Duration? _loaded;
   String _micEngineModel = '';
 
@@ -225,6 +255,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
     // `clock`: tests measure on a fake clock.
     _micWatch = clock.stopwatch()..start();
     _firstFrame = null;
+    _firstFrameAtMs = null;
+    _handoff = null;
+    _tailFuture = null;
     _loaded = null;
     final demo = ref.read(demoModeProvider);
     var ready = !demo && ref.read(voiceReadyProvider);
@@ -264,10 +297,12 @@ final class VoiceController extends Notifier<VoiceUiState> {
       // Cancelled while taking the hit (WP93: the audio went elsewhere):
       // the microphone does not open.
       state = state.copyWith(preparing: false);
+      unawaited(preRoll?.finish?.call());
       return false;
     }
     // Before the microphone opens: its first frame is measured against it.
     _wakeLastSampleAt = preRoll?.lastSampleAtMs;
+    _handoff = preRoll?.finish == null ? null : preRoll;
     // Splits the hole (WP73): service close / hand-over (`ms` minus
     // `afterTake`) and the opening of this microphone (`afterTake`).
     _wakeTake = preRoll == null ? null : (Stopwatch()..start());
@@ -304,7 +339,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
     if (!identical(components.audio, primed.inner)) await primed.stop();
     final pipeline = _pipelineFor(components);
     state = state.copyWith(preparing: false);
-    return _run(pipeline, kind, preRoll);
+    final bridged = await _closeHandoff(preRoll);
+    if (!ref.mounted || cancels != _cancels) return false;
+    return _run(pipeline, kind, bridged);
   }
 
   /// The start failed after the microphone opened: closes it and shows
@@ -314,6 +351,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
     String? error, {
     bool clearHint = true,
   }) async {
+    unawaited(_closeHandoff(_handoff));
     await primed.stop();
     if (!ref.mounted) return false;
     state = state.copyWith(
@@ -361,9 +399,15 @@ final class VoiceController extends Notifier<VoiceUiState> {
     final pipeline = _pipelineFor(components);
     final cancels = _cancels;
     state = state.copyWith(trigger: kind, clearHint: true, clearError: true);
-    final preRoll = takePreRoll == null ? null : await takePreRoll();
+    var preRoll = takePreRoll == null ? null : await takePreRoll();
     // Cancelled while taking the hit (WP93): nothing starts.
-    if (cancels != _cancels || !ref.mounted) return false;
+    if (cancels != _cancels || !ref.mounted) {
+      unawaited(preRoll?.finish?.call());
+      return false;
+    }
+    // The microphone of the pipeline opens only now: the service stops at
+    // once (as before WP146), the hole stays.
+    preRoll = await _closeHandoff(preRoll);
     return _run(pipeline, kind, preRoll);
   }
 
@@ -395,9 +439,39 @@ final class VoiceController extends Notifier<VoiceUiState> {
     return components;
   }
 
+  /// Ends the service's recording of a hit taken with `keepOpen` and returns
+  /// the pre-roll with what it recorded meanwhile, joined to the first frame
+  /// of this microphone without a hole or doubled audio (WP146).
+  Future<WakePreRoll?> _closeHandoff(WakePreRoll? pre) async {
+    final finish = pre?.finish;
+    if (pre == null || finish == null) return pre;
+    final tail = await (_tailFuture ??= finish());
+    _handoff = null;
+    _tailFuture = null;
+    if (tail == null) return pre;
+    final bridged = bridgeWakeTail(
+      pre,
+      tail,
+      firstFrameAtMs: _firstFrameAtMs,
+      firstFrameSamples: _firstFrameSamples,
+      afterTakeMs: _afterTakeMs,
+    );
+    return bridged;
+  }
+
   void _onFirstFrame(int samples) {
     if (_micWatch == null || _firstFrame != null) return;
     _firstFrame = _micWatch!.elapsed;
+    _firstFrameAtMs = DateTime.now().millisecondsSinceEpoch;
+    _firstFrameSamples = samples;
+    _afterTakeMs = _wakeTake?.elapsedMilliseconds;
+    final kept = _handoff?.finish;
+    if (kept != null) {
+      // WP146: this microphone delivers; the service stops now. `wake-gap`
+      // follows when the tail is bridged ([_closeHandoff]).
+      _tailFuture ??= kept();
+      _wakeLastSampleAt = null;
+    }
     final last = _wakeLastSampleAt;
     if (last != null && last > 0) {
       // Wake word: hole between the service's last sample and the first

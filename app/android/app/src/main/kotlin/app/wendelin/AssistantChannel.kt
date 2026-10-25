@@ -126,13 +126,20 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
                     result.success(null)
                     return
                 }
+                // WP146: `keepOpen`: the service records on until `finishWakeHandoff`, so the app's
+                // microphone opens without a hole in between.
+                val keepOpen = call.argument<Boolean>("keepOpen") == true
+                val had = WakeHandoff.pending()
                 val closeAt = System.currentTimeMillis()
-                if (WakeHandoff.pending()) WakeWordService.beforeHandoffTake()
+                if (!keepOpen && had) WakeWordService.beforeHandoffTake()
                 val closeMs = System.currentTimeMillis() - closeAt
-                val taken = WakeHandoff.take(System.currentTimeMillis())
+                val now = System.currentTimeMillis()
+                val taken = if (keepOpen) WakeHandoff.takeKeepingOpen(now) else WakeHandoff.take(now)
                 if (taken != null) {
-                    WakeWordService.onHandoffTaken()
-                    VoiceLog.i("wake-handoff-take captured=${taken.capturedMs}ms close=${closeMs}ms")
+                    if (keepOpen) WakeWordService.onHandoffKept() else WakeWordService.onHandoffTaken()
+                    VoiceLog.i("wake-handoff-take captured=${taken.capturedMs}ms close=${closeMs}ms keepOpen=$keepOpen")
+                } else if (keepOpen && had) {
+                    WakeWordService.beforeHandoffTake() // stale: do not leave the microphone open
                 }
                 result.success(
                     taken?.let {
@@ -142,6 +149,19 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
                             "capturedMs" to it.capturedMs,
                             "lastSampleAt" to it.lastSampleAtMs,
                         )
+                    },
+                )
+            }
+            "finishWakeHandoff" -> {
+                if (!WakePolicy.mayTakeHandoff(activity is MainActivity, ChatState.owned)) {
+                    result.success(null)
+                    return
+                }
+                val tail = WakeWordService.finishHandoff()
+                if (tail != null) VoiceLog.i("wake-handoff-finish tail=${tail.capturedMs}ms")
+                result.success(
+                    tail?.let {
+                        mapOf("pcm" to it.pcm, "capturedMs" to it.capturedMs, "lastSampleAt" to it.lastSampleAtMs)
                     },
                 )
             }

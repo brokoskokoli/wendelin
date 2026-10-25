@@ -32,6 +32,7 @@ class WakeWordService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var resume: Runnable? = null
     private var handoffCheck: Runnable? = null
+    private var overlapGuard: Runnable? = null
     private var lastConflict: String? = null
 
     override fun onCreate() {
@@ -326,6 +327,8 @@ class WakeWordService : Service() {
         resume = null
         handoffCheck?.let { main.removeCallbacks(it) }
         handoffCheck = null
+        overlapGuard?.let { main.removeCallbacks(it) }
+        overlapGuard = null
         watcher?.stop()
         watcher = null
         lastConflict = null
@@ -338,6 +341,40 @@ class WakeWordService : Service() {
         wakeLock = null
     }
 
+    /**
+     * WP146: the app took the hit's audio but the service keeps recording until the app's own
+     * microphone has delivered its first frame ([finishHandoff]); a guard ends it if that never
+     * happens.
+     */
+    private fun handoffKept() {
+        handoffCheck?.let { main.removeCallbacks(it) }
+        handoffCheck = null
+        overlapGuard?.let { main.removeCallbacks(it) }
+        val guard = Runnable {
+            VoiceLog.i("wake-handoff overlap=timeout")
+            overlapGuard = null
+            closeMicForHandoff()
+            // What was collected stays for `finishHandoff`.
+            WakeHandoff.stopCapture()
+            stopMic()
+        }
+        overlapGuard = guard
+        main.postDelayed(guard, OVERLAP_GUARD_MS)
+    }
+
+    /**
+     * WP146: the app's microphone delivers: the service stops now (no second `AudioRecord`
+     * from here on) and returns what it recorded since the take.
+     */
+    private fun finishHandoff(): WakeHandoff.Taken? {
+        overlapGuard?.let { main.removeCallbacks(it) }
+        overlapGuard = null
+        closeMicForHandoff()
+        val tail = WakeHandoff.finish()
+        stopMic()
+        return tail
+    }
+
     /** The overlay took the hit's audio: it opens the microphone now. */
     private fun handoffTaken() {
         handoffCheck?.let { main.removeCallbacks(it) }
@@ -347,8 +384,10 @@ class WakeWordService : Service() {
 
     /** The overlay is gone (or never came): Dart may listen again. */
     private fun overlayClosed() {
-        if (WakeHandoff.pending()) {
-            // Never taken: the kept microphone closes, Dart opens it again.
+        overlapGuard?.let { main.removeCallbacks(it) }
+        overlapGuard = null
+        if (WakeHandoff.pending() || WakeHandoff.capturing()) {
+            // Never taken (or never finished): the kept microphone closes, Dart opens it again.
             WakeHandoff.clear()
             stopMic()
         }
@@ -375,6 +414,9 @@ class WakeWordService : Service() {
         const val EXTRA_REASON = "reason"
         private const val HOUR_MS = 60 * 60 * 1000L
         private const val HANDOFF_TIMEOUT_MS = 15_000L
+
+        /** Longest time the service records next to the app's microphone opening (WP146). */
+        const val OVERLAP_GUARD_MS = 2_500L
         private const val SCREEN_ON_MS = 10_000L
 
         // Stops the user did not ask for: they leave the „Wieder einschalten“ hint.
@@ -396,6 +438,14 @@ class WakeWordService : Service() {
         fun onHandoffTaken() {
             instance?.handoffTaken()
         }
+
+        /** WP146: taken with the capture kept open (the service records until [finishHandoff]). */
+        fun onHandoffKept() {
+            instance?.handoffKept()
+        }
+
+        /** WP146: the app's microphone is up; stops the service and returns the audio since the take. */
+        fun finishHandoff(): WakeHandoff.Taken? = instance?.finishHandoff() ?: WakeHandoff.finish()
 
         /**
          * Debug builds only (WP93, device tests): a hit with a second of silence as pre-roll, as

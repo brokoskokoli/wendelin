@@ -262,6 +262,40 @@ class WakePolicyTest {
     }
 
     @Test
+    fun theCaptureStaysOpenAfterTheTakeUntilFinishWp146() {
+        WakeHandoff.clear()
+        fun chunk(i: Int) = ByteArray(960) { n -> if (n % 2 == 0) i.toByte() else 0 }
+        WakeHandoff.put(chunk(99), 100, 400)
+        WakeHandoff.beginCapture(chunk(1))
+        val taken = WakeHandoff.takeKeepingOpen(200)!!
+        // pre-roll + what was collected until the take, exactly once
+        assertEquals(960 * 2, taken.pcm.size)
+        assertFalse(WakeHandoff.pending())
+        // the service keeps recording: the chunks go to the tail, not to the (taken) pre-roll
+        assertTrue(WakeHandoff.capturing())
+        WakeHandoff.append(chunk(2), 1000)
+        WakeHandoff.append(chunk(3), 1030)
+        val tail = WakeHandoff.finish()!!
+        assertEquals(960 * 2, tail.pcm.size)
+        assertEquals(2, tail.pcm[0].toInt())
+        assertEquals(3, tail.pcm[960].toInt())
+        assertEquals(1030L, tail.lastSampleAtMs)
+        // finished: nothing more is collected, a second finish has nothing
+        assertFalse(WakeHandoff.capturing())
+        WakeHandoff.append(chunk(4), 1060)
+        assertNull(WakeHandoff.finish())
+    }
+
+    @Test
+    fun aStaleHitIsNotKeptOpenWp146() {
+        WakeHandoff.clear()
+        WakeHandoff.put(ByteArray(2), 100)
+        WakeHandoff.beginCapture(ByteArray(0))
+        assertNull(WakeHandoff.takeKeepingOpen(100 + WakeHandoff.MAX_AGE_MS + 1))
+        assertFalse(WakeHandoff.capturing())
+    }
+
+    @Test
     fun aStaleCaptureFlagDoesNotMakeTheWakeWordDeaf() {
         // Service ended during a handover: release() clears the hit, the flag is gone.
         WakeHandoff.clear()

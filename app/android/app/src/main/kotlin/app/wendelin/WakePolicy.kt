@@ -319,6 +319,47 @@ object WakeHandoff {
         }
     }
 
+    /**
+     * WP146: like [take], but the capture stays open. What the service records from now on is
+     * collected for [finish], so the app's own microphone can open and deliver its first frame
+     * before the service stops: no hole between the two recordings. `null` (and the capture
+     * ends) if none or stale.
+     */
+    @Synchronized
+    fun takeKeepingOpen(nowMs: Long): Taken? {
+        val p = pcm
+        pcm = null
+        val extra = tail.toByteArray()
+        tail = java.io.ByteArrayOutputStream()
+        if (p == null || nowMs - at > MAX_AGE_MS) {
+            capturing = false
+            return null
+        }
+        return Taken(p + extra, wakeEnd, extra.size / 2 * 1000L / 16_000, lastSampleAt)
+    }
+
+    /**
+     * WP146: ends a capture kept open by [takeKeepingOpen]; returns what was recorded since (the
+     * `pcm` of the result, `wakeEnd` 0) with the time of its last sample. `null` if no capture
+     * was open.
+     */
+    @Synchronized
+    fun finish(): Taken? {
+        val was = capturing || tail.size() > 0
+        val extra = tail.toByteArray()
+        val last = lastSampleAt
+        capturing = false
+        tail = java.io.ByteArrayOutputStream()
+        lastSampleAt = 0L
+        return if (was) Taken(extra, 0, extra.size / 2 * 1000L / 16_000, last) else null
+    }
+
+    /** WP146: no more audio is collected (the microphone closed), what was collected stays for [finish]. */
+    @Synchronized
+    fun stopCapture() {
+        capturing = false
+    }
+
     /** Whether a hit waits for the overlay. */
     @Synchronized
     fun pending(): Boolean = pcm != null
