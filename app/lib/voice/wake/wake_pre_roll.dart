@@ -180,6 +180,10 @@ final class WakeHandoffTracker {
   WakePreRoll? handoff;
 
   Future<WakeTail?>? _tail;
+
+  /// The hit's service microphone still records. Without it no `await`
+  /// separates the state change from the pipeline start (as before WP146).
+  bool kept(WakePreRoll? pre) => pre?.finish != null;
   Stopwatch? _take;
   int? _firstFrameAtMs;
   int? _firstFrameSamples;
