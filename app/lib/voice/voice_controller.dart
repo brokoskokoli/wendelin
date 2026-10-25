@@ -15,6 +15,7 @@ import '../di/providers.dart';
 import '../di/sms_drafts.dart';
 import '../di/voice_providers.dart';
 import '../l10n/l10n.dart';
+import '../platform/assistant_platform.dart';
 import '../platform/voice/capture_profile_follower.dart';
 import '../platform/voice/ducking_tts.dart' show SpeechFocus;
 import '../platform/voice/record_audio_input.dart';

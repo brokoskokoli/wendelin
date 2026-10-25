@@ -19,8 +19,8 @@ app/lib/ui/settings/voice_screen.dart#VoiceScreen.build: 95
 app/lib/ui/settings/voice_voices_screen.dart#VoiceVoicesScreen.build: 102
 app/lib/ui/settings/wake/wake_service_section.dart#_State.build: 108
 app/lib/voice/voice_confirmation.dart#_VoiceConfirmation._confirmByVoice: 142
-app/lib/voice/voice_controller.dart: 712
-app/lib/voice/voice_controller.dart#VoiceController: 596
+app/lib/voice/voice_controller.dart: 676
+app/lib/voice/voice_controller.dart#VoiceController: 592
 app/lib/voice/voice_controller.dart#VoiceController.start: 96
 app/test/settings/voice_settings_test.dart: 1132
 app/tool/mcp_test_server.dart#main: 100
@@ -81,11 +81,10 @@ packages/wendelin_tools/test/executor/tool_executor_test.dart: 1154
 packages/wendelin_voice/lib/src/models/model_downloader.dart#ModelDownloader._downloadFile: 122
 packages/wendelin_voice/lib/src/models/speech_model_catalog.dart#SpeechModelCatalog: 482
 packages/wendelin_voice/lib/src/models/voice_settings.dart#VoiceSettings.fromJson: 95
-packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart: 734
-packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline: 685
+packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart: 696
+packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline: 646
 packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline._answer: 115
-packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline._listenAfter: 91
-packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline._run: 98
+packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline._run: 96
 packages/wendelin_voice/test/voice_pipeline_test.dart: 1495
 tool/check_deps.dart#main: 89
 tool/self_test.dart: 777
