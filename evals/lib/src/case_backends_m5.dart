@@ -282,6 +282,7 @@ Integration haBackend() {
       'device_class': 'blind',
       'current_position': 100,
     })
+    ..set('light.eval_anna', 'off', {'friendly_name': 'Annas Licht'})
     ..set('switch.eval_coffee', 'off', {'friendly_name': 'Kaffeemaschine'})
     ..set('cover.eval_bedroom', 'open', {
       'friendly_name': 'Rollo Schlafzimmer',
@@ -294,6 +295,7 @@ Integration haBackend() {
       name: 'Licht Wohnzimmer',
       area: 'Wohnzimmer',
     ),
+    const HaEntity(entityId: 'light.eval_anna', name: 'Annas Licht'),
     const HaEntity(
       entityId: 'cover.eval_living',
       name: 'Rollo Wohnzimmer',

@@ -7,6 +7,7 @@ library;
 import 'package:collection/collection.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../agent_config.dart';
 import '../agent_runner_texts.dart';
 import '../context_builder.dart';
 import 'attestation_gate.dart';
@@ -328,6 +329,56 @@ final class ToolRound {
           results[call.id] = outcome.toResultBlock(call.id);
       }
     }
+  }
+
+  /// How often the model may send the same failing call (same tool, same
+  /// arguments, error each time) before the run stops with that error.
+  static const maxSameFailures = 3;
+
+  /// The tool, error text and number of a call of [round] that failed [maxSameFailures] times
+  /// in this run with the same tool and arguments, or `null`. The model gets
+  /// the error in every result; if it still repeats the call, the run ends
+  /// instead of spinning until the round limit (WP150).
+  ({String tool, String error, int count})? repeatedFailure(
+    ToolRoundRun round,
+  ) {
+    for (final call in round.pending) {
+      final same = [
+        for (final e in _state.executed)
+          if (e.outcome.isError && _sameContent(e.call, call)) e,
+      ];
+      if (same.length >= maxSameFailures) {
+        final text = same.last.outcome.content
+            .whereType<TextBlock>()
+            .map((b) => b.text)
+            .join(' ')
+            .trim();
+        return (tool: call.name, error: text, count: same.length);
+      }
+    }
+    return null;
+  }
+
+  /// The stop for a [round] whose call failed [maxSameFailures] times (see
+  /// [repeatedFailure]), or `null`. Closes the round first (verify, results
+  /// in the history) so every tool call has a result.
+  Future<RunStop?> stopOnRepeatedFailure(
+    ToolRoundRun round,
+    AgentConfig config,
+  ) async {
+    final error = repeatedFailure(round);
+    if (error == null) return null;
+    await verify(round);
+    await _state.append(Message.toolResults(resultsOf(round)));
+    return RunStop(
+      failedEvent(
+        AgentErrorKind.repeatedToolError,
+        config,
+        tool: error.tool,
+        detail: error.error,
+        repeats: error.count,
+      ),
+    );
   }
 
   /// The earlier execution [call] would repeat, if any: a call with the

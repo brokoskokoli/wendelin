@@ -33,3 +33,16 @@ cases:
     - tool: ha__call
       args: {entity: Kaffeemaschine, service: turn_on}
     - text: Die Kaffeemaschine ist an.
+  de-ha-annas-licht-an:
+    - tool: ha__call
+      args: {entity: Annas Licht, service: turn_on}
+    - text: Annas Licht ist an.
+  de-ha-annas-licht-aus:
+    - tool: ha__call
+      args: {entity: Annas Licht, service: turn_off}
+    - text: Annas Licht ist aus.
+  # Zahl als String, wie es ein Modell gelegentlich schickt (WP150).
+  de-ha-annas-licht-100:
+    - tool: ha__call
+      args: {entity: Annas Licht, service: turn_on, brightness_pct: "100"}
+    - text: Annas Licht ist auf 100 Prozent.

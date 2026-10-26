@@ -280,6 +280,24 @@ void main() {
       );
     });
 
+    test('Personenname im Genitiv, auch mit Apostroph (WP150)', () async {
+      for (final name in ['Annas Licht', "Anna's Licht", 'Anna’s Licht']) {
+        final f = with_([HaEntity(entityId: 'light.anna', name: name)]);
+        for (final said in [
+          'Annas Licht an',
+          "Anna's Licht an",
+          'Anna’s Licht an',
+        ]) {
+          final call = await f.match(said, language: 'de');
+          expect(call, isNotNull, reason: '$name / $said');
+          expect(call!.arguments, {
+            'entity': 'light.anna',
+            'service': 'turn_on',
+          });
+        }
+      }
+    });
+
     test('Raum plus Typ ohne Namen (Lampe für „Licht“)', () async {
       await expectCall('Schlafzimmer Lampe an', 'light.bedroom', 'turn_on');
     });

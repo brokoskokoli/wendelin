@@ -70,8 +70,8 @@ final class HaFastPath implements FastPath {
     final (:value, :unit, :ok) = _consumeNumber(tokens, used, words);
     if (!ok) return null;
     _consume(tokens, used, {
-      ...words.fillers.map(foldForMatch),
-      ...words.neutral.map(foldForMatch),
+      ...words.fillers.map(_fold),
+      ...words.neutral.map(_fold),
     });
     final domains = _consumeTypes(tokens, used, words);
 
@@ -205,12 +205,11 @@ final class HaFastPath implements FastPath {
   int? _percent(num v) => v is int && v >= 0 && v <= 100 ? v : null;
 
   /// Words of the device name only, folded.
-  Set<String> _nameWordsOf(HaEntity e) =>
-      foldForMatch(e.name).split(' ').toSet();
+  Set<String> _nameWordsOf(HaEntity e) => _fold(e.name).split(' ').toSet();
 
   /// Words of the device name and room, folded.
   Set<String> _wordsOf(HaEntity e) =>
-      foldForMatch('${e.name} ${e.area ?? ''}').split(' ').toSet();
+      _fold('${e.name} ${e.area ?? ''}').split(' ').toSet();
 
   /// The folded words of [text]; `%`, `°` and decimals are prepared so that
   /// the folding does not tear them apart („21,5“ → `21x5`).
@@ -219,7 +218,7 @@ final class HaFastPath implements FastPath {
         .replaceAllMapped(RegExp(r'(\d)[.,](\d)'), (m) => '${m[1]}x${m[2]}')
         .replaceAll('%', ' ${w.percent.first} ')
         .replaceAll('°', ' ${w.degrees.first} ');
-    final folded = foldForMatch(prepared);
+    final folded = _fold(prepared);
     return folded.isEmpty ? const [] : folded.split(' ');
   }
 
@@ -234,7 +233,7 @@ final class HaFastPath implements FastPath {
     final phrases = [
       for (final MapEntry(:key, :value) in w.actions.entries)
         for (final p in value)
-          if (foldForMatch(p).isNotEmpty) (key, foldForMatch(p).split(' ')),
+          if (_fold(p).isNotEmpty) (key, _fold(p).split(' ')),
     ]..sort((a, b) => b.$2.length.compareTo(a.$2.length));
     final found = <HaAction>{};
     for (final (action, parts) in phrases) {
@@ -263,8 +262,8 @@ final class HaFastPath implements FastPath {
     num? value;
     _Unit? unit;
     final units = <(_Unit, List<String>)>[
-      for (final p in w.percent) (_Unit.percent, foldForMatch(p).split(' ')),
-      for (final d in w.degrees) (_Unit.degrees, foldForMatch(d).split(' ')),
+      for (final p in w.percent) (_Unit.percent, _fold(p).split(' ')),
+      for (final d in w.degrees) (_Unit.degrees, _fold(d).split(' ')),
     ]..sort((a, b) => b.$2.length.compareTo(a.$2.length));
     final number = RegExp(r'^(\d{1,3})(?:x(\d))?$');
     for (var i = 0; i < tokens.length; i++) {
@@ -301,7 +300,7 @@ final class HaFastPath implements FastPath {
       final stems = [
         ...value,
         ...?w.recognitionErrors[key],
-      ].map(foldForMatch).where((s) => s.isNotEmpty && !s.contains(' '));
+      ].map(_fold).where((s) => s.isNotEmpty && !s.contains(' '));
       for (var i = 0; i < tokens.length; i++) {
         if (!used[i] && stems.any(tokens[i].startsWith)) {
           used[i] = true;
@@ -317,3 +316,7 @@ final class HaFastPath implements FastPath {
 const _valueVerbs = {HaAction.open, HaAction.on};
 
 enum _Unit { percent, degrees }
+
+/// [foldForMatch] with apostrophes removed, so „Anna's Licht“ and
+/// „Anna’s Licht“ equal „Annas Licht“ (WP150).
+String _fold(String s) => foldForMatch(s.replaceAll(RegExp("['’‘`´]"), ''));
