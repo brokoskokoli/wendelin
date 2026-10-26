@@ -16,8 +16,9 @@
 
 ## Inhalt
 - **Standard je Gerät = heutiges Verhalten** (Abbildung im Paket herleiten und als Tabelle belegen; Vorschlag: Licht/Szene/Medien B, Rollo mit „ohne Rückfrage“ und passender Klasse C, alle übrigen D). Nach dem Update ändert sich nichts, solange der Nutzer nichts umstellt (Migration von `noConfirm`/`alwaysConfirm`, Test).
+- **Standard je Punkt, Nutzer überschreibt** (Maintainer 2026-10-26): Wendelin setzt je Gerät eine Standardstufe (z. B. Schloss, Alarm, Tor/Tür = D), der Nutzer kann sie je Gerät überschreiben. Die UI zeigt, ob die Stufe Standard oder geändert ist, und bietet „Standard wiederherstellen“.
 - **Je Gerät frei einstellbar** (Entscheidung Maintainer 2026-10-26: keine Obergrenze je Domäne, auch Schloss, Alarm oder Tor dürfen auf A; die Verantwortung liegt beim Nutzer). Fail-closed bleibt: fehlende, unbekannte oder ungültige gespeicherte Stufe = D. Bei A/B für Schloss, Alarm, Tor/Tür einmal ein deutlicher Hinweis beim Umstellen.
-- **UI:** Im Geräteabschnitt ein kompakter, eingerückter Eintrag „Sicherheitsstufe“ (kleiner als die normalen Schalter), einklappbar und standardmäßig eingeklappt; eingeklappt zeigt er die aktuelle Stufe als kurzen Text. Auswahl A–D mit je einer Zeile Erklärung. Texte in allen Sprachen.
+- **UI:** Je Gerät ein kompakter, eingerückter Reiter (z. B. „Details“) mit kleinem Pfeil, standardmäßig eingeklappt (Maintainer 2026-10-26: immer eingeklappt, ausklappbar). Eingeklappt zeigt er die Stufe als kurzen Text, ausgeklappt die Auswahl A–D mit je einer Zeile Erklärung (kleiner als die normalen Schalter). Die bisherigen Schalter „ohne Rückfrage“/„immer bestätigen“ entfallen bzw. wandern dort hinein. Texte in allen Sprachen.
 - **Policy an einer Stelle** (`ha_policy.dart`): eine Funktion „darf ausgeführt werden / braucht Bestätigung / braucht Entsperren“ aus Stufe, Domäne, Klasse, Sperrzustand und Sprechererkennung. `locked_agent_run` und die Bestätigung nutzen nur sie.
 
 ## Abnahmekriterien
