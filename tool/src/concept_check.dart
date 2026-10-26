@@ -2,7 +2,7 @@
 //  1. Jede bestätigte K-Nummer (Konzept und Archiv) kommt im Konzepttext in
 //     Klammern vor, z. B. „(K12)“ oder „(offline, K7)“, oder in einer ADR.
 //  2. Nennt STATUS.md einen K-Status („K59 bestätigt“, „K81 offen“), muss er
-//     zum Status im Konzept (Tabelle oder Archiv) passen.
+//     zum Status im Konzept (jede Nennung; „bestätigt“, „offen“, „zurückgestellt“) (Tabelle oder Archiv) passen.
 // Bestand steht in `tool/concept_allowlist.yaml` (Ratsche, nur abbauen), die
 // Schlüssel tragen das Präfix `ref/` (Prüfung 1) bzw. `status/` (Prüfung 2).
 import 'dart:io';
@@ -51,11 +51,16 @@ ConceptScan scanConcept(String root) {
   for (final e in mentions.entries) {
     final s = status[e.key];
     final kind = s == null ? null : statusKind(s);
-    if (kind != e.value.word) {
-      found['status/K${e.key}'] = 1;
-      notes['status/K${e.key}'] =
-          'docs/work-packages/STATUS.md:${e.value.line}: K${e.key} '
-          '„${e.value.word}“, im Konzept ${s == null ? 'nicht vorhanden' : '„$kind“'}';
+    for (final m in e.value) {
+      if (kind == m.word) continue;
+      final key = 'status/K${e.key}';
+      found[key] = 1;
+      notes.putIfAbsent(
+        key,
+        () =>
+            'docs/work-packages/STATUS.md:${m.line}: K${e.key} '
+            '„${m.word}“, im Konzept ${s == null ? 'nicht vorhanden' : '„$kind“'}',
+      );
     }
   }
   return (found: found, notes: notes);

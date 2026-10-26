@@ -29,13 +29,16 @@ String portPackage(String path) {
   return path.split('/').first;
 }
 
-/// Ob eine Datei oder Klasse ein Fake/Test-Double ist (eigene Spalte).
+/// Ob eine Datei oder Klasse ein Fake/Test-Double ist (eigene Spalte). Pfade
+/// unter `testing/` und `debug/` (Testhilfen der Gerätetests, z. B.
+/// `FileTorchPort`) zählen als Fake.
 bool isFake(String className, String path) =>
     className.startsWith('Fake') ||
     className.startsWith('InMemory') ||
     className.startsWith('Recording') ||
-    RegExp(r'(^|/)(fakes?|testing)(\.dart|/)|(^|/)fake_[^/]*$|_fakes?\.dart$')
-        .hasMatch(path);
+    RegExp(
+      r'(^|/)(fakes?|testing|debug)(\.dart|/)|(^|/)fake_[^/]*$|_fakes?\.dart$',
+    ).hasMatch(path);
 
 /// Klassen, die in [header] (der Text zwischen Klassenname und `{`) erben
 /// oder implementieren.

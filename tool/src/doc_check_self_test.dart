@@ -238,6 +238,9 @@ void _tableChecks(SelfCheck t) {
     'packages/p/lib/src/b.dart': 'abstract interface class BarApi {}\n',
     'packages/p/lib/testing/fake_foo.dart':
         'class FakeFooPort implements FooPort {}\n',
+    'packages/p/lib/testing/stub_foo.dart':
+        'class StubFoo implements FooPort {}\n',
+    'app/lib/debug/dev.dart': 'class FileFoo implements FooPort {}\n',
     'app/lib/platform/foo.dart': 'final class AppFoo\n    implements FooPort {}\nclass _Hidden implements FooPort {}\n',
   });
   t.eq(
@@ -249,14 +252,21 @@ void _tableChecks(SelfCheck t) {
   final foo = rows.firstWhere((r) => r.name == 'FooPort');
   t.eq(
     [for (final i in foo.impls) '${i.name}:${i.fake}'],
-    ['AppFoo:false', 'FakeFooPort:true', 'Multi:false'],
-    'Implementierer (auch mehrzeilig, mit Generics) und Fakes getrennt, private ignoriert',
+    [
+      'AppFoo:false',
+      'FakeFooPort:true',
+      'FileFoo:true',
+      'Multi:false',
+      'StubFoo:true',
+    ],
+    'Implementierer (auch mehrzeilig, mit Generics) und Fakes getrennt, private '
+    'ignoriert; Pfade testing/ und debug/ zählen als Fake',
   );
   final table = portsTable(rows);
   t.isTrue(
     table.contains('| `FooPort` | `p` |') &&
         table.contains(
-          '`FakeFooPort` (`packages/p/lib/testing/fake_foo.dart`) |',
+          '`FakeFooPort` (`packages/p/lib/testing/fake_foo.dart`)<br>',
         ),
     'Tabelle nennt Port, Paket und Fake in eigener Spalte',
   );

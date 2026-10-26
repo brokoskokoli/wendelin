@@ -324,16 +324,20 @@ String conceptBody(String concept) {
 }
 
 /// K-Status, die STATUS.md nennt: `K59 bestätigt`, `K74, K77 bestätigt`,
-/// `K66/K68 bestätigt`, `K81 offen` (Nummer → Wort, mit Zeilennummer).
-Map<int, ({String word, int line})> statusMentions(String statusText) {
-  final out = <int, ({String word, int line})>{};
+/// `K66/K68 bestätigt`, `K81 offen`, `K5 zurückgestellt` (Nummer → alle
+/// Nennungen mit Zeilennummer, in Dateireihenfolge).
+Map<int, List<({String word, int line})>> statusMentions(String statusText) {
+  final out = <int, List<({String word, int line})>>{};
   final lines = statusText.split('\n');
   for (var i = 0; i < lines.length; i++) {
     for (final m in RegExp(
-      r'((?:K\d+\s*[,/]\s*)*K\d+)\s+(bestätigt|offen)\b',
+      r'((?:K\d+\s*[,/]\s*)*K\d+)\s+(bestätigt|offen|zurückgestellt)\b',
     ).allMatches(lines[i])) {
       for (final k in RegExp(r'K(\d+)').allMatches(m[1]!)) {
-        out.putIfAbsent(int.parse(k[1]!), () => (word: m[2]!, line: i + 1));
+        out.putIfAbsent(int.parse(k[1]!), () => []).add((
+          word: m[2]!,
+          line: i + 1,
+        ));
       }
     }
   }

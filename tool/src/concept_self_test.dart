@@ -217,6 +217,8 @@ void _check(SelfCheck t, String root) {
   );
   t.eq(errors(), <String>[], 'passender STATUS: grün');
 
+  _statusMentions(t, root, rows);
+
   // Archiv zählt mit: K1 steht nur im Archiv, Verweis bleibt im Text.
   put('$archiveDir/M1.md', '${archiveHead(1)}${rows.first}\n');
   put(conceptFile, _concept([rows[1]]));
@@ -268,4 +270,51 @@ void _archiveTool(SelfCheck t, String root) {
     'zweiter --apply ist ein No-op',
   );
   dir.deleteSync(recursive: true);
+}
+
+/// STATUS-Nennungen: jede Nennung zählt, „zurückgestellt“ ist bekannt.
+void _statusMentions(SelfCheck t, String root, List<String> rows) {
+  void put(String rel, String text) => File('$root/$rel')
+    ..parent.createSync(recursive: true)
+    ..writeAsStringSync(text);
+  List<String> errors() => conceptErrors(root);
+
+  // Spätere Nennung zählt auch: erste passt, zweite nicht.
+  put(
+    'docs/work-packages/STATUS.md',
+    '$_status\nBeleg: K1 bestätigt, K2 offen.\nSpäter: K2 bestätigt.\n',
+  );
+  t.isTrue(
+    errors().any((x) => x.contains('STATUS.md:') && x.contains('K2')),
+    'zweite Nennung einer K-Nummer wird auch geprüft',
+  );
+  // zurückgestellt ist ein bekannter Status.
+  final rows9 = [...rows, _row(9, '2026-10-20', 'WP101', 'zurückgestellt')];
+  put(conceptFile, _concept(rows9));
+  put(
+    'docs/work-packages/STATUS.md',
+    '$_status\nBeleg: K1 bestätigt, K2 offen, K9 zurückgestellt.\n',
+  );
+  t.eq(errors(), <String>[], 'K9 zurückgestellt passt: grün');
+  put(
+    'docs/work-packages/STATUS.md',
+    '$_status\nBeleg: K1 bestätigt, K2 offen, K9 offen.\n',
+  );
+  t.isTrue(
+    errors().any((x) => x.contains('K9') && x.contains('zurückgestellt')),
+    'STATUS „K9 offen“ gegen Konzept „zurückgestellt“: rot',
+  );
+  put(
+    'docs/work-packages/STATUS.md',
+    '$_status\nBeleg: K1 bestätigt, K2 offen, K2 zurückgestellt.\n',
+  );
+  t.isTrue(
+    errors().any((x) => x.contains('K2') && x.contains('zurückgestellt')),
+    'STATUS „K2 zurückgestellt“ gegen Konzept „offen“: rot',
+  );
+  put(
+    'docs/work-packages/STATUS.md',
+    '$_status\nBeleg: K1 bestätigt, K2 offen.\n',
+  );
+  put(conceptFile, _concept(rows));
 }
