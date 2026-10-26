@@ -56,6 +56,7 @@ void main() {
     'Chat sichtbar: Zuhören im Chat; Einstellungen offen: Overlay',
     (tester) async {
       final dir = await e2eDirectory();
+      final enrollLog = captureVoiceLog();
       final audio = _SwitchableAudio();
       final provider = FakeLlmProvider([
         for (var i = 0; i < 6; i++) ScriptedTurn.text('ok'),
@@ -93,6 +94,7 @@ void main() {
           timeout: const Duration(minutes: 3),
         );
         await tester.tap(find.text('Speichern'));
+        expect(enrollLogProblem(enrollLog), isNull);
         await pumpUntil(tester, find.textContaining('15 Aufnahmen'));
         final speakers = await c.read(wakeSpeakersProvider.future);
         final real = SecretWakeTemplateStore(SecureSecretStore());

@@ -85,6 +85,7 @@ void main() {
     'Dienst: einlernen, an, zehn Treffer bei ausgeschaltetem Bildschirm',
     (tester) async {
       final dir = await e2eDirectory();
+      final enrollLog = captureVoiceLog();
       final wavs = '${dir.path}/wake';
       final audio = _SwitchableAudio();
       final app = E2eApp(
@@ -121,6 +122,7 @@ void main() {
       await pumpUntil(tester, find.textContaining(RegExp(r'\d+ Aufnahmen')));
       final speakers = await c.read(wakeSpeakersProvider.future);
       expect(speakers, hasLength(1));
+      expect(enrollLogProblem(enrollLog), isNull);
       // The service runs in another engine and reads the device's secret
       // store; the test app keeps its own: copy the voice over.
       final real = SecretWakeTemplateStore(SecureSecretStore());
