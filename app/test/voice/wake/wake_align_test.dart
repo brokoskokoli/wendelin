@@ -449,4 +449,68 @@ void main() {
     expect(out!.pcm, hasLength(1600 + 12000 - 1500));
     expect(lines.where((l) => l.contains('align=xcorr')), hasLength(1));
   });
+
+  group('WakeHandoffTracker: Suche scheitert oder entfällt', () {
+    final s = source(40000);
+    final tail = Int16List.sublistView(s, 8000, 20000);
+    final app = Int16List.sublistView(s, 18500, 18500 + 6400);
+
+    WakePreRoll taken(int last) => WakePreRoll(
+      pcm: Int16List(1600),
+      wakeEnd: 800,
+      lastSampleAtMs: last,
+      finish: () async => (pcm: tail, lastSampleAtMs: last),
+    );
+
+    test('Isolate-Fehler: close() liefert das nach Zeit gebrückte Pre-Roll '
+        '(align=time) und loggt wake-align-error', () async {
+      final last = DateTime.now().millisecondsSinceEpoch - 40;
+      final pre = taken(last);
+      final tracker = WakeHandoffTracker(
+        align: (t, a, {required estimate}) async => throw StateError('x'),
+      )..begin(pre, (n) => app);
+      tracker.onFirstFrame(1600);
+      final out = await tracker.close(pre);
+      expect(out!.pcm.length, greaterThan(1600));
+      final log = lines.singleWhere((l) => l.contains(' wake-gap '));
+      expect(log, contains('align=time'));
+      expect(log, isNot(contains('align=xcorr')));
+      expect(
+        lines.singleWhere((l) => l.contains('wake-align-error')),
+        contains('type=stateerror'),
+      );
+    });
+
+    test('Zeit-Lücke: die Suche wird nicht gestartet', () async {
+      // The service's last sample is 500 ms before the first frame: gap > 0.
+      final last = DateTime.now().millisecondsSinceEpoch - 500;
+      final pre = taken(last);
+      var calls = 0;
+      final tracker = WakeHandoffTracker(
+        align: (t, a, {required estimate}) async {
+          calls++;
+          return (overlap: null, peak: 0);
+        },
+      )..begin(pre, (n) => app);
+      tracker.onFirstFrame(1600);
+      await tracker.close(pre);
+      expect(calls, 0);
+      expect(
+        lines.singleWhere((l) => l.contains(' wake-gap ')),
+        contains('align=time'),
+      );
+    });
+
+    test('Suche läuft: alignMs steht im wake-gap-Log (nur Zahl)', () async {
+      final last = DateTime.now().millisecondsSinceEpoch - 40;
+      final pre = taken(last);
+      final tracker = WakeHandoffTracker()..begin(pre, (n) => app);
+      tracker.onFirstFrame(1600);
+      await tracker.close(pre);
+      expect(
+        lines.singleWhere((l) => l.contains(' wake-gap ')),
+        matches(RegExp(r'alignMs=\d+(\s|$)')),
+      );
+    });
+  });
 }
