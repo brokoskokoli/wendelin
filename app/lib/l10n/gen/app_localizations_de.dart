@@ -2242,7 +2242,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get mainMicHearing =>
-      'Wendelin hört mit: „Wendelin“ sagen oder tippen';
+      'Wendelin hört mit: „Hey Wendelin“ sagen oder tippen';
 
   @override
   String get mainMicSpeak => 'Sprechen';
@@ -3011,7 +3011,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboardingWakeIntro =>
-      'Wendelin kann auf „Wendelin“ hören, auch wenn das Telefon liegt. Dafür lernt er zuerst deine Stimme (etwa 3 Minuten). Das geht auch später in den Einstellungen.';
+      'Wendelin kann auf „Hey Wendelin“ hören, auch wenn das Telefon liegt. Dafür lernt er zuerst deine Stimme (etwa 3 Minuten). Das geht auch später in den Einstellungen.';
 
   @override
   String get onboardingWakeWord => 'Aktivierungswort';
@@ -4497,7 +4497,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get voiceConvInterruptHint =>
-      'Mit „Wendelin“ unterbrichst du die Sprachausgabe.';
+      'Mit „Hey Wendelin“ unterbrichst du die Sprachausgabe.';
 
   @override
   String get voiceConvKeepListening => 'Weiter zuhören nach der Antwort';
@@ -4870,7 +4870,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get bargeDebugIntro =>
-      'Damit stellst du ein, wie empfindlich „Wendelin“ während der Antwort erkannt wird. Die Änderung gilt ab der nächsten gesprochenen Antwort.';
+      'Damit stellst du ein, wie empfindlich „Hey Wendelin“ während der Antwort erkannt wird. Die Änderung gilt ab der nächsten gesprochenen Antwort.';
 
   @override
   String get bargeDebugMicCommunication => 'Kommunikation + AEC (Standard)';
@@ -4918,7 +4918,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get speechCommunicationHelp =>
-      'Die Antwort läuft wie ein Anruf über den Lautsprecher, damit „Wendelin“ sicherer erkannt wird. Nebenwirkungen: Es gilt die Anruf-Lautstärke, der Klang ist dünner, und mit Bluetooth-Geräten kann die Wiedergabe umschalten. Mit Kopfhörern bleibt die Ausgabe dort. Gilt ab der nächsten Antwort.';
+      'Die Antwort läuft wie ein Anruf über den Lautsprecher, damit „Hey Wendelin“ sicherer erkannt wird. Nebenwirkungen: Es gilt die Anruf-Lautstärke, der Klang ist dünner, und mit Bluetooth-Geräten kann die Wiedergabe umschalten. Mit Kopfhörern bleibt die Ausgabe dort. Gilt ab der nächsten Antwort.';
 
   @override
   String get speechCommunicationTitle =>
@@ -4940,7 +4940,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get wakeCalibrateIntro =>
-      'Leg das Handy hin und red normal weiter. Wendelin hört mit (Mikrofonanzeige an), merkt sich aber nur Zahlenwerte, kein Audio und keinen Text. Ab und zu piept es: Sag dann „Wendelin“.';
+      'Leg das Handy hin und red normal weiter. Wendelin hört mit (Mikrofonanzeige an), merkt sich aber nur Zahlenwerte, kein Audio und keinen Text. Ab und zu piept es: Sag dann „Hey Wendelin“.';
 
   @override
   String get wakeCalibrateMicPreparing => 'Mikrofon wird vorbereitet …';
@@ -4989,7 +4989,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get wakeDetectorModelHint =>
-      'Erkennt „Wendelin“ ohne Einlernen. Braucht den Download.';
+      'Erkennt das Aktivierungswort ohne Einlernen. Braucht den Download.';
 
   @override
   String wakeDetectorModelNeeded(String v) {
@@ -5048,7 +5048,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get wakeEnrollNoRecognizer =>
-      'Spracherkennung fehlt: Ohne sie kann „Wendelin“ beim Einlernen nicht geprüft werden. Bitte lade unter Einstellungen → Sprache ein Erkennungsmodell.';
+      'Spracherkennung fehlt: Ohne sie kann „Hey Wendelin“ beim Einlernen nicht geprüft werden. Bitte lade unter Einstellungen → Sprache ein Erkennungsmodell.';
 
   @override
   String get wakeEnrollNoSpeech => 'Nichts gehört. Noch einmal bitte.';
@@ -5160,7 +5160,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get wakeExplainLocalBody =>
-      'Die Erkennung des Wortes läuft auf dem Gerät. Was du nach „Wendelin“ sagst, wird als Text an den gewählten KI-Anbieter geschickt. Audio wird weder gesendet noch gespeichert.';
+      'Die Erkennung des Wortes läuft auf dem Gerät. Was du nach „Hey Wendelin“ sagst, wird als Text an den gewählten KI-Anbieter geschickt. Audio wird weder gesendet noch gespeichert.';
 
   @override
   String get wakeExplainLocalTitle => 'Zuhören bleibt auf dem Gerät';
@@ -5216,7 +5216,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get wakeServiceSectionEnableDetail =>
-      'Wendelin hört im Hintergrund auf „Wendelin“.';
+      'Wendelin hört im Hintergrund auf „Hey Wendelin“.';
 
   @override
   String get wakeServiceSectionEndedEngine =>
@@ -5303,7 +5303,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get wakeServiceSectionWhisperDetail =>
-      'Wendelin hört nur zu, wenn die Nachprüfung „Wendelin“ bestätigt. Sie umfasst die ganze Stufe 2: Prüfer B, Parakeet oder Whisper, je nachdem, was eingelernt und geladen ist. Schalte sie aus, wenn sie mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.';
+      'Wendelin hört nur zu, wenn die Nachprüfung das Aktivierungswort bestätigt. Sie umfasst die ganze Stufe 2: Prüfer B, Parakeet oder Whisper, je nachdem, was eingelernt und geladen ist. Schalte sie aus, wenn sie mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.';
 
   @override
   String wakeTestAgo(String v, int inSeconds) {
@@ -5335,7 +5335,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get wakeTestIntro =>
-      'Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme. „Bestätigt“ heißt: Die Befehlserkennung (Parakeet oder Whisper) hat „Wendelin“ gehört. Das ist nicht die Nachprüfung (Stufe 2) des Dienstes; sie kann strenger sein.';
+      'Sag „Hey Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme. „Bestätigt“ heißt: Die Befehlserkennung (Parakeet oder Whisper) hat das Aktivierungswort gehört. Das ist nicht die Nachprüfung (Stufe 2) des Dienstes; sie kann strenger sein.';
 
   @override
   String get wakeTestListening => 'Hört zu';
@@ -5400,7 +5400,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get wakeWordIntro =>
-      'Wendelin lernt deine Stimme: Du sagst „Wendelin“ etwa 15 Mal, danach erkennt er es auch im Alltag. Gespeichert werden nur Zahlenwerte, verschlüsselt auf dem Gerät. Audio wird nie gespeichert.';
+      'Wendelin lernt deine Stimme: Du sagst „Hey Wendelin“ etwa 15 Mal, danach erkennt er es auch im Alltag. Gespeichert werden nur Zahlenwerte, verschlüsselt auf dem Gerät. Audio wird nie gespeichert.';
 
   @override
   String get wakeWordLearned => 'Gelernte Stimmen';

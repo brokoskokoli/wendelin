@@ -2255,7 +2255,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get mainMicHearing =>
-      'Wendelin écoute : dites « Wendelin » ou touchez';
+      'Wendelin écoute : dites « Hey Wendelin » ou touchez';
 
   @override
   String get mainMicSpeak => 'Parler';
@@ -3032,7 +3032,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get onboardingWakeIntro =>
-      'Wendelin peut écouter « Wendelin » même quand le téléphone est posé. Pour cela, il apprend d’abord votre voix (environ 3 minutes). Vous pouvez aussi le faire plus tard dans les paramètres.';
+      'Wendelin peut écouter « Hey Wendelin » même quand le téléphone est posé. Pour cela, il apprend d’abord votre voix (environ 3 minutes). Vous pouvez aussi le faire plus tard dans les paramètres.';
 
   @override
   String get onboardingWakeWord => 'Mot d’activation';
@@ -4520,7 +4520,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get voiceConvInterruptHint =>
-      'Avec « Wendelin », vous interrompez la sortie vocale.';
+      'Avec « Hey Wendelin », vous interrompez la sortie vocale.';
 
   @override
   String get voiceConvKeepListening => 'Continuer à écouter après la réponse';
@@ -4896,7 +4896,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get bargeDebugIntro =>
-      'Règle la sensibilité avec laquelle « Wendelin » est reconnu pendant la réponse. La modification s’applique à partir de la prochaine réponse parlée.';
+      'Règle la sensibilité avec laquelle « Hey Wendelin » est reconnu pendant la réponse. La modification s’applique à partir de la prochaine réponse parlée.';
 
   @override
   String get bargeDebugMicCommunication => 'Communication + AEC (par défaut)';
@@ -4944,7 +4944,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get speechCommunicationHelp =>
-      'La réponse est jouée comme un appel par le haut-parleur, pour mieux reconnaître « Wendelin ». Effets secondaires : le volume d’appel s’applique, le son est plus mince et les appareils Bluetooth peuvent changer la lecture. Avec un casque, la sortie y reste. S’applique à partir de la prochaine réponse.';
+      'La réponse est jouée comme un appel par le haut-parleur, pour mieux reconnaître « Hey Wendelin ». Effets secondaires : le volume d’appel s’applique, le son est plus mince et les appareils Bluetooth peuvent changer la lecture. Avec un casque, la sortie y reste. S’applique à partir de la prochaine réponse.';
 
   @override
   String get speechCommunicationTitle =>
@@ -4966,7 +4966,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeCalibrateIntro =>
-      'Posez le téléphone et continuez à parler normalement. Wendelin écoute (indicateur du microphone allumé) mais ne retient que des valeurs numériques, ni audio ni texte. De temps en temps, il bipe : dites alors « Wendelin ».';
+      'Posez le téléphone et continuez à parler normalement. Wendelin écoute (indicateur du microphone allumé) mais ne retient que des valeurs numériques, ni audio ni texte. De temps en temps, il bipe : dites alors « Hey Wendelin ».';
 
   @override
   String get wakeCalibrateMicPreparing => 'Préparation du microphone …';
@@ -5015,7 +5015,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeDetectorModelHint =>
-      'Reconnaît « Wendelin » sans apprentissage. Demande le téléchargement.';
+      'Reconnaît le mot d’activation sans apprentissage. Demande le téléchargement.';
 
   @override
   String wakeDetectorModelNeeded(String v) {
@@ -5074,7 +5074,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeEnrollNoRecognizer =>
-      'La reconnaissance vocale est absente : sans elle, « Wendelin » ne peut pas être vérifié pendant l’apprentissage. Télécharge un modèle de reconnaissance dans Réglages → Voix.';
+      'La reconnaissance vocale est absente : sans elle, « Hey Wendelin » ne peut pas être vérifié pendant l’apprentissage. Télécharge un modèle de reconnaissance dans Réglages → Voix.';
 
   @override
   String get wakeEnrollNoSpeech =>
@@ -5189,7 +5189,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeExplainLocalBody =>
-      'La reconnaissance du mot se fait sur l’appareil. Ce que vous dites après « Wendelin » est envoyé sous forme de texte au fournisseur d’IA choisi. L’audio n’est ni envoyé ni enregistré.';
+      'La reconnaissance du mot se fait sur l’appareil. Ce que vous dites après « Hey Wendelin » est envoyé sous forme de texte au fournisseur d’IA choisi. L’audio n’est ni envoyé ni enregistré.';
 
   @override
   String get wakeExplainLocalTitle => 'L’écoute reste sur l’appareil';
@@ -5245,7 +5245,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeServiceSectionEnableDetail =>
-      'Wendelin écoute en arrière-plan le mot « Wendelin ».';
+      'Wendelin écoute en arrière-plan le mot « Hey Wendelin ».';
 
   @override
   String get wakeServiceSectionEndedEngine =>
@@ -5332,7 +5332,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeServiceSectionWhisperDetail =>
-      'Wendelin n’écoute que si la vérification confirme « Wendelin ». Elle couvre toute l’étape 2 : vérificateur B, Parakeet ou Whisper, selon ce qui est enregistré et chargé. Désactivez-la si elle est trop stricte pour votre voix ; il y aura alors plus de faux déclenchements.';
+      'Wendelin n’écoute que si la vérification confirme le mot d’activation. Elle couvre toute l’étape 2 : vérificateur B, Parakeet ou Whisper, selon ce qui est enregistré et chargé. Désactivez-la si elle est trop stricte pour votre voix ; il y aura alors plus de faux déclenchements.';
 
   @override
   String wakeTestAgo(String v, int inSeconds) {
@@ -5364,7 +5364,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeTestIntro =>
-      'Dites « Wendelin ». Les détections s’affichent ici sans que l’overlay s’ouvre. « Candidat » est la voix. « Confirmé » signifie que la reconnaissance des commandes (Parakeet ou Whisper) a entendu « Wendelin ». Ce n’est pas la vérification (étape 2) du service ; elle peut être plus stricte.';
+      'Dites « Hey Wendelin ». Les détections s’affichent ici sans que l’overlay s’ouvre. « Candidat » est la voix. « Confirmé » signifie que la reconnaissance des commandes (Parakeet ou Whisper) a entendu le mot d’activation. Ce n’est pas la vérification (étape 2) du service ; elle peut être plus stricte.';
 
   @override
   String get wakeTestListening => 'À l’écoute';
@@ -5429,7 +5429,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeWordIntro =>
-      'Wendelin apprend votre voix : vous dites « Wendelin » environ 15 fois, ensuite il le reconnaît aussi au quotidien. Seules des valeurs numériques sont enregistrées, chiffrées sur l’appareil. L’audio n’est jamais enregistré.';
+      'Wendelin apprend votre voix : vous dites « Hey Wendelin » environ 15 fois, ensuite il le reconnaît aussi au quotidien. Seules des valeurs numériques sont enregistrées, chiffrées sur l’appareil. L’audio n’est jamais enregistré.';
 
   @override
   String get wakeWordLearned => 'Voix entraînées';

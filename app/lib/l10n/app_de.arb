@@ -1224,7 +1224,7 @@
   "mainGpuCheckFailedTitle": "GPU-Prüfung nicht bestanden",
   "mainListening": "Ich höre zu …",
   "mainMicCancelAnswer": "Antwort abbrechen",
-  "mainMicHearing": "Wendelin hört mit: „Wendelin“ sagen oder tippen",
+  "mainMicHearing": "Wendelin hört mit: „Hey Wendelin“ sagen oder tippen",
   "mainMicSpeak": "Sprechen",
   "mainMicStopListening": "Zuhören beenden",
   "mainMicStopSpeech": "Sprachausgabe stoppen",
@@ -1748,7 +1748,7 @@
   "onboardingSetUpAnotherProvider": "Weiteren Provider einrichten",
   "onboardingSkip": "Überspringen",
   "onboardingTapOnly": "Nein, nur nach Tippen",
-  "onboardingWakeIntro": "Wendelin kann auf „Wendelin“ hören, auch wenn das Telefon liegt. Dafür lernt er zuerst deine Stimme (etwa 3 Minuten). Das geht auch später in den Einstellungen.",
+  "onboardingWakeIntro": "Wendelin kann auf „Hey Wendelin“ hören, auch wenn das Telefon liegt. Dafür lernt er zuerst deine Stimme (etwa 3 Minuten). Das geht auch später in den Einstellungen.",
   "onboardingWakeWord": "Aktivierungswort",
   "onboardingWelcome": "Willkommen",
   "onboardingWelcomeIntro": "Wendelin ist dein Sprachassistent. In sechs Schritten ist er eingerichtet. Welche Sprache sprichst du mit ihm?",
@@ -2571,7 +2571,7 @@
   "voiceConvBargeSpeech": "Beliebige Sprache (experimentell)",
   "voiceConvCustomBarge": "Eigene Einstellung für das Unterbrechen aktiv (unter „Erweitert“ zurücksetzbar).",
   "voiceConvInterrupt": "Unterbrechen während der Antwort",
-  "voiceConvInterruptHint": "Mit „Wendelin“ unterbrichst du die Sprachausgabe.",
+  "voiceConvInterruptHint": "Mit „Hey Wendelin“ unterbrichst du die Sprachausgabe.",
   "voiceConvKeepListening": "Weiter zuhören nach der Antwort",
   "voiceConvKeepListeningDetail": "Nach der gesprochenen Antwort bleibt das Mikrofon kurz offen, du kannst ohne Tippen nachfragen. „Danke“ oder „Stopp“ beendet.",
   "voiceConvKeepListeningLabel": "Weiter zuhören nach der Antwort",
@@ -2803,7 +2803,7 @@
   "bargeDebugHelpMargin": "Die Schwelle legt fest, wie genau ein Wort passen muss. Höher (0,05, Standard): weniger Fehlalarme, dafür wird dein Wort öfter überhört. Niedriger (0,00 oder -0,05): das Wort wird leichter erkannt, dafür gibt es mehr Fehlalarme.",
   "bargeDebugHelpRecognition": "Erkennung, ohne AEC: keine Echo-Unterdrückung. Dein Wort kommt klar an, aber die laufende Ansage übertönt es oft, und Wendelin kann sich selbst hören.",
   "bargeDebugHelpRecognitionAec": "Erkennung + AEC: wie Standard, aber mit dem Mikrofon der Spracherkennung. Hilft auf Geräten, bei denen das Standard-Mikrofon dein Wort zu stark dämpft.",
-  "bargeDebugIntro": "Damit stellst du ein, wie empfindlich „Wendelin“ während der Antwort erkannt wird. Die Änderung gilt ab der nächsten gesprochenen Antwort.",
+  "bargeDebugIntro": "Damit stellst du ein, wie empfindlich „Hey Wendelin“ während der Antwort erkannt wird. Die Änderung gilt ab der nächsten gesprochenen Antwort.",
   "bargeDebugMicCommunication": "Kommunikation + AEC (Standard)",
   "bargeDebugMicDuring": "Mikrofon während der Antwort",
   "bargeDebugMicRecognition": "Erkennung, ohne AEC",
@@ -2824,7 +2824,7 @@
     }
   },
   "micSettingsHint": "In den Android-Einstellungen unter Apps → Wendelin erlauben.",
-  "speechCommunicationHelp": "Die Antwort läuft wie ein Anruf über den Lautsprecher, damit „Wendelin“ sicherer erkannt wird. Nebenwirkungen: Es gilt die Anruf-Lautstärke, der Klang ist dünner, und mit Bluetooth-Geräten kann die Wiedergabe umschalten. Mit Kopfhörern bleibt die Ausgabe dort. Gilt ab der nächsten Antwort.",
+  "speechCommunicationHelp": "Die Antwort läuft wie ein Anruf über den Lautsprecher, damit „Hey Wendelin“ sicherer erkannt wird. Nebenwirkungen: Es gilt die Anruf-Lautstärke, der Klang ist dünner, und mit Bluetooth-Geräten kann die Wiedergabe umschalten. Mit Kopfhörern bleibt die Ausgabe dort. Gilt ab der nächsten Antwort.",
   "speechCommunicationTitle": "Antwort als Gesprächston (bessere Echo-Unterdrückung)",
   "wakeCalibrateCancelled": "Abgebrochen. Es wurde nichts geändert.",
   "wakeCalibrateDone": "Kalibriert.",
@@ -2837,7 +2837,7 @@
     }
   },
   "wakeCalibrateFinishNow": "Jetzt beenden",
-  "wakeCalibrateIntro": "Leg das Handy hin und red normal weiter. Wendelin hört mit (Mikrofonanzeige an), merkt sich aber nur Zahlenwerte, kein Audio und keinen Text. Ab und zu piept es: Sag dann „Wendelin“.",
+  "wakeCalibrateIntro": "Leg das Handy hin und red normal weiter. Wendelin hört mit (Mikrofonanzeige an), merkt sich aber nur Zahlenwerte, kein Audio und keinen Text. Ab und zu piept es: Sag dann „Hey Wendelin“.",
   "wakeCalibrateMicPreparing": "Mikrofon wird vorbereitet …",
   "wakeCalibrateMinutesLeft": "Noch {v} min",
   "@wakeCalibrateMinutesLeft": {
@@ -2880,7 +2880,7 @@
   "wakeDetectorAuto": "Automatisch",
   "wakeDetectorAutoHint": "Handy: deine Stimme (Vorlagen). Station: das trainierte Modell.",
   "wakeDetectorModel": "Trainiertes Modell",
-  "wakeDetectorModelHint": "Erkennt „Wendelin“ ohne Einlernen. Braucht den Download.",
+  "wakeDetectorModelHint": "Erkennt das Aktivierungswort ohne Einlernen. Braucht den Download.",
   "wakeDetectorModelNeeded": "Das trainierte Modell wird für diese Einstellung benötigt: {v}.",
   "@wakeDetectorModelNeeded": {
     "placeholders": {
@@ -2923,7 +2923,7 @@
     }
   },
   "wakeEnrollNoMic": "Ohne Mikrofon kann Wendelin deine Stimme nicht lernen.",
-  "wakeEnrollNoRecognizer": "Spracherkennung fehlt: Ohne sie kann „Wendelin“ beim Einlernen nicht geprüft werden. Bitte lade unter Einstellungen → Sprache ein Erkennungsmodell.",
+  "wakeEnrollNoRecognizer": "Spracherkennung fehlt: Ohne sie kann „Hey Wendelin“ beim Einlernen nicht geprüft werden. Bitte lade unter Einstellungen → Sprache ein Erkennungsmodell.",
   "wakeEnrollNoSpeech": "Nichts gehört. Noch einmal bitte.",
   "wakeEnrollNotWord": "Nicht erkannt. Bitte noch einmal mit „{word}“.",
   "@wakeEnrollNotWord": {
@@ -3014,7 +3014,7 @@
   "wakeExplainEnable": "Einschalten",
   "wakeExplainEnableTitle": "Aktivierungswort einschalten?",
   "wakeExplainExempt": "Ausnehmen",
-  "wakeExplainLocalBody": "Die Erkennung des Wortes läuft auf dem Gerät. Was du nach „Wendelin“ sagst, wird als Text an den gewählten KI-Anbieter geschickt. Audio wird weder gesendet noch gespeichert.",
+  "wakeExplainLocalBody": "Die Erkennung des Wortes läuft auf dem Gerät. Was du nach „Hey Wendelin“ sagst, wird als Text an den gewählten KI-Anbieter geschickt. Audio wird weder gesendet noch gespeichert.",
   "wakeExplainLocalTitle": "Zuhören bleibt auf dem Gerät",
   "wakeExplainMicDotBody": "Android zeigt den grünen Punkt für das Mikrofon, solange der Dienst zuhört.",
   "wakeExplainMicDotTitle": "Mikrofon-Punkt",
@@ -3044,7 +3044,7 @@
   "wakeServiceSectionChimeDetail": "Ein kurzer Ton, wenn Wendelin das Wort erkannt hat.",
   "wakeServiceSectionChooseAssistant": "Assistenten wählen",
   "wakeServiceSectionEnable": "Aktivierungswort einschalten",
-  "wakeServiceSectionEnableDetail": "Wendelin hört im Hintergrund auf „Wendelin“.",
+  "wakeServiceSectionEnableDetail": "Wendelin hört im Hintergrund auf „Hey Wendelin“.",
   "wakeServiceSectionEndedEngine": "Beendet: Die Erkennung ist ausgefallen",
   "wakeServiceSectionEndedModel": "Beendet: Ein Modell für die Wake-Erkennung fehlt",
   "wakeServiceSectionEndedNoPermission": "Beendet: Mikrofon-Berechtigung fehlt",
@@ -3075,7 +3075,7 @@
   "wakeServiceSectionToEnroll": "Zum Einlernen",
   "wakeServiceSectionWhen": "Wann zuhören?",
   "wakeServiceSectionWhisper": "Nachprüfung (Stufe 2)",
-  "wakeServiceSectionWhisperDetail": "Wendelin hört nur zu, wenn die Nachprüfung „Wendelin“ bestätigt. Sie umfasst die ganze Stufe 2: Prüfer B, Parakeet oder Whisper, je nachdem, was eingelernt und geladen ist. Schalte sie aus, wenn sie mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.",
+  "wakeServiceSectionWhisperDetail": "Wendelin hört nur zu, wenn die Nachprüfung das Aktivierungswort bestätigt. Sie umfasst die ganze Stufe 2: Prüfer B, Parakeet oder Whisper, je nachdem, was eingelernt und geladen ist. Schalte sie aus, wenn sie mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.",
   "wakeTestAgo": "{v} · {inSeconds} s",
   "@wakeTestAgo": {
     "placeholders": {
@@ -3126,7 +3126,7 @@
       }
     }
   },
-  "wakeTestIntro": "Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme. „Bestätigt“ heißt: Die Befehlserkennung (Parakeet oder Whisper) hat „Wendelin“ gehört. Das ist nicht die Nachprüfung (Stufe 2) des Dienstes; sie kann strenger sein.",
+  "wakeTestIntro": "Sag „Hey Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme. „Bestätigt“ heißt: Die Befehlserkennung (Parakeet oder Whisper) hat das Aktivierungswort gehört. Das ist nicht die Nachprüfung (Stufe 2) des Dienstes; sie kann strenger sein.",
   "wakeTestListening": "Hört zu",
   "wakeTestMicPreparing": "Mikrofon wird vorbereitet …",
   "wakeTestNoHit": "Noch kein Treffer.",
@@ -3153,7 +3153,7 @@
   "wakeWordEnroll": "Stimme einlernen",
   "wakeWordEnrollMore": "Weitere Person einlernen",
   "wakeWordFeatureModels": "Merkmalsmodelle",
-  "wakeWordIntro": "Wendelin lernt deine Stimme: Du sagst „Wendelin“ etwa 15 Mal, danach erkennt er es auch im Alltag. Gespeichert werden nur Zahlenwerte, verschlüsselt auf dem Gerät. Audio wird nie gespeichert.",
+  "wakeWordIntro": "Wendelin lernt deine Stimme: Du sagst „Hey Wendelin“ etwa 15 Mal, danach erkennt er es auch im Alltag. Gespeichert werden nur Zahlenwerte, verschlüsselt auf dem Gerät. Audio wird nie gespeichert.",
   "wakeWordLearned": "Gelernte Stimmen",
   "wakeWordNameOptional": "Name (optional)",
   "wakeWordNeedsModel": "Dafür muss zuerst das Sprachmodell geladen werden.",

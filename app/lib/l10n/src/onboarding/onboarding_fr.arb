@@ -11,7 +11,7 @@
   "onboardingSetUpAnotherProvider": "Configurer un autre fournisseur",
   "onboardingSkip": "Passer",
   "onboardingTapOnly": "Non, seulement après un appui",
-  "onboardingWakeIntro": "Wendelin peut écouter « Wendelin » même quand le téléphone est posé. Pour cela, il apprend d’abord votre voix (environ 3 minutes). Vous pouvez aussi le faire plus tard dans les paramètres.",
+  "onboardingWakeIntro": "Wendelin peut écouter « Hey Wendelin » même quand le téléphone est posé. Pour cela, il apprend d’abord votre voix (environ 3 minutes). Vous pouvez aussi le faire plus tard dans les paramètres.",
   "onboardingWakeWord": "Mot d’activation",
   "onboardingWelcome": "Bienvenue",
   "onboardingWelcomeIntro": "Wendelin est votre assistant vocal. La configuration se fait en six étapes. Quelle langue parlez-vous avec lui ?",

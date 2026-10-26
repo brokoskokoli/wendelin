@@ -24,7 +24,7 @@
   "voiceConvBargeSpeech": "Any speech (experimental)",
   "voiceConvCustomBarge": "Custom setting for interrupting is active (can be reset under “Advanced”).",
   "voiceConvInterrupt": "Interrupt during the answer",
-  "voiceConvInterruptHint": "With “Wendelin” you interrupt the speech output.",
+  "voiceConvInterruptHint": "With “Hey Wendelin” you interrupt the speech output.",
   "voiceConvKeepListening": "Keep listening after the answer",
   "voiceConvKeepListeningDetail": "After the spoken answer the microphone stays open briefly, so you can follow up without tapping. “Thanks” or “Stop” ends it.",
   "voiceConvKeepListeningLabel": "Keep listening after the answer",
