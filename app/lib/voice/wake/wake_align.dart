@@ -1,3 +1,4 @@
+import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -41,10 +42,14 @@ const wakeAlignMinRms = 20;
 /// Finds how many samples at the end of [tail] the start of [app] repeats
 /// (WP149): both are the same microphone, the service's recording was open
 /// until after the app's first frame. [estimate] is the overlap in samples
-/// the timestamps suggest (may be zero or negative); only
-/// [wakeAlignBelow] below and [wakeAlignAbove] above it is searched.
+/// the timestamps suggest; only [wakeAlignBelow] below and [wakeAlignAbove]
+/// above it is searched, never below [wakeAlignMinOverlap]. If the
+/// timestamps see a gap ([estimate] < 0: the app continues after the tail)
+/// there is no overlap to find: `null` (the caller fills the gap), since a
+/// match could only be a chance one and would cut real speech.
 /// Normalized cross-correlation of `tail[N-o..N)` against `app[0..o)` for
-/// every `o` of that window, all at full rate (about 2M multiply-adds).
+/// every `o` of that window, all at full rate (about 2M multiply-adds, up to
+/// 6M: run it off the UI isolate, see [alignWakeTailOffUi]).
 /// Fail-closed: rejects (overlap `null`) too little signal, a peak below
 /// [wakeAlignMinPeak] and a peak that does not stand out from the best
 /// rival outside its own main lobe (periodic signal).
@@ -53,6 +58,7 @@ WakeAlign alignWakeTail(
   Int16List app, {
   required int estimate,
 }) {
+  if (estimate < 0) return (overlap: null, peak: 0);
   final maxO = math.min(tail.length, app.length);
   final lo = math.max(wakeAlignMinOverlap, estimate - wakeAlignBelow);
   final hi = math.min(maxO, estimate + wakeAlignAbove);
@@ -109,6 +115,14 @@ WakeAlign alignWakeTail(
           (peak >= wakeAlignSure ? wakeAlignSureMargin : wakeAlignMinMargin);
   return (overlap: ok ? bestO : null, peak: peak);
 }
+
+/// [alignWakeTail] in a short-lived isolate: the search costs up to 6M
+/// multiply-adds (tens of ms on a phone), which must not stall the UI.
+Future<WakeAlign> alignWakeTailOffUi(
+  Int16List tail,
+  Int16List app, {
+  required int estimate,
+}) => Isolate.run(() => alignWakeTail(tail, app, estimate: estimate));
 
 double _rms(Int16List x, int from, int n) {
   var s = 0.0;

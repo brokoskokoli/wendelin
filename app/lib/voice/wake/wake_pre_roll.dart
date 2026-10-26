@@ -84,6 +84,7 @@ WakePreRoll bridgeWakeTail(
   int? firstFrameSamples,
   int? afterTakeMs,
   Int16List? appHead,
+  WakeAlign? alignedOffUi,
 }) {
   var audio = Int16List.fromList(tail.pcm);
   var zeros = 0;
@@ -95,18 +96,15 @@ WakePreRoll bridgeWakeTail(
       : audio.length;
   audio.fillRange(0, muted, 0);
   final last = tail.lastSampleAtMs;
-  int? gap;
-  if (last != null && last > 0 && firstFrameAtMs != null) {
-    gap = wakeGapMs(
-      firstFrameAtMs: firstFrameAtMs,
-      frameSamples: firstFrameSamples ?? 0,
-      lastSampleAtMs: last,
-    );
-  }
+  final gap = firstFrameAtMs == null
+      ? null
+      : _tailGap(tail, firstFrameAtMs, firstFrameSamples);
   var trim = 0;
   var silence = 0;
   WakeAlign? aligned;
-  if (gap != null && appHead != null && appHead.isNotEmpty) {
+  if (alignedOffUi != null) {
+    aligned = alignedOffUi;
+  } else if (gap != null && appHead != null && appHead.isNotEmpty) {
     aligned = alignWakeTail(tail.pcm, appHead, estimate: -gap * 16);
   }
   final byContent = aligned?.overlap;
@@ -153,6 +151,18 @@ WakePreRoll bridgeWakeTail(
     // After a measured gap the audio is continuous up to the first frame;
     // without a first frame the first one is measured against the tail.
     lastSampleAtMs: gap != null ? null : last,
+  );
+}
+
+/// Signed gap (ms) between the tail's last sample and the app's first sample;
+/// `null` without a usable timestamp.
+int? _tailGap(WakeTail tail, int firstFrameAtMs, int? firstFrameSamples) {
+  final last = tail.lastSampleAtMs;
+  if (last == null || last <= 0) return null;
+  return wakeGapMs(
+    firstFrameAtMs: firstFrameAtMs,
+    frameSamples: firstFrameSamples ?? 0,
+    lastSampleAtMs: last,
   );
 }
 
@@ -316,13 +326,23 @@ final class WakeHandoffTracker {
     handoff = null;
     _tail = null;
     if (tail == null) return pre;
+    final firstAt = _firstFrameAtMs;
+    final head = firstAt == null ? null : _appHead?.call(wakeAlignHead);
+    final gap = firstAt == null
+        ? null
+        : _tailGap(tail, firstAt, _firstFrameSamples);
+    // The search runs off the UI isolate (up to 6M multiply-adds).
+    final aligned = gap != null && head != null && head.isNotEmpty
+        ? await alignWakeTailOffUi(tail.pcm, head, estimate: -gap * 16)
+        : null;
     return bridgeWakeTail(
       pre,
       tail,
       firstFrameAtMs: _firstFrameAtMs,
       firstFrameSamples: _firstFrameSamples,
       afterTakeMs: _afterTakeMs,
-      appHead: _firstFrameAtMs == null ? null : _appHead?.call(wakeAlignHead),
+      appHead: head,
+      alignedOffUi: aligned,
     );
   }
 }

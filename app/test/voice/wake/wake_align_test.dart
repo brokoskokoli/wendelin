@@ -239,6 +239,71 @@ void main() {
     });
   });
 
+  group('feste Fehltreffer-Schnitte (Fixtures)', () {
+    final names = ['b6-05', 'de-05', 'en-05', 'fr-05', 'de-02', 'en-09'];
+    final speech = [
+      for (final n in names) Wav.read('test/fixtures/stt/$n.wav').samples,
+    ];
+    Int16List tailOf(int file, int b) =>
+        Int16List.sublistView(speech[file], b - 10000, b);
+    Int16List appFrom(int file, int from) =>
+        Int16List.fromList(speech[file].sublist(from, from + 6400));
+
+    // (file, b, hole in samples, estimate): the app continues [hole] samples
+    // after the tail, the timestamps see the gap (estimate < 0). Without
+    // the gap rule each of these finds a "match" 21-54 ms inside the tail
+    // (voiced speech repeats with every pitch period) and cuts real speech.
+    const holes = [
+      (0, 15149, 16, -361),
+      (0, 45321, 216, -234),
+      (0, 39367, 366, -682),
+      (0, 19718, 421, -620),
+      (1, 65119, 26, -340),
+      (2, 21542, 16, -52),
+    ];
+    test(
+      'Fortsetzung nach einem Loch: nie eine Kürzung (Stille wie bisher)',
+      () {
+        for (final (f, b, h, est) in holes) {
+          final r = alignWakeTail(
+            tailOf(f, b),
+            appFrom(f, b + h),
+            estimate: est,
+          );
+          expect(
+            r.overlap,
+            isNull,
+            reason: '${names[f]} b=$b hole=$h est=$est',
+          );
+        }
+      },
+    );
+
+    // (file, b, start of the unrelated app audio, estimate): not the same
+    // recording. Each is a chance match when one threshold is loosened
+    // (wakeAlignMinPeak 88 -> 80, wakeAlignSure 97 -> 90, no minimum
+    // overlap) and must stay `null`.
+    const elsewhere = [
+      (1, 43263, 28725, 2055), // MinPeak 80
+      (5, 19655, 30477, 1889), // MinPeak 80
+      (0, 54088, 26392, 313), // MinPeak 80
+      (0, 63311, 8106, 85), // MinPeak 80
+      (1, 22588, 65270, 742), // Sure 90
+      (0, 16645, 56913, 155), // Sure 90
+      (0, 16451, 46615, 327), // Sure 90
+      (0, 22050, 5134, 154), // no minimum overlap
+      (0, 29809, 40942, 16), // no minimum overlap
+      (0, 18376, 59537, 107), // no minimum overlap
+    ];
+    test('fremde Aufnahme: nie eine Kürzung, auch nicht bei kleiner '
+        'Schätzung', () {
+      for (final (f, b, from, est) in elsewhere) {
+        final r = alignWakeTail(tailOf(f, b), appFrom(f, from), estimate: est);
+        expect(r.overlap, isNull, reason: '${names[f]} b=$b from=$from');
+      }
+    });
+  });
+
   group('bridgeWakeTail', () {
     final s = source(40000);
     final pre = WakePreRoll(pcm: Int16List(1600), wakeEnd: 800);
@@ -286,6 +351,26 @@ void main() {
       final log = lines.singleWhere((l) => l.contains(' wake-gap '));
       expect(log, contains('align=time'));
       expect(log, isNot(contains('xcorrMs')));
+    });
+
+    test('Loch mit Inhalt, der sich scheinbar wiederholt: Stille, keine '
+        'Kürzung', () {
+      final speech = Wav.read('test/fixtures/stt/b6-05.wav').samples;
+      // tail = speech[b-10000..b), the app continues 16 samples later.
+      const b = 15149;
+      final tail = Int16List.sublistView(speech, b - 10000, b);
+      final app = Int16List.fromList(speech.sublist(b + 16, b + 16 + 6400));
+      final out = bridgeWakeTail(
+        pre,
+        (pcm: tail, lastSampleAtMs: 1000),
+        firstFrameAtMs: 1000 + 22 + 100, // gap 22 ms, first frame 100 ms
+        firstFrameSamples: 1600,
+        appHead: app,
+      );
+      final log = lines.singleWhere((l) => l.contains(' wake-gap '));
+      expect(log, contains('align=time'));
+      expect(log, contains('trim=0'));
+      expect(out.pcm, hasLength(1600 + 10000 + 22 * 16));
     });
 
     test('absurd große Lücke (Zeitstempel ohne Epoche): auf wakeHoleMax '
