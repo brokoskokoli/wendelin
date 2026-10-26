@@ -214,8 +214,19 @@ object WakePolicy {
     fun conflictNow(audioMode: Int, foreignRecording: Boolean): String? =
         conflict(audioMode, foreignRecording, SpeechRoute.active)
 
-    /** Whether the microphone is closed by the service itself, not only by Dart: any conflict. */
-    fun closesMicFor(conflict: String?): Boolean = conflict == "call" || conflict == "recording"
+    /**
+     * Whether the microphone is closed by the service itself, not only by Dart: any conflict.
+     * WP149: during a hand-over overlap ([handoffOverlap]: the hit was taken with the capture kept
+     * open) a `recording` is the app's own new `AudioRecord` (same process, other session) and
+     * does not close it, else the tail ends early and a hole remains; a `call` always does.
+     */
+    fun closesMicFor(conflict: String?, handoffOverlap: Boolean = false): Boolean =
+        conflict == "call" || (conflict == "recording" && !handoffOverlap)
+
+    /** WP149: the `wake-conflict` log line (numbers and codes only). */
+    fun conflictLog(conflict: String?, handoffOverlap: Boolean, closes: Boolean): String =
+        "wake-conflict reason=${conflict ?: "none"} handoff=${if (handoffOverlap) "kept" else "none"} " +
+            "action=${if (closes) "close" else "keep"}"
 
     /** Whether `startMic` of Dart may open the microphone while the last [conflict] holds. */
     fun mayStartMic(conflict: String?): Boolean = !closesMicFor(conflict)

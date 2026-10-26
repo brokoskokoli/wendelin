@@ -44,6 +44,22 @@ class WakePolicyTest {
     }
 
     @Test
+    fun handoffOverlapKeepsTheMicrophoneOpenForTheAppsOwnRecording() {
+        // WP149: the app's new AudioRecord looks like a foreign recording during the overlap.
+        assertFalse(WakePolicy.closesMicFor("recording", handoffOverlap = true))
+        assertTrue(WakePolicy.closesMicFor("recording", handoffOverlap = false))
+        // A call always closes it, overlap or not.
+        assertTrue(WakePolicy.closesMicFor("call", handoffOverlap = true))
+        assertFalse(WakePolicy.closesMicFor(null, handoffOverlap = true))
+        // Dart may still not start the microphone while the conflict holds.
+        assertFalse(WakePolicy.mayStartMic("recording"))
+        assertEquals(
+            "wake-conflict reason=recording handoff=kept action=keep",
+            WakePolicy.conflictLog("recording", true, false),
+        )
+    }
+
+    @Test
     fun alwaysModeIgnoresCharging() {
         assertEquals(WakeDecision.Start, decide(on.copy(mode = WakeMode.ALWAYS), charging = false))
     }

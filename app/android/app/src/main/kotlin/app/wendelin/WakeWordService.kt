@@ -34,6 +34,9 @@ class WakeWordService : Service() {
     private val handoffCheck = TimedGuard(main)
     private val hitFlow = WakeHitFlow(this, main, handoffCheck, ::stopMic) { engine?.send("overlayClosed", null) }
     private val overlapGuard = TimedGuard(main)
+
+    /** WP149: hit taken with the capture kept open, the app's microphone not up yet. */
+    private val handoffOverlap: Boolean get() = overlapGuard.armed
     private val micDeferral = WakeMicDeferral(main, hasMic = { mic != null }, startMic = ::startMic)
     private var lastConflict: String? = null
 
@@ -110,10 +113,12 @@ class WakeWordService : Service() {
         engine = e
         e.send("run", settings.runArgs(StationState.active))
         watcher = WakeConflictWatcher(this, main, { mic?.sessionId ?: 0 }) { reason ->
-            VoiceLog.i("wake-conflict reason=${reason ?: "none"}")
+            // WP149: in the hand-over overlap the app's own AudioRecord is no foreign recording.
+            val closes = WakePolicy.closesMicFor(reason, handoffOverlap)
+            VoiceLog.i(WakePolicy.conflictLog(reason, handoffOverlap, closes))
             lastConflict = reason
             // Do not depend on Dart alone: a call or foreign recording closes the microphone here.
-            if (WakePolicy.closesMicFor(reason)) stopMic()
+            if (closes) stopMic()
             engine?.send("conflict", mapOf("reason" to reason))
         }.also { it.start() }
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager)

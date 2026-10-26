@@ -62,6 +62,9 @@ internal class TimedGuard(private val main: Handler) {
         main.postDelayed(t, delayMs)
     }
 
+    /** Whether the guard is waiting to fire. */
+    val armed: Boolean get() = task != null
+
     fun disarm() {
         task?.let { main.removeCallbacks(it) }
         task = null

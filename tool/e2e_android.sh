@@ -256,7 +256,7 @@ station_tap_end() { # „Beenden“ (de) bzw. End/Terminer antippen
   adb shell input tap $(((n[0] + n[2]) / 2)) $(((n[1] + n[3]) / 2))
 }
 wake_loop() { # <Durchläufe>
-  local n="$1" i ok=0 answered=0 found log
+  local n="$1" i ok=0 answered=0 found log gapmax=-9999 silmax=0 gaps=0 g line m sl
   log="${WAKE_LOG:-/dev/null}"
   for i in $(seq 1 "$n"); do
     adb shell input keyevent KEYCODE_SLEEP
@@ -276,6 +276,16 @@ wake_loop() { # <Durchläufe>
       echo "UI: $(ui_dump | grep -oE '(text|content-desc)="[^"]+"' | tr '\n' '|')" >>"$log"
       adb logcat -d | grep 'Wendelin/voice' >>"$log" || true
       if adb logcat -d | grep -q 'mic-ready.*trigger=wakeWord'; then ok=$((ok + 1)); fi
+      # WP149: größte Lücke (`ms`) und Stille (`silence`) der Übergabe (nur Zahlen).
+      g="$(adb logcat -d | grep -E 'Wendelin/voice: wake-gap ' | tr -d '\r' || true)"
+      while read -r line; do
+        [ -n "$line" ] || continue
+        gaps=$((gaps + 1))
+        m="$(grep -oE ' ms=-?[0-9]+' <<<"$line" | head -1 | tr -dc '0-9-' || true)"
+        sl="$(grep -oE ' silence=[0-9]+' <<<"$line" | head -1 | tr -dc '0-9' || true)"
+        [ -n "$m" ] && [ "$m" -gt "$gapmax" ] && gapmax="$m"
+        [ -n "$sl" ] && [ "$sl" -gt "$silmax" ] && silmax="$sl"
+      done <<<"$g"
       adb logcat -c
       adb shell input keyevent KEYCODE_BACK
       for _ in $(seq 1 40); do
@@ -291,7 +301,7 @@ wake_loop() { # <Durchläufe>
     echo "Durchlauf $i: overlay=$found scenario=$(in_app cat files/e2e/scenario 2>/dev/null)" >>"$log"
   done
   adb shell input keyevent KEYCODE_WAKEUP
-  echo "wakeWord=$ok/$n answered=$answered/$n" |
+  echo "wakeWord=$ok/$n answered=$answered/$n gaps=$gaps gapMaxMs=$gapmax silenceMaxMs=$silmax" |
     adb shell run-as "$PKG" sh -c "'cat > files/e2e/wake-result.txt'"
 }
 host_request() {

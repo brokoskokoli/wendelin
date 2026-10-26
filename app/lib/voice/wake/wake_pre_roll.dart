@@ -99,6 +99,16 @@ WakePreRoll bridgeWakeTail(
     ..setAll(0, pre.pcm)
     ..setAll(pre.pcm.length, audio);
   final added = audio.length + silence;
+  if (silence > 0) {
+    // Emergency only (WP149): the service should record up to the first
+    // frame, so silence means the overlap broke (microphone closed early,
+    // no first frame, tail missing).
+    voiceLog('wake-gap-fallback', {
+      'reason': tail.pcm.isEmpty ? 'tail-empty' : 'hole-after-tail',
+      'silence': samplesToDuration(silence),
+      'tail': samplesToDuration(tail.pcm.length),
+    });
+  }
   voiceLog('wake-gap', {
     'ms': ?gap,
     'afterTake': ?afterTakeMs,

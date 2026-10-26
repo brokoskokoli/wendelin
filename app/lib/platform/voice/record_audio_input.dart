@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:record/record.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../voice/dev_log.dart';
 import '../../voice/voice_log.dart';
 import '../channel_audio_focus_port.dart';
 import 'pcm.dart';
@@ -347,7 +348,12 @@ final class RecordAudioInput
       // Asked before the start, awaited after it: a channel that never
       // answers (tests, no plugin) must not keep stop() from ending this take.
       final mode = _audioMode?.call();
+      // WP149 (developer mode, numbers only): wall clock of the open call, of
+      // the stream being up and of the first chunk, to explain the time
+      // between opening the microphone and its first frame.
+      final openAt = DateTime.now().millisecondsSinceEpoch;
       final bytes = await take.recorder.startStream(_profile);
+      final startedAt = DateTime.now().millisecondsSinceEpoch;
       final profile = _profile;
       if (!identical(_take, take)) {
         // stop() came first.
@@ -355,8 +361,19 @@ final class RecordAudioInput
         return;
       }
       final decoder = PcmBytesDecoder();
+      var firstChunk = false;
       take.sub = bytes.listen(
         (chunk) {
+          if (!firstChunk) {
+            firstChunk = true;
+            final now = DateTime.now().millisecondsSinceEpoch;
+            devLog('mic-open-timing', {
+              'openAt': openAt,
+              'startMs': startedAt - openAt,
+              'firstChunkMs': now - startedAt,
+              'bytes': chunk.length,
+            });
+          }
           final frame = decoder.convert(chunk);
           if (frame.isNotEmpty && !take.out.isClosed) take.out.add(frame);
         },
