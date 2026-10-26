@@ -244,6 +244,7 @@ class WakeEnroller extends ChangeNotifier {
   var _level = 0.0;
   Object? _error;
   var _stopped = false;
+  var _disposed = false;
   var _unchecked = 0;
   var _quietStreak = 0;
 
@@ -280,6 +281,13 @@ class WakeEnroller extends ChangeNotifier {
   void _set(EnrollPhase p) {
     _phase = p;
     notifyListeners();
+  }
+
+  /// Silent once disposed: [run] may still be finishing a recording when the
+  /// screen is left (e.g. saved early with the minimum).
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
   }
 
   /// Runs the recordings until [target] is reached or [cancel]. Completes
@@ -492,6 +500,7 @@ class WakeEnroller extends ChangeNotifier {
   @override
   void dispose() {
     _stopped = true;
+    _disposed = true;
     super.dispose();
   }
 }

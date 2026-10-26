@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -212,6 +213,33 @@ void main() {
     expect(() => e.finish(), throwsStateError);
     expect(await store.load('a'), isNull);
     expect(features.isOpen, isFalse);
+  });
+
+  test('frühes Speichern und Verlassen während der Aufnahme: run endet '
+      'sauber ohne Zugriff auf den entsorgten Enroller (WP151)', () async {
+    final store = FakeWakeTemplateStore();
+    final features = fakeFeatures();
+    final audio = SequenceAudio([for (var i = 0; i < 5; i++) recording()]);
+    final e = enroller(audio, store, target: 5, features: features);
+    Future<WakeTemplates>? saved;
+    e.addListener(() {
+      // Wie der Screen: speichern, danach Seite verlassen (cancel + dispose),
+      // während run() schon die nächste Aufnahme abwartet.
+      if (e.accepted == 2 && saved == null) {
+        saved = () async {
+          final t = await e.finish();
+          unawaited(e.cancel());
+          e.dispose();
+          return t;
+        }();
+      }
+    });
+    await e.run(); // darf nicht „used after being disposed“ werfen
+    final t = await saved!;
+    expect(t.embeddings, hasLength(2), reason: 'genau die angenommenen');
+    expect((await store.load('a'))!.embeddings, hasLength(2));
+    expect(features.isOpen, isFalse, reason: 'Modelle freigegeben');
+    expect(audio.starts, lessThanOrEqualTo(3), reason: 'keine weiteren');
   });
 
   test('zu wenige Aufnahmen: finish lehnt ab, ab dem Minimum nicht', () async {

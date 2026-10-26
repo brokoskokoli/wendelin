@@ -111,15 +111,15 @@ void main() {
       await pumpUntil(tester, find.text('Weiter'));
       await tester.enterText(find.byType(TextField), 'Anna');
       await tester.tap(find.text('Weiter'));
+      // Exact „Speichern“ appears only at the end state (15 recordings); the
+      // earlier „Mit n Aufnahmen speichern“ would save too early.
       await pumpUntil(
         tester,
-        find.textContaining(RegExp(r'^(Mit \d+ Aufnahmen )?[Ss]peichern$')),
+        find.text('Speichern'),
         timeout: const Duration(minutes: 3),
       );
-      await tester.tap(
-        find.textContaining(RegExp(r'^(Mit \d+ Aufnahmen )?[Ss]peichern$')),
-      );
-      await pumpUntil(tester, find.textContaining(RegExp(r'\d+ Aufnahmen')));
+      await tester.tap(find.text('Speichern'));
+      await pumpUntil(tester, find.textContaining('15 Aufnahmen'));
       final speakers = await c.read(wakeSpeakersProvider.future);
       expect(speakers, hasLength(1));
       expect(enrollLogProblem(enrollLog), isNull);
