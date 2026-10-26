@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:wendelin_voice/wendelin_voice.dart';
@@ -116,9 +117,9 @@ WakePreRoll bridgeWakeTail(
     trim = (-gap * 16).clamp(0, audio.length).toInt();
     audio = Int16List.sublistView(audio, 0, audio.length - trim);
   } else if (gap != null && gap > 0) {
-    silence = durationToSamples(Duration(milliseconds: gap));
-    final max = durationToSamples(wakeHoleMax);
-    if (silence > max) silence = max;
+    // Clamp before converting: an absurd gap would overflow the conversion.
+    final capped = math.min(gap, wakeHoleMax.inMilliseconds);
+    silence = durationToSamples(Duration(milliseconds: capped));
   }
   final out = Int16List(pre.pcm.length + audio.length + silence)
     ..setAll(0, pre.pcm)
