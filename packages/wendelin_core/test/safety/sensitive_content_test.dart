@@ -228,6 +228,10 @@ void main() {
       ('PIN: 9 8 7 6! Danke', '*** Danke', '6'),
       ('Code\nPasswort ist rot blau\nweiter', 'Code\n***\nweiter', 'blau'),
       ('Passwort ist a.b. Ende', '*** Ende', 'b.'),
+      ('Das Passwort ist... hunter2', 'Das ***', 'hunter2'),
+      ('Passwort ist. hunter2', '***', 'hunter2'),
+      ('Das Passwort ist:\nhunter2', 'Das ***', 'hunter2'),
+      ('PIN:   ;  4711', '***', '4711'),
     ]) {
       test(text, () {
         final out = redactSensitiveContent(text);

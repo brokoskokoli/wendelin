@@ -89,16 +89,19 @@ SensitiveFinding? detectSensitiveContent(String text) {
 
 /// [text] with every finding of [detectSensitiveContent] replaced by [mask]
 /// (card number, IBAN, credential with its value, API key); the rest stays
-/// readable. A credential is replaced from its keyword up to the end of the
-/// end of its clause (up to `.`, `!`, `?`, `;`, a line break or the end of
-/// the text: "Mein Passwort ist hunter2. Danke" becomes "Mein *** Danke"). Uses the
-/// same detection rules as [detectSensitiveContent], which stays unchanged.
+/// readable. A credential is replaced from its keyword up to the end of its
+/// clause (up to `.`, `!`, `?`, `;`, a line break or the end of the text:
+/// "Mein Passwort ist hunter2. Danke" becomes "Mein *** Danke"). Whitespace,
+/// line breaks and punctuation between keyword and value are skipped first,
+/// so the first value token is always masked. Known limit: a value with
+/// ". " inside releases the rest ("Dr. Who42" leaves "Who42"). Uses the same
+/// detection rules as [detectSensitiveContent], which stays unchanged.
 String redactSensitiveContent(String text, {String mask = '***'}) {
   final spans = <(int, int)>[
     ..._cardSpans(text),
     ..._ibanSpans(text),
     for (final m in _credential.allMatches(text))
-      (m.start, _clauseEnd(text, m.end - 1)),
+      (m.start, _clauseEnd(text, _valueStart(text, m.end))),
     for (final m in _apiKey.allMatches(text)) (m.start, m.end),
   ]..sort((a, b) => a.$1.compareTo(b.$1));
   final out = StringBuffer();
@@ -118,7 +121,32 @@ String redactSensitiveContent(String text, {String mask = '***'}) {
   return out.toString() + text.substring(pos);
 }
 
-// End of the clause (scanned from [end], the match's last character) that holds the credential value: up to a `.`, `!`, `?` or
+// Where the clause scan starts: the match's last character, or, if the match
+// ends in a bare separator (its last word is only punctuation, "ist" plus
+// punctuation, or ends in `:` or `=`: "ist... x", "PIN:   ;  4711", "ist:\nx"), the first character after
+// any whitespace, line breaks and punctuation behind it. A value that ends in
+// a full stop ("PIN 1234. Danke") keeps its clause end.
+int _valueStart(String text, int matchEnd) {
+  final m = text.substring(0, matchEnd);
+  final word = m.substring(m.lastIndexOf(RegExp(r'\s')) + 1);
+  final bare =
+      RegExp(
+        r'^(?:(?:ist|lautet|heißt|heisst|war|is|was)?\p{P}+)$',
+        unicode: true,
+        caseSensitive: false,
+      ).hasMatch(word) ||
+      word.endsWith(':') ||
+      word.endsWith('=');
+  if (!bare) return matchEnd - 1;
+  var e = matchEnd;
+  while (e < text.length &&
+      RegExp(r'[\s\p{P}]', unicode: true).hasMatch(text[e])) {
+    e++;
+  }
+  return e;
+}
+
+// End of the clause (scanned from [end]) that holds the credential value: up to a `.`, `!`, `?` or
 // `;` followed by whitespace or the end, a line break, or the end of the text
 // (spoken values come in several words: "PIN 12 34", "eins zwei drei vier").
 // Better too much than too little.
