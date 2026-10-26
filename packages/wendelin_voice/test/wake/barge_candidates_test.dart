@@ -19,4 +19,20 @@ void main() {
     expect(c.pendingKind, BargeInKeyword.wake);
     expect(c.pendingLoud, -1);
   });
+
+  test(
+    'Cooldown endet bei wartendem stärkerem Kandidaten: Schnitt bleibt -1',
+    () {
+      // Echo D zurückgestellt, dann echter Ruf S (stärker) sofort pending
+      // (pendingLoud = -1); beim Cooldown-Ende darf D das Wortende nicht
+      // überschreiben.
+      final c = BargeCandidates()
+        ..defer(BargeInKeyword.wake, 0.6, 10000, 9000)
+        ..addPending(BargeInKeyword.wake, 0.9, 42800);
+      c.promoteAfterCooldown(32000, 40000, 12800);
+      expect(c.takePending(), BargeInKeyword.wake);
+      expect(c.checkedLoud, -1);
+      expect(c.checkedScore, 0.9);
+    },
+  );
 }

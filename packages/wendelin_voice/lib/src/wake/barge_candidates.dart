@@ -81,9 +81,12 @@ final class BargeCandidates {
     deferredLoud = -1;
     if (fed - deferredAt > clip) return;
     final after = deferredAt + settle;
+    // A pending candidate (a stronger one, cut at the latest speech) keeps
+    // its own cut; the older word end must not replace it.
+    final waiting = pendingKind != null;
     addPending(kind, score, after > fed ? after : fed);
     // Keep the end of its word (as after a reject): the check cuts there.
-    if (loud > 0) pendingLoud = loud;
+    if (loud > 0 && !waiting) pendingLoud = loud;
   }
 
   /// Takes the pending candidate to check it; its score and word position

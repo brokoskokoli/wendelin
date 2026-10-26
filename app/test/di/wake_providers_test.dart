@@ -11,6 +11,7 @@ import 'package:wendelin/voice/wake/wake_storage.dart';
 import 'package:wendelin/voice/wake/wake_template_audit.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_voice/fakes.dart';
+import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../support/test_env.dart';
@@ -256,5 +257,87 @@ void main() {
         .change((s) => s.copyWith(conversationMode: true));
     final detector = c.read(wakeBargeInDetectorProvider)!;
     expect((detector as LazyWakeBargeInDetector).devClips, same(devAudioClips));
+  });
+
+  group('WP151: Verdrahtung der Prüfer-Auswahl im Barge-in', () {
+    // Live clip and enrolled „Hey Wendelin“ sequence are the same, so B
+    // always has a score (reason `b`); the transcript hears „Wendelin“.
+    Float32List seq() => Float32List.fromList([
+      for (var f = 0; f < 25; f++)
+        for (var k = 0; k < 96; k++) math.sin(f * 0.7 + k * 0.3 + 1),
+    ]);
+
+    final extractors = <FakeWakeFeatureExtractor>[];
+
+    Future<LazyWakeBargeInDetector> build() async {
+      extractors.clear();
+      final env = TestEnv(
+        extraOverrides: [
+          speechToTextProvider.overrideWith(
+            (ref) async => FixedTranscriptStt('Wendelin'),
+          ),
+          wakeFeaturesFactoryProvider.overrideWithValue(() {
+            final e = FakeWakeFeatureExtractor(
+              featureVersion: wakeVerifierBFeatureVersion,
+              sequenceFor: (_) => seq(),
+            );
+            extractors.add(e);
+            return e;
+          }),
+        ],
+      );
+      await env.storage.settings.set(
+        voiceSettingsKey,
+        const VoiceSettings(conversationMode: true),
+      );
+      final c = env.container();
+      addTearDown(c.dispose);
+      await c.read(voiceSettingsProvider.future);
+      await c.read(wakeVerifyProvider.future);
+      final store = c.read(wakeStoreProvider);
+      await store.saveSpeakers([const WakeSpeaker(id: 'a', name: 'A')]);
+      await store.save(
+        WakeTemplates(
+          speakerId: 'a',
+          featureVersion: wakeVerifierBFeatureVersion,
+          threshold: 0.5,
+          embeddings: [Float32List(4)],
+          sequences: [
+            for (var i = 0; i < 3; i++)
+              WakeTemplateSequence(word: WakeTemplates.wordHw, values: seq()),
+          ],
+        ),
+      );
+      return c.read(wakeBargeInDetectorProvider)! as LazyWakeBargeInDetector;
+    }
+
+    final clip = Int16List(16000)..fillRange(0, 16000, 7000);
+
+    test('Text ohne Weckwort: B entscheidet', () async {
+      final detector = await build();
+      final v = detector.verifier!(() => 'Am Bahnhof ist Halt.');
+      final r = await v.verify(clip, candidate: BargeInKeyword.wake);
+      expect(r.verifier, 'b');
+    });
+
+    test(
+      'Text mit Weckwort: das echte spoken erreicht die Weiche (Echo)',
+      () async {
+        final detector = await build();
+        final v = detector.verifier!(() => 'Ich bin Wendelin.');
+        final r = await v.verify(clip, candidate: BargeInKeyword.wake);
+        expect(r.result, 'echo'); // Transkript mit Echo-Filter, nicht B
+        expect(r.verifier, 'transcript');
+      },
+    );
+
+    test('dispose schließt die Merkmalskette von B', () async {
+      final detector = await build();
+      final v = detector.verifier!(() => 'Am Bahnhof ist Halt.');
+      await v.verify(clip, candidate: BargeInKeyword.wake);
+      expect(extractors.single.isOpen, isTrue); // B hat sie geöffnet
+      await detector.dispose();
+      expect(extractors.single.isOpen, isFalse);
+    });
   });
 }

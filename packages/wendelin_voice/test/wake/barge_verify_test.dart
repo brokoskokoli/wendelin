@@ -398,6 +398,47 @@ void main() {
         },
       );
 
+      test('Echo verworfen, schwaches Echo im Cooldown, dann echter Ruf: '
+          'Schnitt am echten Wort (WP151)', () async {
+        final script = _ScriptEngine(
+          {0: 'wake', 12: 'wake', 22: 'wake'},
+          conf: {0: 0.85, 12: 0.86, 22: 0.96},
+        );
+        await setUp0(
+          settle: const Duration(milliseconds: 800),
+          cooldown: const Duration(milliseconds: 1500),
+          custom: script,
+        );
+        // Nur ein Ausschnitt mit dem Wort des Nutzers (7000) ist "wake".
+        v.decide = (pcm) => pcm.contains(7000)
+            ? const BargeVerdict('wake', BargeInKeyword.wake)
+            : BargeVerdict.no;
+        Future<void> frame(int level) async {
+          audio.push(Int16List(1600)..fillRange(0, 1600, level));
+          await pumpEventQueue();
+        }
+
+        for (var i = 0; i < 3; i++) {
+          await frame(5000); // Echo (Frames 0 bis 2)
+        }
+        for (var i = 3; i < 10; i++) {
+          await frame(0);
+        }
+        expect(verdicts, ['no']); // erste Prüfung nach dem Echo
+        await frame(0);
+        await frame(0);
+        await frame(5000); // Frame 12: schwaches Echo im Cooldown
+        for (var i = 13; i < 22; i++) {
+          await frame(0);
+        }
+        await frame(7000); // Frame 22: der echte Ruf, stärker
+        for (var i = 23; i < 40; i++) {
+          await frame(0);
+        }
+        expect(v.calls, hasLength(2));
+        expect(got, ['keyword-wake']);
+      });
+
       test('Kandidat im Cooldown außerhalb des Ausschnitts verfällt', () async {
         await setUp0(
           cooldown: const Duration(milliseconds: 3000),
