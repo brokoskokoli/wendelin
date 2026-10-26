@@ -4,6 +4,7 @@ import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/http_tool_editor_screen.dart';
+import 'package:wendelin/ui/settings/http_tools_screen.dart';
 import 'package:wendelin/ui/settings/integration_detail_screen.dart';
 import 'package:wendelin/ui/settings/mcp/mcp_servers_screen.dart';
 import 'package:wendelin/ui/settings/routing/routing_screen.dart';
@@ -48,6 +49,10 @@ void main() {
     await tester.tap(find.byTooltip('Zurück'));
     await settle(tester);
     await tester.scrollUntilVisible(find.text('+ HTTP-Tool'), 200);
+    await tester.tap(find.text('+ HTTP-Tool'));
+    await settle(tester);
+    expect(find.byType(HttpToolsScreen), findsOneWidget);
+    expect(find.byType(HttpToolEditorScreen), findsNothing);
     await tester.tap(find.text('+ HTTP-Tool'));
     await settle(tester);
     expect(find.byType(HttpToolEditorScreen), findsOneWidget);
