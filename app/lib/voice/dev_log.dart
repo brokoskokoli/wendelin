@@ -35,8 +35,9 @@ void _print(String line) => debugPrint(line);
 /// Strings are shortened to [devLogMaxChars] (line breaks become spaces).
 /// Secrets never appear: values of keys such as `token`, `key`, `password`,
 /// `authorization` are replaced (nested JSON too), `Bearer …` and `sk-…`
-/// are masked, and a text that [detectSensitiveContent] flags (card number,
-/// IBAN, password, PIN) is replaced as a whole by `***`.
+/// are masked, and the places that [detectSensitiveContent] flags (card
+/// number, IBAN, password or PIN with its value, API key) are replaced by
+/// `***` ([redactSensitiveContent]); the rest of the text stays readable.
 void devLog(String event, [Map<String, Object?> fields = const {}]) {
   if (!devLogEnabled) return;
   final safe = redactSecrets(fields) as Map<String, Object?>;
@@ -67,10 +68,9 @@ String _format(Object value) {
 
 String _text(String raw) {
   final clean = redactSecretValues(raw).replaceAll(RegExp(r'\s+'), ' ').trim();
-  if (clean == redactedValue || detectSensitiveContent(clean) != null) {
-    return redactedValue;
-  }
-  return clean.length <= devLogMaxChars
-      ? clean
-      : '${clean.substring(0, devLogMaxChars)}…(${clean.length})';
+  if (clean == redactedValue) return redactedValue;
+  final safe = redactSensitiveContent(clean, mask: redactedValue);
+  return safe.length <= devLogMaxChars
+      ? safe
+      : '${safe.substring(0, devLogMaxChars)}…(${safe.length})';
 }

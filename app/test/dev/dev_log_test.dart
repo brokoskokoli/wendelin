@@ -1,4 +1,5 @@
 // WP148: Entwicklerlog – ohne Flag nichts, mit Flag Inhalt, Secrets geschwärzt.
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/voice/dev_agent_log.dart';
 import 'package:wendelin/voice/dev_log.dart';
@@ -106,6 +107,26 @@ void main() {
     });
   });
 
+  group('nur die Fundstelle wird geschwärzt', () {
+    for (final (text, secret) in [
+      ('Zahl mit Karte 4111 1111 1111 1111 bitte', '4111'),
+      ('Überweise auf DE89 3704 0044 0532 0130 00 bitte', '0532'),
+      ('Meine PIN 1234 merken', '1234'),
+      ('Nimm den Key sk-ABCDEFGHIJKLMNOPQRSTUVWX heute', 'ABCDEFGH'),
+    ]) {
+      test(text, () {
+        devLogEnabled = true;
+        devLog('x', {'text': text});
+        expect(lines.single, contains('text="'));
+        expect(lines.single, contains('***'));
+        expect(lines.single, isNot(contains(secret)));
+        // Rest bleibt lesbar (Anfang und Ende des Satzes).
+        expect(lines.single, contains(text.split(' ').first));
+        expect(lines.single, contains(text.split(' ').last));
+      });
+    }
+  });
+
   group('DevAgentTrace', () {
     test('Werkzeug, Argumente, Ergebnis und Modelltext sind sichtbar', () {
       devLogEnabled = true;
@@ -129,6 +150,23 @@ void main() {
       expect(lines[4], contains('status="error"'));
       expect(lines[5], contains('text="Fertig."'));
     });
+
+    test(
+      'observe verändert den Strom nicht: kein Warten auf die Flag-Lesung',
+      () {
+        fakeAsync((async) {
+          var refreshed = 0;
+          final got = <AgentEvent>[];
+          const events = [AgentTextDelta('a'), AgentTextComplete()];
+          DevAgentTrace()
+              .observe(() => refreshed++, () => Stream.fromIterable(events))
+              .listen(got.add);
+          expect(refreshed, 1);
+          async.flushMicrotasks(); // kein Timer, keine Datenbank nötig
+          expect(got, events);
+        });
+      },
+    );
 
     test('Abbruch nach 8 Runden: Zusammenfassung aller Runden', () {
       devLogEnabled = true;

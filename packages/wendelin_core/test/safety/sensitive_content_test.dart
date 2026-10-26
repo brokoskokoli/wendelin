@@ -205,4 +205,49 @@ void main() {
     );
     expect(f, isNot(const SensitiveFinding(SensitiveKind.iban)));
   });
+
+  group('redactSensitiveContent', () {
+    for (final (text, expected, secret) in <(String, String, String)>[
+      ('Karte 4111 1111 1111 1111 bitte', 'Karte *** bitte', '4111'),
+      (
+        'Konto DE89 3704 0044 0532 0130 00 und mehr',
+        'Konto *** und mehr',
+        '0532',
+      ),
+      ('Meine PIN 1234 merken', 'Meine *** merken', '1234'),
+      ('Das Passwort für das WLAN ist hunter2, ok?', 'Das *** ok?', 'hunter2'),
+      ('Key sk-ABCDEFGHIJKLMNOPQRSTUVWX nutzen', 'Key *** nutzen', 'ABCDEFGH'),
+      ('Kennwort: geheim99 und Wetter', '*** und Wetter', 'geheim99'),
+    ]) {
+      test(text, () {
+        final out = redactSensitiveContent(text);
+        expect(out, expected);
+        expect(out, isNot(contains(secret)));
+      });
+    }
+
+    test('harmloser Text bleibt unverändert', () {
+      const t = 'Wie wird das Wetter morgen in Berlin, 14 Uhr?';
+      expect(redactSensitiveContent(t), t);
+    });
+
+    test('mehrere Fundstellen, Rest lesbar', () {
+      final out = redactSensitiveContent(
+        'Karte 4111111111111111 und PIN 1234 sowie Licht an',
+      );
+      expect(out, 'Karte *** und *** sowie Licht an');
+    });
+
+    test('eigene Maske', () {
+      expect(redactSensitiveContent('PIN 1234', mask: '#'), '#');
+    });
+
+    test('detectSensitiveContent bleibt unverändert', () {
+      expect(
+        detectSensitiveContent('Karte 4111111111111111')?.kind,
+        SensitiveKind.cardNumber,
+      );
+      expect(detectSensitiveContent('Licht an'), isNull);
+    });
+  });
 }

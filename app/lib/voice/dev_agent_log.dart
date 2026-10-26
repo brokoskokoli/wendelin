@@ -17,19 +17,22 @@ final class DevAgentTrace {
     _rounds.clear();
   }
 
-  /// The events of one request from [run], logged: reads the stored flag
-  /// first ([refresh]), so the switch works without a restart. Typed and
+  /// The events of one request from [run], logged. Only listens along:
+  /// the stream's timing and content stay as they are (no await, no extra
+  /// async gap). The stored flag is re-read in the background ([refresh],
+  /// fire and forget), so the switch works without a restart. Typed and
   /// spoken requests both pass here once, so no line appears twice.
   Stream<AgentEvent> observe(
-    Future<void> Function() refresh,
+    void Function() refresh,
     Stream<AgentEvent> Function() run,
-  ) => Stream.fromFuture(refresh()).asyncExpand((_) {
+  ) {
+    refresh();
     begin();
     return run().map((e) {
       event(e);
       return e;
     });
-  });
+  }
 
   /// An agent event of the running request.
   void event(AgentEvent e) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 // Agent providers: risk policy, undo, audit, session, provider configuration,
 // adapter factory, agent factory and costs. Imported via `providers.dart`.
 
@@ -218,7 +220,7 @@ final agentFactoryProvider = Provider<AgentRunFactory>((ref) {
     ),
     observe: (run) => ref
         .read(devAgentTraceProvider)
-        .observe(() => refreshDevLogFlag(ref), run),
+        .observe(() => unawaited(refreshDevLogFlag(ref)), run),
     fastPath: ref.watch(haFastPathProvider)
         ? haIntegrationOf(ref.watch(integrationsProvider))?.fastPath
         : null,
