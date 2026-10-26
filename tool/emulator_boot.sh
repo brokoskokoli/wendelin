@@ -95,7 +95,9 @@ _emu_start() { # <serial>
       return 1
     fi
     echo "Starte Emulator ${EMU_AVD:-Wendelin_AOSP_35} auf $serial (Log $log)"
-    nohup "$emu" -avd "${EMU_AVD:-Wendelin_AOSP_35}" -port "$port" -no-window -no-audio \
+    # EMU_AUDIO: Audio-Option des Emulators statt -no-audio (z. B. -allow-host-audio für das Host-Mikrofon, WP149).
+    # shellcheck disable=SC2086 # absichtlich ohne Anführungszeichen: kann mehrere Optionen enthalten
+    nohup "$emu" -avd "${EMU_AVD:-Wendelin_AOSP_35}" -port "$port" -no-window ${EMU_AUDIO:--no-audio} \
       -no-boot-anim -no-snapshot-save -gpu swiftshader_indirect >"$log" 2>&1 </dev/null &
     _EMU_STARTED_PID=$!
     disown "$_EMU_STARTED_PID" 2>/dev/null || true

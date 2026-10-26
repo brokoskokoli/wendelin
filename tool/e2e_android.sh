@@ -257,7 +257,7 @@ station_tap_end() { # „Beenden“ (de) bzw. End/Terminer antippen
   adb shell input tap $(((n[0] + n[2]) / 2)) $(((n[1] + n[3]) / 2))
 }
 wake_loop() { # <Durchläufe>
-  local n="$1" i ok=0 answered=0 found log gapmax=-9999 silmax=0 gaps=0 g line m sl zmax=0 z conflicts=0 keeps=0
+  local n="$1" i ok=0 answered=0 found log gapmax=-9999 silmax=0 gaps=0 g line m sl zmax=0 z conflicts=0 keeps=0 mute=0 ml
   log="${WAKE_LOG:-/dev/null}"
   for i in $(seq 1 "$n"); do
     adb shell input keyevent KEYCODE_SLEEP
@@ -273,7 +273,7 @@ wake_loop() { # <Durchläufe>
     if [ "$found" = 1 ]; then
       # Der Satz im Overlay: erkannt, wenn die Antwort des Skripts („Alles klar.“)
       # im Abzug steht (uiautomator liest content-desc).
-      for _ in $(seq 1 60); do
+      for _ in $(seq 1 $([ "${WAKE_HIT:-}" = debug ] && echo 6 || echo 60)); do
         ui_dump | grep -q 'Alles klar' && { answered=$((answered + 1)); break; }
         sleep 1
       done
@@ -282,6 +282,7 @@ wake_loop() { # <Durchläufe>
       if adb logcat -d | grep -q 'mic-ready.*trigger=wakeWord'; then ok=$((ok + 1)); fi
       # WP149: größte Lücke (`ms`) und Stille (`silence`) der Übergabe (nur Zahlen).
       g="$(adb logcat -d | grep -E 'Wendelin/voice: wake-gap ' | tr -d '\r' || true)"
+      z=""
       while read -r line; do
         [ -n "$line" ] || continue
         gaps=$((gaps + 1))
@@ -292,6 +293,11 @@ wake_loop() { # <Durchläufe>
         z="$(grep -oE ' tailZero=[0-9]+' <<<"$line" | head -1 | tr -dc '0-9' || true)"
         [ -n "$z" ] && [ "$z" -gt "$zmax" ] && zmax="$z"
       done <<<"$g"
+      # Konsistenz statt Maximum (der Emulator-Ton ist unzuverlässig, beide Mikrofone können
+      # nur Nullen liefern): ein Rest mit 100 % Nullen ist nur dann „stumm“, wenn das App-Mikrofon
+      # im selben Durchlauf Signal hatte (kleinster `zero` der `mic-level` < 100).
+      ml="$(adb logcat -d | grep -E 'Wendelin/voice: mic-level ' | grep -oE ' zero=[0-9]+' | tr -dc '0-9\n' | sort -n | head -1 || true)"
+      [ "$z" = 100 ] && [ -n "$ml" ] && [ "$ml" -lt 100 ] && mute=$((mute + 1))
       # Beleg der Ursache (nur Zahlen): Konflikt in der Überlappung gesehen und behalten.
       conflicts=$((conflicts + $(adb logcat -d | grep -c 'wake-conflict reason=recording handoff=kept' || true)))
       keeps=$((keeps + $(adb logcat -d | grep -c 'wake-conflict reason=recording handoff=kept action=keep' || true)))
@@ -310,7 +316,7 @@ wake_loop() { # <Durchläufe>
     echo "Durchlauf $i: overlay=$found scenario=$(in_app cat files/e2e/scenario 2>/dev/null)" >>"$log"
   done
   adb shell input keyevent KEYCODE_WAKEUP
-  echo "wakeWord=$ok/$n answered=$answered/$n gaps=$gaps gapMaxMs=$gapmax silenceMaxMs=$silmax tailZeroMaxPct=$zmax conflicts=$conflicts keeps=$keeps" |
+  echo "wakeWord=$ok/$n answered=$answered/$n gaps=$gaps gapMaxMs=$gapmax silenceMaxMs=$silmax tailZeroMaxPct=$zmax tailMute=$mute conflicts=$conflicts keeps=$keeps" |
     adb shell run-as "$PKG" sh -c "'cat > files/e2e/wake-result.txt'"
 }
 host_request() {

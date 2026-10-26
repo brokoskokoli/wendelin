@@ -144,9 +144,12 @@ void main() {
       // und behielt sein Mikrofon (sonst bleibt der Rest bei ~200 ms).
       expect(field('keeps'), greaterThan(0), reason: 'wake-conflict …keep');
       expect(field('conflicts'), field('keeps'), reason: 'nie close');
-      // Der Rest darf nicht stumm sein (Android schaltet eine Doppelaufnahme
-      // ggf. stumm): `silence=0` allein beweist das nicht.
-      expect(field('tailZeroMaxPct'), lessThan(100), reason: 'Rest stumm');
+      // Der Rest darf nicht stumm sein, wenn das App-Mikrofon Signal hat
+      // (Android schaltet eine Doppelaufnahme ggf. stumm): `silence=0` allein
+      // beweist das nicht. Der Emulator-Ton ist unzuverlässig (beide Mikrofone
+      // können nur Nullen liefern), daher Konsistenz statt Maximum: `tailMute`
+      // zählt Durchläufe mit tailZero=100 bei App-Mikrofon mit Signal.
+      expect(field('tailMute'), 0, reason: 'Rest stumm, App-Mikrofon nicht');
       expect(gapMax, lessThan(50), reason: 'Lücke der Übergabe in ms');
       expect(silenceMax, 0, reason: 'keine Stillefüllung (Notfall)');
       // WENDELIN_KEEP: Dienst an lassen (Neustart-Prüfung, WP54).

@@ -56,6 +56,9 @@ interface RecognizerAudioSource {
 /** The microphone (`AudioRecord`, source `VOICE_RECOGNITION`), attributed to the calling app. */
 class MicAudioSource(private val context: Context) : RecognizerAudioSource {
     @Volatile private var running = false
+
+    /** WP149: [stopAndWait] asks for the unfinished chunk to be delivered (see [readChunks]). */
+    @Volatile private var flushOnStop = false
     private var thread: Thread? = null
 
     /** Audio session of the running recording (0 before the start): tells it from foreign ones. */
@@ -88,17 +91,19 @@ class MicAudioSource(private val context: Context) : RecognizerAudioSource {
         sessionId = record.audioSessionId
         running = true
         thread = Thread({
-            val chunk = ByteArray(RecognizerAudioSource.CHUNK_SAMPLES * 2)
             try {
-                while (running) {
-                    var filled = 0
-                    while (running && filled < chunk.size) {
-                        val n = record.read(chunk, filled, chunk.size - filled)
-                        if (n < 0) throw IllegalStateException("AudioRecord.read: $n")
-                        filled += n
-                    }
-                    if (running) onChunk(chunk.copyOf())
-                }
+                readChunks(
+                    reader = object : PcmReader {
+                        override fun read(buf: ByteArray, off: Int, len: Int) = record.read(buf, off, len)
+
+                        override fun readAvailable(buf: ByteArray, off: Int, len: Int) =
+                            record.read(buf, off, len, AudioRecord.READ_NON_BLOCKING)
+                    },
+                    chunkBytes = RecognizerAudioSource.CHUNK_SAMPLES * 2,
+                    running = { running },
+                    flushOnStop = { flushOnStop },
+                    onChunk = onChunk,
+                )
             } catch (e: Throwable) {
                 if (running) onError(e)
             } finally {
@@ -119,6 +124,7 @@ class MicAudioSource(private val context: Context) : RecognizerAudioSource {
      */
     fun stopAndWait(timeoutMs: Long) {
         val t = thread
+        flushOnStop = true
         stop()
         try {
             t?.join(timeoutMs)
@@ -126,6 +132,51 @@ class MicAudioSource(private val context: Context) : RecognizerAudioSource {
             Thread.currentThread().interrupt()
         }
     }
+}
+
+/** What [readChunks] reads from: the `AudioRecord` (or a fake in tests). */
+internal interface PcmReader {
+    /** Blocks until something is read; returns the bytes read, negative on error. */
+    fun read(buf: ByteArray, off: Int, len: Int): Int
+
+    /** Reads only what is buffered right now (no waiting); 0 if nothing, negative on error. */
+    fun readAvailable(buf: ByteArray, off: Int, len: Int): Int
+}
+
+/**
+ * The read loop of [MicAudioSource]: delivers chunks of [chunkBytes] while [running]. WP149: when it
+ * is stopped and [flushOnStop] holds (hand-over to the app), the chunk that was just being filled
+ * is delivered too, topped up with what is buffered, as a shorter chunk of whole samples. Before,
+ * up to 100 ms (the unfinished chunk) were dropped at the stop, so the service's recording ended
+ * before the first frame of the app's microphone and a hole of that size remained.
+ */
+internal fun readChunks(
+    reader: PcmReader,
+    chunkBytes: Int,
+    running: () -> Boolean,
+    flushOnStop: () -> Boolean,
+    onChunk: (ByteArray) -> Unit,
+) {
+    val chunk = ByteArray(chunkBytes)
+    var filled = 0
+    while (running()) {
+        while (running() && filled < chunk.size) {
+            val n = reader.read(chunk, filled, chunk.size - filled)
+            if (n < 0) throw IllegalStateException("AudioRecord.read: $n")
+            filled += n
+        }
+        if (filled == chunk.size && (running() || flushOnStop())) {
+            onChunk(chunk.copyOf())
+            filled = 0
+        }
+    }
+    if (!flushOnStop()) return
+    if (filled < chunk.size) {
+        val n = reader.readAvailable(chunk, filled, chunk.size - filled)
+        if (n > 0) filled += n
+    }
+    val whole = filled and 1.inv()
+    if (whole > 0) onChunk(chunk.copyOf(whole))
 }
 
 /**
