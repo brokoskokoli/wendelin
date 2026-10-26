@@ -136,6 +136,15 @@ void main() {
             .action,
         PolicyAction.deny,
       );
+      // Own texts: a web search is no „Aktion mit Außenwirkung“; the way out
+      // is named (review WP157).
+      expect(
+        p.decide(net, 's', foreignContent: true),
+        PolicyDecision.deny(RiskPolicy.networkLockedReason),
+      );
+      expect(p.decide(send, 's'), PolicyDecision.deny(RiskPolicy.lockedReason));
+      expect(RiskPolicy.networkLockedReason, contains('Neues Thema'));
+      expect(RiskPolicy.networkLockedReason, contains('neu prüfen'));
       expect(p.decide(net, 's'), _allow);
       expect(p.decide(net, 'andere', foreignContent: true), _confirm);
       expect(p.decide(noNet, 's', foreignContent: true), _allow);

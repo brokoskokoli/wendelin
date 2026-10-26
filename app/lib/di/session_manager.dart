@@ -139,7 +139,7 @@ final class SessionManager {
     final at = clock.now();
     _leftAt = at;
     _absenceTimer?.cancel();
-    _absenceTimer = Timer(absenceLimit, end);
+    _absenceTimer = Timer(absenceLimit, beginFresh);
     final store = absence;
     if (store == null) return;
     unawaited(

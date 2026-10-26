@@ -28,6 +28,20 @@ final class AttestationStep {
 
   /// Whether the final status event went out.
   bool emitted;
+
+  /// Whether this step already locked the session (the tool gate and the
+  /// later verification settle the same step).
+  bool locked = false;
+}
+
+/// A run starts on [invoker]: the conversation [sessionId] may end while the
+/// run goes on (window away), but its session lock holds until the returned
+/// function is called (WP157, [SessionLockable.holdSession]).
+void Function() holdRunSession(ToolInvoker invoker, String sessionId) {
+  if (invoker is! SessionLockable) return () {};
+  final lockable = invoker as SessionLockable;
+  lockable.holdSession(sessionId);
+  return () => lockable.releaseSession(sessionId);
 }
 
 /// Connects the run to providers that verify their answers afterwards
@@ -115,7 +129,8 @@ final class AttestationGate {
     _control.throwIfAborted();
     if (report?.status == AttestationStatus.red) {
       final invoker = _invoker;
-      if (invoker is SessionLockable) {
+      if (invoker is SessionLockable && !target.locked) {
+        target.locked = true;
         (invoker as SessionLockable).lockExternal(
           _sessionId,
           profileId: target.profileId,

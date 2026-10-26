@@ -227,7 +227,8 @@ final class WebFetchTool extends IntegrationTool {
   }
 
   @override
-  String describe(ToolArgs args) => 'Webseite lesen: ${_url(args).host}';
+  String describe(ToolArgs args) =>
+      'Webseite lesen: ${ellipsize(_url(args).toString(), 300)}';
 
   @override
   String get fallbackDescription => 'Webseite lesen';

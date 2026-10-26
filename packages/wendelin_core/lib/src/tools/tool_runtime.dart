@@ -73,6 +73,15 @@ abstract interface class SessionLockable {
   /// is the provider whose answer failed (a green recheck of it lifts the
   /// lock). Idempotent.
   void lockExternal(String sessionId, {String? profileId});
+
+  /// A run of [sessionId] starts: the end of the conversation does not lift
+  /// its lock until [releaseSession] (the run goes on in the background
+  /// while the window is away). Counted, so overlapping runs are safe.
+  void holdSession(String sessionId);
+
+  /// The run that called [holdSession] is over; a conversation end that came
+  /// meanwhile now takes effect.
+  void releaseSession(String sessionId);
 }
 
 /// Progress of [ToolInvoker.invokeAll].

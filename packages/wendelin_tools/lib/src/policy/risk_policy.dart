@@ -103,9 +103,19 @@ final class RiskPolicy {
   final SessionLockStore? _store;
   // Session id -> profile whose answer failed ('' = unknown), oldest first.
   final Map<String, String> _locked = {};
-  // The stored locks were unreadable: fail-closed, nothing external runs.
+  // The stored locks were unreadable: fail-closed, every conversation counts
+  // as locked until the first conversation ends ([endSession]).
   bool _storeUnreadable = false;
+  // Runs going on per session ([holdSession]) and sessions whose end waits
+  // for them.
+  final Map<String, int> _holds = {};
+  final Set<String> _endPending = {};
   Future<void> _saving = Future.value();
+  // Changes not yet written: the app and the overlay share the store, so a
+  // save merges these into what is stored instead of replacing it.
+  final Map<String, String> _added = {};
+  final Set<String> _removed = {};
+  final Set<String> _removedProfiles = {};
 
   /// Default security level for a risk level (the recommendation).
   static SecurityLevel defaultLevelFor(RiskLevel risk) => switch (risk) {
@@ -136,6 +146,22 @@ final class RiskPolicy {
   static const lockedReason =
       'Aktionen mit Außenwirkung sind in dieser Sitzung gesperrt, weil die '
       'Antwort des Anbieters nicht verifiziert werden konnte.';
+
+  /// Text given to the model when a tool with a network target is refused
+  /// after foreign content in a locked conversation (ADR 0023).
+  static const networkLockedReason =
+      'Netzzugriffe sind in dieser Unterhaltung gesperrt: Die Antwort des '
+      'Anbieters konnte nicht verifiziert werden und es liegen fremde '
+      'Inhalte vor. Sag dem Nutzer in seiner Sprache kurz, dass er ein '
+      '„Neues Thema“ beginnen oder den Anbieter neu prüfen kann.';
+
+  /// Text given to the model when the stored session locks cannot be read:
+  /// external tools and network tools after foreign content stay refused.
+  static const storeUnreadableReason =
+      'Der Speicher der Sitzungssperren ist nicht lesbar, deshalb sind '
+      'Aktionen mit Außenwirkung und Netzzugriffe nach fremden Inhalten '
+      'vorsichtshalber gesperrt. Sag dem Nutzer in seiner Sprache kurz, dass '
+      'ein „Neues Thema“ das behebt.';
 
   /// Text given to the model when the call needs the unlocked device
   /// (WP154 L2). The result summary is „Entsperren nötig“.
@@ -187,6 +213,9 @@ final class RiskPolicy {
   void lockExternal(String sessionId, {String? profileId}) {
     _locked.remove(sessionId); // newest last
     _locked[sessionId] = profileId ?? '';
+    _added.remove(sessionId); // newest last
+    _added[sessionId] = profileId ?? '';
+    _removed.remove(sessionId);
     while (_locked.length > maxLockedSessions) {
       _locked.remove(_locked.keys.first);
     }
@@ -198,26 +227,101 @@ final class RiskPolicy {
   bool isExternalLocked(String sessionId) =>
       _storeUnreadable || _locked.containsKey(sessionId);
 
-  /// The conversation [sessionId] ended: its lock is gone.
+  /// A run of [sessionId] starts. While a run is held, the end of its
+  /// conversation ([endSession]) does not lift the lock: the run goes on in
+  /// the background when the window leaves the screen, and its next round
+  /// must not find the conversation unlocked. Counted.
+  void holdSession(String sessionId) =>
+      _holds[sessionId] = (_holds[sessionId] ?? 0) + 1;
+
+  /// The run that called [holdSession] is over; a postponed
+  /// [endSession] now takes effect.
+  void releaseSession(String sessionId) {
+    final n = (_holds[sessionId] ?? 0) - 1;
+    if (n > 0) {
+      _holds[sessionId] = n;
+      return;
+    }
+    _holds.remove(sessionId);
+    if (_endPending.remove(sessionId)) _applyEnd(sessionId);
+  }
+
+  /// The conversation [sessionId] ended: its lock is gone (after its last
+  /// running run, [holdSession]). The first end after an unreadable store
+  /// also ends that state: from then on only the locks set since count, and
+  /// the broken entry is overwritten.
   void endSession(String sessionId) {
-    if (_locked.remove(sessionId) != null) _persist();
+    if (_holds.containsKey(sessionId)) {
+      _endPending.add(sessionId);
+      return;
+    }
+    _applyEnd(sessionId);
+  }
+
+  void _applyEnd(String sessionId) {
+    final had = _locked.remove(sessionId) != null;
+    _added.remove(sessionId);
+    _removed.add(sessionId);
+    if (_storeUnreadable) {
+      _storeUnreadable = false;
+      _persist();
+    } else if (had) {
+      _persist();
+    }
   }
 
   /// The provider [profileId] was checked green again („neu prüfen“): the
   /// locks its answers caused are lifted.
   void unlockProfile(String profileId) {
-    final before = _locked.length;
     _locked.removeWhere((_, p) => p == profileId);
-    if (_locked.length != before) _persist();
+    _added.removeWhere((_, p) => p == profileId);
+    _removedProfiles.add(profileId);
+    // Also without a lock of our own: the other engine may have stored one.
+    _persist();
   }
 
   void _persist() {
     final store = _store;
     if (store == null) return;
     final snapshot = Map<String, String>.of(_locked);
+    final added = Map<String, String>.of(_added);
+    final removed = Set<String>.of(_removed);
+    final profiles = Set<String>.of(_removedProfiles);
+    _added.clear();
+    _removed.clear();
+    _removedProfiles.clear();
     // The lock in memory counts either way; a failing write only loses it
     // for the next start.
-    _saving = _saving.then((_) => store.save(snapshot)).catchError((_) {});
+    _saving = _saving
+        .then((_) => _merge(store, snapshot, added, removed, profiles))
+        .catchError((_) {});
+  }
+
+  // Writes our changes on top of what is stored now (the other engine may
+  // have locked or ended sessions since we loaded). An unreadable store is
+  // overwritten with everything we know.
+  Future<void> _merge(
+    SessionLockStore store,
+    Map<String, String> snapshot,
+    Map<String, String> added,
+    Set<String> removed,
+    Set<String> profiles,
+  ) async {
+    Map<String, String> base;
+    try {
+      base = Map.of(await store.load());
+      base.removeWhere((id, p) => removed.contains(id) || profiles.contains(p));
+      for (final e in added.entries) {
+        base.remove(e.key);
+        base[e.key] = e.value;
+      }
+    } on Object {
+      base = snapshot;
+    }
+    while (base.length > maxLockedSessions) {
+      base.remove(base.keys.first);
+    }
+    await store.save(base);
   }
 
   /// The decision for running [tool] in [sessionId] in the context
@@ -243,15 +347,21 @@ final class RiskPolicy {
     bool foreignContent = false,
   }) {
     if (tool.risk == RiskLevel.external && isExternalLocked(sessionId)) {
-      return PolicyDecision.deny(lockedReason);
+      return PolicyDecision.deny(
+        _storeUnreadable && !_locked.containsKey(sessionId)
+            ? storeUnreadableReason
+            : lockedReason,
+      );
     }
     final mustAsk = foreignContent && tool is! NoNetworkTarget;
     // Locked conversation + foreign content: a network tool is denied for
     // good, also after a later green receipt (the stricter wins).
-    if (mustAsk && _locked.isNotEmpty || _storeUnreadable) {
-      if (isExternalLocked(sessionId)) {
-        return PolicyDecision.deny(lockedReason);
-      }
+    if (mustAsk && isExternalLocked(sessionId)) {
+      return PolicyDecision.deny(
+        _storeUnreadable && !_locked.containsKey(sessionId)
+            ? storeUnreadableReason
+            : networkLockedReason,
+      );
     }
     final override = _overrides[tool.name];
     if (access.locked) {

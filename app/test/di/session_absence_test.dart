@@ -90,6 +90,26 @@ void main() {
     });
   });
 
+  test('nach dem Timer-Ende beginnt ensure() eine neue Sitzung', () {
+    // Review WP157: end() alone would let the 5-min window of the database
+    // hand the same id (lock, private mode, unlocked tools gone) back.
+    fakeAsync((async) {
+      final m = make();
+      String? first;
+      String? second;
+      m.ensure().then((v) => first = v);
+      async.flushMicrotasks();
+      m.leftScreen();
+      async.elapse(const Duration(minutes: 1, seconds: 1));
+      expect(ended, [first]);
+      m.ensure().then((v) => second = v);
+      async.flushMicrotasks();
+      expect(second, isNotNull);
+      expect(second, isNot(first));
+      m.dispose();
+    });
+  });
+
   test('zweites hidden/paused behält den ersten Zeitpunkt', () async {
     final m = make();
     addTearDown(m.dispose);

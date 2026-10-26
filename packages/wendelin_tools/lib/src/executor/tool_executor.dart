@@ -79,6 +79,12 @@ final class ToolExecutor
   void lockExternal(String sessionId, {String? profileId}) =>
       policy.lockExternal(sessionId, profileId: profileId);
 
+  @override
+  void holdSession(String sessionId) => policy.holdSession(sessionId);
+
+  @override
+  void releaseSession(String sessionId) => policy.releaseSession(sessionId);
+
   PolicyDecision _decide(Tool tool, ToolContext ctx) => policy.decide(
     tool,
     ctx.sessionId,

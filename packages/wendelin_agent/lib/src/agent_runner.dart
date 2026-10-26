@@ -143,6 +143,7 @@ final class AgentRunner implements AgentRun, RunConfig {
   AgentConfig get _config => contextBuilder.config;
 
   _Run? _active;
+  void Function()? _release; // session hold of the run (WP157)
 
   @override
   Stream<AgentEvent> run(UserInput input) {
@@ -156,7 +157,10 @@ final class AgentRunner implements AgentRun, RunConfig {
     }
     final state = _Run(this, input);
     _active = state;
-    state.controller.onListen = () => unawaited(state.drive());
+    state.controller.onListen = () {
+      _release = holdRunSession(invoker, sessionId);
+      unawaited(state.drive());
+    };
     state.controller.onCancel = () => state.abort(AgentErrorKind.cancelled);
     return state.controller.stream;
   }
@@ -168,6 +172,8 @@ final class AgentRunner implements AgentRun, RunConfig {
   /// start the next run right away.
   void _finished(_Run state) {
     if (identical(_active, state)) _active = null;
+    _release?.call();
+    _release = null;
   }
 }
 

@@ -31,4 +31,7 @@ Zwei Lücken aus dem Projekt-Review vom 2026-10-26:
 
 ## Folgen
 - Abweichungen vom Konzept (Orchestrator trägt ein): K122 Sperre je Sitzung statt je Provider; Fremd-Einstufung neu (lockert WP41); Netzziel-Rückfrage.
-- Beide Engines (App, Overlay) speichern je ihren Snapshot, der letzte Schreiber gewinnt. Sperr-Einträge beendeter Sitzungen bleiben bis zum Limit stehen, wenn die App beim Ende nicht lief.
+- Beide Engines (App, Overlay) teilen den Speicher; Speichern lädt und führt zusammen (nur die eigenen Änderungen werden auf den gespeicherten Stand gelegt, kein „letzter Schreiber gewinnt“). Sperr-Einträge beendeter Sitzungen bleiben bis zum Limit stehen, wenn die App beim Ende nicht lief.
+- Sitzungsende bei laufendem Lauf: Der Lauf hält seine Sitzung (`holdSession`/`releaseSession` am Invoker); ein Ende währenddessen wird bis zum Laufende aufgeschoben, die Sperre hält also für den ganzen Lauf. Der Hintergrund-Timer nutzt `beginFresh`, damit das 5-min-Fenster die Sitzungs-Id nicht zurückgibt.
+- Unlesbarer Speicher: gesperrt sind nur `external`-Tools und Netz-Tools nach Fremdem (eigene Begründung), lokale Tools laufen. Erholung: das erste Sitzungsende danach hebt den Zustand auf und überschreibt den kaputten Eintrag; Rest-Risiko: eine alte, in der kaputten Datei gesperrte Sitzung einer anderen Engine kann danach noch laufen (Sitzungen enden nach höchstens 5 min).
+- Die Begründungstexte der Sperren sind Modelltext (wie `lockedReason`), kein UI-Text; sie weisen das Modell an, in der Sprache des Nutzers den Ausweg „Neues Thema“ bzw. „Anbieter neu prüfen“ zu nennen.

@@ -30,6 +30,11 @@ final class _PlainInvoker implements ToolInvoker {
 
 final class _LockingInvoker extends _PlainInvoker implements SessionLockable {
   final locks = <(String, String?)>[];
+  final held = <String>[];
+  @override
+  void holdSession(String sessionId) => held.add('+$sessionId');
+  @override
+  void releaseSession(String sessionId) => held.add('-$sessionId');
   @override
   void lockExternal(String sessionId, {String? profileId}) =>
       locks.add((sessionId, profileId));
@@ -62,6 +67,34 @@ void main() {
 
     test('rot: lockExternal mit Sitzungs- und Profil-Id', () async {
       expect((await run(AttestationStatus.red)).locks, [('sess-1', 'phala')]);
+    });
+
+    test('dieselbe Stufe zweimal abgewartet: genau eine Sperre', () async {
+      // The tool gate and the later verification settle the same step.
+      final locking = _LockingInvoker();
+      final report = Completer<AttestationReport?>()
+        ..complete(
+          const AttestationReport(
+            logId: 'l',
+            status: AttestationStatus.red,
+            detail: 'x',
+          ),
+        );
+      final provider = VerifyingFake(FakeLlmProvider([]), report);
+      final gate = AttestationGate(_Control(), 'sess-1', locking);
+      final step = gate.begin(
+        provider,
+        ChatRequest(
+          messages: const [],
+          model: 'm',
+          maxTokens: 1,
+          systemPrompt: '',
+        ),
+        profileId: 'phala',
+      );
+      await gate.settle(step);
+      await gate.settle(step);
+      expect(locking.locks, [('sess-1', 'phala')]);
     });
 
     test('grün, gelb und ohne Ergebnis sperren nicht', () async {
