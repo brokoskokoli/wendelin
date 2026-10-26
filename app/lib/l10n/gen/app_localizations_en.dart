@@ -2060,6 +2060,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'A lock, alarm, gate or door can then be operated without a confirmation, at level A even while the device is locked. The responsibility is yours.';
 
   @override
+  String get levelWarnPersonalMessage =>
+      'This tool reads or changes personal content. At level A it runs even while the device is locked, with any voice; at level B with a recognized voice (a recording can fool it). The responsibility is yours.';
+
+  @override
   String get levelWarnTitle => 'Less protection?';
 
   @override

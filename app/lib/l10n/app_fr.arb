@@ -681,6 +681,7 @@
   "levelSummaryScene": "par défaut : selon les membres",
   "levelWarnConfirm": "Modifier quand même",
   "levelWarnDeviceMessage": "Une serrure, une alarme, un portail ou une porte pourra alors être commandé sans confirmation, au niveau A même appareil verrouillé. La responsabilité vous incombe.",
+  "levelWarnPersonalMessage": "Cet outil lit ou modifie des contenus personnels. Au niveau A, il s’exécute même appareil verrouillé, avec n’importe quelle voix ; au niveau B avec une voix reconnue (un enregistrement peut tromper). La responsabilité vous incombe.",
   "levelWarnTitle": "Moins de protection ?",
   "levelWarnToolMessage": "Cet outil agit vers l’extérieur et pourra alors s’exécuter sans confirmation, au niveau A même appareil verrouillé. La responsabilité vous incombe.",
   "listsAccessLost": "Plus d’accès – choisissez à nouveau le fichier",

@@ -681,6 +681,7 @@
   "levelSummaryScene": "default: depends on the members",
   "levelWarnConfirm": "Change anyway",
   "levelWarnDeviceMessage": "A lock, alarm, gate or door can then be operated without a confirmation, at level A even while the device is locked. The responsibility is yours.",
+  "levelWarnPersonalMessage": "This tool reads or changes personal content. At level A it runs even while the device is locked, with any voice; at level B with a recognized voice (a recording can fool it). The responsibility is yours.",
   "levelWarnTitle": "Less protection?",
   "levelWarnToolMessage": "This tool acts on the outside world and can then run without a confirmation, at level A even while the device is locked. The responsibility is yours.",
   "listsAccessLost": "No access any more – choose the file again",

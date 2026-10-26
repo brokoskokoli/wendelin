@@ -126,7 +126,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
         ),
         // The Home Assistant call tools take the level of the device.
         if (!toolLevelPerDevice(tool.name))
-          _picker(context, tool, prefs, update)
+          _picker(context, integration, tool, prefs, update)
         else if (prefs.alwaysConfirm.contains(tool.name))
           _legacyConfirm(context, tool, prefs, update),
       ],
@@ -167,6 +167,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
 
   Widget _picker(
     BuildContext context,
+    Integration integration,
     Tool tool,
     ToolPrefs prefs,
     void Function(ToolPrefs next) update,
@@ -178,11 +179,14 @@ class IntegrationDetailScreen extends ConsumerWidget {
       name: tool.name,
       level: level,
       isDefault: prefs.levelOf(tool.name) == null,
-      // Loosening a tool with outside effect gets the hint once.
-      warnLevels: tool.risk == RiskLevel.external
-          ? const {SecurityLevel.a, SecurityLevel.b, SecurityLevel.c}
-          : const {},
-      warnMessage: context.l10n.levelWarnToolMessage,
+      // Loosening gets the hint once (WP154): a tool with outside effect at
+      // A to C; a tool of a sensitive integration (it reads or changes
+      // personal content: calendar, contacts, memory, notes, messages …) at
+      // A or B, where a locked device or a recorded voice could use it.
+      warnLevels: warnLevelsOf(tool, integration),
+      warnMessage: tool.risk == RiskLevel.external
+          ? context.l10n.levelWarnToolMessage
+          : context.l10n.levelWarnPersonalMessage,
       onChanged: (l) =>
           update(prefs.withLevel(tool.name, l == base ? null : l)),
     );
@@ -275,4 +279,16 @@ class SensitiveLevelSection extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// Levels of [tool] that need the hint before they are set (WP154): a tool
+/// with outside effect warns at A, B and C; a tool of a [Integration.sensitive]
+/// integration (personal content) at A and B. Others (flashlight, harmless
+/// devices) never warn.
+Set<SecurityLevel> warnLevelsOf(Tool tool, Integration integration) {
+  if (tool.risk == RiskLevel.external) {
+    return const {SecurityLevel.a, SecurityLevel.b, SecurityLevel.c};
+  }
+  if (integration.sensitive) return const {SecurityLevel.a, SecurityLevel.b};
+  return const {};
 }

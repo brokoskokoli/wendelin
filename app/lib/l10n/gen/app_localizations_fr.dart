@@ -2092,6 +2092,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Une serrure, une alarme, un portail ou une porte pourra alors être commandé sans confirmation, au niveau A même appareil verrouillé. La responsabilité vous incombe.';
 
   @override
+  String get levelWarnPersonalMessage =>
+      'Cet outil lit ou modifie des contenus personnels. Au niveau A, il s’exécute même appareil verrouillé, avec n’importe quelle voix ; au niveau B avec une voix reconnue (un enregistrement peut tromper). La responsabilité vous incombe.';
+
+  @override
   String get levelWarnTitle => 'Moins de protection ?';
 
   @override

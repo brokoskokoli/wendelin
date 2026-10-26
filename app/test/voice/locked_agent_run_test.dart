@@ -142,6 +142,46 @@ void main() {
     });
 
     test(
+      'ein Gate über mehrere Anfragen: die Stimme wird nie gemerkt',
+      () async {
+        // Wie die App: ein Gate je Pipeline (`voice_controller.dart`).
+        final g = gate();
+        final inputs = [
+          UserInput(
+            text: 'Licht an',
+            source: InputSource.voice,
+            speakerId: 'p1',
+          ),
+          UserInput(text: 'Licht an', source: InputSource.voice),
+          UserInput(text: 'Licht an', speakerId: 'p1'),
+          UserInput(
+            text: 'Licht an',
+            source: InputSource.voice,
+            speakerId: 'p1',
+          ),
+          UserInput(text: 'Licht an', source: InputSource.voice, speakerId: ''),
+        ];
+        for (final input in inputs) {
+          await g.run(input).toList();
+          await g
+              .run(
+                UserInput(
+                  text: 'Taschenlampe an',
+                  source: input.source,
+                  speakerId: input.speakerId,
+                ),
+              )
+              .toList();
+        }
+        const known = AccessContext(locked: true, speakerRecognized: true);
+        const stranger = AccessContext.lockedUnknownVoice;
+        final expected = [known, stranger, stranger, known, stranger];
+        expect(access, expected);
+        expect(commandAccess, expected);
+      },
+    );
+
+    test(
       'Fehler beim Bestimmen des Laufs: fail-closed wie kein Lauf',
       () async {
         final events = await ask(gate(throws: true));

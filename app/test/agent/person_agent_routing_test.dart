@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
+import 'package:wendelin/di/locked_scope.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/routing.dart';
 import 'package:wendelin/voice/speaker/person_storage.dart';
@@ -162,5 +163,70 @@ void main() {
     expect(identical(config.withDefaultProfile(null), config), isTrue);
     expect(identical(config.withDefaultProfile('phala'), config), isTrue);
     expect(identical(config.withDefaultProfile('weg'), config), isTrue);
+  });
+
+  group('gesperrt (WP154 L3)', () {
+    const lockedScope = LockedScope(
+      access: AccessContext.lockedUnknownVoice,
+      tools: {},
+    );
+
+    Future<void> askLocked(String text, {String? speaker}) async {
+      final controller = c.read(agentControllerProvider.notifier);
+      await controller
+          .submit(
+            UserInput(
+              text: text,
+              source: InputSource.voice,
+              speakerId: speaker,
+            ),
+            locked: lockedScope,
+          )
+          .toList();
+      await controller.idle;
+    }
+
+    Future<void> addOtherPerson() async {
+      await SecretSpeakerProfileStore(env.secrets)
+          .save(testProfile('pb', 'Bernd'));
+      await SecretPersonSettingsStore(env.secrets).save(
+        const PersonSettings(
+          personId: 'pb',
+          address: 'Bernd',
+          agentProfileId: 'phala',
+        ),
+      );
+    }
+
+    test('eine erkannte andere Person beendet die offene Unterhaltung nicht, '
+        'sie läuft im eigenen Umfang', () async {
+      await setUp0();
+      await addOtherPerson();
+      await ask('Wie spät ist es?', speaker: 'pa');
+      final open = c.read(sessionManagerProvider).currentId;
+      expect(open, isNotNull);
+      await askLocked('Licht an', speaker: 'pb');
+      expect(c.read(sessionManagerProvider).currentId, open);
+      expect(llm['phala']!.requests, hasLength(1), reason: 'Umfang von pb');
+      expect(llm['claude']!.requests, hasLength(1));
+      // Danach geht die Unterhaltung von pa weiter, in ihrem Umfang.
+      await ask('Und jetzt?', speaker: 'pa');
+      expect(c.read(sessionManagerProvider).currentId, open);
+      expect(llm['claude']!.requests, hasLength(2));
+      expect(llm['phala']!.requests, hasLength(1));
+    });
+
+    test('eine fremde Stimme läuft nicht im Umfang der offenen Unterhaltung, '
+        'und die bleibt offen', () async {
+      await setUp0();
+      await ask('Wie spät ist es?', speaker: 'pa');
+      final open = c.read(sessionManagerProvider).currentId;
+      await askLocked('Licht an');
+      expect(llm['claude']!.requests, hasLength(1), reason: 'nicht pa');
+      expect(llm['phala']!.requests, hasLength(1), reason: 'Standard');
+      expect(c.read(sessionManagerProvider).currentId, open);
+      await ask('Und jetzt?', speaker: 'pa');
+      expect(llm['claude']!.requests, hasLength(2));
+    });
   });
 }

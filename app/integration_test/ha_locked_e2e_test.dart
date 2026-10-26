@@ -27,6 +27,7 @@ import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin_core/fakes.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/fakes.dart';
 import 'package:wendelin_voice/fakes.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
@@ -59,6 +60,20 @@ ToolCallBlock _call(String id, String entity, String service) => ToolCallBlock(
   argumentsJson: '{"entity":"$entity","service":"$service"}',
 );
 
+/// Ausgangszustand des (je Datei einmal gestarteten) Fake-HA, unabhängig von
+/// der Testreihenfolge: Lichter an, Schloss zu. Wird vor der Aktion geprüft.
+Future<void> _resetHa(HaApi api) async {
+  for (final id in ['light.kitchen', 'light.living']) {
+    await api.callService((
+      domain: 'light',
+      service: 'turn_on',
+      data: {'entity_id': id},
+    ));
+    expect((await api.state(id)).state, 'on', reason: 'Ausgangszustand $id');
+  }
+  expect((await api.state('lock.front')).state, 'locked');
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -87,6 +102,7 @@ void main() {
         await haConnect(api: api, store: store, address: _url, token: _token),
         isNull,
       );
+      await _resetHa(api);
       final all = await api.entities();
       // Küche A, Wohnzimmer C, Schloss ohne Wahl (Standard D).
       final levels = {
@@ -178,6 +194,7 @@ void main() {
           await haConnect(api: api, store: store, address: _url, token: _token),
           isNull,
         );
+        await _resetHa(api);
         final all = await api.entities();
         await store.save([
           for (final e in all)

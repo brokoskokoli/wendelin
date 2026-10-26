@@ -3604,6 +3604,12 @@ abstract class AppLocalizations {
   /// **'Schloss, Alarm, Tor oder Tür lassen sich dann ohne Bestätigung bedienen, bei Stufe A sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.'**
   String get levelWarnDeviceMessage;
 
+  /// No description provided for @levelWarnPersonalMessage.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieses Tool liest oder verändert persönliche Inhalte. Bei Stufe A läuft es sogar bei gesperrtem Gerät mit jeder Stimme, bei Stufe B mit einer erkannten Stimme (eine Aufnahme kann täuschen). Die Verantwortung liegt bei dir.'**
+  String get levelWarnPersonalMessage;
+
   /// No description provided for @levelWarnTitle.
   ///
   /// In de, this message translates to:

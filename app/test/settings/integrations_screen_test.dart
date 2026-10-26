@@ -266,6 +266,69 @@ void main() {
     expect(stored.alwaysConfirm, isEmpty);
   });
 
+  group('Hinweis beim Lockern (WP154 L3)', () {
+    Future<(ProviderContainer, Future<void> Function(String, String))> open(
+      WidgetTester tester,
+      String id,
+      String title,
+    ) async {
+      final c = await pumpIntegrations(tester, TestEnv(enabled: {id}));
+      await tester.tap(find.text(title));
+      await tester.pumpAndSettle();
+      Future<void> pick(String tool, String level) async {
+        final l = find.byKey(ValueKey('level_${tool}_$level'));
+        if (l.evaluate().isEmpty) {
+          final details = find.byKey(ValueKey('levelDetails_$tool'));
+          await tester.ensureVisible(details);
+          await tester.tap(details);
+          await tester.pumpAndSettle();
+        }
+        await tester.ensureVisible(l);
+        await tester.tap(l);
+        await tester.pumpAndSettle();
+      }
+
+      return (c, pick);
+    }
+
+    testWidgets('lesendes Tool einer sensiblen Integration: A und B warnen, '
+        'C nicht', (tester) async {
+      final (c, pick) = await open(tester, 'calendar', 'Kalender');
+      const tool = 'calendar__list_events';
+      await pick(tool, 'b');
+      expect(find.text('Weniger Schutz?'), findsOneWidget);
+      expect(find.textContaining('persönliche Inhalte'), findsOneWidget);
+      await tester.tap(find.text('Abbrechen'));
+      await tester.pumpAndSettle();
+      expect(c.read(toolPrefsProvider).levelOf(tool), isNull);
+
+      await tester.tap(find.byKey(const ValueKey('level_${tool}_b')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Trotzdem ändern'));
+      await tester.pumpAndSettle();
+      expect(c.read(toolPrefsProvider).levelOf(tool), 'b');
+
+      await pick(tool, 'a');
+      expect(find.text('Weniger Schutz?'), findsOneWidget);
+      await tester.tap(find.text('Trotzdem ändern'));
+      await tester.pumpAndSettle();
+      expect(c.read(toolPrefsProvider).levelOf(tool), 'a');
+
+      await pick(tool, 'c');
+      expect(find.text('Weniger Schutz?'), findsNothing);
+      // C ist der Standard eines lesenden Tools: nichts gespeichert.
+      expect(c.read(toolPrefsProvider).levelOf(tool), isNull);
+    });
+
+    testWidgets('Taschenlampe (nicht sensibel, ohne Außenwirkung): kein '
+        'Hinweis', (tester) async {
+      final (c, pick) = await open(tester, 'flashlight', 'Taschenlampe');
+      await pick('flashlight__on', 'b');
+      expect(find.text('Weniger Schutz?'), findsNothing);
+      expect(c.read(toolPrefsProvider).levelOf('flashlight__on'), 'b');
+    });
+  });
+
   testWidgets('Detail: Stufe für sensible Integrationen', (tester) async {
     final env = TestEnv(enabled: const {'calendar'});
     final c = await pumpIntegrations(tester, env);

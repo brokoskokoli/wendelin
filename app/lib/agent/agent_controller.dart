@@ -292,7 +292,7 @@ final class AgentController extends Notifier<ConversationState> {
       // The first request after start waits until every integration was
       // checked, so its active tools are offered.
       await ref.read(toolRegistryReadyProvider.future);
-      (sessionId, scope) = await _sessionFor(input.speakerId);
+      (sessionId, scope) = await _sessionFor(input.speakerId, locked != null);
     } on Object catch (e, stack) {
       _report(e, stack);
       _finishWithNotice(NoticeKind.error, uiTexts(ref).agentNoticeStartFailed);
@@ -348,10 +348,13 @@ final class AgentController extends Notifier<ConversationState> {
   /// gets a new conversation (no history); everything else continues the
   /// open one in its scope. After an app restart the scope comes from the
   /// person stored with the conversation; unreadable or deleted: new one.
-  Future<(String, PersonScope)> _sessionFor(String? speakerId) async {
+  /// [locked] (WP154 L3): no session change, no remembered scope; the
+  /// request runs in the scope of its own speaker only (unknown = standard).
+  Future<(String, PersonScope)> _sessionFor(String? who, bool locked) async {
     final sessions = ref.read(sessionManagerProvider);
     final resolver = ref.read(personScopeResolverProvider);
-    final requested = await resolver.scopeOf(speakerId);
+    final requested = await resolver.scopeOf(who);
+    if (locked) return (await sessions.ensure(), requested);
     bool clashes(PersonScope open) =>
         !requested.isStandard && open.personId != requested.personId;
 
@@ -369,10 +372,7 @@ final class AgentController extends Notifier<ConversationState> {
     try {
       final conversations = sessions.conversations;
       if ((await conversations.messages(id)).isEmpty) {
-        return await _adopt(
-          id,
-          requested,
-        ); // new (or expired): the speaker's own
+        return await _adopt(id, requested); // new/expired: the speaker's own
       }
       final stored = await conversations.sessionPerson(id);
       final scope = stored == null
