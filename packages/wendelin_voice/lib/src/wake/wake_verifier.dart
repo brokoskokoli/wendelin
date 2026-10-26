@@ -18,6 +18,13 @@ abstract interface class WakeVerifier {
   Future<bool> confirm(Int16List pcm);
 }
 
+/// WP155: a verifier that can tell the numbers of its last verdict (the
+/// developer archive stores them; no text, no audio).
+abstract interface class VerdictDetail {
+  /// Numbers and codes of the last verdict (`score`, `thr`), empty if none.
+  Map<String, Object?> get lastDetail;
+}
+
 /// Spellings of „Wendelin“ that count as the wake word after folding
 /// (`foldForMatch`): the name, common mis-hearings and splits.
 const wakeWordSpellings = [

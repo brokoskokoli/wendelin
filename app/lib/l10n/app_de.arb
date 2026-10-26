@@ -1,5 +1,46 @@
 {
   "@@locale": "de",
+  "devArchiveDelete": "Archiv löschen",
+  "devArchiveDeleteMessage": "Alle gesammelten Weckwort-Aufnahmen ({cases} Einträge, {size}) werden gelöscht. Das lässt sich nicht rückgängig machen.",
+  "@devArchiveDeleteMessage": {
+    "placeholders": {
+      "cases": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "devArchiveDeleteTitle": "Archiv löschen?",
+  "devArchiveDeleteToo": "Mitlöschen",
+  "devArchiveDeleted": "Archiv gelöscht",
+  "devArchiveEmpty": "Noch keine Einträge",
+  "devArchiveKeep": "Behalten",
+  "devArchiveOffMessage": "Die kurzlebigen Aufnahmen sind gelöscht. Das Weckwort-Archiv ({cases} Einträge, {size}) kann bleiben oder mit gelöscht werden.",
+  "@devArchiveOffMessage": {
+    "placeholders": {
+      "cases": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "devArchiveOffTitle": "Weckwort-Archiv mitlöschen?",
+  "devArchiveSummary": "{cases} Einträge, {size}",
+  "@devArchiveSummary": {
+    "placeholders": {
+      "cases": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "devArchiveTitle": "Weckwort-Archiv",
   "agentNoticeCancelled": "Abgebrochen.",
   "agentNoticeGpuFailed": "GPU-Prüfung fehlgeschlagen. Details im Prüfprotokoll.",
   "agentNoticeGpuNoEvidence": "Dieses Modell liefert keinen GPU-Nachweis. Tippe auf Ohne GPU-Prüfung senden.",

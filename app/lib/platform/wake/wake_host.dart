@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../voice/dev_archive.dart';
 import '../../voice/dev_audio.dart';
 import '../../voice/dev_log.dart';
 import '../../voice/voice_log.dart';
@@ -178,6 +179,15 @@ final class WakeHost {
     WakeWordEngine engine, {
     required bool verify,
   }) async {
+    final band = wakeBandFor(station: _station);
+    devArchiveSetInfo('idle', {
+      'mode': 'idle',
+      'detector': _detector.name,
+      'station': _station,
+      'verify': verify,
+      'verify_from': band.verifyFrom,
+      'accept_from': band.acceptFrom,
+    });
     final listener = WakeWordListener(
       audio: audio,
       engine: _LoggingEngine(engine, _detector, verify: verify),
@@ -377,7 +387,7 @@ final class WakeHost {
 const wakePreRoll = Duration(milliseconds: 2500);
 
 /// Logs every stage 1 candidate: score and rule, nothing else.
-final class _LoggingEngine implements WakeWordEngine {
+final class _LoggingEngine implements WakeWordEngine, ScoringWakeEngine {
   _LoggingEngine(this.inner, this.detector, {required this.verify});
 
   final WakeWordEngine inner;
@@ -389,6 +399,12 @@ final class _LoggingEngine implements WakeWordEngine {
 
   @override
   Future<void> open(List<KeywordSpec> keywords) => inner.open(keywords);
+
+  // WP155: the window scores of the inner engine go to the listener.
+  @override
+  set scoreSink(void Function(int endSample, double score)? sink) {
+    if (inner case final ScoringWakeEngine e) e.scoreSink = sink;
+  }
 
   @override
   Future<List<WakeWordHit>> accept(Int16List frame) async {
@@ -421,13 +437,18 @@ final class _LoggingEngine implements WakeWordEngine {
 
 /// Logs the verdict of stage 2 (`ok`, `no`, or `skip` if it could not
 /// decide, which counts as not confirmed).
-final class _LoggingVerifier implements WakeEndAwareVerifier {
+final class _LoggingVerifier implements WakeEndAwareVerifier, VerdictDetail {
   _LoggingVerifier(this.inner);
 
   final WakeVerifier inner;
 
   @override
   String get kind => inner.kind;
+
+  // WP155: the numbers of the inner verifier (B) for the wake archive.
+  @override
+  Map<String, Object?> get lastDetail =>
+      inner is VerdictDetail ? (inner as VerdictDetail).lastDetail : const {};
 
   @override
   Future<bool> confirm(Int16List pcm) => confirmAt(pcm, -1);

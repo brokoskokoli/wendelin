@@ -1,5 +1,46 @@
 {
   "@@locale": "fr",
+  "devArchiveDelete": "Supprimer l'archive",
+  "devArchiveDeleteMessage": "Tous les enregistrements collectés du mot d'éveil ({cases} entrées, {size}) seront supprimés. Cette action est irréversible.",
+  "@devArchiveDeleteMessage": {
+    "placeholders": {
+      "cases": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "devArchiveDeleteTitle": "Supprimer l'archive ?",
+  "devArchiveDeleteToo": "Supprimer aussi",
+  "devArchiveDeleted": "Archive supprimée",
+  "devArchiveEmpty": "Aucune entrée pour l'instant",
+  "devArchiveKeep": "Conserver",
+  "devArchiveOffMessage": "Les enregistrements éphémères sont supprimés. L'archive du mot d'éveil ({cases} entrées, {size}) peut rester ou être supprimée aussi.",
+  "@devArchiveOffMessage": {
+    "placeholders": {
+      "cases": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "devArchiveOffTitle": "Supprimer aussi l'archive du mot d'éveil ?",
+  "devArchiveSummary": "{cases} entrées, {size}",
+  "@devArchiveSummary": {
+    "placeholders": {
+      "cases": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "devArchiveTitle": "Archive du mot d'éveil",
   "agentNoticeCancelled": "Annulé.",
   "agentNoticeGpuFailed": "Échec de la vérification du GPU. Détails dans le journal de vérification.",
   "agentNoticeGpuNoEvidence": "Ce modèle ne fournit aucune preuve GPU. Touchez Envoyer sans vérification GPU.",

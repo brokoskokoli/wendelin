@@ -10,6 +10,45 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
+  String get devArchiveDelete => 'Archiv löschen';
+
+  @override
+  String devArchiveDeleteMessage(int cases, String size) {
+    return 'Alle gesammelten Weckwort-Aufnahmen ($cases Einträge, $size) werden gelöscht. Das lässt sich nicht rückgängig machen.';
+  }
+
+  @override
+  String get devArchiveDeleteTitle => 'Archiv löschen?';
+
+  @override
+  String get devArchiveDeleteToo => 'Mitlöschen';
+
+  @override
+  String get devArchiveDeleted => 'Archiv gelöscht';
+
+  @override
+  String get devArchiveEmpty => 'Noch keine Einträge';
+
+  @override
+  String get devArchiveKeep => 'Behalten';
+
+  @override
+  String devArchiveOffMessage(int cases, String size) {
+    return 'Die kurzlebigen Aufnahmen sind gelöscht. Das Weckwort-Archiv ($cases Einträge, $size) kann bleiben oder mit gelöscht werden.';
+  }
+
+  @override
+  String get devArchiveOffTitle => 'Weckwort-Archiv mitlöschen?';
+
+  @override
+  String devArchiveSummary(int cases, String size) {
+    return '$cases Einträge, $size';
+  }
+
+  @override
+  String get devArchiveTitle => 'Weckwort-Archiv';
+
+  @override
   String get agentNoticeCancelled => 'Abgebrochen.';
 
   @override

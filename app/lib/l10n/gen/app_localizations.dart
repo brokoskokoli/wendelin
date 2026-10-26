@@ -100,6 +100,72 @@ abstract class AppLocalizations {
     Locale('fr'),
   ];
 
+  /// No description provided for @devArchiveDelete.
+  ///
+  /// In de, this message translates to:
+  /// **'Archiv löschen'**
+  String get devArchiveDelete;
+
+  /// No description provided for @devArchiveDeleteMessage.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle gesammelten Weckwort-Aufnahmen ({cases} Einträge, {size}) werden gelöscht. Das lässt sich nicht rückgängig machen.'**
+  String devArchiveDeleteMessage(int cases, String size);
+
+  /// No description provided for @devArchiveDeleteTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Archiv löschen?'**
+  String get devArchiveDeleteTitle;
+
+  /// No description provided for @devArchiveDeleteToo.
+  ///
+  /// In de, this message translates to:
+  /// **'Mitlöschen'**
+  String get devArchiveDeleteToo;
+
+  /// No description provided for @devArchiveDeleted.
+  ///
+  /// In de, this message translates to:
+  /// **'Archiv gelöscht'**
+  String get devArchiveDeleted;
+
+  /// No description provided for @devArchiveEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Einträge'**
+  String get devArchiveEmpty;
+
+  /// No description provided for @devArchiveKeep.
+  ///
+  /// In de, this message translates to:
+  /// **'Behalten'**
+  String get devArchiveKeep;
+
+  /// No description provided for @devArchiveOffMessage.
+  ///
+  /// In de, this message translates to:
+  /// **'Die kurzlebigen Aufnahmen sind gelöscht. Das Weckwort-Archiv ({cases} Einträge, {size}) kann bleiben oder mit gelöscht werden.'**
+  String devArchiveOffMessage(int cases, String size);
+
+  /// No description provided for @devArchiveOffTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Weckwort-Archiv mitlöschen?'**
+  String get devArchiveOffTitle;
+
+  /// No description provided for @devArchiveSummary.
+  ///
+  /// In de, this message translates to:
+  /// **'{cases} Einträge, {size}'**
+  String devArchiveSummary(int cases, String size);
+
+  /// No description provided for @devArchiveTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Weckwort-Archiv'**
+  String get devArchiveTitle;
+
   /// No description provided for @agentNoticeCancelled.
   ///
   /// In de, this message translates to:

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../platform/wake/wake_platform.dart';
+import '../voice/dev_archive.dart';
 import '../voice/dev_audio.dart';
 import '../voice/dev_log.dart';
 import 'app_settings.dart';
@@ -57,7 +58,10 @@ final class DeveloperModePref extends Notifier<bool> {
   }
 
   /// Switches the mode and stores it.
-  Future<void> set({required bool enabled}) async {
+  ///
+  /// Switching off deletes the short-lived recordings at once (WP155); the
+  /// wake archive only with [deleteArchive] (the caller asked the user).
+  Future<void> set({required bool enabled, bool deleteArchive = false}) async {
     state = enabled;
     devLogEnabled = enabled;
     await ref
@@ -66,5 +70,10 @@ final class DeveloperModePref extends Notifier<bool> {
         .set(AppSettings.developerMode, enabled);
     // The wake service has no database: Kotlin keeps the flag for it.
     unawaited(ref.read(wakePlatformProvider).setDevMode(enabled: enabled));
+    // After the switch, so nothing is written anew (the queue is awaited).
+    if (!enabled) {
+      await deleteDevAudio();
+      if (deleteArchive) await clearDevArchive();
+    }
   }
 }

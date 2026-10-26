@@ -5,13 +5,16 @@ import 'package:path_provider/path_provider.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../platform/voice/pcm.dart';
+import 'dev_archive.dart';
 import 'dev_log.dart';
 
 /// Audio recordings of the developer mode (WP148): WAV files (16 kHz, mono,
 /// PCM16) in the app's external files folder, where `adb pull` reaches them
 /// in the release build (`Android/data/<package>/files/dev-audio/`). A
 /// deliberate exception to "no audio on the device": nothing leaves it, the
-/// files go after a day, and without the developer mode nothing is written.
+/// files go after a day (at once when the mode is switched off), and without
+/// the developer mode nothing is written. The wake archive (WP155,
+/// `dev_archive.dart`) lives in a folder of its own below this one.
 
 /// Name of the folder below the app's external files folder.
 const devAudioFolder = 'dev-audio';
@@ -39,6 +42,7 @@ Future<Directory?> _externalDirectory() async {
 final DevClips devAudioClips = DevClips(
   enabled: () => devLogEnabled,
   write: saveDevClip,
+  archive: devArchive,
 );
 
 int _pending = 0;
@@ -61,7 +65,9 @@ void saveDevClip(DevClip clip) {
 }
 
 /// Completes when everything handed to [saveDevClip] is written (tests).
-Future<void> get devAudioIdle => _queue;
+/// Nothing waiting: a fresh future, so the caller's zone runs the answer (a
+/// completed future delivers in the zone it was made in).
+Future<void> get devAudioIdle => _pending == 0 ? Future.value() : _queue;
 
 Future<void> _write(DevClip clip) async {
   if (!devLogEnabled) return; // fail-closed: the mode may have gone off
@@ -131,12 +137,32 @@ Future<int> pruneDevAudio(
 }
 
 /// Cleans the folder (app start, wake engine start), whether the mode is on
-/// or not: recordings of an earlier session must not linger.
+/// or not: recordings of an earlier session must not linger. The wake
+/// archive (a folder of its own) is not touched by the age rule, only by its
+/// size cap.
 Future<void> cleanDevAudio() async {
   try {
     final dir = await devAudioDirectory();
     if (dir != null) await pruneDevAudio(dir);
+    final archive = await devArchiveDirectory();
+    if (archive != null) await pruneDevArchive(archive);
   } on Object {
     // Nothing to clean.
+  }
+}
+
+/// Deletes the short-lived recordings at once (WP155: the developer mode
+/// was switched off); the wake archive stays. Waits for what is being
+/// written, so no file appears afterwards.
+Future<void> deleteDevAudio() async {
+  await devAudioIdle;
+  try {
+    final dir = await devAudioDirectory();
+    if (dir == null || !await dir.exists()) return;
+    await for (final e in dir.list(followLinks: false)) {
+      if (e is File && e.path.endsWith('.wav')) await e.delete();
+    }
+  } on Object {
+    // Left as it is.
   }
 }

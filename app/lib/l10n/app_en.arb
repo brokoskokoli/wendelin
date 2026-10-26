@@ -1,5 +1,46 @@
 {
   "@@locale": "en",
+  "devArchiveDelete": "Delete archive",
+  "devArchiveDeleteMessage": "All collected wake word recordings ({cases} entries, {size}) will be deleted. This cannot be undone.",
+  "@devArchiveDeleteMessage": {
+    "placeholders": {
+      "cases": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "devArchiveDeleteTitle": "Delete the archive?",
+  "devArchiveDeleteToo": "Delete too",
+  "devArchiveDeleted": "Archive deleted",
+  "devArchiveEmpty": "No entries yet",
+  "devArchiveKeep": "Keep",
+  "devArchiveOffMessage": "The short-lived recordings are deleted. The wake word archive ({cases} entries, {size}) can stay or be deleted as well.",
+  "@devArchiveOffMessage": {
+    "placeholders": {
+      "cases": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "devArchiveOffTitle": "Delete the wake word archive too?",
+  "devArchiveSummary": "{cases} entries, {size}",
+  "@devArchiveSummary": {
+    "placeholders": {
+      "cases": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "devArchiveTitle": "Wake word archive",
   "agentNoticeCancelled": "Cancelled.",
   "agentNoticeGpuFailed": "GPU check failed. Details in the verification log.",
   "agentNoticeGpuNoEvidence": "This model provides no GPU evidence. Tap Send without GPU check.",

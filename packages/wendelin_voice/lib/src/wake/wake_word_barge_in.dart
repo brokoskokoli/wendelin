@@ -12,6 +12,7 @@ import 'barge_tail_collector.dart';
 import 'barge_verifier.dart';
 import 'keyword_spec.dart';
 import 'pre_roll_buffer.dart';
+import 'wake_archive_notes.dart';
 import 'wake_word_engine.dart';
 
 /// [BargeInDetector] on a [WakeWordEngine]: while the answer is spoken it
@@ -45,7 +46,8 @@ final class WakeWordBargeInDetector
     this.clock = const SystemClock(),
     this.tailMax = const Duration(seconds: 3),
     DevClips? devClips, // WP148: audio of candidates and checks
-  }) : _dev = DevAroundSet(devClips);
+  }) : _clips = devClips,
+       _dev = DevAroundSet(devClips);
 
   /// Time source of the tail's idle time.
   final Clock clock;
@@ -140,6 +142,7 @@ final class WakeWordBargeInDetector
   int _generation = 0;
   late final PreRollBuffer _ring = PreRollBuffer(capacity: clip + clip);
   final DevAroundSet _dev;
+  final DevClips? _clips;
   bool _verifying = false;
   int _fed = 0, _blockedUntil = 0, _ignoreUntil = 0;
   // End of the last live block with speech level, and the confidence of the
@@ -240,7 +243,9 @@ final class WakeWordBargeInDetector
       if (h.keywordId != 'wake') continue;
       const keyword = BargeInKeyword.wake;
       if (verifier == null) {
-        _dev.startLast('barge-cand', _ring);
+        final c = noteBargeCandidate(_clips, h.confidence);
+        _dev.startLast('barge-cand', _ring, to: c);
+        c?.finish('accepted', {'path': 'unchecked'});
         _signals.add(const BargeInSignal.keyword(keyword));
         continue;
       }
@@ -255,12 +260,18 @@ final class WakeWordBargeInDetector
       final stronger = score > _rejected + strongerMargin;
       final busy = _verifying || (_fed < _blockedUntil && !stronger);
       onCandidate?.call(keyword, busy: busy, score: score);
-      _dev.startLast('barge-cand', _ring);
+      final c = noteBargeCandidate(_clips, score, busy: busy);
+      _dev.startLast('barge-cand', _ring, to: c);
       if (busy) {
-        _cand.defer(keyword, score, _fed, _lastLoud);
+        _cand.defer(keyword, score, _fed, _lastLoud, archive: c);
       } else {
         // Waiting (or already waiting): the check starts after the word.
-        _cand.addPending(keyword, score, _fed + durationToSamples(settle));
+        _cand.addPending(
+          keyword,
+          score,
+          _fed + durationToSamples(settle),
+          archive: c,
+        );
       }
     }
     final v = verifier;
@@ -284,6 +295,8 @@ final class WakeWordBargeInDetector
   }
 
   Future<void> _verify(BargeVerifier v, BargeInKeyword cand, int gen) async {
+    final arch = _cand.checkedCase;
+    _cand.checkedCase = null;
     final pcm = clipEndingAtSpeech(
       _ring.snapshot(),
       fed: _fed,
@@ -294,9 +307,12 @@ final class WakeWordBargeInDetector
     if (speechEnd(pcm, minLevel) == 0) {
       // Nothing to recognize (background similarity): no recognizer run.
       onVerdict?.call(const BargeVerdict('skip', null, 'silent'), 0);
+      arch?.finish('dropped', {'reason': 'silent'});
       return;
     }
-    _dev.emitMarked('barge-verify', pcm, 'speechEnd', speechEnd(pcm, minLevel));
+    final heard = speechEnd(pcm, minLevel);
+    _dev.emitMarked('barge-verify', pcm, 'speechEnd', heard);
+    noteVerifyClip(_clips, arch, 'barge-verify', pcm, 'speechEnd', heard);
     _verifying = true;
     final sw = Stopwatch()..start();
     var verdict = const BargeVerdict('skip', null, 'error');
@@ -308,7 +324,9 @@ final class WakeWordBargeInDetector
       // Fail closed: no verdict, no keyword.
     }
     _verifying = false;
+    noteBargeVerdict(_clips, arch, verdict);
     if (gen != _generation) {
+      arch?.finish('dropped', {'reason': 'stopped'});
       // Ended meanwhile: no signal, but visible in the log.
       onVerdict?.call(
         const BargeVerdict('skip', null, 'stopped'),
@@ -318,6 +336,7 @@ final class WakeWordBargeInDetector
     }
     onVerdict?.call(verdict, sw.elapsedMilliseconds);
     final keyword = verdict.keyword;
+    finishBargeCase(arch, verdict);
     if (keyword == null) {
       _blockedUntil = _fed + durationToSamples(cooldown);
       _rejected = _cand.checkedScore;

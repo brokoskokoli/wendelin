@@ -1,3 +1,4 @@
+import '../dev/dev_archive.dart';
 import '../io/barge_in_detector.dart';
 
 /// Bookkeeping of the candidates of [WakeWordBargeInDetector]: the one that
@@ -41,8 +42,18 @@ final class BargeCandidates {
   /// [pendingLoud] of the check that runs (`-1`: cut at the latest speech).
   int checkedLoud = -1;
 
-  /// Forgets everything.
+  /// WP155: archive case of the deferred candidate.
+  DevArchiveCase? deferredCase;
+
+  /// WP155: archive case of the check that runs.
+  DevArchiveCase? checkedCase;
+
+  /// Forgets everything; the cases of the forgotten candidates end as
+  /// dropped (`stopped`).
   void clear() {
+    pending?.archive?.finish('dropped', _stopped);
+    deferredCase?.finish('dropped', _stopped);
+    deferredCase = null;
     pendingAt = -1;
     pending = null;
     deferredKind = null;
@@ -54,21 +65,39 @@ final class BargeCandidates {
   /// pending one is already waiting). [loud] is the end of its word (`-1`:
   /// the latest speech). The pending candidate is the strongest one: only a
   /// stronger one takes over its score and cut, a weaker one keeps both.
-  void addPending(BargeInKeyword kind, double score, int at, {int loud = -1}) {
+  void addPending(
+    BargeInKeyword kind,
+    double score,
+    int at, {
+    int loud = -1,
+    DevArchiveCase? archive,
+  }) {
     final old = pending;
     final takeOver = old == null || score > old.score;
+    // One entry per candidate: the one that does not go on ends here.
+    (takeOver ? old?.archive : archive)?.finish('dropped', _merged);
     pending = PendingCandidate(
       kind,
       takeOver ? score : old.score,
       takeOver ? loud : old.loud,
+      takeOver ? archive : old.archive,
     );
     if (pendingAt < 0) pendingAt = at;
   }
 
   /// A candidate during a check or cooldown: the window follows the strongest
   /// one, a weaker later one must not push it back.
-  void defer(BargeInKeyword kind, double score, int fed, int lastLoud) {
-    if (deferredKind == null || score > deferredScore) {
+  void defer(
+    BargeInKeyword kind,
+    double score,
+    int fed,
+    int lastLoud, {
+    DevArchiveCase? archive,
+  }) {
+    final takeOver = deferredKind == null || score > deferredScore;
+    (takeOver ? deferredCase : archive)?.finish('dropped', _busy);
+    if (takeOver) deferredCase = archive;
+    if (takeOver) {
       deferredAt = fed;
       deferredLoud = lastLoud;
     }
@@ -90,10 +119,15 @@ final class BargeCandidates {
     if (kind == null) return;
     final score = deferredScore;
     final loud = deferredLoud;
+    final archive = deferredCase;
     deferredKind = null;
     deferredScore = 0;
     deferredLoud = -1;
-    if (fed - deferredAt > clip) return;
+    deferredCase = null;
+    if (fed - deferredAt > clip) {
+      archive?.finish('dropped', _stale);
+      return;
+    }
     final after = deferredAt + settle;
     // A stronger pending candidate keeps its own cut (see [addPending]).
     addPending(
@@ -101,6 +135,7 @@ final class BargeCandidates {
       score,
       after > fed ? after : fed,
       loud: loud > 0 ? loud : -1,
+      archive: archive,
     );
   }
 
@@ -112,6 +147,7 @@ final class BargeCandidates {
     pending = null;
     checkedScore = p.score;
     checkedLoud = p.loud;
+    checkedCase = p.archive;
     return p.kind;
   }
 
@@ -131,16 +167,21 @@ final class BargeCandidates {
     if (kind == null) return true;
     final score = deferredScore;
     final loud = deferredLoud;
+    final archive = deferredCase;
     deferredKind = null;
     deferredScore = 0;
     deferredLoud = -1;
+    deferredCase = null;
     var at = blockedUntil > fed ? blockedUntil : fed;
     if (score > checkedScore + margin) {
       final own = deferredAt + settle;
       at = own > fed ? own : fed;
     }
-    if (loud <= 0 || loud <= fed - ring) return false;
-    addPending(kind, score, at, loud: loud);
+    if (loud <= 0 || loud <= fed - ring) {
+      archive?.finish('dropped', _stale);
+      return false;
+    }
+    addPending(kind, score, at, loud: loud, archive: archive);
     pendingAt = at;
     return true;
   }
@@ -150,7 +191,10 @@ final class BargeCandidates {
 /// (`-1`: cut at the latest speech).
 final class PendingCandidate {
   /// Creates a pending candidate.
-  const PendingCandidate(this.kind, this.score, this.loud);
+  const PendingCandidate(this.kind, this.score, this.loud, [this.archive]);
+
+  /// WP155: the archive case of the candidate.
+  final DevArchiveCase? archive;
 
   /// Kind of the keyword.
   final BargeInKeyword kind;
@@ -161,3 +205,8 @@ final class PendingCandidate {
   /// End of the word, `-1`: latest speech.
   final int loud;
 }
+
+const _stopped = {'reason': 'stopped'};
+const _merged = {'reason': 'merged'};
+const _busy = {'reason': 'busy'};
+const _stale = {'reason': 'stale'};

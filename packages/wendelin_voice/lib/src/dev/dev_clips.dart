@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import '../io/audio_input.dart';
 import '../wake/pre_roll_buffer.dart';
+import 'dev_archive.dart';
 
 /// Audio on each side of a candidate in its clip (WP148).
 const devClipSpan = Duration(seconds: 2);
@@ -38,13 +39,23 @@ final class DevClip {
 /// voice path.
 final class DevClips {
   /// Creates the hook.
-  const DevClips({required this.enabled, required this.write});
+  const DevClips({required this.enabled, required this.write, this.archive});
 
   /// Whether the developer mode is on right now.
   final bool Function() enabled;
 
   /// Takes a finished clip (must not block: the app writes asynchronously).
   final void Function(DevClip clip) write;
+
+  /// WP155: the weak-word archive; `null`: nothing is archived.
+  final DevArchive? archive;
+
+  /// A new archive case of [source], or `null` if the mode is off or the app
+  /// has no archive.
+  DevArchiveCase? archiveCase(String source) {
+    final a = archive;
+    return a == null || !on ? null : DevArchiveCase(a, source: source);
+  }
 
   /// [enabled], a throwing check counts as off (fail closed).
   bool get on {
@@ -91,6 +102,8 @@ final class DevAround {
     required this.afterWanted,
     Int16List? already,
     DateTime? at,
+    this.archiveCase,
+    this.archiveOnly = false,
   }) : at = at ?? DateTime.now() {
     if (already != null && already.isNotEmpty) _add(already);
   }
@@ -100,6 +113,13 @@ final class DevAround {
 
   /// Event time.
   final DateTime at;
+
+  /// WP155: the archive case this clip belongs to (gets the clip as well).
+  final DevArchiveCase? archiveCase;
+
+  /// WP155: the clip goes to the archive only (a near miss has no short-lived
+  /// file in `dev-audio`).
+  final bool archiveOnly;
 
   /// Audio up to the moment.
   final Int16List before;
@@ -160,6 +180,9 @@ final class DevAroundSet {
   /// Most collectors open at once (a candidate storm must not pile up audio).
   static const maxOpen = 4;
 
+  /// Most collectors of archive cases open at once (WP155, a few KB each).
+  static const maxOpenArchive = 16;
+
   /// Whether collecting is on.
   bool get on => clips?.on ?? false;
 
@@ -169,16 +192,40 @@ final class DevAroundSet {
     _open.add(make());
   }
 
+  /// Starts a collector of an archive case (WP155). Without room or without
+  /// the mode the case goes on without a clip ([DevArchiveCase.giveUpClip]).
+  void startCase(DevAround Function() make, DevArchiveCase? c) {
+    if (c == null) return;
+    if (!on || _open.length >= maxOpenArchive) {
+      c.giveUpClip();
+      return;
+    }
+    DevAround a;
+    try {
+      a = make();
+    } on Object {
+      c.giveUpClip();
+      return;
+    }
+    _open.add(a);
+  }
+
   /// Starts the `event` collector with the last [devClipSpan] of [ring]
   /// before the moment (taken only if the mode is on) and [devClipSpan]
   /// after it.
-  void startLast(String event, PreRollBuffer ring) => start(
-    () => DevAround(
+  void startLast(String event, PreRollBuffer ring, {DevArchiveCase? to}) {
+    DevAround make() => DevAround(
       event: event,
       before: ring.snapshot(last: devClipSpan),
       afterWanted: durationToSamples(devClipSpan),
-    ),
-  );
+      archiveCase: to,
+    );
+    if (to != null) {
+      startCase(make, to);
+    } else {
+      start(make);
+    }
+  }
 
   /// [DevClips.emitMarked] if the hook is set.
   void emitMarked(String event, Int16List pcm, String mark, int samples) =>
@@ -189,7 +236,7 @@ final class DevAroundSet {
     if (_open.isEmpty) return;
     _open.removeWhere((a) {
       if (!a.add(frame)) return false;
-      clips?.emit(a.build());
+      _emit(a);
       return true;
     });
   }
@@ -197,11 +244,22 @@ final class DevAroundSet {
   /// Emits what is there (stop, pause, end of the stream).
   void flush() {
     for (final a in _open) {
-      clips?.emit(a.build());
+      _emit(a);
     }
     _open.clear();
   }
 
+  void _emit(DevAround a) {
+    final clip = a.build();
+    if (!a.archiveOnly) clips?.emit(clip);
+    a.archiveCase?.clip(clip);
+  }
+
   /// Forgets all without emitting.
-  void clear() => _open.clear();
+  void clear() {
+    for (final a in _open) {
+      a.archiveCase?.giveUpClip();
+    }
+    _open.clear();
+  }
 }

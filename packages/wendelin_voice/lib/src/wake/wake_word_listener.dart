@@ -3,12 +3,14 @@ import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
 
+import '../dev/dev_archive.dart';
 import '../dev/dev_clips.dart';
 import '../io/audio_input.dart';
 import '../io/voice_exception.dart';
 import '../models/wake_classifier_catalog.dart';
 import 'keyword_spec.dart';
 import 'pre_roll_buffer.dart';
+import 'wake_archive_notes.dart';
 import 'wake_verifier.dart';
 import 'wake_verifier_b.dart';
 import 'wake_word_engine.dart';
@@ -160,6 +162,10 @@ final class WakeWordListener {
     ),
   );
   late final _dev = DevAroundSet(devClips);
+  // WP155: one near miss per utterance from the window scores.
+  late final _near = NearMissTracker(
+    above: WakeClassifierRules.phone.verifyFrom,
+  );
   Completer<void>? _tailWait;
   int _tailTarget = 0;
   // Cancelled in stop/_release.
@@ -229,6 +235,11 @@ final class WakeWordListener {
     _chain = Future.value();
     _lockedUntil = 0;
     _verifying = false;
+    _near.reset();
+    final e = engine;
+    if (e is ScoringWakeEngine && devClips?.archive != null) {
+      e.scoreSink = _onScore;
+    }
     final gen = ++_generation;
     _sub = audio.start().listen(
       (f) => _onFrame(f, gen),
@@ -276,10 +287,39 @@ final class WakeWordListener {
     }
   }
 
+  // WP155: a window score; a near miss is archived once its run is over.
+  void _onScore(int end, double score) {
+    try {
+      if (!_dev.on) {
+        _near.reset();
+        return;
+      }
+      final miss = _near.onScore(end, score);
+      if (miss == null) return;
+      final c = noteNearMiss(devClips, miss);
+      if (c == null) return;
+      _dev.startCase(
+        () => _candidateClip(miss.peakEnd, 'near-miss', c, only: true),
+        c,
+      );
+    } on Object {
+      // Never into the voice path.
+    }
+  }
+
+  void _startCandidateClip(int end, DevArchiveCase? arch) {
+    if (arch != null) {
+      _dev.startCase(() => _candidateClip(end, 'wake-cand', arch), arch);
+    } else {
+      _dev.start(() => _candidateClip(end, 'wake-cand', null));
+    }
+  }
+
   Future<void> _onCandidate(WakeWordHit hit, int gen) async {
     _candidates++;
     final end = hit.endSample;
-    _dev.start(() => _candidateClip(end));
+    final arch = noteWakeCandidate(devClips, hit);
+    _startCandidateClip(end, arch);
     final v = verifier;
     final tail = v == null || hit.direct ? 0 : durationToSamples(verifyTail);
     if (tail > 0 && _position < end + tail) {
@@ -287,7 +327,10 @@ final class WakeWordListener {
       final wait = _tailWait = Completer<void>();
       await wait.future.timeout(verifyTimeout, onTimeout: () {});
       _tailWait = null;
-      if (gen != _generation) return;
+      if (gen != _generation) {
+        arch?.finish('dropped', {'reason': 'stopped'});
+        return;
+      }
     }
     // From here on the frames are collected for the consumer, the snapshot
     // holds everything up to now (engine lag included).
@@ -302,20 +345,29 @@ final class WakeWordListener {
       rel(end + tail),
     );
     var ok = true;
+    var verdict = hit.direct ? 'direct' : (v == null ? 'unchecked' : 'ok');
     if (v != null && !hit.direct) {
       try {
         final at = rel(end) - rel(end - durationToSamples(verifyWindow));
         devClips?.emitMarked('wake-verify', lead, 'wakeEnd', at);
+        noteVerifyClip(devClips, arch, 'wake-verify', lead, 'wakeEnd', at);
         ok =
             await (v is WakeEndAwareVerifier
                     ? v.confirmAt(lead, at)
                     : v.confirm(lead))
                 .timeout(verifyTimeout);
+        verdict = ok ? 'ok' : 'no';
       } on Object {
         ok = false; // a failing or slow verifier must not trigger
+        verdict = 'error';
       }
+      noteWakeVerdict(devClips, arch, v, verdict);
     }
-    if (gen != _generation) return;
+    if (gen != _generation) {
+      arch?.finish('dropped', {'reason': 'stopped'});
+      return;
+    }
+    finishWakeCase(arch, verdict, ok);
     _verifying = false;
     _lockedUntil = _processed + durationToSamples(lockout);
     final since = List.of(_since);
@@ -343,16 +395,23 @@ final class WakeWordListener {
   }
 
   // The candidate at stream position [end] with what lies around it (WP148).
-  DevAround _candidateClip(int end) {
+  DevAround _candidateClip(
+    int end,
+    String event,
+    DevArchiveCase? archiveCase, {
+    bool only = false,
+  }) {
     final snap = _ring.snapshot();
     final start = _position - snap.length;
     int rel(int abs) => (abs - start).clamp(0, snap.length);
     final span = durationToSamples(devClipSpan);
     return DevAround(
-      event: 'wake-cand',
+      event: event,
       before: Int16List.sublistView(snap, rel(end - span), rel(end)),
       already: Int16List.sublistView(snap, rel(end)),
       afterWanted: span,
+      archiveCase: archiveCase,
+      archiveOnly: only,
     );
   }
 

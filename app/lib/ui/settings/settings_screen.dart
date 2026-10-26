@@ -9,6 +9,7 @@ import '../../di/providers.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import '../routes.dart';
+import 'dev_archive_section.dart';
 import 'settings_page.dart';
 
 /// Settings overview: one row per area (concept: „Einstellungen“). MCP servers
@@ -46,11 +47,13 @@ class SettingsScreen extends ConsumerWidget {
               ),
           ],
         ),
-        if (ref.watch(developerModeProvider))
+        if (ref.watch(developerModeProvider)) ...[
           Padding(
             padding: const EdgeInsets.only(top: WSpace.m),
             child: Text(l.developerModeActiveHint, style: WText.detail),
           ),
+          const DevArchiveSection(),
+        ],
         if (kDebugMode) const _Development(),
       ],
     );
