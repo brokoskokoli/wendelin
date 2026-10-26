@@ -187,13 +187,18 @@ void main() {
     }
 
     Future<void> addOtherPerson() async {
+      // Own, distinguishable profile: neither the default (phala) nor pa's.
+      llm['bernd'] = FakeLlmProvider([ScriptedTurn.text('ok')]);
+      await env.storage.providerProfiles.save(
+        _profile('bernd', 'Berndmodell', PrivacyLevel.standard),
+      );
       await SecretSpeakerProfileStore(env.secrets)
           .save(testProfile('pb', 'Bernd'));
       await SecretPersonSettingsStore(env.secrets).save(
         const PersonSettings(
           personId: 'pb',
           address: 'Bernd',
-          agentProfileId: 'phala',
+          agentProfileId: 'bernd',
         ),
       );
     }
@@ -207,13 +212,15 @@ void main() {
       expect(open, isNotNull);
       await askLocked('Licht an', speaker: 'pb');
       expect(c.read(sessionManagerProvider).currentId, open);
-      expect(llm['phala']!.requests, hasLength(1), reason: 'Umfang von pb');
-      expect(llm['claude']!.requests, hasLength(1));
+      expect(llm['bernd']!.requests, hasLength(1), reason: 'Umfang von pb');
+      expect(llm['phala']!.requests, isEmpty, reason: 'nicht der Standard');
+      expect(llm['claude']!.requests, hasLength(1), reason: 'nur pa vorher');
       // Danach geht die Unterhaltung von pa weiter, in ihrem Umfang.
       await ask('Und jetzt?', speaker: 'pa');
       expect(c.read(sessionManagerProvider).currentId, open);
       expect(llm['claude']!.requests, hasLength(2));
-      expect(llm['phala']!.requests, hasLength(1));
+      expect(llm['phala']!.requests, isEmpty);
+      expect(llm['bernd']!.requests, hasLength(1));
     });
 
     test('eine fremde Stimme läuft nicht im Umfang der offenen Unterhaltung, '
