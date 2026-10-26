@@ -1,6 +1,6 @@
 # ADR 0009 – Routing-Regeln und Eskalationsketten
 
-Status: vorgeschlagen · 2026-10-13
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-13
 
 **Änderung 2026-10-14 (K28, WP59):** Eskalationsketten entfallen. `RuleSet.chains`, `Resolution.routeProfileId` und die automatische Eskalation sind entfernt; ältere Exporte mit `chains` werden gelesen, die Ketten ignoriert (Import-Vorschau weist darauf hin). Wendelin wechselt nie von selbst den Anbieter; nur „nochmal mit X“ (`Resolution.requestedTarget`) übergibt, mit Rückfrage unter der Datenschutz-Untergrenze. Die Abschnitte zu Ketten unten gelten nur noch für diese ausdrückliche Übergabe und die Auswahl eines ausreichend geschützten Ziels vor dem Aufruf (Privacy-Regel-Ziele, dann Standardziel).
 

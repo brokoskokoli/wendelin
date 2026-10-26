@@ -1,6 +1,6 @@
 # ADR 0007 – Sprach-Plattform Android (`app/lib/platform/voice/`)
 
-Status: vorgeschlagen · 2026-10-13
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-13
 
 ## Kontext
 WP17 setzt die Ports aus `wendelin_voice` (WP15) auf dem Gerät um: Mikrofon, Silero VAD, Whisper, System-TTS mit Offline-Fallback (K7), Modell-Download. Konzept und WP15 lassen offen, mit welchen Plugins, auf welchem Isolat und wie Archive, Speicherplatz und Einstellungen behandelt werden.

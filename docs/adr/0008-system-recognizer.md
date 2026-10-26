@@ -1,6 +1,6 @@
 # ADR 0008 – Lokale System-Spracherkennung (`RecognitionService` mit Whisper)
 
-Status: vorgeschlagen · 2026-10-13 · ergänzt durch WP30 (§3a)
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-13 · ergänzt durch WP30 (§3a)
 
 ## Kontext
 Android verlangt für den Standard-Assistenten einen `RecognitionService` (ADR 0006 §2). Bis WP18 war das ein Platzhalter mit `ERROR_CLIENT`: Solange Wendelin Assistent war, hatten andere Apps keine Spracheingabe. WP20 betreibt den Dienst mit dem lokalen Whisper und Silero VAD aus WP17 (ADR 0007). Auf Geräten ohne Google-Dienste (K7) wird Wendelin damit zur Offline-Spracherkennung für alle Apps.

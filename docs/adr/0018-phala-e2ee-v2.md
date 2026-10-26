@@ -1,6 +1,6 @@
 # ADR 0018 – Phala-E2EE v2 verpflichtend (WP62, K37)
 
-Status: vorgeschlagen · 2026-10-14
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-14
 
 ## Kontext
 Phala/RedPill bietet Ende-zu-Ende-Verschlüsselung der Nachrichtenfelder zum Gateway-CVM (Protokoll v2, `X-E2EE-*`). Wendelin sendet an Phala-Profile nur noch verschlüsselt (Wunsch Maintainer). Quelle des Protokolls: `Dstack-TEE/private-ai-gateway` @ 57477f5d (`spec/e2ee-v2.md`, `src/aci/e2ee.rs`); die Notiz mit Zeilenbelegen liegt in `docs/notes/wp62-phala-e2ee-spec.md`. Die Phala-Doku nennt nur `secp256k1`; der Server bietet im Keyset auch `x25519` an, und die Spezifikation empfiehlt es.

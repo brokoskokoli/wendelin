@@ -1,6 +1,6 @@
 # ADR 0020 – Tinfoil als dritter TEE-Anbieter (SEV-SNP, EHBP, Sigstore) (WP76d)
 
-Status: vorgeschlagen · 2026-10-19
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-19
 
 ## Kontext
 Tinfoil (Host inference.tinfoil.sh) betreibt einen Router in einer AMD-SEV-SNP-VM; die Modell-Enklaven prüft der Router. Der Client prüft nur den Router und verschlüsselt mit EHBP (HPKE) Ende zu Ende bis in den Router. Spike und Recherche: `docs/notes/tinfoil-spike.md`, `docs/notes/e2ee-alternatives.md`. Bausteine: WP76a (SNP, `native/attest/src/snp.rs`), WP76b (Sigstore, `sigstore.rs`), WP76c (EHBP, `ehbp.rs`); WP76d verdrahtet sie in Verifier, Factory und App.

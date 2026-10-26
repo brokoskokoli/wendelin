@@ -1,6 +1,6 @@
 # ADR 0003 – Agent-Schleife (`wendelin_agent`)
 
-Status: vorgeschlagen · 2026-10-13
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-13
 
 ## Kontext
 WP05 baut die Agent-Schleife nur gegen die Interfaces aus `wendelin_core` (ADR 0002). Einige Punkte lässt das Konzept offen; sie werden hier festgelegt.

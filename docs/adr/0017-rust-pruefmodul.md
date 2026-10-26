@@ -1,6 +1,6 @@
 # ADR 0017 – Rust-Prüfmodul für die TEE-Attestierung (`native/attest`)
 
-Status: vorgeschlagen · 2026-10-14
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-14
 
 ## Kontext
 Die Prüfung von TEE-Antworten (Konzept K23 h, WP46/WP47) braucht Quote-Prüfung (Intel DCAP: Zertifikatsketten, CRLs, TCB-Info, QE-Identität), Ed25519, SHA-384, JCS-Kanonisierung, das Nachrechnen von RTMR3 und den SPKI-Hash. Die Spike WP43 hat zwei Wege gemessen: Rust (`dcap-qvl` über `flutter_rust_bridge`) und die Android-Bibliothek `com.phala:dcap-qvl-android` mit Kotlin-Kanal.

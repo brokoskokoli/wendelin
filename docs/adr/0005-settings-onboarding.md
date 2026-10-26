@@ -1,6 +1,6 @@
 # ADR 0005 – Einstellungen und Onboarding (`app/lib/ui/settings/`, `app/lib/ui/onboarding/`)
 
-Status: vorgeschlagen · 2026-10-13
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-13
 
 ## Kontext
 WP09 ersetzt die vorläufige Einstellungsseite aus WP08 und ergänzt Provider-Einrichtung, Listen (K6) mit Dateizugriff, Web-Suche, Gedächtnis, Datenschutz, Kosten, Assistent und das Onboarding. Mehrere Punkte lassen Konzept und Arbeitspaket offen.
