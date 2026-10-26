@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete, solange der Maintainer am Rechner ist (
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-26 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP157; Test-APK v0.1.0-rc7; als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-26 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP157, WP155; Test-APK v0.1.0-rc8; als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -97,11 +97,11 @@ Stand: 2026-10-26 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP157; Tes
 | WP148 | Entwicklermodus mit erweitertem Logging (10× „System“) | gemergt (7a59e0fe) | K120 bestätigt; devLog (app/lib/voice/dev_log.dart), DevClips; Gerätetest (Mehrrunden, Overlay-Umschalten, Secrets, Bonus, Marken gegenhören); Folge: detectSensitiveContent erkennt „PIN – 1234“ u. ä. nicht, Tests Überschwärzung, Overlay übernimmt Umschalten erst ab nächster Sitzung, wake_service_e2e Einlernen 0/15 |
 | WP149 | Wake-Übergabe ohne Audiolücke | gemergt (ab06b1c0) | Ursache: WakeConflictWatcher stoppte Dienst-Mikro trotz keepOpen + verworfener Teil-Chunk; Handytest docs/testing/m5/wp149.md (xcorr nur synthetisch kalibriert); Folge: eigene vs. fremde Aufnahme per AppVoice-Session, ~690 ms Mikro-Öffnung |
 | WP150 | Home Assistant: Werkzeugschleife bei einem Licht mit Personennamen | gemergt (90a2a345) | K121 bestätigt; Ursache: Zahl als String, Validator lehnt ab, Modell wiederholt (Dev-Log 12:28); Gerätetest docs/testing/m5/wp150.md mit neuer APK; Folge: Agent-Fehlertexte nur deutsch (l10n) |
-| WP151 | Unterbrechen mit Weckwort bei Gesprächston | gemergt 0b94041d | Ursache: Parakeet liest das kurze „(Hey) Wendelin“ bei Gesprächston falsch; Fix Prüfer B beim Unterbrechen (offline 24/26 statt 9/26), Parakeet nur Rückfall/Echo-Fall; K124 offen. Mit erledigt: E2E-Einlernen (WP148-Folgepunkt), WakeEnroller nach dispose/Doppel-Speichern. Folgepunkte: Gerätetest `docs/testing/m5/wp151.md` (vorher Vorlagen neu einlernen); wake_continuous_e2e vorbestehend rot (WP68, silence.wav nicht kopiert, Timeout bei WAKE_RUNS>1); Soll-Reste wake_enroll_screen.dart:234-238, enroll_log.dart:16, wake_enroller.dart:339-354 ohne Logzeile, keine Obergrenze für Versuche; eigener Befehl „Berlin“ 0,70 > thr 0,68 |
+| WP151 | Unterbrechen mit Weckwort bei Gesprächston | gemergt 0b94041d | Ursache: Parakeet liest das kurze „(Hey) Wendelin“ bei Gesprächston falsch; Fix Prüfer B beim Unterbrechen (offline 24/26 statt 9/26), Parakeet nur Rückfall/Echo-Fall; K124 bestätigt 2026-10-26. Mit erledigt: E2E-Einlernen (WP148-Folgepunkt), WakeEnroller nach dispose/Doppel-Speichern. Folgepunkte: Gerätetest `docs/testing/m5/wp151.md` (vorher Vorlagen neu einlernen); wake_continuous_e2e vorbestehend rot (WP68, silence.wav nicht kopiert, Timeout bei WAKE_RUNS>1); Soll-Reste wake_enroll_screen.dart:234-238, enroll_log.dart:16, wake_enroller.dart:339-354 ohne Logzeile, keine Obergrenze für Versuche; eigener Befehl „Berlin“ 0,70 > thr 0,68 |
 | WP152 | Hauptmenü: MCP-Server und HTTP-Tools nur unter Integrationen | gemergt (24c76bde) | „+ HTTP-Tool“ öffnet jetzt die Liste (Beschriftung ggf. „HTTP-Tools“); `AppRoutes.httpToolNew` ohne Aufrufer (Soll) |
 | WP153 | Gesperrtes Gerät: nach dem Entsperren sauber weitermachen | geplant | Gerätebefund rc5: nach Entsperren keine Anzeige, Fenster zu; Analyse zuerst, nach WP148 |
 | WP154 | Home Assistant: Sicherheitsstufe je Gerät (A–D) | gemergt ffed7c83 | Stufen A–D für jedes Werkzeug und HA-Gerät, Gesperrt-Pfad über Policy/Executor (Projekt-Review Befund 1 erledigt), Stimme (B), ADR 0022, K123 bestätigt 2026-10-26; Folgepunkte: Gerätetest mit echten Stimmen/Wiedergabe/Kaltstart (`docs/testing/m5/wp154.md`), Goldens zeigen Material-Icons als Kästchen (Schrift in flutter_test_config nicht geladen), Undo nach gesperrtem Lauf im Audit unter Sitzung „locked“ |
-| WP155 | Entwicklermodus: Weckwort-Archiv für Training | geplant | Wunsch Maintainer 2026-10-26: alle Weckwort-/Barge-in-Fälle inkl. verworfen und knapp verfehlt dauerhaft sammeln (eigenes Verzeichnis, index.jsonl); Prüfseite später; nach WP151 |
+| WP155 | Entwicklermodus: Weckwort-Archiv für Training | in Arbeit | Wunsch Maintainer 2026-10-26: alle Weckwort-/Barge-in-Fälle inkl. verworfen und knapp verfehlt dauerhaft sammeln (eigenes Verzeichnis, index.jsonl); Prüfseite später; nach WP151 |
 | WP156 | „Hey Wendelin“ konsequent in Texten und Doku | geplant | Entscheidung Maintainer 2026-10-26 (K115-Nachtrag): Anzeige überall „Hey Wendelin“, Erkennung vorerst beide Wörter; nach WP151 |
 | WP157 | Sicherheit: Sperre nach roter Quittung je Unterhaltung, Netz-Lesewerkzeuge nach fremden Inhalten | in Arbeit | Projekt-Review 2026-10-26 (Befunde 2, 5), Entscheidung Maintainer: Sperre echt, Rückfrage (K122); nach WP154 |
 | WP158 | Robustheit: Fehler beim Mikrofonstart, Stationskanal | geplant | Projekt-Review 2026-10-26 (Befunde 6, 7); nicht parallel zu WP153 |
@@ -111,7 +111,7 @@ Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 ## Nächste Schritte
 
 Stand 2026-10-26 (Orchestrator):
-0. Laufend: WP157. Gemergt: WP154 (ffed7c83, K123 bestätigt), WP151 (0b94041d, K124 offen); rc8 bauen.
+0. Laufend: WP157. Gemergt: WP154 (ffed7c83, K123 bestätigt), WP151 (0b94041d, K124 bestätigt). rc8 gebaut (Tag v0.1.0-rc8, 1cc047f9). Läuft außerdem: WP155.
 1. Nach WP151: WP155 (Weckwort-Archiv + Dev-Datenschutz) und WP156 („Hey Wendelin“ in Texten), nacheinander oder parallel nur mit getrennten Schlüsseln.
 2. Jetzt startbar (WP154 gemergt): WP157 (Sitzungssperre, Netz-Lesewerkzeuge, K122), dann WP153 (Entsperren) und WP158 (Mikrofonstart), nicht gleichzeitig.
 3. Gerätetest rc7 (T27-WP149, T27-WP150, T26-WP148); nach WP151 rc8.
