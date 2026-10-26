@@ -57,4 +57,37 @@ void main() {
       }
     });
   });
+
+  group('AccessContext', () {
+    test('of entspricht levelAccess in jeder Zeile', () {
+      for (final level in [null, ...SecurityLevel.values]) {
+        for (final locked in [false, true]) {
+          for (final voice in [false, true]) {
+            expect(
+              AccessContext(locked: locked, speakerRecognized: voice)
+                  .of(level),
+              levelAccess(level, locked: locked, speakerRecognized: voice),
+              reason: '$level $locked $voice',
+            );
+          }
+        }
+      }
+    });
+    test('Gleichheit, Konstanten, Standard entsperrt', () {
+      expect(const AccessContext(), AccessContext.unlocked);
+      expect(AccessContext.unlocked.locked, isFalse);
+      expect(AccessContext.lockedUnknownVoice.locked, isTrue);
+      expect(AccessContext.lockedUnknownVoice.speakerRecognized, isFalse);
+      expect(
+        const AccessContext(locked: true).hashCode,
+        AccessContext.lockedUnknownVoice.hashCode,
+      );
+      expect(AccessContext.unlocked, isNot(AccessContext.lockedUnknownVoice));
+      expect(
+        const AccessContext(locked: true, speakerRecognized: true),
+        isNot(AccessContext.lockedUnknownVoice),
+      );
+      expect(AccessContext.lockedUnknownVoice.toString(), contains('true'));
+    });
+  });
 }

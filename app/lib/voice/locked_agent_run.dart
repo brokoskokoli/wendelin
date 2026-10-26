@@ -248,7 +248,8 @@ abstract final class LockedTexts {
 /// Assistant device is allowed locked, [LockedScope]) and then only with
 /// those tools; otherwise it only gets the fixed „unlock“ sentence and the
 /// utterance is remembered 30 s ([onRefused], K92). A tool call the policy
-/// refuses („Entsperren nötig“) remembers it the same way. Any trigger
+/// refuses („Entsperren nötig“) remembers it the same way, unless a tool
+/// of that run already ran ([onPartlyDone]: no double execution). Any trigger
 /// (`TriggerKind.assistant`, the wake word) takes the same path.
 final class LockGateAgentRun implements AgentRun {
   /// Creates the gate.
@@ -259,6 +260,7 @@ final class LockGateAgentRun implements AgentRun {
     required this.onRefused,
     required this.trigger,
     this.modelRun,
+    this.onPartlyDone,
     this.log,
   });
 
@@ -280,6 +282,11 @@ final class LockGateAgentRun implements AgentRun {
   /// with WP157), or `null` if nothing beyond the local commands is allowed.
   /// `null` here = never a model while locked (tests, K85 behaviour).
   final Future<AgentRun?> Function(AccessContext access)? modelRun;
+
+  /// Called when a model run did part of the request and the policy turned
+  /// down the rest: the unlock is offered but the request is NOT remembered
+  /// (no double run, [trigger] for the audit log).
+  final void Function(String trigger)? onPartlyDone;
 
   /// Diagnostics without any content (`locked-cmd …`).
   final void Function(String line)? log;
@@ -328,16 +335,27 @@ final class LockGateAgentRun implements AgentRun {
       return;
     }
     _lockedRun = model;
-    var remembered = false;
+    var refused = false;
+    var anyDone = false;
     await for (final event in model.run(input)) {
-      // A call the policy turned down: the request waits for the unlock.
-      if (!remembered &&
-          event is ToolCallFinished &&
-          event.outcome.summary == ToolExecutor.unlockSummary) {
-        remembered = true;
-        onRefused(trigger(), input);
+      if (event is ToolCallFinished) {
+        if (event.outcome.summary == ToolExecutor.unlockSummary) {
+          refused = true;
+        } else if (!event.outcome.isError) {
+          anyDone = true;
+        }
       }
       yield event;
+    }
+    // A call the policy turned down: the unlock is offered. The request only
+    // waits for it if nothing ran yet; otherwise the repeat after the unlock
+    // would run the finished part twice (the answer names what is done).
+    if (refused) {
+      if (anyDone) {
+        onPartlyDone?.call(trigger());
+      } else {
+        onRefused(trigger(), input);
+      }
     }
   }
 
@@ -377,6 +395,10 @@ LockGateAgentRun lockGateFor(
   onRefused: (t, input) {
     ref.read(auditRecorderProvider).lockedRefused(trigger: t);
     ref.read(lockedPendingProvider.notifier).keep(input.text);
+    ref.read(lockedRefusalsProvider.notifier).bump();
+  },
+  onPartlyDone: (t) {
+    ref.read(auditRecorderProvider).lockedRefused(trigger: t);
     ref.read(lockedRefusalsProvider.notifier).bump();
   },
   trigger: trigger,

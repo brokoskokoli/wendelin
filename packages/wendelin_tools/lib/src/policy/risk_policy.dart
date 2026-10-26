@@ -116,8 +116,9 @@ final class RiskPolicy {
   /// Text given to the model when the call needs the unlocked device
   /// (WP154 L2). The result summary is „Entsperren nötig“.
   static const unlockReason =
-      'Entsperren nötig: Das ist bei gesperrtem Gerät nicht erlaubt. Sag dem '
-      'Nutzer kurz, dass er das Telefon entsperren soll.';
+      'Entsperren nötig: Das ist bei gesperrtem Gerät nicht erlaubt. Nenne '
+      'dem Nutzer kurz, was schon erledigt ist (falls etwas lief), und sag, '
+      'dass er das Telefon für den Rest entsperren soll.';
 
   /// Text given to the model when the user disabled a tool by override.
   static const deniedReason = 'Dieses Tool ist vom Nutzer gesperrt.';

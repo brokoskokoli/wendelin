@@ -69,9 +69,13 @@ void main() {
     expect(find.text('Details · Stufe C · Standard'), findsOneWidget);
     expect(find.byKey(const ValueKey('level_x_a')), findsNothing);
     expect(find.byKey(const ValueKey('levelRestore_x')), findsNothing);
+    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+    expect(find.byIcon(Icons.expand_less), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('levelDetails_x')));
     await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.expand_less), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_right), findsNothing);
     for (final l in ['a', 'b', 'c', 'd']) {
       expect(find.byKey(ValueKey('level_x_$l')), findsOneWidget);
     }
@@ -98,6 +102,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('levelDetails_x')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('level_x_a')), findsNothing);
+    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
   });
 
   testWidgets('Hinweis bei lockernden Stufen: Abbrechen ändert nichts', (

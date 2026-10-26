@@ -220,48 +220,40 @@ void main() {
       expect(r.isError, isFalse, reason: r.text);
     });
 
-    test(
-      'ruhiges Rollo geht auch über ha__call_secure, ein Licht nicht',
-      () async {
-        api.set('cover.living', 'open', {'device_class': 'blind'});
-        final h = ha([
-          _e('cover.living', quiet: true, cls: 'blind'),
-          _e('light.kitchen'),
-        ]);
-        // ha__call nimmt das Rollo (Stufe C); ha__call_secure fragt zusätzlich.
-        final viaCall = await run(h, 'ha__call', 'cover.living', 'close_cover');
-        expect(viaCall.isError, isFalse, reason: viaCall.text);
-        final viaSecure = await run(
-          h,
-          'ha__call_secure',
-          'cover.living',
-          'close_cover',
-        );
-        expect(viaSecure.isError, isFalse, reason: viaSecure.text);
-        expect(api.calls, hasLength(2));
-        // Auch ein Licht auf B darf mit Rückfrage laufen (nur strenger): nach
-        // der bestätigten Karte kein Fehler, kein Umweg über ha__call.
-        api.calls.clear();
-        final light = await run(
-          h,
-          'ha__call_secure',
-          'light.kitchen',
-          'turn_on',
-        );
-        expect(light.isError, isFalse, reason: light.text);
-        expect(api.calls.single.service, 'turn_on');
-        // Ebenso ein Schloss auf A.
-        api.calls.clear();
-        final lock = await run(
-          ha([_e('lock.front', level: 'a')]),
-          'ha__call_secure',
-          'lock.front',
-          'lock',
-        );
-        expect(lock.isError, isFalse, reason: lock.text);
-        expect(api.calls.single.service, 'lock');
-      },
-    );
+    test('ruhiges Rollo, Licht B und Schloss A laufen auch über ha__call_secure (nur strenger)', () async {
+      api.set('cover.living', 'open', {'device_class': 'blind'});
+      final h = ha([
+        _e('cover.living', quiet: true, cls: 'blind'),
+        _e('light.kitchen'),
+      ]);
+      // ha__call nimmt das Rollo (Stufe C); ha__call_secure fragt zusätzlich.
+      final viaCall = await run(h, 'ha__call', 'cover.living', 'close_cover');
+      expect(viaCall.isError, isFalse, reason: viaCall.text);
+      final viaSecure = await run(
+        h,
+        'ha__call_secure',
+        'cover.living',
+        'close_cover',
+      );
+      expect(viaSecure.isError, isFalse, reason: viaSecure.text);
+      expect(api.calls, hasLength(2));
+      // Auch ein Licht auf B darf mit Rückfrage laufen (nur strenger): nach
+      // der bestätigten Karte kein Fehler, kein Umweg über ha__call.
+      api.calls.clear();
+      final light = await run(h, 'ha__call_secure', 'light.kitchen', 'turn_on');
+      expect(light.isError, isFalse, reason: light.text);
+      expect(api.calls.single.service, 'turn_on');
+      // Ebenso ein Schloss auf A.
+      api.calls.clear();
+      final lock = await run(
+        ha([_e('lock.front', level: 'a')]),
+        'ha__call_secure',
+        'lock.front',
+        'lock',
+      );
+      expect(lock.isError, isFalse, reason: lock.text);
+      expect(api.calls.single.service, 'lock');
+    });
 
     test(
       'Migration: alter Schalter „immer bestätigen“ = D, ohne Änderung',
@@ -330,6 +322,121 @@ void main() {
       expect(await ok('lock.front'), isFalse);
       expect(await ok('light.dim'), isFalse);
       expect(await ok('lock.garden'), isTrue);
+    });
+
+    group('gesperrt (L2, Stimme unbekannt)', () {
+      ToolContext lockedCtx({bool voice = false}) => ToolContext(
+        sessionId: 's1',
+        clock: FixedClock(DateTime.utc(2026, 10, 13, 12)),
+        locale: 'de-DE',
+        timeZone: 'Europe/Berlin',
+        access: AccessContext(locked: true, speakerRecognized: voice),
+      );
+      Future<ToolOutcome> runLocked(
+        HaIntegration h,
+        String tool,
+        String id,
+        String s, {
+        bool voice = false,
+      }) => h.tools.singleWhere((t) => t.name == tool).execute({
+        'entity': id,
+        'service': s,
+      }, lockedCtx(voice: voice));
+
+      test('Licht auf A läuft', () async {
+        final h = ha([_e('light.kitchen', level: 'a')]);
+        final r = await runLocked(h, 'ha__call', 'light.kitchen', 'turn_on');
+        expect(r.isError, isFalse, reason: r.text);
+        expect(api.calls.single.service, 'turn_on');
+      });
+
+      for (final (name, entity, level) in [
+        ('Licht B (Standard)', 'light.kitchen', null),
+        ('Licht auf C', 'light.kitchen', 'c'),
+        ('Rollo C', 'cover.living', 'c'),
+        ('Schloss D (Standard)', 'lock.front', null),
+        ('Licht auf D', 'light.kitchen', 'd'),
+      ]) {
+        test(
+          '$name: Entsperren nötig, Home Assistant nie aufgerufen',
+          () async {
+            api.set(entity, 'off', const {});
+            final h = ha([_e(entity, level: level)]);
+            final r = await runLocked(h, 'ha__call', entity, 'turn_on');
+            expect(r.isError, isTrue);
+            expect(r.summary, 'Entsperren nötig');
+            expect(api.calls, isEmpty);
+          },
+        );
+      }
+
+      test('erkannte Stimme (Hook für WP157): Licht auf B läuft', () async {
+        final h = ha([_e('light.kitchen', level: 'b')]);
+        final r = await runLocked(
+          h,
+          'ha__call',
+          'light.kitchen',
+          'turn_on',
+          voice: true,
+        );
+        expect(r.isError, isFalse, reason: r.text);
+        expect(api.calls, hasLength(1));
+      });
+
+      test('ha__call_secure gesperrt nie, auch nicht Schloss auf A', () async {
+        final h = ha([_e('lock.front', level: 'a'), _e('light.k', level: 'a')]);
+        for (final (id, s) in [
+          ('lock.front', 'lock'),
+          ('light.k', 'turn_on'),
+        ]) {
+          final r = await runLocked(h, 'ha__call_secure', id, s);
+          expect(r.isError, isTrue, reason: id);
+          expect(r.summary, 'Entsperren nötig');
+        }
+        expect(api.calls, isEmpty);
+      });
+
+      test(
+        'Promptabschnitt listet nur erlaubte Geräte, ohne list_entities',
+        () async {
+          final h = ha([
+            _e('light.kitchen', level: 'a'),
+            _e('light.hall'),
+            _e('lock.front', level: 'a'),
+            _e('switch.coffee'),
+          ]);
+          final section = await h.tools
+              .whereType<PromptContributor>()
+              .first
+              .promptSection(
+                'Licht an',
+                access: AccessContext.lockedUnknownVoice,
+              );
+          expect(section, isNotNull);
+          expect(section, contains('light.kitchen'));
+          expect(section, isNot(contains('light.hall')));
+          expect(section, isNot(contains('switch.coffee')));
+          expect(section, isNot(contains('ha__list_entities')));
+        },
+      );
+
+      test('anyAllowedWhileLocked: nur wenn ein Gerät erlaubt ist', () async {
+        expect(
+          await ha([_e('light.k')])
+              .anyAllowedWhileLocked(AccessContext.lockedUnknownVoice),
+          isFalse,
+        );
+        expect(
+          await ha([_e('light.k', level: 'a')])
+              .anyAllowedWhileLocked(AccessContext.lockedUnknownVoice),
+          isTrue,
+        );
+        expect(
+          await ha([_e('light.k')])
+              .anyAllowedWhileLocked(AccessContext.unlocked),
+          isTrue,
+        );
+      });
     });
   });
 }

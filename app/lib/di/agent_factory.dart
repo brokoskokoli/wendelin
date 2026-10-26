@@ -132,7 +132,10 @@ final class AgentFactory implements AgentRunFactory {
     final runner = AgentRunner(
       resolver: providers.resolver(),
       contextBuilder: ContextBuilder(
-        config: person.address == null
+        // Locked: the name is no tool data and goes to the provider; omitted.
+        config: locked != null
+            ? config.withUserName(null)
+            : person.address == null
             ? config
             : config.withUserName(person.address),
         clock: clock,

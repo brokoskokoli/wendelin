@@ -1,0 +1,123 @@
+// Gerätetest-Entwurf WP154 L2 (Gesperrt-Pfad, Home Assistant): Fake-HA auf dem
+// Rechner (`app/tool/ha_test_server.dart`, Emulator: 10.0.2.2). Ein Lauf mit
+// `LockedScope` (gesperrt, Stimme unbekannt) wie ihn das Overlay startet:
+// Licht Küche auf A läuft, Licht Wohnzimmer auf C und das Schloss auf D
+// werden mit „Entsperren nötig“ abgewiesen, der Server sieht nur den
+// einen erlaubten Aufruf.
+//
+// Entwurf, nur `flutter analyze`d (kein Emulatorlauf durch den Coder). Läuft
+// mit `tool/e2e_android.sh integration_test/wp154/locked_ha_e2e_test.dart`;
+// das Skript startet den Fake-HA bisher nur für `ha_e2e_test.dart` (Name),
+// dort `*ha_e2e_test.dart` bzw. den Dateinamen der Prüfung anpassen.
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+import 'package:wendelin/agent/agent_controller.dart';
+import 'package:wendelin/debug/device_test_overrides.dart';
+import 'package:wendelin/di/home_assistant.dart';
+import 'package:wendelin/di/locked_scope.dart';
+import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/di/startup.dart';
+import 'package:wendelin_core/fakes.dart';
+import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_storage/fakes.dart';
+
+const _url = String.fromEnvironment('HA_URL');
+const _token = String.fromEnvironment('HA_TOKEN');
+
+ProviderContainer _container(List<Override> overrides) {
+  final storage = openInMemoryStorage();
+  final c = ProviderContainer(
+    overrides: [
+      storageProvider.overrideWithValue(storage),
+      secretStoreProvider.overrideWithValue(InMemorySecretStore()),
+      startupProvider.overrideWithValue(
+        const StartupSettings(enabledIntegrations: {'ha'}, uiLanguage: 'de'),
+      ),
+      ...overrides,
+    ],
+  );
+  addTearDown(() async {
+    c.dispose();
+    await storage.close();
+  });
+  return c;
+}
+
+ToolCallBlock _call(String id, String entity, String service) => ToolCallBlock(
+  id: id,
+  name: 'ha__call',
+  argumentsJson: '{"entity":"$entity","service":"$service"}',
+);
+
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('gesperrt: Licht A läuft, Licht C und Schloss D nicht', (
+    tester,
+  ) async {
+    expect(_url, startsWith('http://10.0.2.2:'), reason: 'HA_URL fehlt');
+    final llm = FakeLlmProvider([
+      ScriptedTurn.toolCalls([
+        _call('k', 'light.kitchen', 'turn_off'),
+        _call('l', 'light.living', 'turn_off'),
+        _call('s', 'lock.front', 'unlock'),
+      ]),
+      ScriptedTurn.text('Küche aus, der Rest geht nur entsperrt.'),
+    ]);
+    final c = _container([
+      storedProviderConfigProvider.overrideWith(
+        (ref) async => deviceTestProviderConfig(llm),
+      ),
+    ]);
+    await tester.runAsync(() async {
+      await c.read(toolRegistryReadyProvider.future);
+      final api = c.read(haApiProvider);
+      final store = c.read(haStoreProvider);
+      expect(
+        await haConnect(api: api, store: store, address: _url, token: _token),
+        isNull,
+      );
+      final all = await api.entities();
+      // Küche A, Wohnzimmer C, Schloss ohne Wahl (Standard D).
+      final levels = {
+        'light.kitchen': SecurityLevel.a,
+        'light.living': SecurityLevel.c,
+      };
+      await store.save([
+        for (final e in all)
+          if (levels.containsKey(e.entityId) || e.entityId == 'lock.front')
+            e.withLevel(levels[e.entityId]),
+      ]);
+      await c.read(toolRegistryProvider).refresh('ha');
+
+      final scope = await c.read(lockedScopeProvider)(
+        AccessContext.lockedUnknownVoice,
+      );
+      expect(scope, isNotNull, reason: 'Licht A erlaubt ein Modell');
+      expect(scope!.tools, contains('ha__call'));
+      expect(scope.tools, isNot(contains('ha__call_secure')));
+
+      final events = await c
+          .read(agentControllerProvider.notifier)
+          .submit(UserInput(text: 'Alles aus'), locked: scope)
+          .toList();
+      expect(events.last, isA<AgentDone>());
+      final finished = {
+        for (final e in events.whereType<ToolCallFinished>()) e.call.id: e,
+      };
+      expect(finished['k']!.outcome.isError, isFalse);
+      expect(finished['l']!.outcome.summary, 'Entsperren nötig');
+      expect(finished['s']!.outcome.summary, 'Entsperren nötig');
+
+      expect((await api.state('light.kitchen')).state, 'off');
+      expect((await api.state('light.living')).state, 'on');
+      expect((await api.state('lock.front')).state, 'locked');
+      // Nichts gespeichert (kein Verlauf einer gesperrten Anfrage).
+      final storage = c.read(storageProvider);
+      expect(await storage.conversations.sessions(limit: 5), isEmpty);
+    });
+  });
+}

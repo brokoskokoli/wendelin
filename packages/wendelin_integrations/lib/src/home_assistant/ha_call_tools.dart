@@ -280,8 +280,9 @@ abstract base class HaCallTool extends IntegrationTool {
   }
 
   static ToolOutcome _unlock(String device) => ToolOutcome.error(
-    '„$device“ ist nur bei entsperrtem Gerät steuerbar. Sag dem Nutzer kurz, '
-    'dass er das Telefon entsperren soll.',
+    '„$device“ ist nur bei entsperrtem Gerät steuerbar. Nenne dem '
+    'Nutzer kurz, was schon erledigt ist (falls etwas lief), und sag, dass er '
+    'das Telefon für den Rest entsperren soll.',
     summary: 'Entsperren nötig',
   );
 
