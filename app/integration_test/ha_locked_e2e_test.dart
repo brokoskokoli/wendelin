@@ -9,6 +9,11 @@
 // das Skript startet den Fake-HA für jede Datei `ha_*e2e_test.dart` und
 // übergibt HA_URL/HA_TOKEN. Bisher nur `flutter analyze`d; der Emulatorlauf
 // steht aus (E2E-Agent).
+//
+// L3 (zweiter Test): dieselbe Anfrage mit der Stimme aus der Sprechererkennung
+// (`FakeSpeakerRecognizer`, die Eingabe entsteht wie in der Pipeline aus
+// `Transcript.withSpeaker`). Licht Küche auf B läuft nur mit erkannter Stimme,
+// ein Fremder bekommt „Entsperren nötig“, das Schloss (D) läuft nie.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -23,6 +28,8 @@ import 'package:wendelin/di/startup.dart';
 import 'package:wendelin_core/fakes.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_storage/fakes.dart';
+import 'package:wendelin_voice/fakes.dart';
+import 'package:wendelin_voice/wendelin_voice.dart';
 
 const _url = String.fromEnvironment('HA_URL');
 const _token = String.fromEnvironment('HA_TOKEN');
@@ -120,4 +127,88 @@ void main() {
       expect(await storage.conversations.sessions(limit: 5), isEmpty);
     });
   });
+
+  // Eingabe wie sie die Pipeline baut (`voice_pipeline.dart`, `_answer`).
+  Future<UserInput> spoken(SpeakerMatch match) async {
+    final recognizer = FakeSpeakerRecognizer(match);
+    final heard = const Transcript(
+      text: 'Küche aus',
+      language: 'de',
+    ).withSpeaker(await recognizer.identify(FakeSpeakerEmbedder.audio(0)));
+    return UserInput(
+      text: heard.text,
+      source: InputSource.voice,
+      language: heard.language,
+      speakerId: heard.speaker?.personId,
+    );
+  }
+
+  for (final (name, match, runs) in [
+    (
+      'erkannte Stimme',
+      const SpeakerMatch.known(personId: 'p1', name: 'Anna', score: 0.8),
+      true,
+    ),
+    (
+      'fremde Stimme',
+      const SpeakerMatch.unknown(SpeakerUnknownReason.belowThreshold),
+      false,
+    ),
+  ]) {
+    testWidgets('gesperrt, $name: Licht B ${runs ? 'läuft' : 'bleibt'}, '
+        'Schloss D nie', (tester) async {
+      expect(_url, startsWith('http://10.0.2.2:'), reason: 'HA_URL fehlt');
+      final llm = FakeLlmProvider([
+        ScriptedTurn.toolCalls([
+          _call('k', 'light.kitchen', 'turn_off'),
+          _call('s', 'lock.front', 'unlock'),
+        ]),
+        ScriptedTurn.text('Fertig.'),
+      ]);
+      final c = _container([
+        storedProviderConfigProvider.overrideWith(
+          (ref) async => deviceTestProviderConfig(llm),
+        ),
+      ]);
+      await tester.runAsync(() async {
+        await c.read(toolRegistryReadyProvider.future);
+        final api = c.read(haApiProvider);
+        final store = c.read(haStoreProvider);
+        expect(
+          await haConnect(api: api, store: store, address: _url, token: _token),
+          isNull,
+        );
+        final all = await api.entities();
+        await store.save([
+          for (final e in all)
+            if (e.entityId == 'light.kitchen')
+              e.withLevel(SecurityLevel.b)
+            else if (e.entityId == 'lock.front')
+              e,
+        ]);
+        await c.read(toolRegistryProvider).refresh('ha');
+
+        final input = await spoken(match);
+        final access = AccessContext.lockedFor(input);
+        expect(access.speakerRecognized, runs);
+        final scope = await c.read(lockedScopeProvider)(access);
+        expect(scope == null, !runs, reason: 'ohne Stimme kein Modelllauf');
+        if (scope == null) {
+          expect((await api.state('light.kitchen')).state, 'on');
+          return;
+        }
+        final events = await c
+            .read(agentControllerProvider.notifier)
+            .submit(input, locked: scope)
+            .toList();
+        final finished = {
+          for (final e in events.whereType<ToolCallFinished>()) e.call.id: e,
+        };
+        expect(finished['k']!.outcome.isError, isFalse);
+        expect(finished['s']!.outcome.summary, 'Entsperren nötig');
+        expect((await api.state('light.kitchen')).state, 'off');
+        expect((await api.state('lock.front')).state, 'locked');
+      });
+    });
+  }
 }

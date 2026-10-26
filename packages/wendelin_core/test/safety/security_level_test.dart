@@ -88,5 +88,32 @@ void main() {
       );
       expect(AccessContext.lockedUnknownVoice.toString(), contains('true'));
     });
+
+    group('lockedFor: Stimme aus der Eingabe (WP154 L3)', () {
+      UserInput input({InputSource source = InputSource.voice, String? id}) =>
+          UserInput(text: 'x', source: source, speakerId: id);
+
+      test('gesprochen mit erkannter Person: Stimme erkannt', () {
+        final a = AccessContext.lockedFor(input(id: 'p1'));
+        expect(a.locked, isTrue);
+        expect(a.speakerRecognized, isTrue);
+      });
+      for (final (name, i) in [
+        ('gesprochen, unbekannt (keine Id)', input()),
+        ('gesprochen, leere Id', input(id: '')),
+        ('getippt', input(source: InputSource.text)),
+        (
+          'getippt mit Id (darf nie vorkommen)',
+          input(source: InputSource.text, id: 'p1'),
+        ),
+      ]) {
+        test('$name: fremd, gesperrt bleibt', () {
+          final a = AccessContext.lockedFor(i);
+          expect(a.locked, isTrue);
+          expect(a.speakerRecognized, isFalse);
+          expect(a, AccessContext.lockedUnknownVoice);
+        });
+      }
+    });
   });
 }

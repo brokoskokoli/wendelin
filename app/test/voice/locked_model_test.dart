@@ -63,14 +63,13 @@ void main() {
       ToolPrefs prefs, {
       String entities = _entities,
       Set<String> enabled = const {'flashlight', 'ha'},
+      AccessContext access = AccessContext.lockedUnknownVoice,
     }) async {
       final llm = FakeLlmProvider(const []);
       final env = _env(llm, prefs: prefs, entities: entities, enabled: enabled);
       final c = env.container();
       addTearDown(c.dispose);
-      final s = await c.read(lockedScopeProvider)(
-        AccessContext.lockedUnknownVoice,
-      );
+      final s = await c.read(lockedScopeProvider)(access);
       return s?.tools;
     }
 
@@ -129,6 +128,33 @@ void main() {
       });
     }
 
+    const voice = AccessContext(locked: true, speakerRecognized: true);
+
+    test(
+      'Licht B (Standard) mit erkannter Stimme: ha__call im Umfang',
+      () async {
+        const light = '[{"id":"light.b","name":"L"}]';
+        expect(await scope(const ToolPrefs(), entities: light, access: voice), {
+          'ha__call',
+          ...torch,
+        });
+        expect(await scope(const ToolPrefs(), entities: light), isNull);
+      },
+    );
+
+    for (final (name, entity) in [
+      ('Schloss D', '{"id":"lock.d","name":"S"}'),
+      ('Rollo C', '{"id":"cover.c","name":"R","level":"c"}'),
+      ('Licht auf D', '{"id":"light.a","name":"L","level":"d"}'),
+    ]) {
+      test('$name mit erkannter Stimme: kein Modell', () async {
+        expect(
+          await scope(const ToolPrefs(), entities: '[$entity]', access: voice),
+          isNull,
+        );
+      });
+    }
+
     test('altes „Immer bestätigen“ auf ha__call: nicht im Umfang', () async {
       expect(
         await scope(
@@ -180,6 +206,7 @@ void main() {
       TestEnv env,
       String said, {
       bool unlockSucceeds = false,
+      SpeakerRecognizer? speaker,
     }) async {
       final platform = FakeAssistantPlatform()
         ..locked = true
@@ -192,6 +219,7 @@ void main() {
         voice: fakeVoice(
           script: [Transcript(text: said, language: 'de')],
           tts: tts,
+          speaker: speaker,
         ),
       );
       c.read(agentControllerProvider.notifier).seed(overlaySample());
@@ -347,6 +375,204 @@ void main() {
         isEmpty,
         reason: 'gesperrt nie; entsperrt wartet das Schloss auf Bestätigung',
       );
+    });
+
+    group('Stimme (WP154 L3)', () {
+      final known = FakeSpeakerRecognizer(
+        const SpeakerMatch.known(personId: 'p1', name: 'Anna', score: 0.8),
+      );
+      SpeakerRecognizer? foreign() => FakeSpeakerRecognizer(
+        const SpeakerMatch.unknown(
+          SpeakerUnknownReason.belowThreshold,
+          score: 0.2,
+        ),
+      );
+      final voices = <String, SpeakerRecognizer? Function()>{
+        'fremde Stimme': foreign,
+        'Erkennung aus': () => null,
+        'Erkennung wirft': () => FakeSpeakerRecognizer(
+          const SpeakerMatch.unknown(SpeakerUnknownReason.failed),
+        )..throwing = true,
+        'zu kurz': () => FakeSpeakerRecognizer(
+          const SpeakerMatch.unknown(SpeakerUnknownReason.tooShort),
+        ),
+        'mehrdeutig': () => FakeSpeakerRecognizer(
+          const SpeakerMatch.unknown(SpeakerUnknownReason.ambiguous),
+        ),
+      };
+
+      // Nur Geräte, die gesperrt eine erkannte Stimme brauchen (B, D): ohne
+      // Stimme gibt es keinen Modelllauf.
+      const bOnly =
+          '[{"id":"light.b","name":"Stehlampe"},'
+          '{"id":"lock.d","name":"Haustür"}]';
+
+      FakeLlmProvider lightB() => FakeLlmProvider([
+        ScriptedTurn.toolCalls([
+          ToolCallBlock(
+            id: '1',
+            name: 'ha__call',
+            argumentsJson: '{"entity":"light.b","service":"turn_on"}',
+          ),
+        ]),
+        ScriptedTurn.text('Erledigt.'),
+      ]);
+
+      testWidgets('Licht B, erkannte Stimme: läuft gesperrt über das Modell', (
+        tester,
+      ) async {
+        llm = lightB();
+        final env = _env(llm, entities: bOnly);
+        final (_, platform, _) = await run(
+          tester,
+          env,
+          'Stehlampe an',
+          speaker: known,
+        );
+        expect(env.ha.calls.single.domain, 'light');
+        expect(env.ha.calls.single.service, 'turn_on');
+        expect(platform.unlockRequests, 0);
+        expect([
+          for (final t in llm.requests.first.tools) t.name,
+        ], unorderedEquals(['ha__call', 'flashlight__on', 'flashlight__off']));
+      });
+
+      for (final MapEntry(key: name, value: make) in voices.entries) {
+        testWidgets('Licht B, $name: Entsperren nötig, nichts läuft', (
+          tester,
+        ) async {
+          llm = lightB();
+          final env = _env(llm, entities: bOnly);
+          final (_, platform, tts) = await run(
+            tester,
+            env,
+            'Stehlampe an',
+            speaker: make(),
+          );
+          expect(env.ha.calls, isEmpty);
+          expect(llm.requests, isEmpty, reason: 'kein Modell ohne Stimme');
+          expect(tts.spoken.join(' '), 'Bitte entsperre das Telefon.');
+          expect(platform.unlockRequests, 1);
+        });
+      }
+
+      testWidgets('Licht A im Umfang, fremde Stimme: das Modell versucht Licht '
+          'B, die Policy verweigert', (tester) async {
+        llm = lightB();
+        final env = _env(llm); // Flurlicht A öffnet den Modelllauf
+        final (_, platform, _) = await run(
+          tester,
+          env,
+          'Stehlampe an',
+          speaker: foreign(),
+        );
+        expect(llm.requests, isNotEmpty);
+        expect(env.ha.calls, isEmpty);
+        expect(platform.unlockRequests, 1);
+      });
+
+      testWidgets('Schloss D läuft nie, auch mit erkannter Stimme', (
+        tester,
+      ) async {
+        llm = FakeLlmProvider([
+          ScriptedTurn.toolCalls([
+            ToolCallBlock(
+              id: '1',
+              name: 'ha__call',
+              argumentsJson: '{"entity":"lock.d","service":"unlock"}',
+            ),
+          ]),
+          ScriptedTurn.text('Bitte entsperren.'),
+        ]);
+        final env = _env(llm, entities: bOnly);
+        final (_, platform, tts) = await run(
+          tester,
+          env,
+          'Haustür auf',
+          speaker: known,
+        );
+        expect(env.ha.calls, isEmpty);
+        expect(tts.spoken.join(' '), isNot(contains('Tür offen')));
+        expect(platform.unlockRequests, 1);
+      });
+
+      testWidgets('Licht B und Schloss D, erkannte Stimme: nur das Licht', (
+        tester,
+      ) async {
+        llm = FakeLlmProvider([
+          ScriptedTurn.toolCalls([
+            ToolCallBlock(
+              id: '1',
+              name: 'ha__call',
+              argumentsJson: '{"entity":"light.b","service":"turn_on"}',
+            ),
+            ToolCallBlock(
+              id: '2',
+              name: 'ha__call',
+              argumentsJson: '{"entity":"lock.d","service":"unlock"}',
+            ),
+          ]),
+          ScriptedTurn.text('Licht an, Tür bitte entsperren.'),
+        ]);
+        final env = _env(llm, entities: bOnly);
+        final (_, platform, _) = await run(
+          tester,
+          env,
+          'Stehlampe an und Haustür auf',
+          speaker: known,
+          unlockSucceeds: true,
+        );
+        expect(env.ha.calls.map((x) => '${x.domain}.${x.service}'), [
+          'light.turn_on',
+        ]);
+        expect(platform.unlockRequests, 1);
+      });
+
+      testWidgets(
+        'Taschenlampe auf B: erkannte Stimme schaltet, fremde nicht',
+        (tester) async {
+          const prefs = ToolPrefs(
+            levels: {'flashlight__on': 'b', 'flashlight__off': 'b'},
+          );
+          final ok = _env(llm, prefs: prefs);
+          final (_, p1, tts1) = await run(
+            tester,
+            ok,
+            'Taschenlampe an',
+            speaker: known,
+          );
+          expect(ok.torch.on, isTrue);
+          expect(tts1.spoken.join(' '), 'Taschenlampe an.');
+          expect(p1.unlockRequests, 0);
+        },
+      );
+
+      testWidgets('Taschenlampe auf B, fremde Stimme: Entsperren nötig', (
+        tester,
+      ) async {
+        const prefs = ToolPrefs(
+          levels: {'flashlight__on': 'b', 'flashlight__off': 'b'},
+        );
+        final env = _env(llm, prefs: prefs);
+        final (_, platform, tts) = await run(
+          tester,
+          env,
+          'Taschenlampe an',
+          speaker: foreign(),
+        );
+        expect(env.torch.on, isFalse);
+        expect(tts.spoken.join(' '), 'Bitte entsperre das Telefon.');
+        expect(platform.unlockRequests, 1);
+        expect(llm.requests, isEmpty);
+      });
+
+      testWidgets('Taschenlampe im Standard (A): läuft mit jeder Stimme', (
+        tester,
+      ) async {
+        final env = _env(llm, entities: bOnly);
+        await run(tester, env, 'Taschenlampe an', speaker: foreign());
+        expect(env.torch.on, isTrue);
+      });
     });
   });
 }

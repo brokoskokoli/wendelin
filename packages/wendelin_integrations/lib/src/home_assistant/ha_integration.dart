@@ -142,7 +142,7 @@ final class HaIntegration implements Integration {
   /// recognized voice**, according to the policy table ([haDecide], level
   /// B or A). Only `ha__call`; reading (it would read house details aloud)
   /// never. Unknown or unresolvable entities are not allowed. Nothing calls
-  /// this yet (the locked path is WP154 L2, the voice L3).
+  /// this yet (the scope computation asks it with the access of the request).
   Future<bool> allowedWhileLocked(
     String toolName,
     Map<String, Object?> args, {

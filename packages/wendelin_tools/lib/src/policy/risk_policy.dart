@@ -181,7 +181,9 @@ final class RiskPolicy {
       // A per-device tool is let through (it refuses itself), but a stored
       // tool level (the legacy "always confirm" = D) still counts: locked is
       // never looser than unlocked, the stricter of both wins.
-      if (tool is LevelPerDeviceTool && stored == null) {
+      if (tool is LevelPerDeviceTool &&
+          stored == null &&
+          tool.risk != RiskLevel.external) {
         return PolicyDecision.allow;
       }
       final level = stored ?? defaultLevelOf(tool);

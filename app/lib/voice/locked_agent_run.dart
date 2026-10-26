@@ -104,6 +104,7 @@ enum LockedCommandResult {
 typedef LockedCommandRunner = Future<LockedCommandResult> Function(
   LockedCommand command,
   String trigger,
+  AccessContext access,
 );
 
 /// Tool name of each [LockedCommand] (it only runs if its integration is
@@ -134,7 +135,7 @@ String lockedToolName(LockedCommand c) => switch (c) {
 /// disabled tool does not run, and a tool that hangs ends at the executor's
 /// timeout.
 final lockedCommandRunnerProvider = Provider<LockedCommandRunner>((ref) {
-  return (command, trigger) async {
+  return (command, trigger, access) async {
     final name = lockedToolName(command);
     final demo = ref.read(demoModeProvider);
     final enabled = ref.read(enabledIntegrationsProvider);
@@ -157,7 +158,7 @@ final lockedCommandRunnerProvider = Provider<LockedCommandRunner>((ref) {
     final executor = ToolExecutor(
       catalog: _OneTool(tool),
       policy: ref.read(riskPolicyProvider),
-      access: AccessContext.lockedUnknownVoice,
+      access: access,
     );
     var result = LockedCommandResult.failed;
     try {
@@ -278,8 +279,8 @@ final class LockGateAgentRun implements AgentRun {
   /// (WP114; memory only).
   final void Function(String trigger, UserInput input) onRefused;
 
-  /// The run for a request on a locked device in [access] (the voice comes
-  /// with WP157), or `null` if nothing beyond the local commands is allowed.
+  /// The run for a request on a locked device in [access] (the voice from
+  /// [AccessContext.lockedFor]), or `null` if nothing beyond the local commands is allowed.
   /// `null` here = never a model while locked (tests, K85 behaviour).
   final Future<AgentRun?> Function(AccessContext access)? modelRun;
 
@@ -304,9 +305,14 @@ final class LockGateAgentRun implements AgentRun {
 
   Stream<AgentEvent> _locked(UserInput input) async* {
     final command = matchLockedCommand(input.text);
-    log?.call('locked-cmd match=${command?.name ?? 'none'}');
+    // Who is speaking (WP154 L3): only a recognized voice counts for level B.
+    final access = AccessContext.lockedFor(input);
+    log?.call(
+      'locked-cmd match=${command?.name ?? 'none'} '
+      'voice=${access.speakerRecognized ? 'known' : 'unknown'}',
+    );
     if (command != null) {
-      final result = await runCommand(command, trigger());
+      final result = await runCommand(command, trigger(), access);
       if (result == LockedCommandResult.needsUnlock) {
         onRefused(trigger(), input);
       }
@@ -320,8 +326,6 @@ final class LockGateAgentRun implements AgentRun {
       });
       return;
     }
-    // Voice recognition is WP157: until then the voice is unknown.
-    const access = AccessContext.lockedUnknownVoice;
     AgentRun? model;
     try {
       model = await modelRun?.call(access);
@@ -382,7 +386,7 @@ LockGateAgentRun lockGateFor(
 }) => LockGateAgentRun(
   inner: inner,
   locked: () => ref.read(lockedModeProvider),
-  runCommand: (c, t) => ref.read(lockedCommandRunnerProvider)(c, t),
+  runCommand: (c, t, a) => ref.read(lockedCommandRunnerProvider)(c, t, a),
   modelRun: (access) async {
     final scope = await ref.read(lockedScopeProvider)(access);
     if (scope == null) return null;

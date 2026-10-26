@@ -140,6 +140,60 @@ void main() {
         );
       }
     });
+    test('Tabelle Stimme aus der Eingabe × Stufe × Gerät (WP154 L3)', () {
+      final voices = <String, UserInput>{
+        'erkannt': UserInput(
+          text: 'x',
+          source: InputSource.voice,
+          speakerId: 'p',
+        ),
+        'unbekannt': UserInput(text: 'x', source: InputSource.voice),
+        'getippt': UserInput(text: 'x'),
+        'Fehler': UserInput(text: 'x', source: InputSource.voice),
+      };
+      for (final id in ['light.a', 'lock.a', 'cover.a', 'media_player.a']) {
+        for (final level in ['a', 'b', 'c', 'd']) {
+          for (final MapEntry(key: voice, value: input) in voices.entries) {
+            final access = AccessContext.lockedFor(input);
+            final want = switch (level) {
+              'a' => a,
+              'b' => voice == 'erkannt' ? a : u,
+              _ => u,
+            };
+            expect(
+              haDecide(
+                _e(id, level: level),
+                locked: access.locked,
+                speakerRecognized: access.speakerRecognized,
+              ),
+              want,
+              reason: '$id $level $voice',
+            );
+          }
+        }
+      }
+    });
+    test('Standard: Licht B fragt Stimme, Schloss D nie, auch erkannt', () {
+      const voice = true;
+      expect(
+        haDecide(_e('light.a'), locked: true, speakerRecognized: voice),
+        a,
+      );
+      expect(haDecide(_e('light.a'), locked: true), u);
+      expect(
+        haDecide(_e('media_player.a'), locked: true, speakerRecognized: voice),
+        a,
+      );
+      expect(haDecide(_e('lock.a'), locked: true, speakerRecognized: voice), u);
+      expect(
+        haDecide(
+          _e('alarm_control_panel.a'),
+          locked: true,
+          speakerRecognized: voice,
+        ),
+        u,
+      );
+    });
     test('manipulierte oder ungültige Stufe = D, nie der Standard', () {
       for (final raw in ['', 'x', 'A', 'z', 'null']) {
         expect(haDecide(_e('light.a', level: raw)), c, reason: raw);
@@ -325,7 +379,7 @@ void main() {
       expect(await ok('lock.garden'), isTrue);
     });
 
-    group('gesperrt (L2, Stimme unbekannt)', () {
+    group('gesperrt (L2/L3, Stimme je Aufruf)', () {
       ToolContext lockedCtx({bool voice = false}) => ToolContext(
         sessionId: 's1',
         clock: FixedClock(DateTime.utc(2026, 10, 13, 12)),
@@ -371,7 +425,7 @@ void main() {
         );
       }
 
-      test('erkannte Stimme (Hook für WP157): Licht auf B läuft', () async {
+      test('erkannte Stimme: Licht auf B läuft', () async {
         final h = ha([_e('light.kitchen', level: 'b')]);
         final r = await runLocked(
           h,
@@ -383,6 +437,40 @@ void main() {
         expect(r.isError, isFalse, reason: r.text);
         expect(api.calls, hasLength(1));
       });
+
+      test('Licht B (Standard) mit fremder Stimme: Entsperren nötig', () async {
+        final h = ha([_e('light.kitchen')]);
+        final r = await runLocked(h, 'ha__call', 'light.kitchen', 'turn_on');
+        expect(r.isError, isTrue);
+        expect(r.summary, 'Entsperren nötig');
+        expect(api.calls, isEmpty);
+        final ok = await runLocked(
+          h,
+          'ha__call',
+          'light.kitchen',
+          'turn_on',
+          voice: true,
+        );
+        expect(ok.isError, isFalse, reason: ok.text);
+        expect(api.calls, hasLength(1), reason: 'Standard B: erkannte Stimme');
+      });
+
+      test(
+        'Schloss D und Szene mit Schloss laufen nie, auch erkannt',
+        () async {
+          api.set('lock.front', 'locked', const {});
+          final h = ha([_e('lock.front')]);
+          final r = await runLocked(
+            h,
+            'ha__call',
+            'lock.front',
+            'unlock',
+            voice: true,
+          );
+          expect(r.summary, 'Entsperren nötig');
+          expect(api.calls, isEmpty);
+        },
+      );
 
       test('ha__call_secure gesperrt nie, auch nicht Schloss auf A', () async {
         final h = ha([_e('lock.front', level: 'a'), _e('light.k', level: 'a')]);

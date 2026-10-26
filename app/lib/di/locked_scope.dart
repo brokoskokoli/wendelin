@@ -21,7 +21,7 @@ final class LockedScope {
   /// Creates the scope.
   const LockedScope({required this.access, required this.tools});
 
-  /// Lock state and voice (WP157 adds the recognized speaker).
+  /// Lock state and whether the voice was recognized (WP154 L3).
   final AccessContext access;
 
   /// Names of the tools offered; for a tool that decides per device

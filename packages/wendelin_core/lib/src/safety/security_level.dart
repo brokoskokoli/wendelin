@@ -1,3 +1,5 @@
+import '../agent/user_input.dart';
+
 /// Security level of a tool or a device (WP154, ADR 0022). The user chooses
 /// it per tool (and per Home Assistant device); the default is the
 /// recommendation of the tool.
@@ -70,8 +72,8 @@ LevelAccess levelAccess(
 }
 
 /// Who asks and in which device state (WP154 L2, ADR 0022): the input of
-/// [levelAccess] as one value that travels with a request. WP157 adds more
-/// fields (e.g. the speaker) without touching every call site.
+/// [levelAccess] as one value that travels with a request. A recognized
+/// speaker (L3) is one more field, so no call site changes.
 ///
 /// Fail-closed: the default is the **unlocked** device only where a request
 /// comes from the typed or spoken app itself; everything that runs while the
@@ -83,8 +85,20 @@ final class AccessContext {
   /// The device is unlocked (typed or spoken request in the app).
   static const unlocked = AccessContext();
 
-  /// The device is locked and the voice is not recognized (until WP92 L3).
+  /// The device is locked and the voice is not recognized.
   static const lockedUnknownVoice = AccessContext(locked: true);
+
+  /// The context of [input] on a locked device (WP154 L3): the voice counts
+  /// as recognized only for a **spoken** request that carries the id of a
+  /// recognized person (`SpeakerMatch.known`, WP92). Typed input, recognition
+  /// off, unknown, too short, ambiguous, failed or timed out all arrive
+  /// without an id: fail-closed ([lockedUnknownVoice]).
+  factory AccessContext.lockedFor(UserInput input) => AccessContext(
+    locked: true,
+    speakerRecognized:
+        input.source == InputSource.voice &&
+        (input.speakerId?.isNotEmpty ?? false),
+  );
 
   /// Whether the device is locked.
   final bool locked;

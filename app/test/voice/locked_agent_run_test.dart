@@ -45,6 +45,7 @@ void main() {
     final refused = <String>[];
     final partly = <String>[];
     final access = <AccessContext>[];
+    final commandAccess = <AccessContext>[];
 
     LockGateAgentRun gate({
       AgentRun? model,
@@ -53,7 +54,10 @@ void main() {
     }) => LockGateAgentRun(
       inner: _Inner(),
       locked: () => true,
-      runCommand: (_, _) async => command,
+      runCommand: (_, _, a) async {
+        commandAccess.add(a);
+        return command;
+      },
       onRefused: (t, input) => refused.add('$t:${input.text}'),
       onPartlyDone: partly.add,
       trigger: () => 'assistant',
@@ -68,6 +72,7 @@ void main() {
       refused.clear();
       partly.clear();
       access.clear();
+      commandAccess.clear();
     });
 
     Future<List<AgentEvent>> ask(LockGateAgentRun g, [String t = 'Licht an']) =>
@@ -81,6 +86,59 @@ void main() {
       );
       expect(refused, ['assistant:Licht an']);
       expect(access.single, AccessContext.lockedUnknownVoice);
+    });
+
+    group('Stimme der Eingabe (WP154 L3)', () {
+      Future<void> speak(LockGateAgentRun g, UserInput input) =>
+          g.run(input).toList();
+
+      test(
+        'erkannte Person: Modelllauf und Befehl bekommen Stimme erkannt',
+        () async {
+          final known = UserInput(
+            text: 'Licht an',
+            source: InputSource.voice,
+            speakerId: 'p1',
+          );
+          await speak(gate(), known);
+          await speak(
+            gate(),
+            UserInput(
+              text: 'Taschenlampe an',
+              source: InputSource.voice,
+              speakerId: 'p1',
+            ),
+          );
+          expect(
+            access.single,
+            const AccessContext(locked: true, speakerRecognized: true),
+          );
+          expect(commandAccess.single.speakerRecognized, isTrue);
+        },
+      );
+
+      test('ohne Id, getippt oder leere Id: fremd (fail-closed)', () async {
+        for (final input in [
+          UserInput(text: 'Licht an', source: InputSource.voice),
+          UserInput(text: 'Licht an'),
+          UserInput(text: 'Licht an', speakerId: 'p1'),
+          UserInput(text: 'Licht an', source: InputSource.voice, speakerId: ''),
+        ]) {
+          await speak(gate(), input);
+          await speak(
+            gate(),
+            UserInput(
+              text: 'Taschenlampe an',
+              source: input.source,
+              speakerId: input.speakerId,
+            ),
+          );
+        }
+        expect(access, everyElement(AccessContext.lockedUnknownVoice));
+        expect(commandAccess, everyElement(AccessContext.lockedUnknownVoice));
+        expect(access, hasLength(4));
+        expect(commandAccess, hasLength(4));
+      });
     });
 
     test(
@@ -174,7 +232,7 @@ void main() {
       final gate = LockGateAgentRun(
         inner: inner,
         locked: () => locked,
-        runCommand: (_, _) async => LockedCommandResult.done,
+        runCommand: (_, _, _) async => LockedCommandResult.done,
         onRefused: (_, _) {},
         trigger: () => 'assistant',
       );

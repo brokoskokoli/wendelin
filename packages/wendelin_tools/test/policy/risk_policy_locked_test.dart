@@ -50,6 +50,72 @@ void main() {
     }
   });
 
+  group('Stimme aus der Eingabe × Stufe (WP154 L3, gesperrt)', () {
+    // Wie die Pipeline sie liefert: erkannt = Id, alles andere ohne Id.
+    final voices = <String, UserInput>{
+      'erkannt': UserInput(
+        text: 'x',
+        source: InputSource.voice,
+        speakerId: 'p',
+      ),
+      'unbekannt': UserInput(text: 'x', source: InputSource.voice),
+      'getippt': UserInput(text: 'x'),
+      'Fehler/Zeitlimit (keine Id)': UserInput(
+        text: 'x',
+        source: InputSource.voice,
+      ),
+    };
+    for (final tool in [_read, _write, _external]) {
+      for (final level in SecurityLevel.values) {
+        for (final MapEntry(key: voice, value: input) in voices.entries) {
+          final recognized = voice == 'erkannt';
+          final allowed =
+              level == SecurityLevel.a ||
+              (level == SecurityLevel.b && recognized);
+          test('${tool.risk.name} auf ${level.name}, Stimme $voice → '
+              '${allowed ? 'läuft' : 'Entsperren nötig'}', () {
+            final p = RiskPolicy()..setLevel(tool.name, level);
+            expect(
+              p.decide(tool, 's', access: AccessContext.lockedFor(input)),
+              allowed ? PolicyDecision.allow : PolicyDecision.unlock,
+            );
+          });
+        }
+      }
+    }
+    test('Standard (kein Eintrag) bleibt für jede Stimme gesperrt', () {
+      for (final input in voices.values) {
+        for (final tool in [_read, _write, _external]) {
+          expect(
+            RiskPolicy().decide(
+              tool,
+              's',
+              access: AccessContext.lockedFor(input),
+            ),
+            PolicyDecision.unlock,
+            reason: tool.name,
+          );
+        }
+      }
+    });
+    test('erkannte Stimme hebt Sitzungssperre und Deaktivierung nicht auf', () {
+      final p = RiskPolicy()
+        ..setLevel('p__send', SecurityLevel.b)
+        ..lockExternal('s');
+      expect(
+        p.decide(_external, 's', access: _voice),
+        PolicyDecision.deny(RiskPolicy.lockedReason),
+      );
+      final q = RiskPolicy()
+        ..setLevel('p__read', SecurityLevel.b)
+        ..setOverride('p__read', PolicyAction.deny);
+      expect(
+        q.decide(_read, 's', access: _voice),
+        PolicyDecision.deny(RiskPolicy.deniedReason),
+      );
+    });
+  });
+
   group('Vorbehalte bleiben gesperrt', () {
     test('deaktiviertes Tool bleibt verweigert, auch auf A', () {
       final p = RiskPolicy()
@@ -123,6 +189,18 @@ void main() {
     test('gespeichertes A auf dem Gerätetool: gesperrt durchgelassen', () {
       final p = RiskPolicy()..setLevel('h__call', SecurityLevel.a);
       expect(p.decide(ha, 's', access: _locked), PolicyDecision.allow);
+    });
+
+    test('Geräte-Tool mit external ohne Stufe: nie lockerer als entsperrt', () {
+      // Tiefenschutz (Review 4): entsperrt fragt es, gesperrt darf es nicht
+      // einfach durch.
+      final ext = PerDeviceFake(
+        FakeTool(name: 'h__x', risk: RiskLevel.external),
+      );
+      final p = RiskPolicy();
+      expect(p.decide(ext, 's').action, PolicyAction.confirm);
+      expect(p.decide(ext, 's', access: _locked), PolicyDecision.unlock);
+      expect(p.decide(ext, 's', access: _voice), PolicyDecision.unlock);
     });
 
     test('deaktiviert bleibt verweigert', () {
