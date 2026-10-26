@@ -126,7 +126,8 @@ void main() {
         cooldown: cooldown,
         settle: settle,
         verifyTimeout: timeout,
-        onCandidate: (k, {required busy}) => cands.add('${k.name} $busy'),
+        onCandidate: (k, {required busy, required score}) =>
+            cands.add('${k.name} $busy'),
         onVerdict: (r, ms) => verdicts.add(
           r.reason == null ? r.result : '${r.result}/${r.reason}',
         ),
@@ -397,6 +398,113 @@ void main() {
         },
       );
 
+      test('Echo verworfen, schwaches Echo im Cooldown, dann echter Ruf: '
+          'Schnitt am echten Wort (WP151)', () async {
+        final script = _ScriptEngine(
+          {0: 'wake', 12: 'wake', 22: 'wake'},
+          conf: {0: 0.85, 12: 0.86, 22: 0.96},
+        );
+        await setUp0(
+          settle: const Duration(milliseconds: 800),
+          cooldown: const Duration(milliseconds: 1500),
+          custom: script,
+        );
+        // Nur ein Ausschnitt mit dem Wort des Nutzers (7000) ist "wake".
+        // Frame-Grenze (Frame = 1600 Samples, settle 800 ms = 12800): das
+        // schwache Echo in Frame 12 endet bei Sample 20800, mit dem Schnitt
+        // am alten Wortende reicht der Ausschnitt bis 33600 = Ende von
+        // Frame 21. Der Ruf in Frame 22 (ab 35200) liegt knapp dahinter:
+        // ohne den Fix fehlt er. Läge er in Frame 21, zeigte der Test den
+        // Fehler nicht mehr.
+        v.decide = (pcm) => pcm.contains(7000)
+            ? const BargeVerdict('wake', BargeInKeyword.wake)
+            : BargeVerdict.no;
+        Future<void> frame(int level) async {
+          audio.push(Int16List(1600)..fillRange(0, 1600, level));
+          await pumpEventQueue();
+        }
+
+        for (var i = 0; i < 3; i++) {
+          await frame(5000); // Echo (Frames 0 bis 2)
+        }
+        for (var i = 3; i < 10; i++) {
+          await frame(0);
+        }
+        expect(verdicts, ['no']); // erste Prüfung nach dem Echo
+        await frame(0);
+        await frame(0);
+        await frame(5000); // Frame 12: schwaches Echo im Cooldown
+        for (var i = 13; i < 22; i++) {
+          await frame(0);
+        }
+        await frame(7000); // Frame 22: der echte Ruf, stärker
+        for (var i = 23; i < 40; i++) {
+          await frame(0);
+        }
+        expect(v.calls, hasLength(2));
+        expect(got, ['keyword-wake']);
+      });
+
+      // WP151 Runde 3: Echo, dann (während der Prüfung) schwaches D1, die
+      // Prüfung wird verworfen, im Cooldown kommt ein stärkerer Kandidat S.
+      // Frames je 1600 Samples, settle 800 ms (8 Frames), Cooldown 1,5 s
+      // (15 Frames), Ausschnitt 2,5 s (25 Frames). Prüfung 1 startet nach
+      // Frame 8, D1 (Frame 10) wird zurückgestellt, das Urteil "no" fällt
+      // nach Frame 14, der Cooldown endet nach Frame 29. S (stärker) wartet
+      // mit seinem eigenen Schnitt: Ende von S + settle.
+      Future<void> echoD1Then(
+        int sFrame, {
+        required int d1Level,
+        required int sLevel,
+      }) async {
+        final script = _ScriptEngine(
+          {0: 'wake', 10: 'wake', sFrame: 'wake'},
+          conf: {0: 0.85, 10: 0.80, sFrame: 0.96},
+        );
+        await setUp0(
+          settle: const Duration(milliseconds: 800),
+          cooldown: const Duration(milliseconds: 1500),
+          custom: script,
+        );
+        v.decide = (pcm) => pcm.contains(7000)
+            ? const BargeVerdict('wake', BargeInKeyword.wake)
+            : BargeVerdict.no;
+        final hold = Completer<void>();
+        v.hold = hold;
+        Future<void> frame(int level) async {
+          audio.push(Int16List(1600)..fillRange(0, 1600, level));
+          await pumpEventQueue();
+        }
+
+        for (var i = 0; i < 40; i++) {
+          if (i == 15) {
+            v.hold = null;
+            hold.complete(); // Urteil der ersten Prüfung: no
+          }
+          await frame(
+            i == 0 ? 5000 : (i == 10 ? d1Level : (i == sFrame ? sLevel : 0)),
+          );
+        }
+      }
+
+      test('Echo verworfen, schwaches Echo D1, dann stärkerer Ruf S im '
+          'Cooldown: Schnitt an S, nicht an D1 (WP151 Runde 3)', () async {
+        await echoD1Then(20, d1Level: 5000, sLevel: 7000);
+        expect(v.calls, hasLength(2));
+        expect(got, ['keyword-wake']);
+      });
+
+      test('D1 ist das echte Wort, S (Echo) kommt kurz danach: D1 bleibt im '
+          'Ausschnitt', () async {
+        // S in Frame 20: Schnitt bei Ende Frame 20 + 8 = nach Frame 28, der
+        // Ausschnitt reicht 25 Frames zurück (ab Frame 4) und enthält D1
+        // (Frame 10). D1 fiele erst bei S nach Frame 26 heraus (Cooldown
+        // ist bei Frame 29 zu Ende): so viel Abstand ist die Grenze.
+        await echoD1Then(20, d1Level: 7000, sLevel: 5000);
+        expect(v.calls, hasLength(2));
+        expect(got, ['keyword-wake']);
+      });
+
       test('Kandidat im Cooldown außerhalb des Ausschnitts verfällt', () async {
         await setUp0(
           cooldown: const Duration(milliseconds: 3000),
@@ -430,6 +538,8 @@ void main() {
         await frames(10, loud: true);
         expect(v.calls, hasLength(1));
         expect(got, isEmpty);
+        // WP151: nicht still verworfen, das Log nennt den Grund.
+        expect(verdicts, contains('skip/stale'));
       });
 
       test('Stille im Ausschnitt: skip/silent ohne Erkenner', () async {
@@ -568,6 +678,75 @@ void main() {
             ..verdict = const BargeVerdict('wake', BargeInKeyword.wake);
           await frames(2, loud: true); // weit vor dem Ende des Cooldowns
           expect(v.calls, hasLength(2));
+          expect(got, ['keyword-wake']);
+        },
+      );
+
+      test(
+        'WP151: stärkerer Kandidat in langer Prüfung geht nicht verloren',
+        () async {
+          // Gerätelog 2026-10-26: sim 0,73 mit busy=true kam nie an die Reihe,
+          // weil die Prüfung des ersten länger als der Ausschnitt dauerte.
+          final script = _ScriptEngine(
+            {0: 'wake', 3: 'wake'},
+            conf: {0: 0.54, 3: 0.73},
+          );
+          await setUp0(
+            settle: const Duration(milliseconds: 200),
+            cooldown: const Duration(milliseconds: 1500),
+            custom: script,
+          );
+          v
+            ..verdict = BargeVerdict.no
+            ..hold = Completer<void>();
+          await frames(3, loud: true);
+          audio.push(Int16List(1600)..fillRange(0, 1600, 7000)); // Wort, busy
+          await pumpEventQueue();
+          await frames(40, loud: true); // die Prüfung dauert 4 s
+          expect(cands, ['wake false', 'wake true']);
+          v.hold!.complete();
+          await pumpEventQueue();
+          v
+            ..hold = null
+            ..decide = (pcm) => pcm.contains(7000)
+                ? const BargeVerdict('wake', BargeInKeyword.wake)
+                : BargeVerdict.no;
+          await frames(1, loud: true);
+          expect(v.calls, hasLength(2));
+          expect(got, ['keyword-wake']);
+        },
+      );
+
+      test(
+        'WP151: Wort des Kandidaten in der Prüfung läuft bis settle weiter',
+        () async {
+          final script = _ScriptEngine(
+            {0: 'wake', 3: 'wake'},
+            conf: {0: 0.54, 3: 0.73},
+          );
+          await setUp0(
+            settle: const Duration(milliseconds: 200),
+            cooldown: const Duration(milliseconds: 1500),
+            custom: script,
+          );
+          v
+            ..verdict = BargeVerdict.no
+            ..hold = Completer<void>();
+          await frames(3, loud: true);
+          audio.push(Int16List(1600)..fillRange(0, 1600, 5000)); // Kandidat
+          await frames(2, loud: true); // das Wort geht weiter
+          // Nachlauf des Wortes (leise, unter dem Pegel) mit Kennzeichen.
+          audio.push(Int16List(1600)..fillRange(0, 1600, 100));
+          await pumpEventQueue();
+          await frames(40, loud: true); // die Prüfung dauert 4 s
+          v.hold!.complete();
+          await pumpEventQueue();
+          v
+            ..hold = null
+            ..decide = (pcm) => pcm.contains(100)
+                ? const BargeVerdict('wake', BargeInKeyword.wake)
+                : BargeVerdict.no;
+          await frames(1, loud: true);
           expect(got, ['keyword-wake']);
         },
       );

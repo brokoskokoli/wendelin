@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -214,6 +215,139 @@ void main() {
     expect(features.isOpen, isFalse);
   });
 
+  test('frühes Speichern und Verlassen in der Pause: run endet '
+      'sauber ohne Zugriff auf den entsorgten Enroller (WP151)', () async {
+    final store = FakeWakeTemplateStore();
+    final features = fakeFeatures();
+    final audio = SequenceAudio([for (var i = 0; i < 5; i++) recording()]);
+    final e = enroller(audio, store, target: 5, features: features);
+    Future<WakeTemplates>? saved;
+    e.addListener(() {
+      // Wie der Screen: speichern, danach Seite verlassen (cancel + dispose),
+      // während run() schon die nächste Aufnahme abwartet.
+      if (e.accepted == 2 && saved == null && e.canFinish) {
+        saved = () async {
+          final t = await e.finish();
+          unawaited(e.cancel());
+          e.dispose();
+          return t;
+        }();
+      }
+    });
+    await e.run(); // darf nicht „used after being disposed“ werfen
+    final t = await saved!;
+    expect(t.embeddings, hasLength(2), reason: 'genau die angenommenen');
+    expect((await store.load('a'))!.embeddings, hasLength(2));
+    expect(features.isOpen, isFalse, reason: 'Modelle freigegeben');
+    expect(audio.starts, 2, reason: 'keine weiteren Aufnahmen');
+  });
+
+  test(
+    'Verlassen während einer laufenden Aufnahme (offener Audio-Strom): '
+    'run endet, Mikrofon gestoppt, gespeichert bleibt gespeichert (WP151)',
+    () async {
+      final store = FakeWakeTemplateStore();
+      final audio = OpenAfterAudio([recording(), recording()]);
+      final e = enroller(audio, store, target: 5);
+      var armed = false;
+      e.addListener(() {
+        if (e.accepted == 2 && !armed) {
+          armed = true;
+          unawaited(
+            audio.hanging.future.then((_) async {
+              await e.finish();
+              unawaited(e.cancel());
+              e.dispose();
+            }),
+          );
+        }
+      });
+      await e.run();
+      expect(audio.starts, 3, reason: 'dritte Aufnahme hing offen');
+      expect(audio.isRunning, isFalse);
+      expect((await store.load('a'))!.embeddings, hasLength(2));
+    },
+  );
+
+  test(
+    'finish liefert eine unveränderliche Kopie der Aufnahmen (WP151)',
+    () async {
+      final audio = SequenceAudio([recording(), recording()]);
+      final e = enroller(audio, FakeWakeTemplateStore(), target: 5, minimum: 2);
+      e.addListener(() {
+        if (e.accepted == 2) e.cancel();
+      });
+      await e.run();
+      final t = await e.finish();
+      expect(
+        () => t.embeddings.add(t.embeddings.first),
+        throwsUnsupportedError,
+      );
+    },
+  );
+
+  test('finish hält run an: Mikrofon aus, Zustand bleibt gespeichert, '
+      'zweites finish schreibt nicht (WP151)', () async {
+    final store = CountingStore();
+    final audio = SequenceAudio([for (var i = 0; i < 5; i++) recording()]);
+    final e = enroller(audio, store, target: 5, minimum: 2);
+    Future<WakeTemplates>? saving;
+    bool? canFinishWhileSaving;
+    e.addListener(() {
+      if (e.accepted == 2 && saving == null && e.canFinish) {
+        saving = e.finish();
+        canFinishWhileSaving = e.canFinish; // zweites Tippen vor dem Ende
+      }
+    });
+    await e.run();
+    await saving;
+    expect(canFinishWhileSaving, isFalse);
+    expect(e.phase, EnrollPhase.saved);
+    expect(e.canFinish, isFalse);
+    expect(audio.starts, 2, reason: 'nach Speichern nimmt nichts mehr auf');
+    expect(audio.isRunning, isFalse);
+    expect(() => e.finish(), throwsStateError);
+    expect(store.saves, 1);
+  });
+
+  test(
+    'nur finish bei offenem Audio-Strom: Mikrofon aus, run endet (WP151)',
+    () async {
+      final store = FakeWakeTemplateStore();
+      final audio = OpenAfterAudio([recording(), recording()]);
+      final e = enroller(audio, store, target: 5);
+      var armed = false;
+      e.addListener(() {
+        if (e.accepted == 2 && !armed) {
+          armed = true;
+          unawaited(audio.hanging.future.then((_) => e.finish()));
+        }
+      });
+      await e.run().timeout(const Duration(seconds: 5));
+      await pumpEventQueue();
+      expect(audio.isRunning, isFalse, reason: 'finish stoppt die Aufnahme');
+      expect(e.phase, EnrollPhase.saved);
+      expect((await store.load('a'))!.embeddings, hasLength(2));
+    },
+  );
+
+  test('Speicherfehler: Fehler weitergereicht, zweites finish speichert '
+      '(WP151)', () async {
+    final store = FlakyStore();
+    final audio = SequenceAudio([recording(), recording()]);
+    final e = enroller(audio, store, target: 5, minimum: 2);
+    e.addListener(() {
+      if (e.accepted == 2) e.cancel();
+    });
+    await e.run();
+    await expectLater(e.finish(), throwsStateError);
+    expect(e.canFinish, isTrue, reason: 'erneuter Versuch möglich');
+    expect(audio.isRunning, isFalse);
+    await e.finish();
+    expect(e.phase, EnrollPhase.saved);
+    expect((await store.load('a'))!.embeddings, hasLength(2));
+  });
+
   test('zu wenige Aufnahmen: finish lehnt ab, ab dem Minimum nicht', () async {
     final audio = SequenceAudio([recording(), recording()]);
     final e = enroller(audio, FakeWakeTemplateStore(), target: 5, minimum: 2);
@@ -405,4 +539,66 @@ Future<void> enrollTwice(WakeTemplateStore store, String _) async {
     await e.run();
     await e.finish();
   }
+}
+
+/// Serves the scripted recordings, then hangs with an open stream until
+/// [stop].
+final class OpenAfterAudio extends SequenceAudio {
+  OpenAfterAudio(super.recordings);
+
+  final hanging = Completer<void>();
+  StreamController<Int16List>? _open;
+
+  @override
+  Stream<Int16List> start() {
+    if (starts < recordings.length) return super.start();
+    starts++;
+    _open = StreamController<Int16List>();
+    hanging.complete();
+    return _open!.stream;
+  }
+
+  @override
+  Future<void> stop() async {
+    await super.stop();
+    await _open?.close();
+  }
+}
+
+final class CountingStore implements WakeTemplateStore {
+  final _inner = FakeWakeTemplateStore();
+  int saves = 0;
+
+  @override
+  Future<WakeTemplates?> load(String speakerId) => _inner.load(speakerId);
+
+  @override
+  Future<void> save(WakeTemplates templates) {
+    saves++;
+    return _inner.save(templates);
+  }
+
+  @override
+  Future<void> delete(String speakerId) => _inner.delete(speakerId);
+}
+
+/// Fails the first [save].
+final class FlakyStore implements WakeTemplateStore {
+  final _inner = FakeWakeTemplateStore();
+  var _failed = false;
+
+  @override
+  Future<WakeTemplates?> load(String speakerId) => _inner.load(speakerId);
+
+  @override
+  Future<void> save(WakeTemplates templates) {
+    if (!_failed) {
+      _failed = true;
+      throw StateError('Speicher voll');
+    }
+    return _inner.save(templates);
+  }
+
+  @override
+  Future<void> delete(String speakerId) => _inner.delete(speakerId);
 }

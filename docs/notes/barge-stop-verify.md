@@ -40,3 +40,15 @@ Kein Fix nötig. Stufe 2 nutzt das `SpeechToText` der Pipeline; alle Aufrufe lau
 - `barge-hit` wie bisher, jetzt erst nach `barge-verify`.
 
 E2E: `app/integration_test/support/barge_log.dart` prüft das Log aus dem Overlay (Datei `files/e2e/voice.log`): kein `barge-hit` ohne `barge-cand` und passendes `barge-verify` (Regeln in `app/test/voice/barge_log_check_test.dart`).
+
+## WP151: Prüfer B beim Unterbrechen bei Gesprächston
+
+Anlass: Gerätelog 2026-10-26, Gesprächston. Parakeet las das kurze „(Hey) Wendelin“ oft als „The“/„Even“/„Venez“; nur 9 von 26 echten Rufen griffen. Prüfer B (Vorlagenvergleich, `wake_verifier_b.dart`, Schwelle `verifierBThresholdHw`) kam offline auf 24 von 26 Rufen und 0 von 519 Sprachausgaben-Ausschnitten. Fenster und Zuschnitt waren in Ordnung, Nullen im Strom kommen von der Android-Echounterdrückung.
+
+- **Auswahl:** `VerifierBBargeVerifier` (`barge_verifier.dart`) entscheidet mit eingelernten „Hey Wendelin“-Folgen (`VerifierBScorer`, geteilt mit `VerifierBWakeVerifier`). Ohne brauchbare Folgen, bei Fehler von B oder bei einem Platzhalter-`mu` entscheidet der Transkript-Prüfer wie vorher (nie beide für denselben Ausschnitt). Der Eigen-Echo-Filter gilt nur im Transkript-Pfad; B hat keinen Text, die eigene Stimme passt nicht auf die eingelernte.
+- **Zuschnitt:** Ende des Wortes = letzter lauter Block des Ausschnitts (`speechEnd`), dann der Live-Zuschnitt von B (1,9 s davor, 0,85 s danach) wie beim Ruf im Leerlauf.
+- **Kandidat während einer Prüfung:** geht nicht mehr verloren. Er merkt sich das Ende seines Wortes (`_deferredLoud`); sein Ausschnitt wird dort geschnitten, nicht am Ende der Sprache „jetzt“. Verworfen wird nur, wenn das Wort aus dem Ring (2 × Ausschnitt) gefallen ist, dann mit `barge-verify result=skip reason=stale`.
+- **Log:** `barge-verify` nennt `verifier=b|transcript` und bei B `score=`; `barge-cand` nennt den Wert des Kandidaten (`cand=`), `sim` bleibt das Maximum der Sitzung.
+- Gerätetest: `docs/testing/m5/wp151.md`.
+
+Nachtrag WP151 Runde 1: Enthält der zuletzt vorgelesene Text das Weckwort, entscheidet nicht B, sondern das Transkript mit Echo-Filter (K84); offline kam TTS mit „(Hey) Wendelin“ auf B bis 0,665 (Schwelle 0,6815). Ein Kandidat aus dem Cooldown behält sein Wortende (`pendingLoud`) wie nach einer Ablehnung.

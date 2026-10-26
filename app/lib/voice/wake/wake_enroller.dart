@@ -244,6 +244,8 @@ class WakeEnroller extends ChangeNotifier {
   var _level = 0.0;
   Object? _error;
   var _stopped = false;
+  var _finishing = false;
+  var _disposed = false;
   var _unchecked = 0;
   var _quietStreak = 0;
 
@@ -275,11 +277,19 @@ class WakeEnroller extends ChangeNotifier {
   Object? get error => _error;
 
   /// Whether [finish] may be called.
-  bool get canFinish => accepted >= minimum && _phase != EnrollPhase.saved;
+  bool get canFinish =>
+      accepted >= minimum && !_finishing && _phase != EnrollPhase.saved;
 
   void _set(EnrollPhase p) {
     _phase = p;
     notifyListeners();
+  }
+
+  /// Silent once disposed: [run] may still be finishing a recording when the
+  /// screen is left (e.g. saved early with the minimum).
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
   }
 
   /// Runs the recordings until [target] is reached or [cancel]. Completes
@@ -303,7 +313,9 @@ class WakeEnroller extends ChangeNotifier {
       _stopped = true;
     }
     await features.close();
-    if (_stopped || _error != null) {
+    if (_finishing) {
+      // Saved: the phase stays `saved` (set by [finish]).
+    } else if (_stopped || _error != null) {
       _set(EnrollPhase.cancelled);
     } else {
       _set(EnrollPhase.complete);
@@ -473,6 +485,11 @@ class WakeEnroller extends ChangeNotifier {
   /// refines it), replacing those of the speaker.
   Future<WakeTemplates> finish() async {
     if (!canFinish) throw StateError('zu wenige Aufnahmen');
+    // Fail-closed: a second call finds [canFinish] false; the recording stops
+    // so nothing listens on after saving.
+    _finishing = true;
+    _stopped = true;
+    notifyListeners(); // the save button goes away at once
     final templates = WakeTemplates(
       speakerId: speakerId,
       featureVersion: features.featureVersion,
@@ -484,7 +501,14 @@ class WakeEnroller extends ChangeNotifier {
           if (q != null) WakeTemplateSequence(word: word, values: q),
       ],
     );
-    await store.save(templates);
+    try {
+      await audio.stop();
+      await store.save(templates);
+    } on Object {
+      _finishing = false;
+      _set(EnrollPhase.cancelled); // retry via finish stays possible
+      rethrow;
+    }
     _set(EnrollPhase.saved);
     return templates;
   }
@@ -492,6 +516,7 @@ class WakeEnroller extends ChangeNotifier {
   @override
   void dispose() {
     _stopped = true;
+    _disposed = true;
     super.dispose();
   }
 }

@@ -305,6 +305,21 @@ final wakeEnrollPauseProvider = Provider<Duration>(
   (ref) => const Duration(milliseconds: 900),
 );
 
+/// Stage 2 of the barge-in (WP151): verifier B, or the [transcript] check
+/// alone while `mu` is a placeholder (no measurement yet, so no B).
+BargeVerifier chooseBargeVerifier({
+  required BargeVerifier transcript,
+  required VerifierBScorer scorer,
+  required String Function() spokenText,
+  required bool muIsPlaceholder,
+}) => muIsPlaceholder
+    ? transcript
+    : VerifierBBargeVerifier(
+        scorer: scorer,
+        fallback: transcript,
+        spokenText: spokenText,
+      );
+
 /// Barge-in on the wake word chain (WP50): „Wendelin“ interrupts the spoken
 /// answer in the conversation mode. `null` while the conversation
 /// mode is off. `bootstrap/run_app.dart` puts it in place of the empty
@@ -331,10 +346,19 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
   // have been rebuilt (disposed ref -> `UnmountedRefException`, no start).
   final settings = ref.read(storageProvider).settings;
   final listening = ref.read(bargeListeningProvider.notifier);
+  // One feature chain for B, opened at the first check, released with the
+  // detector.
+  final scorer = VerifierBScorer(
+    features: makeFeatures,
+    templates: () async => [
+      for (final s in await store.speakers()) ?await store.load(s.id),
+    ],
+  );
   final detector = LazyWakeBargeInDetector(
     audio: ref.watch(audioInputProvider),
     // WP148: audio of candidates and checks, only in developer mode.
     devClips: devAudioClips,
+    onDispose: scorer.close,
     // WP123: the capture before the answer primes the feature chain.
     warm: ref.read(micTailProvider).take,
     // Developer setting (WP72): other margin than +0.05.
@@ -342,12 +366,23 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
         double.tryParse(await settings.get(AppSettings.bargeMargin) ?? ''),
     // WP113 (K84): the big recognizer checks every candidate, unless stage 2
     // is switched off in the wake word settings.
+    // WP151: with enrolled „Hey Wendelin“ sequences verifier B decides (the
+    // transcript misreads the short call at conversation volume); without
+    // them the transcript check with the echo filter does.
     verifier: verify
-        ? (spoken) => LazyBargeVerifier(
-            stt: () => sttFuture!,
-            language: () => language,
-            spokenText: spoken,
-          )
+        ? (spoken) {
+            final transcript = LazyBargeVerifier(
+              stt: () => sttFuture!,
+              language: () => language,
+              spokenText: spoken,
+            );
+            return chooseBargeVerifier(
+              transcript: transcript,
+              scorer: scorer,
+              spokenText: spoken,
+              muIsPlaceholder: wakeVerifierBMuIsPlaceholder,
+            );
+          }
         : null,
     onListening: ({required on}) {
       // The container may be gone (end of a test, rebuild).

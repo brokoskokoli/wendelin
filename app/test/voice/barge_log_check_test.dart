@@ -20,6 +20,23 @@ void main() {
     );
   });
 
+  test('Prüfer des Treffers wird geprüft (verifier=b)', () {
+    List<String> lines(String by) => [
+      config,
+      l('barge-cand', 'kind=wake busy=false'),
+      l('barge-verify', 'result=wake ms=900 verifier=$by score=0.9800'),
+      l('barge-hit', 'kind=keyword-wake'),
+    ];
+    expect(
+      bargeLogProblem(lines('b'), hitKind: 'keyword-wake', verifier: 'b'),
+      isNull,
+    );
+    expect(
+      bargeLogProblem(lines('stt'), hitKind: 'keyword-wake', verifier: 'b'),
+      contains('verifier=stt'),
+    );
+  });
+
   test('Treffer ohne Gegenprüfung ist ein Befund', () {
     expect(
       bargeLogProblem([
