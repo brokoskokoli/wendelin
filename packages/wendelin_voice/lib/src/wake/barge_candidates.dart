@@ -8,14 +8,20 @@ final class BargeCandidates {
   /// Position at which the pending check may start.
   int pendingAt = -1;
 
+  /// The pending candidate: kind, score and the end of its own word belong
+  /// together (WP151), so the cut of a check can never come from another
+  /// candidate. `null`: none waits.
+  PendingCandidate? pending;
+
   /// Kind of the pending candidate, `null`: none.
-  BargeInKeyword? pendingKind;
+  BargeInKeyword? get pendingKind => pending?.kind;
 
   /// Best score of the pending candidate.
-  double pendingScore = 0;
+  double get pendingScore => pending?.score ?? 0;
 
-  /// End of the loud word of a pending candidate that was deferred (WP151).
-  int pendingLoud = -1;
+  /// End of the loud word of the pending candidate (`-1`: cut at the latest
+  /// speech).
+  int get pendingLoud => pending?.loud ?? -1;
 
   /// Position of the strongest deferred candidate.
   int deferredAt = 0;
@@ -38,16 +44,24 @@ final class BargeCandidates {
   /// Forgets everything.
   void clear() {
     pendingAt = -1;
-    pendingKind = deferredKind = null;
-    pendingScore = deferredScore = checkedScore = 0;
-    pendingLoud = deferredLoud = checkedLoud = -1;
+    pending = null;
+    deferredKind = null;
+    deferredScore = checkedScore = 0;
+    deferredLoud = checkedLoud = -1;
   }
 
   /// A candidate [kind] with [score]; the check may start at [at] (kept if a
-  /// pending one is already waiting).
-  void addPending(BargeInKeyword kind, double score, int at) {
-    pendingKind = kind;
-    if (score > pendingScore) pendingScore = score;
+  /// pending one is already waiting). [loud] is the end of its word (`-1`:
+  /// the latest speech). The pending candidate is the strongest one: only a
+  /// stronger one takes over its score and cut, a weaker one keeps both.
+  void addPending(BargeInKeyword kind, double score, int at, {int loud = -1}) {
+    final old = pending;
+    final takeOver = old == null || score > old.score;
+    pending = PendingCandidate(
+      kind,
+      takeOver ? score : old.score,
+      takeOver ? loud : old.loud,
+    );
     if (pendingAt < 0) pendingAt = at;
   }
 
@@ -81,25 +95,24 @@ final class BargeCandidates {
     deferredLoud = -1;
     if (fed - deferredAt > clip) return;
     final after = deferredAt + settle;
-    // A pending candidate (a stronger one, cut at the latest speech) keeps
-    // its own cut; the older word end must not replace it.
-    final waiting = pendingKind != null;
-    addPending(kind, score, after > fed ? after : fed);
-    // Keep the end of its word (as after a reject): the check cuts there.
-    if (loud > 0 && !waiting) pendingLoud = loud;
+    // A stronger pending candidate keeps its own cut (see [addPending]).
+    addPending(
+      kind,
+      score,
+      after > fed ? after : fed,
+      loud: loud > 0 ? loud : -1,
+    );
   }
 
   /// Takes the pending candidate to check it; its score and word position
   /// move to [checkedScore] and [checkedLoud].
   BargeInKeyword takePending() {
-    final kind = pendingKind!;
+    final p = pending!;
     pendingAt = -1;
-    pendingKind = null;
-    checkedScore = pendingScore;
-    pendingScore = 0;
-    checkedLoud = pendingLoud;
-    pendingLoud = -1;
-    return kind;
+    pending = null;
+    checkedScore = p.score;
+    checkedLoud = p.loud;
+    return p.kind;
   }
 
   /// After a rejected check: a candidate that came meanwhile is pending again
@@ -127,9 +140,24 @@ final class BargeCandidates {
       at = own > fed ? own : fed;
     }
     if (loud <= 0 || loud <= fed - ring) return false;
-    addPending(kind, score, at);
+    addPending(kind, score, at, loud: loud);
     pendingAt = at;
-    pendingLoud = loud;
     return true;
   }
+}
+
+/// A waiting candidate: [kind], best [score] and [loud], the end of its word
+/// (`-1`: cut at the latest speech).
+final class PendingCandidate {
+  /// Creates a pending candidate.
+  const PendingCandidate(this.kind, this.score, this.loud);
+
+  /// Kind of the keyword.
+  final BargeInKeyword kind;
+
+  /// Best score.
+  final double score;
+
+  /// End of the word, `-1`: latest speech.
+  final int loud;
 }

@@ -410,6 +410,12 @@ void main() {
           custom: script,
         );
         // Nur ein Ausschnitt mit dem Wort des Nutzers (7000) ist "wake".
+        // Frame-Grenze (Frame = 1600 Samples, settle 800 ms = 12800): das
+        // schwache Echo in Frame 12 endet bei Sample 20800, mit dem Schnitt
+        // am alten Wortende reicht der Ausschnitt bis 33600 = Ende von
+        // Frame 21. Der Ruf in Frame 22 (ab 35200) liegt knapp dahinter:
+        // ohne den Fix fehlt er. Läge er in Frame 21, zeigte der Test den
+        // Fehler nicht mehr.
         v.decide = (pcm) => pcm.contains(7000)
             ? const BargeVerdict('wake', BargeInKeyword.wake)
             : BargeVerdict.no;
@@ -435,6 +441,66 @@ void main() {
         for (var i = 23; i < 40; i++) {
           await frame(0);
         }
+        expect(v.calls, hasLength(2));
+        expect(got, ['keyword-wake']);
+      });
+
+      // WP151 Runde 3: Echo, dann (während der Prüfung) schwaches D1, die
+      // Prüfung wird verworfen, im Cooldown kommt ein stärkerer Kandidat S.
+      // Frames je 1600 Samples, settle 800 ms (8 Frames), Cooldown 1,5 s
+      // (15 Frames), Ausschnitt 2,5 s (25 Frames). Prüfung 1 startet nach
+      // Frame 8, D1 (Frame 10) wird zurückgestellt, das Urteil "no" fällt
+      // nach Frame 14, der Cooldown endet nach Frame 29. S (stärker) wartet
+      // mit seinem eigenen Schnitt: Ende von S + settle.
+      Future<void> echoD1Then(
+        int sFrame, {
+        required int d1Level,
+        required int sLevel,
+      }) async {
+        final script = _ScriptEngine(
+          {0: 'wake', 10: 'wake', sFrame: 'wake'},
+          conf: {0: 0.85, 10: 0.80, sFrame: 0.96},
+        );
+        await setUp0(
+          settle: const Duration(milliseconds: 800),
+          cooldown: const Duration(milliseconds: 1500),
+          custom: script,
+        );
+        v.decide = (pcm) => pcm.contains(7000)
+            ? const BargeVerdict('wake', BargeInKeyword.wake)
+            : BargeVerdict.no;
+        final hold = Completer<void>();
+        v.hold = hold;
+        Future<void> frame(int level) async {
+          audio.push(Int16List(1600)..fillRange(0, 1600, level));
+          await pumpEventQueue();
+        }
+
+        for (var i = 0; i < 40; i++) {
+          if (i == 15) {
+            v.hold = null;
+            hold.complete(); // Urteil der ersten Prüfung: no
+          }
+          await frame(
+            i == 0 ? 5000 : (i == 10 ? d1Level : (i == sFrame ? sLevel : 0)),
+          );
+        }
+      }
+
+      test('Echo verworfen, schwaches Echo D1, dann stärkerer Ruf S im '
+          'Cooldown: Schnitt an S, nicht an D1 (WP151 Runde 3)', () async {
+        await echoD1Then(20, d1Level: 5000, sLevel: 7000);
+        expect(v.calls, hasLength(2));
+        expect(got, ['keyword-wake']);
+      });
+
+      test('D1 ist das echte Wort, S (Echo) kommt kurz danach: D1 bleibt im '
+          'Ausschnitt', () async {
+        // S in Frame 20: Schnitt bei Ende Frame 20 + 8 = nach Frame 28, der
+        // Ausschnitt reicht 25 Frames zurück (ab Frame 4) und enthält D1
+        // (Frame 10). D1 fiele erst bei S nach Frame 26 heraus (Cooldown
+        // ist bei Frame 29 zu Ende): so viel Abstand ist die Grenze.
+        await echoD1Then(20, d1Level: 7000, sLevel: 5000);
         expect(v.calls, hasLength(2));
         expect(got, ['keyword-wake']);
       });
