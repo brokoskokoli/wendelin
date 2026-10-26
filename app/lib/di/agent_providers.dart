@@ -1,3 +1,5 @@
+import 'dart:async';
+
 // Agent providers: risk policy, undo, audit, session, provider configuration,
 // adapter factory, agent factory and costs. Imported via `providers.dart`.
 
@@ -9,6 +11,7 @@ import 'package:wendelin_storage/wendelin_storage.dart' show SessionOrigin;
 import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../agent/agent_controller.dart';
+import '../voice/dev_agent_log.dart';
 import 'agent_factory.dart';
 import 'attest_log.dart';
 import 'attestation_hub.dart' show AttestationHub;
@@ -17,6 +20,7 @@ import 'attestation_providers.dart';
 import 'audit_recorder.dart';
 import 'core_providers.dart';
 import 'costs.dart';
+import 'developer_mode.dart';
 import 'home_assistant.dart' show haIntegrationOf;
 import 'integration_providers.dart';
 import 'preference_models.dart';
@@ -214,6 +218,9 @@ final agentFactoryProvider = Provider<AgentRunFactory>((ref) {
       personaAddon: assistant.persona,
       spokenVersion: spokenVersion,
     ),
+    observe: (run) => ref
+        .read(devAgentTraceProvider)
+        .observe(() => unawaited(refreshDevLogFlag(ref)), run),
     fastPath: ref.watch(haFastPathProvider)
         ? haIntegrationOf(ref.watch(integrationsProvider))?.fastPath
         : null,

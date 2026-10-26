@@ -565,7 +565,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       diagnostics: voiceLog,
       config: components.config,
       clock: ref.read(clockProvider),
-    );
+    ).withDevLog(ref);
     _components = components;
     _audio = audio;
     _pipeline = pipeline;

@@ -9,6 +9,7 @@ import '../di/providers.dart';
 import '../di/voice_providers.dart';
 import '../l10n/l10n.dart';
 
+export '../di/developer_mode.dart' show DevLogPipeline;
 export 'latency_trace.dart' show latencyTraceProvider;
 
 /// The voice parts the app uses for push-to-talk and the overlay, or

@@ -87,6 +87,72 @@ SensitiveFinding? detectSensitiveContent(String text) {
   return kind == null ? null : SensitiveFinding(kind);
 }
 
+/// [text] with every finding of [detectSensitiveContent] replaced by [mask]
+/// (card number, IBAN, credential with its value, API key); the rest stays
+/// readable. A credential is replaced from its keyword up to the end of its
+/// clause (up to `.`, `!`, `?`, `;`, a line break or the end of the text:
+/// "Mein Passwort ist hunter2. Danke" becomes "Mein *** Danke"). Everything that is
+/// neither letter nor digit behind the keyword is skipped first,
+/// so the first value character is always masked. Known limit: a value with
+/// ". " inside releases the rest ("Dr. Who42" leaves "Who42"). Uses the same
+/// detection rules as [detectSensitiveContent], which stays unchanged.
+String redactSensitiveContent(String text, {String mask = '***'}) {
+  final spans = <(int, int)>[
+    ..._cardSpans(text),
+    ..._ibanSpans(text),
+    for (final m in _credential.allMatches(text))
+      (m.start, _clauseEnd(text, _valueStart(text, m))),
+    for (final m in _apiKey.allMatches(text)) (m.start, m.end),
+  ]..sort((a, b) => a.$1.compareTo(b.$1));
+  final out = StringBuffer();
+  var pos = 0;
+  var i = 0;
+  while (i < spans.length) {
+    var (from, to) = spans[i++];
+    while (i < spans.length && spans[i].$1 <= to) {
+      if (spans[i].$2 > to) to = spans[i].$2;
+      i++;
+    }
+    out
+      ..write(text.substring(pos, from))
+      ..write(mask);
+    pos = to;
+  }
+  return out.toString() + text.substring(pos);
+}
+
+// Where the value begins: the value token of the match (`v1`/`v2` for the
+// "keyword + value with a digit" forms) or else the match's last character
+// (the first character after the separator). From there every character that
+// is neither letter nor digit is skipped ("Passwort:. x", "PIN=! 1234",
+// "ist... x", line breaks included), so the clause end is only searched
+// behind at least one value character. "PIN 1234. Danke": the value token
+// starts at "1", its trailing full stop ends the clause.
+int _valueStart(String text, RegExpMatch m) {
+  final v = m.namedGroup('v1') ?? m.namedGroup('v2');
+  var e = v == null ? m.end - 1 : m.end - v.length;
+  final alnum = RegExp(r'[\p{L}\p{N}]', unicode: true);
+  while (e < text.length && !alnum.hasMatch(text[e])) {
+    e++;
+  }
+  return e;
+}
+
+// End of the clause (scanned from [end]) that holds the credential value: up to a `.`, `!`, `?` or
+// `;` followed by whitespace or the end, a line break, or the end of the text
+// (spoken values come in several words: "PIN 12 34", "eins zwei drei vier").
+// Better too much than too little.
+int _clauseEnd(String text, int end) {
+  for (var e = end; e < text.length; e++) {
+    final c = text.codeUnitAt(e);
+    if (c == 0x0A || c == 0x0D) return e;
+    if (c == 0x2E || c == 0x21 || c == 0x3F || c == 0x3B) {
+      if (e + 1 >= text.length || text.codeUnitAt(e + 1) <= 0x20) return e + 1;
+    }
+  }
+  return text.length;
+}
+
 /// Luhn checksum over a string of ASCII digits.
 bool luhnValid(String digits) {
   var sum = 0;
@@ -108,10 +174,15 @@ bool luhnValid(String digits) {
 final _digitRun = RegExp(r'(\+\s?)?(?<!\d)\d+(?:[ .\-]{1,3}\d+)*(?!\d)');
 final _separator = RegExp(r'[ .\-]+');
 
-bool _containsCardNumber(String text) {
+bool _containsCardNumber(String text) => _cardSpans(text).iterator.moveNext();
+
+// Character ranges of the card numbers in [text] (see [detectSensitiveContent]).
+Iterable<(int, int)> _cardSpans(String text) sync* {
   for (final m in _digitRun.allMatches(text)) {
     if (m.group(1) != null) continue;
-    final groups = m.group(0)!.split(_separator);
+    final run = m.group(0)!;
+    final groups = run.split(_separator);
+    final seps = _separator.allMatches(run).toList();
     for (var start = 0; start < groups.length; start++) {
       final first = groups[start].codeUnitAt(0);
       if (first < 0x32 || first > 0x36) continue; // '2'..'6'
@@ -120,12 +191,13 @@ bool _containsCardNumber(String text) {
         digits += groups[end];
         if (digits.length > 19) break;
         if (digits.length >= 13 && !_isPhone(digits) && luhnValid(digits)) {
-          return true;
+          final from = start == 0 ? 0 : seps[start - 1].end;
+          final to = end == groups.length - 1 ? run.length : seps[end].start;
+          yield (m.start + from, m.start + to);
         }
       }
     }
   }
-  return false;
 }
 
 bool _isPhone(String digits) =>
@@ -143,12 +215,15 @@ final _ibanStart = RegExp(r'(?<![A-Za-z0-9])[A-Za-z]{2}\d{2}');
 final _alnumRun = RegExp('[A-Za-z0-9]+');
 final _nonDigit = RegExp('[^0-9]');
 
-bool _containsIban(String text) {
+bool _containsIban(String text) => _ibanSpans(text).iterator.moveNext();
+
+// Character ranges of the IBANs in [text] (see [detectSensitiveContent]).
+Iterable<(int, int)> _ibanSpans(String text) sync* {
   for (final m in _ibanCandidate.allMatches(text)) {
     final iban = m.group(0)!.replaceAll(' ', '');
     final bban = iban.substring(4);
     if (bban.replaceAll(_nonDigit, '').length < 6) continue;
-    if (bban.length >= 15 || ibanChecksumValid(iban)) return true;
+    if (bban.length >= 15 || ibanChecksumValid(iban)) yield (m.start, m.end);
   }
   // Any spacing (single spaces or dashes between arbitrary chunks): only
   // with a valid mod-97 checksum.
@@ -165,10 +240,12 @@ bool _containsIban(String text) {
       pos = run.end;
       final length = iban.length - 4;
       if (length > 30) break;
-      if (length >= 11 && ibanChecksumValid(iban.toString())) return true;
+      if (length >= 11 && ibanChecksumValid(iban.toString())) {
+        yield (m.start, pos);
+        break;
+      }
     }
   }
-  return false;
 }
 
 /// ISO 13616 mod-97 check of a compact IBAN (any case, no separators).
@@ -211,7 +288,7 @@ final _credential = RegExp(
   r'\s*\S'
   // Or keyword directly followed by a value containing a digit.
   '|$_keyword'
-  r'\s*[:=]?\s+(?=[^\s]*\p{N})[^\s]+'
+  r'\s*[:=]?\s+(?=[^\s]*\p{N})(?<v1>[^\s]+)'
   // Weak keyword, up to four words, `:`/`=` and any value.
   '|$_weakKeyword'
   r'(?:\s+[\p{L}\p{N}-]+){0,4}?\s*[:=]\s*\S'
@@ -219,7 +296,7 @@ final _credential = RegExp(
   // digit.
   '|$_weakKeyword'
   r'(?:\s+(?:ist|lautet|is|was|war)(?![\p{L}\p{N}]))?'
-  r'\s+(?=[^\s]*\p{N})[^\s]+',
+  r'\s+(?=[^\s]*\p{N})(?<v2>[^\s]+)',
   caseSensitive: false,
   unicode: true,
 );

@@ -1,0 +1,21 @@
+{
+  "developerModeActiveHint": "Entwicklermodus an – erweitertes Logging",
+  "developerModeOff": "Entwicklermodus aus",
+  "developerModeOn": "Entwicklermodus an",
+  "developerModeStepsToOff": "Noch {n}× tippen, um den Entwicklermodus auszuschalten",
+  "@developerModeStepsToOff": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "developerModeStepsToOn": "Noch {n}× tippen, um den Entwicklermodus einzuschalten",
+  "@developerModeStepsToOn": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  }
+}

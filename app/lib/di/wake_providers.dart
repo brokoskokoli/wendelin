@@ -11,6 +11,7 @@ import '../platform/voice/onnx_wake_models.dart';
 import '../platform/voice/pcm.dart';
 import '../platform/voice/wake_feature_chain.dart';
 import '../platform/wake/wake_detector.dart';
+import '../voice/dev_audio.dart';
 import '../voice/voice_log.dart';
 import '../voice/wake/lazy_barge_verifier.dart';
 import '../voice/wake/wake_barge_in.dart';
@@ -332,6 +333,8 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
   final listening = ref.read(bargeListeningProvider.notifier);
   final detector = LazyWakeBargeInDetector(
     audio: ref.watch(audioInputProvider),
+    // WP148: audio of candidates and checks, only in developer mode.
+    devClips: devAudioClips,
     // WP123: the capture before the answer primes the feature chain.
     warm: ref.read(micTailProvider).take,
     // Developer setting (WP72): other margin than +0.05.

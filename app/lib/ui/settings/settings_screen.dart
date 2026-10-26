@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../di/developer_mode.dart';
 import '../../di/providers.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
@@ -45,6 +46,11 @@ class SettingsScreen extends ConsumerWidget {
               ),
           ],
         ),
+        if (ref.watch(developerModeProvider))
+          Padding(
+            padding: const EdgeInsets.only(top: WSpace.m),
+            child: Text(l.developerModeActiveHint, style: WText.detail),
+          ),
         if (kDebugMode) const _Development(),
       ],
     );

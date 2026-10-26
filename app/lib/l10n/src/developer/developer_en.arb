@@ -1,0 +1,21 @@
+{
+  "developerModeActiveHint": "Developer mode on – extended logging",
+  "developerModeOff": "Developer mode off",
+  "developerModeOn": "Developer mode on",
+  "developerModeStepsToOff": "{n} more taps to turn developer mode off",
+  "@developerModeStepsToOff": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "developerModeStepsToOn": "{n} more taps to turn developer mode on",
+  "@developerModeStepsToOn": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  }
+}

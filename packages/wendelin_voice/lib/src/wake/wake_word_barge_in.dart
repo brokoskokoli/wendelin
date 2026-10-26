@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../dev/dev_clips.dart';
 import '../io/audio_input.dart';
 import '../io/barge_in_detector.dart';
 import 'barge_clip.dart';
@@ -42,7 +43,8 @@ final class WakeWordBargeInDetector
     this.onVerdict,
     this.clock = const SystemClock(),
     this.tailMax = const Duration(seconds: 3),
-  });
+    DevClips? devClips, // WP148: audio of candidates and checks
+  }) : _dev = DevAroundSet(devClips);
 
   /// Time source of the tail's idle time.
   final Clock clock;
@@ -131,6 +133,7 @@ final class WakeWordBargeInDetector
   bool _engineOpen = false;
   int _generation = 0;
   late final PreRollBuffer _ring = PreRollBuffer(capacity: clip + clip);
+  final DevAroundSet _dev;
   bool _verifying = false;
   int _fed = 0, _blockedUntil = 0, _ignoreUntil = 0;
   // End of the last live block with speech level, and the confidence of the
@@ -172,6 +175,7 @@ final class WakeWordBargeInDetector
     }
     engine.reset();
     _ring.clear();
+    _dev.clear();
     _fed = _blockedUntil = _ignoreUntil = 0;
     _lastLoud = -1 << 40;
     _rejected = 0;
@@ -219,8 +223,9 @@ final class WakeWordBargeInDetector
 
   Future<void> _onFrame(Int16List frame, int gen) async {
     if (gen != _generation) return;
+    _dev.feed(frame);
+    if (verifier != null || _dev.on) _ring.add(frame);
     if (verifier != null) {
-      _ring.add(frame);
       final loud = speechEnd(frame, minLevel);
       if (loud > 0) _lastLoud = _fed + loud;
     }
@@ -233,6 +238,7 @@ final class WakeWordBargeInDetector
       if (h.keywordId != 'wake') continue;
       const keyword = BargeInKeyword.wake;
       if (verifier == null) {
+        _dev.startLast('barge-cand', _ring);
         _signals.add(const BargeInSignal.keyword(keyword));
         continue;
       }
@@ -247,6 +253,7 @@ final class WakeWordBargeInDetector
       final stronger = score > _rejected + strongerMargin;
       final busy = _verifying || (_fed < _blockedUntil && !stronger);
       onCandidate?.call(keyword, busy: busy);
+      _dev.startLast('barge-cand', _ring);
       if (busy) {
         // The window follows the strongest busy candidate; a weaker later one
         // must not push it back.
@@ -303,6 +310,7 @@ final class WakeWordBargeInDetector
       onVerdict?.call(const BargeVerdict('skip', null, 'silent'), 0);
       return;
     }
+    _dev.emitMarked('barge-verify', pcm, 'speechEnd', speechEnd(pcm, minLevel));
     _verifying = true;
     final sw = Stopwatch()..start();
     var verdict = const BargeVerdict('skip', null, 'error');
@@ -356,6 +364,7 @@ final class WakeWordBargeInDetector
     if (!_running) return;
     _running = false;
     _generation++;
+    _dev.flush();
     if (_pendingKind != null) {
       onVerdict?.call(const BargeVerdict('skip', null, 'stopped'), 0);
     }
@@ -385,6 +394,7 @@ final class WakeWordBargeInDetector
     final end = input.detach();
     if (end == null) return false;
     _detached = end;
+    _dev.flush();
     // Pending candidates and checks are void: nobody speaks to an answer
     // that is over, and the engine gets no more frames.
     _generation++;

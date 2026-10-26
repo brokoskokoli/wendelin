@@ -1368,6 +1368,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Wendelin needs access to your contacts to find numbers by name, plus the SMS and phone permissions. Android asks you next. Wendelin never sends an SMS or places a call unless you confirmed the preview with name and number first (by tap or by saying “yes”). Neither works while the device is locked. Without the phone permission Wendelin only opens the dialer.';
 
   @override
+  String get developerModeActiveHint => 'Developer mode on – extended logging';
+
+  @override
+  String get developerModeOff => 'Developer mode off';
+
+  @override
+  String get developerModeOn => 'Developer mode on';
+
+  @override
+  String developerModeStepsToOff(int n) {
+    return '$n more taps to turn developer mode off';
+  }
+
+  @override
+  String developerModeStepsToOn(int n) {
+    return '$n more taps to turn developer mode on';
+  }
+
+  @override
   String get batteryAllow => 'Allow no restriction';
 
   @override

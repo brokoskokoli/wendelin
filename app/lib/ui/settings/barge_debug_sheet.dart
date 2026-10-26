@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../di/app_settings.dart';
 import '../../di/core_providers.dart';
+import '../../di/developer_mode.dart';
 import '../../di/voice_providers.dart';
 import '../../di/wake_providers.dart';
 import '../../l10n/l10n.dart';
@@ -199,7 +200,8 @@ class _State extends ConsumerState<BargeDebugSheet> {
                 : _reset,
             child: Text(context.l10n.reset),
           ),
-          ..._bonusSection(context),
+          // WP148: only in developer mode; a stored value stays in effect.
+          if (ref.watch(developerModeProvider)) ..._bonusSection(context),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(context.l10n.speechCommunicationTitle),

@@ -31,6 +31,11 @@ data class WakeSettings(
      * read before its own `configure(enabled=true)` cannot switch it off again.
      */
     val offByUser: Boolean = false,
+    /**
+     * Developer mode of the app (WP148), mirrored by `devMode` on the wake channel: the wake
+     * engine (no database) records audio only while this is set. Not part of `configure`.
+     */
+    val devMode: Boolean = false,
 ) {
     /**
      * [old] changed by the channel arguments `enabled`, `mode`, `verify`; missing or invalid
@@ -45,6 +50,7 @@ data class WakeSettings(
             detector = (args?.get("detector") as? String)?.takeIf { it in DETECTORS } ?: detector,
             pausedUntilMs = if (on) pausedUntilMs else 0L,
             offByUser = if (args?.containsKey("enabled") == true) false else offByUser,
+            devMode = devMode,
         )
     }
 }

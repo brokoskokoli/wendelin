@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:meta/meta.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../voice/dev_log.dart';
 import '../../voice/voice_log.dart';
 import 'pcm.dart';
 
@@ -325,10 +326,22 @@ final class WhisperSpeechToText implements SpeechToText {
       'hws': d.hotwordsScore,
       'hits': d.hotwordHits,
     });
+    // Developer mode (WP148): the recognized text, also what was dropped.
+    devLog('stt-text', {
+      'model': modelId,
+      'lang': lang,
+      'conf': confidence,
+      'text': text,
+      if (cleanedAway(raw.text, text)) 'raw': raw.text,
+    });
     if (text.isEmpty) return Transcript(text: '', language: lang);
     return Transcript(text: text, language: lang, confidence: confidence);
   }
 }
+
+/// Whether cleaning removed something of [raw] (annotations, credits).
+@visibleForTesting
+bool cleanedAway(String raw, String text) => raw.trim() != text;
 
 /// Primary subtag of a BCP 47 tag in lower case (`de-AT` → `de`).
 String primaryLanguage(String tag) =>

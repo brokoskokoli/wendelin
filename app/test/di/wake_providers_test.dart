@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/di/wake_providers.dart';
 import 'package:wendelin/platform/wake/wake_detector.dart';
+import 'package:wendelin/voice/dev_audio.dart';
 import 'package:wendelin/voice/wake/wake_barge_in.dart';
 import 'package:wendelin/voice/wake/wake_storage.dart';
 import 'package:wendelin/voice/wake/wake_template_audit.dart';
@@ -244,4 +245,16 @@ void main() {
       expect(warm(), isEmpty);
     },
   );
+
+  test('WP148: der Barge-in-Erkenner bekommt den Aufnahme-Haken', () async {
+    final env = TestEnv();
+    final c = env.container();
+    addTearDown(c.dispose);
+    await c.read(voiceSettingsProvider.future);
+    await c
+        .read(voiceSettingsProvider.notifier)
+        .change((s) => s.copyWith(conversationMode: true));
+    final detector = c.read(wakeBargeInDetectorProvider)!;
+    expect((detector as LazyWakeBargeInDetector).devClips, same(devAudioClips));
+  });
 }

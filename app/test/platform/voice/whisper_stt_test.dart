@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/platform/voice/whisper_sherpa.dart';
 import 'package:wendelin/platform/voice/whisper_stt.dart';
+import 'package:wendelin/voice/dev_log.dart';
 import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
@@ -238,6 +239,39 @@ void main() {
         }
       },
     );
+
+    test(
+      'WP148 stt-text: Text nur im Entwicklermodus, bereinigter Rest als raw',
+      () async {
+        final dev = <String>[];
+        final voice = <String>[];
+        devLogSink = dev.add;
+        voiceLogSink = voice.add;
+        final backend = FakeWhisperBackend(text: 'Schreib Milch [Musik]');
+        final stt = WhisperSpeechToText(backend: backend, modelId: 'm');
+
+        await stt.transcribe(speech, language: 'de');
+        expect(dev, isEmpty, reason: 'ohne Flag keine Zeile');
+
+        devLogEnabled = true;
+        await stt.transcribe(speech, language: 'de');
+        expect(dev, hasLength(1));
+        expect(dev.single, startsWith('Wendelin/dev: stt-text '));
+        expect(dev.single, contains('text="Schreib Milch"'));
+        expect(dev.single, contains('raw="Schreib Milch [Musik]"'));
+        expect(voice.join('\n'), isNot(contains('Milch')));
+
+        dev.clear();
+        backend.text = 'Schreib Milch';
+        await stt.transcribe(speech, language: 'de');
+        expect(dev.single, isNot(contains(' raw=')));
+      },
+    );
+
+    test('cleanedAway: nur wenn die Bereinigung etwas entfernt hat', () {
+      expect(cleanedAway(' Hallo ', 'Hallo'), isFalse);
+      expect(cleanedAway('Hallo [Musik]', 'Hallo'), isTrue);
+    });
 
     test('logProbsOf: Mittelwert und kleinster Wert', () {
       expect(logProbsOf('{"ys_log_probs":[-0.5,-2.5,-0.5]}'), (

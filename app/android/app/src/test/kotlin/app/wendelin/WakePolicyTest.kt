@@ -87,9 +87,12 @@ class WakePolicyTest {
         assertEquals(old.copy(detector = "model"), old.withArgs(mapOf("detector" to "model")))
         assertEquals(old, old.withArgs(mapOf("detector" to "bogus")))
         assertEquals(
-            mapOf("verify" to true, "detector" to "auto", "station" to true),
+            mapOf("verify" to true, "detector" to "auto", "station" to true, "dev" to false),
             WakeSettings().runArgs(stationActive = true),
         )
+        // WP148: the developer mode goes to the engine with `run`, `configure` leaves it alone.
+        assertEquals(true, WakeSettings(devMode = true).runArgs(stationActive = false)["dev"])
+        assertEquals(old.copy(devMode = true), old.copy(devMode = true).withArgs(mapOf("verify" to true)))
         assertEquals(old.copy(mode = WakeMode.CHARGING), old.withArgs(mapOf("mode" to "charging")))
         // Wrong types keep the old values.
         assertEquals(old, old.withArgs(mapOf("enabled" to "yes", "mode" to 3, "verify" to 1)))

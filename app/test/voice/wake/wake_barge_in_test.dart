@@ -137,6 +137,44 @@ void main() {
       expect(events, [true, false, true, false]);
     });
 
+    ftest('WP148: devClips gehen an den Detektor: Kandidat und Prüf-Ausschnitt '
+        'als Clips, nur bei eingeschaltetem Modus', () async {
+      Future<List<String>> run({required bool on}) async {
+        final clips = <DevClip>[];
+        final seen = <String>[];
+        final d = LazyWakeBargeInDetector(
+          audio: FakeAudioInput(
+            frames: [
+              for (var i = 0; i < 3; i++)
+                Int16List.fromList([
+                  for (var j = 0; j < 480; j++) j.isEven ? 2000 : -2000,
+                ]),
+            ],
+            frameInterval: const Duration(milliseconds: 5),
+          ),
+          verifySettle: Duration.zero,
+          templates: () async => [tpl(0.9)],
+          verifier: (spoken) => _SpyVerifier(() => seen.add(spoken())),
+          devClips: DevClips(enabled: () => on, write: clips.add),
+          features: () => FakeWakeFeatureExtractor(
+            windowEvery: 480,
+            windowFor: (end, _) => WakeWindow(
+              endSample: end,
+              embedding: Float32List.fromList([1, 0]),
+            ),
+          ),
+        );
+        await d.start();
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await d.dispose();
+        expect(seen, isNotEmpty, reason: 'die Prüfung lief');
+        return [for (final c in clips) c.event];
+      }
+
+      expect(await run(on: true), containsAll(['barge-cand', 'barge-verify']));
+      expect(await run(on: false), isEmpty);
+    });
+
     ftest('Echo-Filter: stop() leert, nur die letzten Sätze zählen', () async {
       final seen = <String>[];
       final d = LazyWakeBargeInDetector(

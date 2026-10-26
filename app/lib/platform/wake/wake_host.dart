@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../voice/dev_audio.dart';
+import '../../voice/dev_log.dart';
 import '../../voice/voice_log.dart';
 import '../channels.dart';
 import 'service_audio_input.dart';
@@ -42,9 +44,9 @@ abstract interface class WakeParts {
 /// recording). Diagnostics (`wake-cand`, `wake-verify`, `wake-pause`,
 /// `wake-resume`, `wake-alive`) contain no audio and no text.
 ///
-/// Calls from Kotlin: `run` (`{verify}`), `audio` (`{pcm}`), `audioError`
+/// Calls from Kotlin: `run` (`{verify, detector, station, dev}`), `audio` (`{pcm}`), `audioError`
 /// (`{message}`), `conflict` (`{reason}`, `null` = free), `overlayClosed`,
-/// `shutdown`. Calls to Kotlin: `ready`, `startMic`, `stopMic`, `hit`
+/// `shutdown`, `devMode` (`{on}`, WP148). Calls to Kotlin: `ready`, `startMic`, `stopMic`, `hit`
 /// (`{pcm, kw, score}`) and `failed` (`{reason}`).
 final class WakeHost {
   /// Creates the host.
@@ -90,7 +92,14 @@ final class WakeHost {
         ? call.arguments as Map<Object?, Object?>
         : const <Object?, Object?>{};
     switch (call.method) {
+      case 'devMode':
+        // WP148: the app (via Kotlin) switched the developer mode; only an
+        // explicit `true` turns it on.
+        devLogEnabled = args['on'] == true;
       case 'run':
+        // The flag as Kotlin has stored it; anything else is off.
+        devLogEnabled = args['dev'] == true;
+        unawaited(cleanDevAudio());
         await _serial(
           () => _run(
             verify: args['verify'] != false,
@@ -179,6 +188,8 @@ final class WakeHost {
       // its threshold there. The overlay skips everything up to the end of
       // the word, so the longer lead costs nothing but a few KB.
       preRoll: wakePreRoll,
+      // Developer mode (WP148): audio of candidates and checks.
+      devClips: devAudioClips,
     );
     _listener = listener;
     _subs

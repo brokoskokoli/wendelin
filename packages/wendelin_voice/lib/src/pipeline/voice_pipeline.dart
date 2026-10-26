@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../dev/dev_clips.dart';
 import '../io/audio_input.dart';
 import '../io/barge_in_detector.dart';
 import '../io/speech_to_text.dart';
@@ -49,7 +50,7 @@ part 'voice_pipeline_record.dart';
 /// - With a [BargeInDetector] and [VoicePipelineConfig.bargeIn] a signal
 ///   during [VoiceState.speaking] stops the speech at once: „Wendelin“ (or
 ///   speech) starts a new utterance.
-final class VoicePipeline {
+final class VoicePipeline with VoiceContentLog {
   /// Creates a pipeline. [textToSpeech] is asked for the engine before
   /// every answer with the answer language (see `TtsSelector.current`);
   /// `null` = text only.

@@ -15,6 +15,14 @@ abstract final class AppSettings {
     defaultValue: false,
   );
 
+  /// Developer mode (WP148): extended logging (`Wendelin/dev`) and the
+  /// developer options; switched by 10 taps on „System“ in the app language
+  /// settings. Off by default.
+  static final developerMode = SettingKey.boolean(
+    'debug.developerMode',
+    defaultValue: false,
+  );
+
   /// Developer setting (WP72, hidden): capture variant during the speech
   /// output (`SpeechCapture` name; default `communication`).
   static final bargeSource = SettingKey.string('debug.bargeSource');

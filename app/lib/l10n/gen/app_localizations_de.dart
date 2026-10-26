@@ -1386,6 +1386,26 @@ class AppLocalizationsDe extends AppLocalizations {
       'Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm.';
 
   @override
+  String get developerModeActiveHint =>
+      'Entwicklermodus an – erweitertes Logging';
+
+  @override
+  String get developerModeOff => 'Entwicklermodus aus';
+
+  @override
+  String get developerModeOn => 'Entwicklermodus an';
+
+  @override
+  String developerModeStepsToOff(int n) {
+    return 'Noch $n× tippen, um den Entwicklermodus auszuschalten';
+  }
+
+  @override
+  String developerModeStepsToOn(int n) {
+    return 'Noch $n× tippen, um den Entwicklermodus einzuschalten';
+  }
+
+  @override
   String get batteryAllow => 'Keine Einschränkung erlauben';
 
   @override

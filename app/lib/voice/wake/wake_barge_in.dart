@@ -42,6 +42,7 @@ final class LazyWakeBargeInDetector
     this.diagInterval = const Duration(seconds: 1),
     this.verifySettle = const Duration(milliseconds: 800),
     this.tailMax = const Duration(seconds: 3),
+    this.devClips,
   });
 
   /// Microphone shared with the pipeline.
@@ -94,6 +95,9 @@ final class LazyWakeBargeInDetector
 
   /// How long the detached recording runs without a follow-up (WP146).
   final Duration tailMax;
+
+  /// WP148: audio of candidates and checks (developer mode only).
+  final DevClips? devClips;
 
   /// Interval of the `barge-diag` lines while listening.
   final Duration diagInterval;
@@ -182,6 +186,7 @@ final class LazyWakeBargeInDetector
       warm: warm,
       tailMax: tailMax,
       settle: verifySettle,
+      devClips: devClips,
       // Scores and kind only; the word itself stays out of the log.
       onCandidate: (kind, {required busy}) => voiceLog('barge-cand', {
         'kind': kind.name,
