@@ -36,6 +36,7 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
     this.timeout = const Duration(seconds: 20),
     this.shaper = const ResultShaper(),
     this.catalogFor,
+    this.access = AccessContext.unlocked,
   }) : policy = policy ?? RiskPolicy();
 
   /// Where tools are looked up when the context names no privacy level.
@@ -56,11 +57,16 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
   /// Decides allow / confirm / deny.
   final RiskPolicy policy;
 
+  /// Lock state and voice of the run (WP154 L2). Authoritative: the policy
+  /// decides with it and every tool gets it in `ToolContext.access`, whatever
+  /// the context of the call says. Locked calls are audited `whileLocked`.
+  final AccessContext access;
+
   @override
   RiskLevel effectiveRisk(Tool tool, String sessionId) =>
       RiskPolicy.effectiveRisk(
         tool.risk,
-        policy.decide(tool, sessionId).action,
+        policy.decide(tool, sessionId, access: access).action,
       );
 
   /// Checks arguments against the tool's input schema.
@@ -143,6 +149,7 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
         decision: decision,
         status: status,
         duration: duration,
+        whileLocked: access.locked,
       ),
     );
     return ToolFinished(call, outcome, duration);
@@ -186,12 +193,12 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
       );
     }
 
-    final policyDecision = policy.decide(tool, ctx.sessionId);
+    final policyDecision = policy.decide(tool, ctx.sessionId, access: access);
     var decision = AuditDecision.allowed;
     switch (policyDecision.action) {
       case PolicyAction.deny:
         return (
-          ToolOutcome.error(policyDecision.reason ?? RiskPolicy.deniedReason),
+          _deniedOutcome(policyDecision),
           AuditStatus.denied,
           AuditDecision.denied,
         );
@@ -217,7 +224,7 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
         }
         // The policy may have changed while the card was open (e.g.
         // lockExternal after a failed receipt check).
-        final recheck = policy.decide(tool, ctx.sessionId);
+        final recheck = policy.decide(tool, ctx.sessionId, access: access);
         if (recheck.action == PolicyAction.deny) {
           return (
             ToolOutcome.error(recheck.reason ?? RiskPolicy.deniedReason),
@@ -251,6 +258,7 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
       privacyLevel: ctx.privacyLevel,
       privacyFloor: ctx.privacyFloor,
       memoryOwner: ctx.memoryOwner,
+      access: access,
     );
 
     final result = Completer<(ToolOutcome, AuditStatus)>();
@@ -308,6 +316,14 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
       Zone.current.handleUncaughtError(e, s);
     }
   }
+
+  /// Result summary of a call that waits for the unlock (WP154 L2).
+  static const unlockSummary = 'Entsperren nötig';
+
+  static ToolOutcome _deniedOutcome(PolicyDecision d) => ToolOutcome.error(
+    d.reason ?? RiskPolicy.deniedReason,
+    summary: d.needsUnlock ? unlockSummary : null,
+  );
 
   /// Error text for a call to an unknown or inactive tool.
   static String unknownToolText(String name) =>

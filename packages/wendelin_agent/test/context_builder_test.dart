@@ -158,6 +158,8 @@ final class _ThrowingSection implements Tool, PromptContributor {
   @override
   String describeForConfirmation(Map<String, Object?> args) => name;
   @override
-  Future<String?> promptSection(String requestText) async =>
-      throw StateError('kaputt');
+  Future<String?> promptSection(
+    String requestText, {
+    AccessContext access = AccessContext.unlocked,
+  }) async => throw StateError('kaputt');
 }

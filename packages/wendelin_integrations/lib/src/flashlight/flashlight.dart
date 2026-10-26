@@ -80,7 +80,7 @@ enum TorchMode {
 /// `flashlight__on`, `flashlight__off`, `flashlight__toggle` (write, undo
 /// restores the previous state). The result holds only the own state.
 final class FlashlightTool extends IntegrationTool
-    implements TrustedContentSource, FixedConfirmationTool {
+    implements TrustedContentSource, FixedConfirmationTool, DefaultLevelTool {
   /// Creates a tool of the given [mode].
   const FlashlightTool(this.port, {required this.name, required this.mode});
 
@@ -110,6 +110,17 @@ final class FlashlightTool extends IntegrationTool
 
   @override
   RiskLevel get risk => RiskLevel.write;
+
+  /// Standard **A** for `on` and `off` (WP154 L2, the approval list of
+  /// K85): the tool only changes the torch of this phone. It reads no
+  /// personal data, sends nothing, affects nobody else, needs no permission
+  /// prompt and shows its effect at once; the other mode undoes it. That is
+  /// what the locked command always ran, so nothing changes without the
+  /// user's choice. `toggle` stays C: no spoken command ever reached it
+  /// locked. The user may change each tool (A–D).
+  @override
+  SecurityLevel get defaultLevel =>
+      mode == TorchMode.toggle ? SecurityLevel.c : SecurityLevel.a;
 
   @override
   Set<String> get confirmationKeys => const {'flashlight.on', 'flashlight.off'};

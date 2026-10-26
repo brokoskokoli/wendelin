@@ -237,6 +237,13 @@ final class ToolRegistry {
     required String sessionId,
   }) => [for (final tool in _offered(level, sessionId)) tool.spec];
 
+  /// All active tools a provider with privacy [level] may see, sorted by
+  /// name, also in meta mode (before `tools__search` unlocked them). For
+  /// the locked path (WP154 L2), which offers a fixed subset.
+  List<Tool> activeToolsFor(PrivacyLevel level) => [
+    for (final e in _active(level)) e.tool,
+  ];
+
   /// The [ToolCatalog] for a provider with privacy [level] in [sessionId].
   ToolCatalog catalogFor(PrivacyLevel level, {required String sessionId}) =>
       _LevelCatalog(this, level, sessionId);

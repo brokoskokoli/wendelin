@@ -1,0 +1,39 @@
+{
+  "levelDetails": "Détails",
+  "levelSummary": "Niveau {level} · {state}",
+  "@levelSummary": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "levelStateDefault": "par défaut",
+  "levelStateChanged": "modifié",
+  "levelSummaryScene": "par défaut : selon les membres",
+  "levelLegacyRemove": "Retirer l’ancien « Toujours confirmer » (l’appareil fixe le niveau)",
+  "levelRestore": "Rétablir le réglage par défaut",
+  "levelHelpA": "Toujours, même verrouillé et sans voix reconnue.",
+  "levelHelpB": "Avec une voix reconnue (même verrouillé) ou appareil déverrouillé.",
+  "levelHelpC": "Seulement appareil déverrouillé.",
+  "levelHelpD": "Déverrouillé et avec confirmation à l’écran.",
+  "levelWarnTitle": "Moins de protection ?",
+  "levelWarnDeviceMessage": "Une serrure, une alarme, un portail ou une porte pourra alors être commandé sans confirmation, au niveau A même appareil verrouillé. La responsabilité vous incombe.",
+  "levelWarnToolMessage": "Cet outil agit vers l’extérieur et pourra alors s’exécuter sans confirmation, au niveau A même appareil verrouillé. La responsabilité vous incombe.",
+  "levelWarnPersonalMessage": "Cet outil lit ou modifie des contenus personnels. Au niveau A, il s’exécute même appareil verrouillé, avec n’importe quelle voix ; au niveau B avec une voix reconnue (un enregistrement peut tromper). La responsabilité vous incombe.",
+  "levelWarnConfirm": "Modifier quand même",
+  "levelSemantics": "{name} : niveau {level}",
+  "@levelSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  }
+}

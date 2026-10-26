@@ -166,7 +166,7 @@ void main() {
     expect(find.byType(WebSearchScreen), findsOneWidget);
   });
 
-  testWidgets('Detail: Tool aus, „Immer nachfragen“, external fragt immer', (
+  testWidgets('Detail: Tool aus, Sicherheitsstufe je Tool (WP154)', (
     tester,
   ) async {
     final env = TestEnv(enabled: const {'calendar'});
@@ -175,6 +175,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(IntegrationDetailScreen), findsOneWidget);
     expect(find.text('calendar__delete_event'), findsOneWidget);
+    // external: Standard D, fragt immer nach.
     expect(find.text('Außenwirkung · fragt immer nach'), findsOneWidget);
 
     // Tool ausschalten → geht nicht mehr ans Modell.
@@ -194,29 +195,138 @@ void main() {
       isNot(contains('calendar__list_events')),
     );
 
-    // write-Tool auf „Immer nachfragen“ → Policy fragt.
-    await tester.tap(find.text('calendar__create_event'));
-    await tester.pumpAndSettle();
-    expect(find.text('ändert · fragt immer nach'), findsOneWidget);
     final policy = c.read(riskPolicyProvider);
     final create = c
         .read(integrationsProvider)['calendar']!
         .tools
         .firstWhere((t) => t.name == 'calendar__create_event');
-    expect(policy.decide(create, 's').action, PolicyAction.confirm);
-
-    // external lässt sich nicht lockern.
-    await tester.tap(find.text('calendar__delete_event'));
-    await tester.pumpAndSettle();
-    expect(find.text('Außenwirkung · fragt immer nach'), findsOneWidget);
-
-    // Zurücknehmen und gespeichert.
-    await tester.tap(find.text('calendar__create_event'));
-    await tester.pumpAndSettle();
+    final delete = c
+        .read(integrationsProvider)['calendar']!
+        .tools
+        .firstWhere((t) => t.name == 'calendar__delete_event');
+    // write ist standardmäßig C und fragt nicht.
     expect(policy.decide(create, 's').action, PolicyAction.allow);
+
+    Future<void> pick(String tool, String level) async {
+      final details = find.byKey(ValueKey('levelDetails_$tool'));
+      await tester.ensureVisible(details);
+      await tester.tap(details);
+      await tester.pumpAndSettle();
+      final l = find.byKey(ValueKey('level_${tool}_$level'));
+      await tester.ensureVisible(l);
+      await tester.tap(l);
+      await tester.pumpAndSettle();
+    }
+
+    // write auf D → Policy fragt, die Zeile sagt es.
+    await pick('calendar__create_event', 'd');
+    expect(find.text('ändert · fragt immer nach'), findsOneWidget);
+    expect(policy.decide(create, 's').action, PolicyAction.confirm);
+    expect(c.read(toolPrefsProvider).levelOf('calendar__create_event'), 'd');
+
+    // external auf C lockern: erst der Hinweis, bei „Abbrechen“ bleibt D.
+    final details = find.byKey(
+      const ValueKey('levelDetails_calendar__delete_event'),
+    );
+    await tester.ensureVisible(details);
+    await tester.tap(details);
+    await tester.pumpAndSettle();
+    final cKey = find.byKey(const ValueKey('level_calendar__delete_event_c'));
+    await tester.ensureVisible(cKey);
+    await tester.tap(cKey);
+    await tester.pumpAndSettle();
+    expect(find.text('Weniger Schutz?'), findsOneWidget);
+    await tester.tap(find.text('Abbrechen'));
+    await tester.pumpAndSettle();
+    expect(policy.decide(delete, 's').action, PolicyAction.confirm);
+    expect(c.read(toolPrefsProvider).levelOf('calendar__delete_event'), isNull);
+
+    await tester.tap(cKey);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Trotzdem ändern'));
+    await tester.pumpAndSettle();
+    expect(policy.decide(delete, 's').action, PolicyAction.allow);
+    expect(
+      find.text('Außenwirkung · ohne Nachfrage (Stufe gelockert)'),
+      findsOneWidget,
+    );
+
+    // Standard wiederherstellen → wieder D und gespeichert.
+    final restore = find.byKey(
+      const ValueKey('levelRestore_calendar__delete_event'),
+    );
+    await tester.ensureVisible(restore);
+    await tester.tap(restore);
+    await tester.pumpAndSettle();
+    expect(policy.decide(delete, 's').action, PolicyAction.confirm);
+    expect(find.text('Außenwirkung · fragt immer nach'), findsOneWidget);
     final stored = c.read(toolPrefsProvider);
     expect(stored.disabled, {'calendar__list_events'});
+    expect(stored.levels, {'calendar__create_event': 'd'});
     expect(stored.alwaysConfirm, isEmpty);
+  });
+
+  group('Hinweis beim Lockern (WP154 L3)', () {
+    Future<(ProviderContainer, Future<void> Function(String, String))> open(
+      WidgetTester tester,
+      String id,
+      String title,
+    ) async {
+      final c = await pumpIntegrations(tester, TestEnv(enabled: {id}));
+      await tester.tap(find.text(title));
+      await tester.pumpAndSettle();
+      Future<void> pick(String tool, String level) async {
+        final l = find.byKey(ValueKey('level_${tool}_$level'));
+        if (l.evaluate().isEmpty) {
+          final details = find.byKey(ValueKey('levelDetails_$tool'));
+          await tester.ensureVisible(details);
+          await tester.tap(details);
+          await tester.pumpAndSettle();
+        }
+        await tester.ensureVisible(l);
+        await tester.tap(l);
+        await tester.pumpAndSettle();
+      }
+
+      return (c, pick);
+    }
+
+    testWidgets('lesendes Tool einer sensiblen Integration: A und B warnen, '
+        'C nicht', (tester) async {
+      final (c, pick) = await open(tester, 'calendar', 'Kalender');
+      const tool = 'calendar__list_events';
+      await pick(tool, 'b');
+      expect(find.text('Weniger Schutz?'), findsOneWidget);
+      expect(find.textContaining('persönliche Inhalte'), findsOneWidget);
+      await tester.tap(find.text('Abbrechen'));
+      await tester.pumpAndSettle();
+      expect(c.read(toolPrefsProvider).levelOf(tool), isNull);
+
+      await tester.tap(find.byKey(const ValueKey('level_${tool}_b')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Trotzdem ändern'));
+      await tester.pumpAndSettle();
+      expect(c.read(toolPrefsProvider).levelOf(tool), 'b');
+
+      await pick(tool, 'a');
+      expect(find.text('Weniger Schutz?'), findsOneWidget);
+      await tester.tap(find.text('Trotzdem ändern'));
+      await tester.pumpAndSettle();
+      expect(c.read(toolPrefsProvider).levelOf(tool), 'a');
+
+      await pick(tool, 'c');
+      expect(find.text('Weniger Schutz?'), findsNothing);
+      // C ist der Standard eines lesenden Tools: nichts gespeichert.
+      expect(c.read(toolPrefsProvider).levelOf(tool), isNull);
+    });
+
+    testWidgets('Taschenlampe (nicht sensibel, ohne Außenwirkung): kein '
+        'Hinweis', (tester) async {
+      final (c, pick) = await open(tester, 'flashlight', 'Taschenlampe');
+      await pick('flashlight__on', 'b');
+      expect(find.text('Weniger Schutz?'), findsNothing);
+      expect(c.read(toolPrefsProvider).levelOf('flashlight__on'), 'b');
+    });
   });
 
   testWidgets('Detail: Stufe für sensible Integrationen', (tester) async {

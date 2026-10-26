@@ -163,7 +163,8 @@ final userIntegrationCleanupsProvider = Provider<List<IntegrationCleanup>>(
       final markGone = removal.whole && prefs.sensitive.containsKey(removal.id);
       if (!markGone &&
           !prefs.disabled.any(tools.contains) &&
-          !prefs.alwaysConfirm.any(tools.contains)) {
+          !prefs.alwaysConfirm.any(tools.contains) &&
+          !prefs.levels.keys.any(tools.contains)) {
         return;
       }
       await ref
@@ -172,6 +173,10 @@ final userIntegrationCleanupsProvider = Provider<List<IntegrationCleanup>>(
             ToolPrefs(
               disabled: prefs.disabled.difference(tools),
               alwaysConfirm: prefs.alwaysConfirm.difference(tools),
+              levels: {
+                for (final e in prefs.levels.entries)
+                  if (!tools.contains(e.key)) e.key: e.value,
+              },
               sensitiveMinimum: prefs.sensitiveMinimum,
               sensitive: {
                 for (final e in prefs.sensitive.entries)

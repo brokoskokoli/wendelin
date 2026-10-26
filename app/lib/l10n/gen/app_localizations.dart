@@ -2644,24 +2644,6 @@ abstract class AppLocalizations {
   /// **'Adresse'**
   String get haAddressLabel;
 
-  /// No description provided for @haAlwaysConfirm.
-  ///
-  /// In de, this message translates to:
-  /// **'Immer bestätigen'**
-  String get haAlwaysConfirm;
-
-  /// No description provided for @haAlwaysConfirmHelp.
-  ///
-  /// In de, this message translates to:
-  /// **'Wendelin fragt vor jedem Schalten nach (z. B. Herd, Ofen).'**
-  String get haAlwaysConfirmHelp;
-
-  /// No description provided for @haAlwaysConfirmSemantics.
-  ///
-  /// In de, this message translates to:
-  /// **'{name}: {label}'**
-  String haAlwaysConfirmSemantics(String name, String label);
-
   /// No description provided for @haApproved.
   ///
   /// In de, this message translates to:
@@ -2716,12 +2698,6 @@ abstract class AppLocalizations {
   /// **'Home Assistant trennen?'**
   String get haDisconnectTitle;
 
-  /// No description provided for @haEntityAlwaysAsks.
-  ///
-  /// In de, this message translates to:
-  /// **'{entityId} · fragt immer nach'**
-  String haEntityAlwaysAsks(String entityId);
-
   /// No description provided for @haErrorTitle.
   ///
   /// In de, this message translates to:
@@ -2737,7 +2713,7 @@ abstract class AppLocalizations {
   /// No description provided for @haFastPathHelp.
   ///
   /// In de, this message translates to:
-  /// **'„Rollo Wohnzimmer runter“ oder „Küche Deckenlicht aus“ führt Wendelin ohne KI aus, mit denselben Regeln. Schlösser, Alarmanlagen, Tore und Geräte mit „Immer bestätigen“ gehen nie so. Bei Unklarem fragt wie bisher die KI.'**
+  /// **'„Rollo Wohnzimmer runter“ oder „Küche Deckenlicht aus“ führt Wendelin ohne KI aus, mit denselben Regeln. Schlösser, Alarmanlagen, Tore und Geräte der Stufe D gehen nie so. Bei Unklarem fragt wie bisher die KI.'**
   String get haFastPathHelp;
 
   /// No description provided for @haFilter.
@@ -2775,18 +2751,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Wendelin steuert deine freigegebenen Geräte über die Schnittstelle deines Home Assistant. Nur im Heimnetz oder über Tailscale. Adresse und Token bleiben im sicheren Speicher des Geräts.'**
   String get haIntro;
-
-  /// No description provided for @haNoAsk.
-  ///
-  /// In de, this message translates to:
-  /// **'Ohne Rückfrage'**
-  String get haNoAsk;
-
-  /// No description provided for @haNoAskHelp.
-  ///
-  /// In de, this message translates to:
-  /// **'Wendelin bewegt dieses Rollo ohne Nachfrage (mit Rückgängig). Nur für Rollos, Jalousien, Markisen und Vorhänge; Garagentore und Türen fragen immer.'**
-  String get haNoAskHelp;
 
   /// No description provided for @haNoDevices.
   ///
@@ -3262,6 +3226,12 @@ abstract class AppLocalizations {
   /// **'Außenwirkung · fragt immer nach'**
   String get integrationDetailExternalAsks;
 
+  /// No description provided for @integrationDetailExternalNoAsk.
+  ///
+  /// In de, this message translates to:
+  /// **'Außenwirkung · ohne Nachfrage (Stufe gelockert)'**
+  String get integrationDetailExternalNoAsk;
+
   /// No description provided for @integrationDetailIntegrationDetailHaSetup.
   ///
   /// In de, this message translates to:
@@ -3355,7 +3325,7 @@ abstract class AppLocalizations {
   /// No description provided for @integrationDetailTapTool.
   ///
   /// In de, this message translates to:
-  /// **'Tippe auf ein Tool, um „Immer nachfragen“ ein- oder auszuschalten.'**
+  /// **'Unter „Details“ legst du je Tool die Sicherheitsstufe fest (A bis D).'**
   String get integrationDetailTapTool;
 
   /// No description provided for @integrationDetailTitle.
@@ -3549,6 +3519,108 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'{service} ist nicht erreichbar oder antwortet nicht. Später erneut versuchen.'**
   String reconnectErrUnavailable(String service);
+
+  /// No description provided for @levelDetails.
+  ///
+  /// In de, this message translates to:
+  /// **'Details'**
+  String get levelDetails;
+
+  /// No description provided for @levelHelpA.
+  ///
+  /// In de, this message translates to:
+  /// **'Immer, auch bei gesperrtem Gerät und ohne erkannte Stimme.'**
+  String get levelHelpA;
+
+  /// No description provided for @levelHelpB.
+  ///
+  /// In de, this message translates to:
+  /// **'Bei erkannter Stimme (auch gesperrt) oder entsperrtem Gerät.'**
+  String get levelHelpB;
+
+  /// No description provided for @levelHelpC.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur bei entsperrtem Gerät.'**
+  String get levelHelpC;
+
+  /// No description provided for @levelHelpD.
+  ///
+  /// In de, this message translates to:
+  /// **'Entsperrt und mit Bestätigung auf dem Display.'**
+  String get levelHelpD;
+
+  /// No description provided for @levelLegacyRemove.
+  ///
+  /// In de, this message translates to:
+  /// **'Altes „Immer bestätigen“ entfernen (das Gerät bestimmt die Stufe)'**
+  String get levelLegacyRemove;
+
+  /// No description provided for @levelRestore.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard wiederherstellen'**
+  String get levelRestore;
+
+  /// No description provided for @levelSemantics.
+  ///
+  /// In de, this message translates to:
+  /// **'{name}: Stufe {level}'**
+  String levelSemantics(String name, String level);
+
+  /// No description provided for @levelStateChanged.
+  ///
+  /// In de, this message translates to:
+  /// **'geändert'**
+  String get levelStateChanged;
+
+  /// No description provided for @levelStateDefault.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard'**
+  String get levelStateDefault;
+
+  /// No description provided for @levelSummary.
+  ///
+  /// In de, this message translates to:
+  /// **'Stufe {level} · {state}'**
+  String levelSummary(String level, String state);
+
+  /// No description provided for @levelSummaryScene.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard: je nach Mitgliedern'**
+  String get levelSummaryScene;
+
+  /// No description provided for @levelWarnConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Trotzdem ändern'**
+  String get levelWarnConfirm;
+
+  /// No description provided for @levelWarnDeviceMessage.
+  ///
+  /// In de, this message translates to:
+  /// **'Schloss, Alarm, Tor oder Tür lassen sich dann ohne Bestätigung bedienen, bei Stufe A sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.'**
+  String get levelWarnDeviceMessage;
+
+  /// No description provided for @levelWarnPersonalMessage.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieses Tool liest oder verändert persönliche Inhalte. Bei Stufe A läuft es sogar bei gesperrtem Gerät mit jeder Stimme, bei Stufe B mit einer erkannten Stimme (eine Aufnahme kann täuschen). Die Verantwortung liegt bei dir.'**
+  String get levelWarnPersonalMessage;
+
+  /// No description provided for @levelWarnTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Weniger Schutz?'**
+  String get levelWarnTitle;
+
+  /// No description provided for @levelWarnToolMessage.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieses Tool wirkt nach außen und kann dann ohne Bestätigung laufen, bei Stufe A sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.'**
+  String get levelWarnToolMessage;
 
   /// No description provided for @listsAccessLost.
   ///

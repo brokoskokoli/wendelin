@@ -46,7 +46,7 @@ Reines Dart (`package:http`, `crypto`), keine Flutter-Importe. Abhängigkeiten: 
 - `McpToolOverride.risk` hebt die Stufe nur an, nie ab (K8 b).
 - `readOnlyHint` eines selbst eingerichteten Servers gilt als vertrauenswürdig genug für `read`. Restrisiko: Ein lügender Server lässt ein schreibendes Tool ohne Nachfrage laufen. Gegenmittel sind `confirmAll` und `risk`. WP27 zeigt die effektive Stufe an.
 
-**Welcher Override zählt**: Für MCP-Tools ist `McpToolOverride` in der Server-Konfiguration maßgeblich. Er bestimmt `Tool.risk`, wird mit der Konfiguration exportiert und überlebt ein Neuladen der Tool-Liste. `RiskPolicy.setOverride` in `wendelin_tools` wirkt zusätzlich zur Laufzeit und kann nur verschärfen (Bestätigung, Sperre). Er ersetzt `McpToolOverride` nicht und wird für MCP-Tools nicht benutzt, um sie freizugeben.
+**Welcher Override zählt**: Für MCP-Tools ist `McpToolOverride` in der Server-Konfiguration maßgeblich. Er bestimmt `Tool.risk`, wird mit der Konfiguration exportiert und überlebt ein Neuladen der Tool-Liste. `RiskPolicy.setOverride` in `wendelin_tools` wirkt zusätzlich zur Laufzeit und kann nur verschärfen (Bestätigung, Sperre). Seit WP154 (ADR 0022) hat jedes Tool zusätzlich eine **Sicherheitsstufe A–D** (`RiskPolicy.setLevel`, vom Nutzer je Tool gewählt, Standard `read`/`write` = C, `external` = D): sie darf auch lockern, also ein `external`-Tool ohne Rückfrage laufen lassen, und ersetzt hier das alte „kann nur verschärfen“; `deny` und `lockExternal` gelten unabhängig von der Stufe weiter. Die Basisstufe aus `McpToolOverride` bleibt davon getrennt. Er ersetzt `McpToolOverride` nicht und wird für MCP-Tools nicht benutzt, um sie freizugeben.
 
 ## Kontextbudget
 

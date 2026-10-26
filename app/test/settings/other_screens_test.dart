@@ -539,14 +539,52 @@ void main() {
     final q = p
         .withEnabled('a__b', enabled: false)
         .withConfirm('a__c', confirm: true)
+        .withLevel('a__e', SecurityLevel.a)
         .withSensitiveMinimum(PrivacyLevel.tee);
     final back = ToolPrefs.fromJson(q.toJson());
     expect(back.disabled, {'a__b'});
-    expect(back.alwaysConfirm, {'a__c'});
+    // "Immer nachfragen" ist jetzt Stufe D, das alte Feld bleibt leer.
+    expect(back.alwaysConfirm, isEmpty);
+    expect(back.levels, {'a__c': 'd', 'a__e': 'a'});
+    expect(back.levelOf('a__c'), 'd');
+    expect(back.levelOf('a__x'), isNull);
     expect(back.sensitiveMinimum, PrivacyLevel.tee);
     expect(q.withEnabled('a__b', enabled: true).disabled, isEmpty);
-    expect(q.withConfirm('a__c', confirm: false).alwaysConfirm, isEmpty);
+    expect(q.withConfirm('a__c', confirm: false).levelOf('a__c'), isNull);
     expect(ToolPrefs.fromJson({'disabled': 3}).disabled, isEmpty);
+  });
+
+  test('ToolPrefs: Migration und ungültige Stufen (WP154)', () {
+    // Alt: alwaysConfirm ohne Stufe zählt als D und bleibt unverändert.
+    final legacy = ToolPrefs.fromJson({
+      'alwaysConfirm': ['a__c'],
+    });
+    expect(legacy.levelOf('a__c'), 'd');
+    expect(legacy.levelOf('a__other'), isNull);
+    expect(legacy.toJson()['alwaysConfirm'], ['a__c']);
+    // Eine gewählte Stufe ersetzt den alten Eintrag.
+    final chosen = legacy.withLevel('a__c', SecurityLevel.b);
+    expect(chosen.alwaysConfirm, isEmpty);
+    expect(chosen.levelOf('a__c'), 'b');
+    // Die Stufe hat Vorrang vor dem alten Eintrag.
+    final both = ToolPrefs.fromJson({
+      'alwaysConfirm': ['a__c'],
+      'levels': {'a__c': 'a'},
+    });
+    expect(both.levelOf('a__c'), 'a');
+    // Ungültig oder kein Text bleibt erhalten und gilt fail-closed als D.
+    final bad = ToolPrefs.fromJson({
+      'levels': {'x': 'z', 'y': 3},
+    });
+    expect(bad.levels, {'x': 'z', 'y': ''});
+    expect(
+      SecurityLevel.effective(bad.levelOf('x'), SecurityLevel.a),
+      SecurityLevel.d,
+    );
+    expect(
+      SecurityLevel.effective(bad.levelOf('y'), SecurityLevel.a),
+      SecurityLevel.d,
+    );
   });
 }
 

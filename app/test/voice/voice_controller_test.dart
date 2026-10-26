@@ -32,12 +32,14 @@ VoiceComponents fakeVoice({
   List<Transcript> script = const [],
   FakeTextToSpeech? tts,
   AudioInput? audio,
+  SpeakerRecognizer? speaker,
 }) => VoiceComponents(
   audio: audio ?? FakeAudioInput(frames: utterance()),
   vad: FakeVoiceActivityDetector(),
   stt: FakeSpeechToText(script),
   textToSpeech: (_) async => tts,
   config: const VoicePipelineConfig(),
+  speaker: speaker,
 );
 
 /// [TestEnv] whose voice parts are [voice] (`null` = no speech).

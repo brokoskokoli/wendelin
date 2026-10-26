@@ -1,3 +1,5 @@
+import '../safety/security_level.dart';
+
 /// Optional capability of a `Tool` (WP135 A): the tool adds a section to the
 /// system prompt of a request, e.g. the approved smart-home devices, so the
 /// model need not call a listing tool first.
@@ -10,5 +12,12 @@
 abstract interface class PromptContributor {
   /// The prompt section for a request with [requestText], or `null` for
   /// none. Never throws: a failure means no section.
-  Future<String?> promptSection(String requestText);
+  ///
+  /// [access] is the lock state of the request: while locked, the section
+  /// names only what a locked call may do (WP154 L2) and points to no
+  /// listing tool.
+  Future<String?> promptSection(
+    String requestText, {
+    AccessContext access = AccessContext.unlocked,
+  });
 }

@@ -87,9 +87,16 @@ final class FakeTool
   /// Request texts [promptSection] was asked for.
   final List<String> sectionRequests = [];
 
+  /// The [AccessContext] of each [promptSection] call.
+  final List<AccessContext> sectionAccess = [];
+
   @override
-  Future<String?> promptSection(String requestText) async {
+  Future<String?> promptSection(
+    String requestText, {
+    AccessContext access = AccessContext.unlocked,
+  }) async {
     sectionRequests.add(requestText);
+    sectionAccess.add(access);
     return section;
   }
 

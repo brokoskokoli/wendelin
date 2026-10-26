@@ -1,5 +1,6 @@
 import '../provider/cancel_token.dart';
 import '../provider/privacy_level.dart';
+import '../safety/security_level.dart';
 import '../util/clock.dart';
 
 /// Environment passed to `Tool.execute`.
@@ -14,6 +15,7 @@ final class ToolContext {
     this.privacyLevel,
     this.privacyFloor,
     this.memoryOwner = '',
+    this.access = AccessContext.unlocked,
   }) : cancel = cancel ?? CancelToken();
 
   /// Current conversation session.
@@ -47,4 +49,9 @@ final class ToolContext {
   /// default memory (unknown speaker, typed chat). The memory tools read and
   /// write only this namespace.
   final String memoryOwner;
+
+  /// Lock state and voice of the request (WP154 L2). The executor sets it;
+  /// a tool that decides per device (`LevelPerDeviceTool`) refuses what the
+  /// table does not allow in this context.
+  final AccessContext access;
 }

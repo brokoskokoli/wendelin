@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../src/common/port_exception.dart';
 import '../src/flashlight/flashlight.dart';
 import 'fake_failures.dart';
@@ -10,6 +12,9 @@ final class FakeTorchPort with FakeFailures implements TorchPort {
 
   /// Whether the device has a flash LED.
   bool available;
+
+  /// If `true`, [set] never answers (a hanging platform call).
+  bool hangs = false;
 
   /// Whether the torch is on (can be flipped to simulate the system tile).
   bool on;
@@ -29,6 +34,7 @@ final class FakeTorchPort with FakeFailures implements TorchPort {
   @override
   Future<void> set(bool on) async {
     enter('set');
+    if (hangs) return Completer<void>().future;
     if (!available) {
       throw const PortException(
         PortErrorKind.unsupported,

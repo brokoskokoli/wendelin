@@ -11,12 +11,14 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 import '../di/attestation_hub.dart';
 import '../di/attestation_providers.dart';
 import '../di/audit_recorder.dart';
+import '../di/locked_scope.dart';
 import '../di/preferences.dart';
 import '../di/provider_config.dart';
 import '../di/providers.dart';
 import '../di/speaker_providers.dart';
 import '../di/vocabulary_provider.dart';
 import '../voice/speaker/person_scope.dart';
+import 'agent_request.dart';
 import 'chat_entry.dart';
 import 'conversation_reducer.dart';
 import 'conversation_state.dart';
@@ -170,17 +172,7 @@ final class AgentController extends Notifier<ConversationState> {
     } on Object {
       return true; // Unknown: the stricter hint.
     }
-    return floored.any((t) => _isPrivateRequest(config, UserInput(text: t)));
-  }
-
-  /// Whether [input] is routed privately (a `privacy` rule matches).
-  static bool _isPrivateRequest(ProviderConfig? config, UserInput input) {
-    if (config == null) return false;
-    try {
-      return config.resolver().resolve(input).privacyFloor != null;
-    } on Object {
-      return false;
-    }
+    return floored.any((t) => isPrivateRequest(config, UserInput(text: t)));
   }
 
   /// The session [sessionId] ended (inactivity, „neues Thema“): a shown
@@ -230,8 +222,14 @@ final class AgentController extends Notifier<ConversationState> {
   /// agent events of this request; the stream ends after `AgentDone` or
   /// `AgentFailed`. [trigger] names what started it (audit log, e.g.
   /// `assistant`). If the request cannot start (busy, no provider), the
-  /// stream holds a single `AgentFailed`.
-  Stream<AgentEvent> submit(UserInput input, {String? trigger}) {
+  /// stream holds a single `AgentFailed`. [locked] (WP154 L2) is the scope
+  /// of a request on a locked device: only its tools, nothing stored, the
+  /// wording not in the audit log.
+  Stream<AgentEvent> submit(
+    UserInput input, {
+    String? trigger,
+    LockedScope? locked,
+  }) {
     final out = StreamController<AgentEvent>();
     final text = input.text.trim();
     if (text.isEmpty || state.running) {
@@ -255,7 +253,7 @@ final class AgentController extends Notifier<ConversationState> {
         ..close();
       return out.stream;
     }
-    unawaited(_start(input, trigger: trigger, out: out));
+    unawaited(_start(input, trigger: trigger, out: out, locked: locked));
     return out.stream;
   }
 
@@ -263,6 +261,7 @@ final class AgentController extends Notifier<ConversationState> {
     UserInput input, {
     required String? trigger,
     required StreamController<AgentEvent>? out,
+    LockedScope? locked,
   }) async {
     final trimmed = input.text.trim();
     // Corrected note names only count for their spoken request (WP33, B8).
@@ -293,7 +292,7 @@ final class AgentController extends Notifier<ConversationState> {
       // The first request after start waits until every integration was
       // checked, so its active tools are offered.
       await ref.read(toolRegistryReadyProvider.future);
-      (sessionId, scope) = await _sessionFor(input.speakerId);
+      (sessionId, scope) = await _sessionFor(input.speakerId, locked != null);
     } on Object catch (e, stack) {
       _report(e, stack);
       _finishWithNotice(NoticeKind.error, uiTexts(ref).agentNoticeStartFailed);
@@ -311,30 +310,28 @@ final class AgentController extends Notifier<ConversationState> {
     _sessionId = sessionId;
     final scoped = providers.withDefaultProfile(scope.agentProfileId);
     _providers = scoped;
-    final isNew = sessionId != _shownSessionId;
-    _shownSessionId = sessionId;
+    final isNew = locked == null && sessionId != _shownSessionId;
+    if (locked == null) _shownSessionId = sessionId;
     state = _reducer.userMessage(
       isNew ? state.copyWith(clearPrivate: true) : state,
       trimmed,
       sessionStart: isNew ? ref.read(clockProvider).now() : null,
     );
-    if (_isPrivateRequest(scoped, input)) {
+    if (isPrivateRequest(scoped, input)) {
       state = state.copyWith(privateByRequest: true);
     }
 
-    final request = UserInput(
-      text: trimmed,
-      images: input.images,
-      source: input.source,
-      sttConfidence: input.sttConfidence,
-      language: input.language,
-      interfaceLanguage: uiTexts(ref).localeName,
-      requestEscalation: input.requestEscalation,
+    final request = requestFor(input, trimmed, uiTexts(ref).localeName);
+    final lockedRun = locked != null;
+    _audit.request(
+      sessionId,
+      request,
+      trigger: trigger,
+      whileLocked: lockedRun,
     );
-    _audit.request(sessionId, request, trigger: trigger);
     final run = ref
         .read(agentFactoryProvider)
-        .create(scoped, sessionId, person: scope);
+        .create(scoped, sessionId, person: scope, locked: locked);
     _run = run;
     _events = run
         .run(request)
@@ -351,10 +348,13 @@ final class AgentController extends Notifier<ConversationState> {
   /// gets a new conversation (no history); everything else continues the
   /// open one in its scope. After an app restart the scope comes from the
   /// person stored with the conversation; unreadable or deleted: new one.
-  Future<(String, PersonScope)> _sessionFor(String? speakerId) async {
+  /// [locked] (WP154 L3): no session created or changed ([lockedSessionId],
+  /// not in the DB), no remembered scope; only the speaker's own scope.
+  Future<(String, PersonScope)> _sessionFor(String? who, bool locked) async {
     final sessions = ref.read(sessionManagerProvider);
     final resolver = ref.read(personScopeResolverProvider);
-    final requested = await resolver.scopeOf(speakerId);
+    final requested = await resolver.scopeOf(who);
+    if (locked) return (lockedSessionId, requested);
     bool clashes(PersonScope open) =>
         !requested.isStandard && open.personId != requested.personId;
 
@@ -372,10 +372,7 @@ final class AgentController extends Notifier<ConversationState> {
     try {
       final conversations = sessions.conversations;
       if ((await conversations.messages(id)).isEmpty) {
-        return await _adopt(
-          id,
-          requested,
-        ); // new (or expired): the speaker's own
+        return await _adopt(id, requested); // new/expired: the speaker's own
       }
       final stored = await conversations.sessionPerson(id);
       final scope = stored == null
@@ -597,7 +594,7 @@ final class AgentController extends Notifier<ConversationState> {
       // The stream ended without a terminal event (should not happen).
       state = state.copyWith(running: false, clearPending: true);
     }
-    ref.read(sessionManagerProvider).touch();
+    if (_sessionId != lockedSessionId) ref.read(sessionManagerProvider).touch();
     _closeOut();
     _completeIdle();
   }

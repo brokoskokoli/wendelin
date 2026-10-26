@@ -26,6 +26,7 @@ export 'src/provider/privacy_level.dart';
 export 'src/provider/provider_exception.dart';
 export 'src/provider/provider_profile.dart';
 export 'src/provider/provider_type.dart';
+export 'src/safety/security_level.dart';
 export 'src/safety/sensitive_content.dart';
 export 'src/sse/sse_parser.dart';
 export 'src/text/fold.dart';

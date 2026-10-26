@@ -1,22 +1,7 @@
 {
   "haFastPath": "Einfache Befehle sofort ausführen",
-  "haFastPathHelp": "„Rollo Wohnzimmer runter“ oder „Küche Deckenlicht aus“ führt Wendelin ohne KI aus, mit denselben Regeln. Schlösser, Alarmanlagen, Tore und Geräte mit „Immer bestätigen“ gehen nie so. Bei Unklarem fragt wie bisher die KI.",
-  "haNoAsk": "Ohne Rückfrage",
-  "haNoAskHelp": "Wendelin bewegt dieses Rollo ohne Nachfrage (mit Rückgängig). Nur für Rollos, Jalousien, Markisen und Vorhänge; Garagentore und Türen fragen immer.",
+  "haFastPathHelp": "„Rollo Wohnzimmer runter“ oder „Küche Deckenlicht aus“ führt Wendelin ohne KI aus, mit denselben Regeln. Schlösser, Alarmanlagen, Tore und Geräte der Stufe D gehen nie so. Bei Unklarem fragt wie bisher die KI.",
   "haAddressLabel": "Adresse",
-  "haAlwaysConfirm": "Immer bestätigen",
-  "haAlwaysConfirmHelp": "Wendelin fragt vor jedem Schalten nach (z. B. Herd, Ofen).",
-  "haAlwaysConfirmSemantics": "{name}: {label}",
-  "@haAlwaysConfirmSemantics": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      },
-      "label": {
-        "type": "String"
-      }
-    }
-  },
   "haApproved": "{n, plural, one{1 Gerät freigegeben} other{{n} Geräte freigegeben}}",
   "@haApproved": {
     "placeholders": {
@@ -33,14 +18,6 @@
   "haDisconnect": "Trennen",
   "haDisconnectMessage": "Adresse, Token und die Auswahl der Geräte werden vom Gerät gelöscht.",
   "haDisconnectTitle": "Home Assistant trennen?",
-  "haEntityAlwaysAsks": "{entityId} · fragt immer nach",
-  "@haEntityAlwaysAsks": {
-    "placeholders": {
-      "entityId": {
-        "type": "String"
-      }
-    }
-  },
   "haErrorTitle": "Fehler – nicht erreichbar",
   "haFilter": "Geräte filtern",
   "haFound": "Gefunden",

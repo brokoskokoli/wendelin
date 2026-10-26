@@ -1482,18 +1482,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haAddressLabel => 'Address';
 
   @override
-  String get haAlwaysConfirm => 'Always confirm';
-
-  @override
-  String get haAlwaysConfirmHelp =>
-      'Wendelin asks before every switch (e.g. stove, oven).';
-
-  @override
-  String haAlwaysConfirmSemantics(String name, String label) {
-    return '$name: $label';
-  }
-
-  @override
   String haApproved(int n) {
     String _temp0 = intl.Intl.pluralLogic(
       n,
@@ -1531,11 +1519,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haDisconnectTitle => 'Disconnect Home Assistant?';
 
   @override
-  String haEntityAlwaysAsks(String entityId) {
-    return '$entityId · always asks';
-  }
-
-  @override
   String get haErrorTitle => 'Error – not reachable';
 
   @override
@@ -1543,7 +1526,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get haFastPathHelp =>
-      '„Living room blind down“ or „Kitchen ceiling light off“ runs without AI, under the same rules. Locks, alarms, gates and devices set to „Always confirm“ never use it. For anything unclear the AI answers as before.';
+      '„Living room blind down“ or „Kitchen ceiling light off“ runs without AI, under the same rules. Locks, alarms, gates and devices on level D never use it. For anything unclear the AI answers as before.';
 
   @override
   String get haFilter => 'Filter devices';
@@ -1564,13 +1547,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get haIntro =>
       'Wendelin controls your approved devices through the API of your Home Assistant. Only on the home network or via Tailscale. Address and token stay in the device’s secure storage.';
-
-  @override
-  String get haNoAsk => 'Without confirmation';
-
-  @override
-  String get haNoAskHelp =>
-      'Wendelin moves this blind without asking (with undo). Only for shutters, blinds, awnings and curtains; garage doors and doors always ask.';
 
   @override
   String get haNoDevices => 'No devices found.';
@@ -1853,6 +1829,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get integrationDetailExternalAsks => 'External effect · always asks';
 
   @override
+  String get integrationDetailExternalNoAsk =>
+      'External effect · no confirmation (level loosened)';
+
+  @override
   String get integrationDetailIntegrationDetailHaSetup =>
       'Address, token and devices';
 
@@ -1905,7 +1885,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get integrationDetailTapTool =>
-      'Tap a tool to turn “Always ask” on or off.';
+      'Under “Details” you set the security level (A to D) per tool.';
 
   @override
   String get integrationDetailTitle => 'Integration';
@@ -2028,6 +2008,67 @@ class AppLocalizationsEn extends AppLocalizations {
   String reconnectErrUnavailable(String service) {
     return '$service is not reachable or does not answer. Try again later.';
   }
+
+  @override
+  String get levelDetails => 'Details';
+
+  @override
+  String get levelHelpA =>
+      'Always, also when locked and without a recognized voice.';
+
+  @override
+  String get levelHelpB =>
+      'With a recognized voice (also when locked) or when unlocked.';
+
+  @override
+  String get levelHelpC => 'Only when the device is unlocked.';
+
+  @override
+  String get levelHelpD => 'Unlocked and with a confirmation on the display.';
+
+  @override
+  String get levelLegacyRemove =>
+      'Remove the old “Always confirm” (the device sets the level)';
+
+  @override
+  String get levelRestore => 'Restore default';
+
+  @override
+  String levelSemantics(String name, String level) {
+    return '$name: level $level';
+  }
+
+  @override
+  String get levelStateChanged => 'changed';
+
+  @override
+  String get levelStateDefault => 'default';
+
+  @override
+  String levelSummary(String level, String state) {
+    return 'Level $level · $state';
+  }
+
+  @override
+  String get levelSummaryScene => 'default: depends on the members';
+
+  @override
+  String get levelWarnConfirm => 'Change anyway';
+
+  @override
+  String get levelWarnDeviceMessage =>
+      'A lock, alarm, gate or door can then be operated without a confirmation, at level A even while the device is locked. The responsibility is yours.';
+
+  @override
+  String get levelWarnPersonalMessage =>
+      'This tool reads or changes personal content. At level A it runs even while the device is locked, with any voice; at level B with a recognized voice (a recording can fool it). The responsibility is yours.';
+
+  @override
+  String get levelWarnTitle => 'Less protection?';
+
+  @override
+  String get levelWarnToolMessage =>
+      'This tool acts on the outside world and can then run without a confirmation, at level A even while the device is locked. The responsibility is yours.';
 
   @override
   String get listsAccessLost => 'No access any more – choose the file again';

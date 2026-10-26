@@ -40,6 +40,21 @@ final class AgentConfig {
     spokenCheckTimeout: spokenCheckTimeout,
   );
 
+  /// Copy without the personal parts of the prompt: no user name and no
+  /// free persona text (WP154, a locked device sends nothing personal).
+  AgentConfig withoutPersonal() => AgentConfig(
+    maxToolRounds: maxToolRounds,
+    maxDuration: maxDuration,
+    maxTokensPerRequest: maxTokensPerRequest,
+    maxOutputTokens: maxOutputTokens,
+    historyTurns: historyTurns,
+    memoryEntries: memoryEntries,
+    assistantName: assistantName,
+    temperature: temperature,
+    spokenVersion: spokenVersion,
+    spokenCheckTimeout: spokenCheckTimeout,
+  );
+
   /// Maximum number of tool rounds per user request (a round = executing
   /// the tool calls of one model answer). The next round is refused.
   final int maxToolRounds;

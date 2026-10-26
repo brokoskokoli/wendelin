@@ -6,6 +6,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../voice/speaker/person_scope.dart';
 import 'audit_recorder.dart';
+import 'locked_scope.dart';
 import 'provider_config.dart';
 import 'storage_adapters.dart';
 
@@ -16,10 +17,15 @@ abstract interface class AgentRunFactory {
   ///
   /// [person] is the recognized person's scope (WP92b): address, memory
   /// namespace. Without it the request behaves as before.
+  ///
+  /// [locked] (WP154 L2) is the scope of a request on a locked device: only
+  /// its tools, no history, no memory unless `memory__search` is among
+  /// them, nothing stored. `null` = unlocked.
   AgentRun create(
     ProviderConfig providers,
     String sessionId, {
     PersonScope person = PersonScope.standard,
+    LockedScope? locked,
   });
 }
 
@@ -91,73 +97,79 @@ final class AgentFactory implements AgentRunFactory {
   /// whose catalog offers `memory__search` as `memoryFloor` ([memoryFloorOf]).
   /// Weaker targets (also after „nochmal mit …“) get no memory in the
   /// system prompt; a run that sees it is tainted with that level.
+  ///
+  /// **Locked (WP154 L2):** [locked] narrows the run to the tools the policy
+  /// allows for it. Every context source is checked: the tool specs and the
+  /// prompt sections come from that catalog, the memory only if
+  /// `memory__search` is allowed, the history is not read and nothing is
+  /// recorded, the fast path only with `ha__call`; date, time, language and
+  /// persona are no personal data of a tool. The executor decides with the
+  /// same access, so a call outside the set ends as „Entsperren nötig“.
   @override
   AgentRun create(
     ProviderConfig providers,
     String sessionId, {
     PersonScope person = PersonScope.standard,
+    LockedScope? locked,
   }) {
-    final catalog = registry.catalogFor(
-      providers.lowestPrivacy,
-      sessionId: sessionId,
-    );
-    ToolCatalog catalogFor(PrivacyLevel level) =>
-        registry.catalogFor(level, sessionId: sessionId);
+    final access = locked?.access ?? AccessContext.unlocked;
+    ToolCatalog catalogFor(PrivacyLevel level) {
+      final inner = registry.catalogFor(level, sessionId: sessionId);
+      return locked?.narrow(inner, registry.activeToolsFor(level)) ?? inner;
+    }
+
+    final catalog = catalogFor(providers.lowestPrivacy);
     final conversation = StorageConversation(storage.conversations, sessionId);
-    final memoryAllowed = _memoryAllowed(providers, catalogFor);
+    // Locked: the memory only enters the prompt if its search is allowed.
+    final memoryAllowed =
+        (locked == null || locked.tools.contains('memory__search')) &&
+        _memoryAllowed(providers, catalogFor);
     final memoryFloor = memoryFloorOf(catalogFor);
     final runner = AgentRunner(
       resolver: providers.resolver(),
       contextBuilder: ContextBuilder(
-        config: person.address == null
-            ? config
-            : config.withUserName(person.address),
+        config: _configFor(person, locked),
         clock: clock,
         device: device,
         catalog: catalog,
+        access: access,
+        // Locked: `catalogFor` offers `memory__search` only if allowed.
         memory: memoryAllowed
             ? StorageMemoryRetriever(storage.memory, owner: person.memoryOwner)
             : null,
-        history: conversation,
+        // Locked: earlier turns may hold anything; none is read.
+        history: locked == null ? conversation : null,
       ),
       invoker: ToolExecutor(
         catalog: catalog,
         catalogFor: catalogFor,
         policy: policy,
         audit: audit,
+        access: access,
       ),
       catalogFor: catalogFor,
-      onToolRefused: (session, call) => audit.record(
-        ToolAuditEntry(
-          sessionId: session,
-          callId: call.id,
-          tool: call.name,
-          argumentsJson: call.argumentsJson,
-          decision: AuditDecision.denied,
-          status: AuditStatus.denied,
-          duration: Duration.zero,
-        ),
+      onToolRefused: _recordCall(
+        access,
+        AuditDecision.denied,
+        AuditStatus.denied,
       ),
-      onUndoFailed: (session, call) => audit.record(
-        // The action ran, its answer was not verified and the undo failed:
-        // the user must check it (WP77).
-        ToolAuditEntry(
-          sessionId: session,
-          callId: call.id,
-          tool: call.name,
-          argumentsJson: call.argumentsJson,
-          decision: AuditDecision.allowed,
-          status: AuditStatus.error,
-          duration: Duration.zero,
-        ),
+      // The action ran, its answer was not verified and the undo failed: the
+      // user must check it (WP77).
+      onUndoFailed: _recordCall(
+        access,
+        AuditDecision.allowed,
+        AuditStatus.error,
       ),
       onFixedConfirmation: _logFixed,
-      fastPath: fastPath,
+      fastPath: locked == null || locked.tools.contains('ha__call')
+          ? fastPath
+          : null,
       onFastPath: _logFast,
       fallbackTargets: providers.fallbackTargets,
       clock: clock,
       sessionId: sessionId,
-      recorder: conversation,
+      // Locked: nothing of this request is stored (K85, no history).
+      recorder: locked == null ? conversation : null,
       costEstimator: costEstimator,
       budgetGuard: budgetGuard,
       memoryFloor: memoryFloor,
@@ -166,12 +178,39 @@ final class AgentFactory implements AgentRunFactory {
     return _PreloadingRun(
       registry: registry,
       level: providers.primary.privacy,
+      preload: locked == null,
       sessionId: sessionId,
       locale: device.locale,
       inner: runner,
       observe: observe,
     );
   }
+
+  void Function(String, ToolCallBlock) _recordCall(
+    AccessContext access,
+    AuditDecision decision,
+    AuditStatus status,
+  ) =>
+      (session, call) => audit.record(
+        ToolAuditEntry(
+          sessionId: session,
+          callId: call.id,
+          tool: call.name,
+          argumentsJson: call.argumentsJson,
+          decision: decision,
+          status: status,
+          duration: Duration.zero,
+          whileLocked: access.locked,
+        ),
+      );
+
+  /// Locked: the name is no tool data and goes to the provider; omitted.
+  AgentConfig _configFor(PersonScope person, LockedScope? locked) =>
+      locked != null
+      ? config.withoutPersonal()
+      : person.address == null
+      ? config
+      : config.withUserName(person.address);
 
   static bool _memoryAllowed(
     ProviderConfig providers,
@@ -213,10 +252,14 @@ final class _PreloadingRun implements AgentRun {
     required this.sessionId,
     required this.locale,
     required this.inner,
+    this.preload = true,
     this.observe,
   });
 
   final ToolRegistry registry;
+
+  /// Locked requests unlock nothing: they offer a fixed set.
+  final bool preload;
   final PrivacyLevel level;
   final String sessionId;
   final String locale;
@@ -225,12 +268,14 @@ final class _PreloadingRun implements AgentRun {
 
   @override
   Stream<AgentEvent> run(UserInput input) {
-    registry.preloadForRequest(
-      input.text,
-      level,
-      sessionId: sessionId,
-      languageTag: input.language ?? locale,
-    );
+    if (preload) {
+      registry.preloadForRequest(
+        input.text,
+        level,
+        sessionId: sessionId,
+        languageTag: input.language ?? locale,
+      );
+    }
     return observe?.call(() => inner.run(input)) ?? inner.run(input);
   }
 

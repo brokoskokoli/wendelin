@@ -56,7 +56,9 @@ final class HaFastPath implements FastPath {
     final eligible = [
       for (final e in await ctx.approved())
         if (_fastDomains.contains(e.domain) &&
-            !e.alwaysConfirm &&
+            // Level D asks; the call itself decides again from the live
+            // state (WP154).
+            haEffectiveLevel(e, liveClass: e.deviceClass) != SecurityLevel.d &&
             !haHasBlocker('${e.name} ${e.entityId}'))
           e,
     ];
@@ -155,11 +157,6 @@ final class HaFastPath implements FastPath {
     num? value,
     _Unit? unit,
   ) {
-    // Only blinds the user let move without a question (WP135 E). The call
-    // checks the live class again.
-    if (!e.noConfirm || !haQuietCoverClasses.contains(e.deviceClass)) {
-      return null;
-    }
     if (value != null || half) {
       // „auf“ is both „open“ and the preposition of „auf 50 Prozent“, fr
       // „mets“ both „on“ and „set“: the number decides.

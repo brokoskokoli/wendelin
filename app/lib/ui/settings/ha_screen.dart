@@ -39,8 +39,9 @@ class _HaScreenState extends ConsumerState<HaScreen> {
   List<HaServer>? _servers;
   List<HaEntity>? _all;
   Set<String> _approved = {};
-  Set<String> _confirm = {};
-  Set<String> _noAsk = {};
+
+  /// The security choice of the approved devices (level, legacy flags).
+  Map<String, HaEntity> _chosen = {};
   List<HaEntity> _gone = const [];
 
   @override
@@ -65,14 +66,7 @@ class _HaScreenState extends ConsumerState<HaScreen> {
     setState(() {
       _endpoint = endpoint;
       _approved = {for (final e in approved) e.entityId};
-      _confirm = {
-        for (final e in approved)
-          if (e.alwaysConfirm) e.entityId,
-      };
-      _noAsk = {
-        for (final e in approved)
-          if (e.noConfirm) e.entityId,
-      };
+      _chosen = {for (final e in approved) e.entityId: e};
       _gone = [
         for (final e in approved)
           if (e.missing) e,
@@ -170,8 +164,7 @@ class _HaScreenState extends ConsumerState<HaScreen> {
       _endpoint = null;
       _all = null;
       _approved = {};
-      _confirm = {};
-      _noAsk = {};
+      _chosen = {};
       _error = null;
     });
   }
@@ -183,8 +176,6 @@ class _HaScreenState extends ConsumerState<HaScreen> {
     await _save();
   }
 
-  /// „Immer bestätigen“ of a switch: its calls then go through the
-  /// confirmation (`ha__call_secure`).
   /// Removes a device Home Assistant no longer lists.
   Future<void> _removeGone(HaEntity e) async {
     final next = {..._approved}..remove(e.entityId);
@@ -198,18 +189,10 @@ class _HaScreenState extends ConsumerState<HaScreen> {
     await _save();
   }
 
-  Future<void> _toggleConfirm(HaEntity e, bool on) async {
-    final next = {..._confirm};
-    on ? next.add(e.entityId) : next.remove(e.entityId);
-    setState(() => _confirm = next);
-    await _save();
-  }
-
-  /// „Ohne Rückfrage“ of a blind (WP135 E).
-  Future<void> _toggleNoAsk(HaEntity e, bool on) async {
-    final next = {..._noAsk};
-    on ? next.add(e.entityId) : next.remove(e.entityId);
-    setState(() => _noAsk = next);
+  /// The level of a device (WP154); `null` = default. The level replaces
+  /// the legacy flags.
+  Future<void> _setLevel(HaEntity e, SecurityLevel? level) async {
+    setState(() => _chosen = {..._chosen, e.entityId: e.withLevel(level)});
     await _save();
   }
 
@@ -222,9 +205,7 @@ class _HaScreenState extends ConsumerState<HaScreen> {
     await store.save([
       for (final id in _approved)
         if (byId[id] ?? old[id] case final e?)
-          e
-              .withConfirm(_confirm.contains(id))
-              .withNoConfirm(_noAsk.contains(id)),
+          if (_chosen[id] case final c?) e.withChoice(c) else e,
     ]);
     // The hint names of the recognizer follow the approval.
     ref.invalidate(haApprovedEntitiesProvider);
@@ -409,11 +390,9 @@ class _HaScreenState extends ConsumerState<HaScreen> {
           title: key,
           entities: value,
           approved: _approved,
-          alwaysConfirm: _confirm,
-          noAsk: _noAsk,
+          choiceOf: (e) => _chosen[e.entityId] ?? e,
           onToggle: (e, on) => unawaited(_toggle(e, on)),
-          onToggleConfirm: (e, on) => unawaited(_toggleConfirm(e, on)),
-          onToggleNoAsk: (e, on) => unawaited(_toggleNoAsk(e, on)),
+          onLevel: (e, level) => unawaited(_setLevel(e, level)),
         ),
       WideButton(
         context.l10n.haReload,

@@ -167,6 +167,9 @@ abstract final class WSize {
   /// Warn-Dreieck im Kopf der Bestätigungskarte.
   static const statusIconHeader = 16.0;
 
+  /// Kleine Symbole im Reiter „Details“ (Pfeil, Stufenwahl).
+  static const iconDetail = 16.0;
+
   /// Form-Symbole vor Text (●, ◆, ▲, ■, ✓).
   static const glyph = 8.0;
 

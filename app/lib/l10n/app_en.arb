@@ -466,9 +466,6 @@
     }
   },
   "haAddressLabel": "Address",
-  "haAlwaysConfirm": "Always confirm",
-  "haAlwaysConfirmHelp": "Wendelin asks before every switch (e.g. stove, oven).",
-  "haAlwaysConfirmSemantics": "{name}: {label}",
   "haApproved": "{n, plural, one{1 device approved} other{{n} devices approved}}",
   "haConnect": "Connect",
   "haConnected": "Connected",
@@ -478,18 +475,15 @@
   "haDisconnect": "Disconnect",
   "haDisconnectMessage": "Address, token and the device selection are deleted from this device.",
   "haDisconnectTitle": "Disconnect Home Assistant?",
-  "haEntityAlwaysAsks": "{entityId} · always asks",
   "haErrorTitle": "Error – not reachable",
   "haFastPath": "Run simple commands right away",
-  "haFastPathHelp": "„Living room blind down“ or „Kitchen ceiling light off“ runs without AI, under the same rules. Locks, alarms, gates and devices set to „Always confirm“ never use it. For anything unclear the AI answers as before.",
+  "haFastPathHelp": "„Living room blind down“ or „Kitchen ceiling light off“ runs without AI, under the same rules. Locks, alarms, gates and devices on level D never use it. For anything unclear the AI answers as before.",
   "haFilter": "Filter devices",
   "haFound": "Found",
   "haGone": "No longer in Home Assistant",
   "haHttpNote": "Unencrypted http is only allowed on the home network, via Tailscale (100.x, *.ts.net) and for *.local, otherwise only https. Nothing is found automatically via Tailscale: enter the address by hand.",
   "haInputMissing": "Please enter address and token.",
   "haIntro": "Wendelin controls your approved devices through the API of your Home Assistant. Only on the home network or via Tailscale. Address and token stay in the device’s secure storage.",
-  "haNoAsk": "Without confirmation",
-  "haNoAskHelp": "Wendelin moves this blind without asking (with undo). Only for shutters, blinds, awnings and curtains; garage doors and doors always ask.",
   "haNoDevices": "No devices found.",
   "haNoRoom": "No room",
   "haNothingFound": "Nothing found. Enter the address by hand (required for Tailscale).",
@@ -569,6 +563,7 @@
   "comingSoonM3": "Coming in M3",
   "integrationDetailBringAccount": "Bring! account",
   "integrationDetailExternalAsks": "External effect · always asks",
+  "integrationDetailExternalNoAsk": "External effect · no confirmation (level loosened)",
   "integrationDetailIntegrationDetailHaSetup": "Address, token and devices",
   "integrationDetailIntegrationDetailSpotifyAccount": "Spotify account",
   "integrationDetailLevelAll": "To all providers",
@@ -584,7 +579,7 @@
   "integrationDetailSensitiveNote": "Sensitive: the tools only go to providers at or above the level you set for sensitive integrations.",
   "integrationDetailSensitiveTitle": "Sensitive integrations",
   "integrationDetailSetUpSearch": "Set up search service",
-  "integrationDetailTapTool": "Tap a tool to turn “Always ask” on or off.",
+  "integrationDetailTapTool": "Under “Details” you set the security level (A to D) per tool.",
   "integrationDetailTitle": "Integration",
   "integrationDetailVaultDaily": "Vault and daily notes",
   "integrationDetailViewMemory": "View memory",
@@ -652,6 +647,43 @@
       }
     }
   },
+  "levelDetails": "Details",
+  "levelHelpA": "Always, also when locked and without a recognized voice.",
+  "levelHelpB": "With a recognized voice (also when locked) or when unlocked.",
+  "levelHelpC": "Only when the device is unlocked.",
+  "levelHelpD": "Unlocked and with a confirmation on the display.",
+  "levelLegacyRemove": "Remove the old “Always confirm” (the device sets the level)",
+  "levelRestore": "Restore default",
+  "levelSemantics": "{name}: level {level}",
+  "@levelSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "levelStateChanged": "changed",
+  "levelStateDefault": "default",
+  "levelSummary": "Level {level} · {state}",
+  "@levelSummary": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "levelSummaryScene": "default: depends on the members",
+  "levelWarnConfirm": "Change anyway",
+  "levelWarnDeviceMessage": "A lock, alarm, gate or door can then be operated without a confirmation, at level A even while the device is locked. The responsibility is yours.",
+  "levelWarnPersonalMessage": "This tool reads or changes personal content. At level A it runs even while the device is locked, with any voice; at level B with a recognized voice (a recording can fool it). The responsibility is yours.",
+  "levelWarnTitle": "Less protection?",
+  "levelWarnToolMessage": "This tool acts on the outside world and can then run without a confirmation, at level A even while the device is locked. The responsibility is yours.",
   "listsAccessLost": "No access any more – choose the file again",
   "listsAdd": "+ List",
   "listsAliases": "Other names, separated by commas (optional)",
