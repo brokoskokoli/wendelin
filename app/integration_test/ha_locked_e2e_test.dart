@@ -5,10 +5,10 @@
 // werden mit „Entsperren nötig“ abgewiesen, der Server sieht nur den
 // einen erlaubten Aufruf.
 //
-// Entwurf, nur `flutter analyze`d (kein Emulatorlauf durch den Coder). Läuft
-// mit `tool/e2e_android.sh integration_test/wp154/locked_ha_e2e_test.dart`;
-// das Skript startet den Fake-HA bisher nur für `ha_e2e_test.dart` (Name),
-// dort `*ha_e2e_test.dart` bzw. den Dateinamen der Prüfung anpassen.
+// Läuft mit `tool/e2e_android.sh integration_test/ha_locked_e2e_test.dart`:
+// das Skript startet den Fake-HA für jede Datei `ha_*e2e_test.dart` und
+// übergibt HA_URL/HA_TOKEN. Bisher nur `flutter analyze`d; der Emulatorlauf
+// steht aus (E2E-Agent).
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;

@@ -64,8 +64,7 @@ void main() {
         for (final locked in [false, true]) {
           for (final voice in [false, true]) {
             expect(
-              AccessContext(locked: locked, speakerRecognized: voice)
-                  .of(level),
+              AccessContext(locked: locked, speakerRecognized: voice).of(level),
               levelAccess(level, locked: locked, speakerRecognized: voice),
               reason: '$level $locked $voice',
             );

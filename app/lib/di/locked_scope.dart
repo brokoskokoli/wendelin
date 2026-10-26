@@ -27,6 +27,13 @@ final class LockedScope {
   /// Names of the tools offered; for a tool that decides per device
   /// (`ha__call`) at least one device is allowed.
   final Set<String> tools;
+
+  /// [inner] limited to the [tools] of [active] that this scope offers.
+  ToolCatalog narrow(ToolCatalog inner, Iterable<Tool> active) =>
+      LockedCatalog(inner, [
+        for (final t in active)
+          if (tools.contains(t.name)) t,
+      ]);
 }
 
 /// The tools of [inner] a locked request may use: [activeSpecs] lists only

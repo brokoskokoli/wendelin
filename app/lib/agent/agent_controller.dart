@@ -18,6 +18,7 @@ import '../di/providers.dart';
 import '../di/speaker_providers.dart';
 import '../di/vocabulary_provider.dart';
 import '../voice/speaker/person_scope.dart';
+import 'agent_request.dart';
 import 'chat_entry.dart';
 import 'conversation_reducer.dart';
 import 'conversation_state.dart';
@@ -171,17 +172,7 @@ final class AgentController extends Notifier<ConversationState> {
     } on Object {
       return true; // Unknown: the stricter hint.
     }
-    return floored.any((t) => _isPrivateRequest(config, UserInput(text: t)));
-  }
-
-  /// Whether [input] is routed privately (a `privacy` rule matches).
-  static bool _isPrivateRequest(ProviderConfig? config, UserInput input) {
-    if (config == null) return false;
-    try {
-      return config.resolver().resolve(input).privacyFloor != null;
-    } on Object {
-      return false;
-    }
+    return floored.any((t) => isPrivateRequest(config, UserInput(text: t)));
   }
 
   /// The session [sessionId] ended (inactivity, „neues Thema“): a shown
@@ -326,24 +317,17 @@ final class AgentController extends Notifier<ConversationState> {
       trimmed,
       sessionStart: isNew ? ref.read(clockProvider).now() : null,
     );
-    if (_isPrivateRequest(scoped, input)) {
+    if (isPrivateRequest(scoped, input)) {
       state = state.copyWith(privateByRequest: true);
     }
 
-    final request = UserInput(
-      text: trimmed,
-      images: input.images,
-      source: input.source,
-      sttConfidence: input.sttConfidence,
-      language: input.language,
-      interfaceLanguage: uiTexts(ref).localeName,
-      requestEscalation: input.requestEscalation,
-    );
+    final request = requestFor(input, trimmed, uiTexts(ref).localeName);
+    final lockedRun = locked != null;
     _audit.request(
       sessionId,
       request,
       trigger: trigger,
-      whileLocked: locked != null,
+      whileLocked: lockedRun,
     );
     final run = ref
         .read(agentFactoryProvider)

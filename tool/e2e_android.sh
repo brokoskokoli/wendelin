@@ -78,7 +78,8 @@
 # `adb emu geo fix` die Position (Hamburg, 10.0 / 53.55) und entzieht die
 # Berechtigung danach wieder.
 #
-# Home Assistant (WP104, integration_test/ha_e2e_test.dart): das Skript startet
+# Home Assistant (WP104, integration_test/ha_e2e_test.dart und ha_*_e2e_test.dart,
+# z. B. WP154 ha_locked_e2e_test.dart): das Skript startet
 # den Fake-HA app/tool/ha_test_server.dart (nur 127.0.0.1; Emulator: 10.0.2.2),
 # übergibt HA_URL/HA_TOKEN und prüft danach das Server-Log (keine unerwarteten
 # Aufrufe).
@@ -643,7 +644,7 @@ HA=()
 for f in "$@"; do
   if [ -f "$f" ] && grep -q "pragma('vm:entry-point')" "$f"; then
     INSTRUMENTED+=("$f")
-  elif [ "$(basename "$f")" = ha_e2e_test.dart ]; then
+  elif case "$(basename "$f")" in ha_e2e_test.dart | ha_*_e2e_test.dart) true ;; *) false ;; esac; then
     HA+=("$f") # braucht den Fake-HA (WP104), eigener Lauf
   else
     PLAIN+=("$f")

@@ -198,10 +198,7 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
     switch (policyDecision.action) {
       case PolicyAction.deny:
         return (
-          ToolOutcome.error(
-            policyDecision.reason ?? RiskPolicy.deniedReason,
-            summary: policyDecision.needsUnlock ? unlockSummary : null,
-          ),
+          _deniedOutcome(policyDecision),
           AuditStatus.denied,
           AuditDecision.denied,
         );
@@ -322,6 +319,11 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
 
   /// Result summary of a call that waits for the unlock (WP154 L2).
   static const unlockSummary = 'Entsperren nötig';
+
+  static ToolOutcome _deniedOutcome(PolicyDecision d) => ToolOutcome.error(
+    d.reason ?? RiskPolicy.deniedReason,
+    summary: d.needsUnlock ? unlockSummary : null,
+  );
 
   /// Error text for a call to an unknown or inactive tool.
   static String unknownToolText(String name) =>

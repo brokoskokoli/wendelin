@@ -115,11 +115,7 @@ final class AgentFactory implements AgentRunFactory {
     final access = locked?.access ?? AccessContext.unlocked;
     ToolCatalog catalogFor(PrivacyLevel level) {
       final inner = registry.catalogFor(level, sessionId: sessionId);
-      if (locked == null) return inner;
-      return LockedCatalog(inner, [
-        for (final t in registry.activeToolsFor(level))
-          if (locked.tools.contains(t.name)) t,
-      ]);
+      return locked?.narrow(inner, registry.activeToolsFor(level)) ?? inner;
     }
 
     final catalog = catalogFor(providers.lowestPrivacy);
@@ -132,12 +128,7 @@ final class AgentFactory implements AgentRunFactory {
     final runner = AgentRunner(
       resolver: providers.resolver(),
       contextBuilder: ContextBuilder(
-        // Locked: the name is no tool data and goes to the provider; omitted.
-        config: locked != null
-            ? config.withUserName(null)
-            : person.address == null
-            ? config
-            : config.withUserName(person.address),
+        config: _configFor(person, locked),
         clock: clock,
         device: device,
         catalog: catalog,
@@ -157,31 +148,17 @@ final class AgentFactory implements AgentRunFactory {
         access: access,
       ),
       catalogFor: catalogFor,
-      onToolRefused: (session, call) => audit.record(
-        ToolAuditEntry(
-          sessionId: session,
-          callId: call.id,
-          tool: call.name,
-          argumentsJson: call.argumentsJson,
-          decision: AuditDecision.denied,
-          status: AuditStatus.denied,
-          duration: Duration.zero,
-          whileLocked: access.locked,
-        ),
+      onToolRefused: _recordCall(
+        access,
+        AuditDecision.denied,
+        AuditStatus.denied,
       ),
-      onUndoFailed: (session, call) => audit.record(
-        // The action ran, its answer was not verified and the undo failed:
-        // the user must check it (WP77).
-        ToolAuditEntry(
-          sessionId: session,
-          callId: call.id,
-          tool: call.name,
-          argumentsJson: call.argumentsJson,
-          decision: AuditDecision.allowed,
-          status: AuditStatus.error,
-          duration: Duration.zero,
-          whileLocked: access.locked,
-        ),
+      // The action ran, its answer was not verified and the undo failed: the
+      // user must check it (WP77).
+      onUndoFailed: _recordCall(
+        access,
+        AuditDecision.allowed,
+        AuditStatus.error,
       ),
       onFixedConfirmation: _logFixed,
       fastPath: locked == null || locked.tools.contains('ha__call')
@@ -208,6 +185,32 @@ final class AgentFactory implements AgentRunFactory {
       observe: observe,
     );
   }
+
+  void Function(String, ToolCallBlock) _recordCall(
+    AccessContext access,
+    AuditDecision decision,
+    AuditStatus status,
+  ) =>
+      (session, call) => audit.record(
+        ToolAuditEntry(
+          sessionId: session,
+          callId: call.id,
+          tool: call.name,
+          argumentsJson: call.argumentsJson,
+          decision: decision,
+          status: status,
+          duration: Duration.zero,
+          whileLocked: access.locked,
+        ),
+      );
+
+  /// Locked: the name is no tool data and goes to the provider; omitted.
+  AgentConfig _configFor(PersonScope person, LockedScope? locked) =>
+      locked != null
+      ? config.withUserName(null)
+      : person.address == null
+      ? config
+      : config.withUserName(person.address);
 
   static bool _memoryAllowed(
     ProviderConfig providers,
