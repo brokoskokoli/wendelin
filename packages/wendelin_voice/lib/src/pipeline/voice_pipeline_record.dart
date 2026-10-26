@@ -63,9 +63,16 @@ extension VoicePipelineRecord on VoicePipeline {
     final levels = _LevelLog(diagnostics);
     _endListening = end;
     _endpointer = endpointer;
+    final rec = devClips?.on == true ? _devRec = _DevRec() : null;
     try {
       vad.reset();
       if (preRoll != null) {
+        if (rec != null) {
+          rec.base = wakeEnd == null ? 0 : wakeEnd.clamp(0, preRoll.length);
+          rec
+            ..add('preRoll', preRoll)
+            ..marks['wakeEnd'] = samplesToDuration(rec.base).inMilliseconds;
+        }
         final early = _feedPreRollLogged(
           endpointer,
           preRoll,
@@ -91,6 +98,11 @@ extension VoicePipelineRecord on VoicePipeline {
       fail(error);
     }
     final result = await done.future;
+    if (rec != null) {
+      if (identical(_devRec, rec)) _devRec = null;
+      final clip = rec.build(result);
+      if (clip != null) devClips?.emit(clip);
+    }
     if (identical(_endpointer, endpointer)) {
       _endListening = null;
       _endpointer = null;

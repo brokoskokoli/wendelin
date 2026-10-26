@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
 
+import '../dev/dev_clips.dart';
 import '../io/audio_input.dart';
 import '../io/voice_exception.dart';
 import '../models/wake_classifier_catalog.dart';
@@ -110,6 +111,7 @@ final class WakeWordListener {
     this.verifyWindow = WakeClassifierRules.verifyWindow,
     this.verifyTail = WakeClassifierRules.verifyTail,
     this.verifyTimeout = const Duration(seconds: 8),
+    this.devClips,
   });
 
   /// Microphone.
@@ -141,6 +143,10 @@ final class WakeWordListener {
   /// Longest wait for stage 2 (a timeout counts as rejected).
   final Duration verifyTimeout;
 
+  /// Developer mode (WP148): audio of every candidate (`wake-cand`, 2 s each
+  /// side) and of every check (`wake-verify`); `null` or off: nothing is kept.
+  final DevClips? devClips;
+
   final _detections = StreamController<WakeWordDetection>.broadcast(sync: true);
   final _stateChanges = StreamController<WakeListenerState>.broadcast(
     sync: true,
@@ -153,6 +159,7 @@ final class WakeWordListener {
       _max(preRoll, verifyWindow + verifyTail + const Duration(seconds: 2)),
     ),
   );
+  late final _dev = DevAroundSet(devClips);
   Completer<void>? _tailWait;
   int _tailTarget = 0;
   // Cancelled in stop/_release.
@@ -245,6 +252,7 @@ final class WakeWordListener {
   void _onFrame(Int16List frame, int gen) {
     if (gen != _generation) return;
     _ring.add(frame);
+    _dev.feed(frame);
     if (_verifying) _since.add(frame);
     _position += frame.length;
     if (_tailWait != null && _position >= _tailTarget) {
@@ -271,6 +279,7 @@ final class WakeWordListener {
   Future<void> _onCandidate(WakeWordHit hit, int gen) async {
     _candidates++;
     final end = hit.endSample;
+    _dev.start(() => _candidateClip(end));
     final v = verifier;
     final tail = v == null || hit.direct ? 0 : durationToSamples(verifyTail);
     if (tail > 0 && _position < end + tail) {
@@ -296,6 +305,14 @@ final class WakeWordListener {
     if (v != null && !hit.direct) {
       try {
         final at = rel(end) - rel(end - durationToSamples(verifyWindow));
+        devClips?.emit(
+          DevClip(
+            event: 'wake-verify',
+            pcm: lead,
+            at: DateTime.now(),
+            marksMs: {'wakeEnd': samplesToDuration(at).inMilliseconds},
+          ),
+        );
         ok =
             await (v is WakeEndAwareVerifier
                     ? v.confirmAt(lead, at)
@@ -332,6 +349,20 @@ final class WakeWordListener {
     );
   }
 
+  // The candidate at stream position [end] with what lies around it (WP148).
+  DevAround _candidateClip(int end) {
+    final snap = _ring.snapshot();
+    final start = _position - snap.length;
+    int rel(int abs) => (abs - start).clamp(0, snap.length);
+    final span = durationToSamples(devClipSpan);
+    return DevAround(
+      event: 'wake-cand',
+      before: Int16List.sublistView(snap, rel(end - span), rel(end)),
+      already: Int16List.sublistView(snap, rel(end)),
+      afterWanted: span,
+    );
+  }
+
   /// Releases the microphone; [resume] continues. No-op unless listening.
   Future<void> pause() async {
     if (_state != WakeListenerState.listening) return;
@@ -363,6 +394,8 @@ final class WakeWordListener {
 
   Future<void> _release() async {
     _generation++;
+    // What was collected for the developer mode is written, cut short.
+    _dev.flush();
     // No audio stays in memory while the microphone is released.
     _ring.clear();
     _since.clear();

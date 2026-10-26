@@ -143,6 +143,16 @@ class WakePlatform {
     }
   }
 
+  /// Mirrors the developer mode (WP148) to Kotlin, which tells the wake
+  /// engine (it has no database): audio recordings only while it is on.
+  Future<void> setDevMode({required bool enabled}) async {
+    try {
+      await _channel.invokeMethod<void>('devMode', {'on': enabled});
+    } on Object {
+      // Not on Android, or no engine: the service then stays at its value.
+    }
+  }
+
   /// Sets the wake word settings; Kotlin starts or stops the service.
   Future<void> configure({
     required bool enabled,

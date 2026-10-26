@@ -8,6 +8,7 @@
 /// in `package:wendelin_voice/testing.dart`.
 library;
 
+export 'src/dev/dev_clips.dart';
 export 'src/io/audio_input.dart';
 export 'src/io/barge_in_detector.dart';
 export 'src/io/speech_to_text.dart';

@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../voice/dev_audio.dart';
 import '../voice/dev_log.dart';
 import 'app_settings.dart';
+import '../platform/wake/wake_platform.dart';
 import 'providers.dart';
 
 /// Whether the developer mode is on (WP148): extended logging with content
@@ -39,6 +41,7 @@ extension DevLogPipeline on VoicePipeline {
   /// Hooks this pipeline up and returns it.
   VoicePipeline withDevLog(Ref ref) {
     contentLog = devLog;
+    devClips = devAudioClips;
     unawaited(refreshDevLogFlag(ref));
     return this;
   }
@@ -61,5 +64,7 @@ final class DeveloperModePref extends Notifier<bool> {
         .read(storageProvider)
         .settings
         .set(AppSettings.developerMode, enabled);
+    // The wake service has no database: Kotlin keeps the flag for it.
+    unawaited(ref.read(wakePlatformProvider).setDevMode(enabled: enabled));
   }
 }

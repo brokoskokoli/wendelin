@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../dev/dev_clips.dart';
 import '../io/audio_input.dart';
 import '../io/barge_in_detector.dart';
 import '../io/speech_to_text.dart';
@@ -121,6 +122,8 @@ final class VoicePipeline with VoiceContentLog {
   // (WP146): the live audio is the continuation of a possible re-listen.
   bool _micHeld = false;
   final _listenLog = _ListenLog();
+  // The recording of the listening that runs (WP148), only in developer mode.
+  _DevRec? _devRec;
   Endpointer? _endpointer;
   SpeechQueue? _queue;
   bool _agentRunning = false;

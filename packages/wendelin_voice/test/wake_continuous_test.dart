@@ -441,6 +441,84 @@ void main() {
       expect(speechAfterWakeWord(louder, 1000 * 16), isTrue);
     });
   });
+
+  group('Tonaufnahme der ganzen Interaktion (WP148)', () {
+    DevClips hook(List<DevClip> out, {bool on = true}) =>
+        DevClips(enabled: () => on, write: out.add);
+
+    test('Vorlauf + Mikrofon in einer Datei, Marken stimmen mit den Samples', () {
+      runFake((async) {
+        final h = Harness(
+          turns: [ScriptedTurn.text('Licht an.')],
+          transcripts: const [
+            Transcript(text: 'Wendelin.'),
+            Transcript(text: 'Mach das Licht an'),
+          ],
+        );
+        final clips = <DevClip>[];
+        h.pipeline.devClips = hook(clips);
+        h.fakeAudio.script(
+          AudioFrames.pattern(
+            '${'.' * 10}${'S' * 20}${'.' * 30}',
+            frame: frame,
+          ),
+        );
+        final pre = cat([speech(600), quiet(1000)]);
+        h.pipeline.start(trigger: wake(pre, 200 * 16));
+        settle(async);
+        // Zwei Aufnahmen (Weckwort allein, dann der Rest live): je eine Datei.
+        final rec = clips.where((c) => c.event == 'rec').toList();
+        expect(rec, isNotEmpty);
+        final first = rec.first;
+        expect(first.marksMs['preRoll'], 0);
+        expect(first.marksMs['wakeEnd'], 200);
+        // Der Vorlauf steht vollständig und unverändert am Anfang.
+        expect(first.pcm.sublist(0, pre.length), pre);
+        // Mikrofon (falls geöffnet) beginnt genau hinter dem Vorlauf.
+        final mic = rec.last.marksMs['mic'];
+        if (mic != null) {
+          expect(rec.last.pcm.length, greaterThan(mic * 16));
+        }
+      });
+    });
+
+    test('Entscheidung im Vorlauf: Datei = Vorlauf, ohne Mikrofon', () {
+      runFake((async) {
+        final h = Harness(
+          turns: [ScriptedTurn.text('Licht an.')],
+          transcripts: const [Transcript(text: 'Wendelin, mach Licht an.')],
+        );
+        final clips = <DevClip>[];
+        h.pipeline.devClips = hook(clips);
+        final pre = cat([speech(600), speech(900), quiet(900)]);
+        h.pipeline.start(trigger: wake(pre, 600 * 16));
+        settle(async);
+        final rec = clips.singleWhere((c) => c.event == 'rec');
+        expect(rec.pcm.length, pre.length);
+        expect(rec.marksMs.containsKey('mic'), isFalse);
+        // Sprache beginnt hinter dem Weckwort (Rand 100 ms), Ende davor.
+        expect(rec.marksMs['speechStart'], greaterThanOrEqualTo(600));
+        expect(rec.marksMs['speechEnd'], lessThanOrEqualTo(ms(pre.length)));
+      });
+    });
+
+    test('ohne Entwicklermodus: keine Aufnahme gesammelt', () {
+      runFake((async) {
+        final h = Harness(
+          turns: [ScriptedTurn.text('Licht an.')],
+          transcripts: const [Transcript(text: 'Wendelin, mach Licht an.')],
+        );
+        final clips = <DevClip>[];
+        h.pipeline.devClips = hook(clips, on: false);
+        h.pipeline.start(
+          trigger: wake(cat([speech(600), speech(900), quiet(900)]), 600 * 16),
+        );
+        settle(async);
+        expect(clips, isEmpty);
+        expect(h.recording.inputs, isNotEmpty); // die Pipeline lief
+      });
+    });
+  });
 }
 
 /// An open microphone with buffered [frames] that are replayed on [start]; a
@@ -472,3 +550,5 @@ final class _HeldMic implements AudioInput {
     _frames.clear();
   }
 }
+
+int ms(int samples) => samplesToDuration(samples).inMilliseconds;

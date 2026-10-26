@@ -49,6 +49,18 @@ void devLog(String event, [Map<String, Object?> fields = const {}]) {
   devLogSink(b.toString());
 }
 
+/// A value of [devLog] that is written as it is, without the masking of
+/// number-like text. Only for text that the app made up itself and that
+/// holds no user content (the names of the audio files: a time stamp such as
+/// `20261026-002349.507` would otherwise look like a card number).
+final class DevLogLiteral {
+  /// Wraps [text].
+  const DevLogLiteral(this.text);
+
+  /// The text.
+  final String text;
+}
+
 /// The JSON text [json] (tool arguments) for [devLog]: parsed so that keys
 /// like `password` are redacted, [json] itself if it is no JSON.
 String devJson(String json) {
@@ -63,6 +75,7 @@ String _format(Object value) {
   if (value is num || value is bool) return '$value';
   if (value is Duration) return '${value.inMilliseconds}';
   if (value is Enum) return value.name;
+  if (value is DevLogLiteral) return jsonEncode(value.text);
   return jsonEncode(_text('$value'));
 }
 

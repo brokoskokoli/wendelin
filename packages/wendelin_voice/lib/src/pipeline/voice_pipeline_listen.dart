@@ -11,6 +11,56 @@ const _bargeTailHoleMax = Duration(milliseconds: 1000);
 mixin VoiceContentLog {
   /// The receiver of events with content.
   void Function(String event, Map<String, Object?> fields)? contentLog;
+
+  /// The receiver of the whole recordings of an interaction (`rec`): lead-in
+  /// (wake word pre-roll or barge-in tail, with inserted silence) and the
+  /// microphone; nothing is collected unless it is on.
+  DevClips? devClips;
+}
+
+/// The whole recording of one listening (WP148): the audio in the order the
+/// endpointer got it, with the places where the sources meet.
+final class _DevRec {
+  _DevRec() : at = DateTime.now();
+
+  final DateTime at;
+  final _parts = <Int16List>[];
+  final marks = <String, int>{};
+  int _len = 0;
+
+  /// Offset of the endpointer's time 0 in the recording.
+  int base = 0;
+
+  void add(String? mark, Int16List pcm) {
+    if (mark != null) marks[mark] = samplesToDuration(_len).inMilliseconds;
+    if (pcm.isEmpty) return;
+    _parts.add(pcm);
+    _len += pcm.length;
+  }
+
+  DevClip? build(Endpoint? e) {
+    if (_len == 0) return null;
+    final out = Int16List(_len);
+    var at0 = 0;
+    for (final p in _parts) {
+      out.setAll(at0, p);
+      at0 += p.length;
+    }
+    final start = e?.speechStart;
+    final end = e?.speechEnd;
+    final b = samplesToDuration(base).inMilliseconds;
+    return DevClip(
+      event: 'rec',
+      pcm: out,
+      at: at,
+      marksMs: {
+        ...marks,
+        if (start != null) 'speechStart': b + start.inMilliseconds,
+        if (end != null) 'speechEnd': b + end.inMilliseconds,
+        if (e != null) 'decided': b + e.elapsed.inMilliseconds,
+      },
+    );
+  }
 }
 
 /// Announcing the listening phase and the confidence gate (WP140).
@@ -151,13 +201,16 @@ extension VoicePipelineListen on VoicePipeline {
     final sub = audio.start().listen(
       (frame) {
         if (done.isCompleted || frame.isEmpty) return;
+        Endpoint? early;
+        final isFirst = first;
         if (first) {
           first = false;
-          final early = onFirstFrame(frame);
-          if (early != null) {
-            end(early);
-            return;
-          }
+          early = onFirstFrame(frame);
+        }
+        _devRec?.add(isFirst ? 'mic' : null, frame);
+        if (early != null) {
+          end(early);
+          return;
         }
         levels.add(frame);
         try {
@@ -222,6 +275,9 @@ extension VoicePipelineListen on VoicePipeline {
     } else if (gap <= _bargeTailHoleMax) {
       silence = durationToSamples(gap);
     }
+    _devRec
+      ?..add('tail', audio)
+      ..add('silence', Int16List(silence));
     final lead = Int16List(audio.length + silence)..setAll(0, audio);
     final early = lead.isEmpty
         ? null

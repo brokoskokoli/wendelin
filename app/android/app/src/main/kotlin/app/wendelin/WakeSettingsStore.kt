@@ -20,6 +20,7 @@ object WakeSettingsStore {
             detector = p.getString("detector", null)?.takeIf { it in DETECTORS } ?: "auto",
             pausedUntilMs = p.getLong("pausedUntil", 0L),
             offByUser = p.getBoolean("offByUser", false),
+            devMode = p.getBoolean("devMode", false),
         )
     }
 
@@ -31,7 +32,13 @@ object WakeSettingsStore {
             .putString("detector", s.detector)
             .putLong("pausedUntil", s.pausedUntilMs)
             .putBoolean("offByUser", s.offByUser)
+            .putBoolean("devMode", s.devMode)
             .apply()
+    }
+
+    /** Stores the developer mode only (WP148); a read error counts as off. */
+    fun setDevMode(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean("devMode", on).apply()
     }
 
     /** Last stop reason for the status line of the settings page. */

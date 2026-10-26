@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
@@ -6,9 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/wake_providers.dart';
 import 'package:wendelin/platform/wake/device_wake_parts.dart';
+import 'package:wendelin/platform/voice/pcm.dart';
 import 'package:wendelin/platform/wake/service_audio_input.dart';
 import 'package:wendelin/platform/wake/wake_detector.dart';
 import 'package:wendelin/platform/wake/wake_host.dart';
+import 'package:wendelin/voice/dev_audio.dart';
+import 'package:wendelin/voice/dev_log.dart';
 import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin/voice/wake/wake_storage.dart';
 import 'package:wendelin_storage/testing.dart';
@@ -209,6 +213,98 @@ void main() {
     await fromKotlin('overlayClosed');
     await until(() => calls().where((c) => c == 'startMic').length > starts);
     expect(logs.join('\n'), contains('wake-resume'));
+  });
+
+  group('Tonaufnahmen im Entwicklermodus (WP148)', () {
+    late Directory out;
+    late List<String> devLines;
+
+    setUp(() {
+      out = Directory.systemTemp.createTempSync('wakedev');
+      devLines = [];
+      devLogSink = devLines.add;
+      devAudioDirectory = () async => out;
+      addTearDown(() => out.deleteSync(recursive: true));
+    });
+
+    List<String> names() => [
+      for (final f in out.listSync().whereType<File>()) f.uri.pathSegments.last,
+    ]..sort();
+
+    // Ein abgelehnter Kandidat mit 2,5 s Nachlauf: das Weckwort kommt nach
+    // 0,3 s Rauschen, Stufe 2 sagt nein, der Dienst hört weiter.
+    Future<void> rejectedCandidate() async {
+      await hear(Int16List(1600));
+      await hear(Int16List(1600));
+      await hear(FakeWakeWordEngine.markerFrame(1600));
+      for (var i = 0; i < 25; i++) {
+        await hear(Int16List(1600));
+      }
+      await until(() => devLines.any((l) => l.contains('wake-cand')));
+      await devAudioIdle;
+    }
+
+    test('dev=true im run: Kandidat und Prüf-Ausschnitt als WAV, Log nennt '
+        'Datei und Offsets', () async {
+      await start(
+        verify: true,
+        p: _Parts(verdict: false),
+        extra: {'dev': true},
+      );
+      await rejectedCandidate();
+      final n = names();
+      expect(n.where((x) => x.endsWith('_wake-cand.wav')), hasLength(1));
+      expect(n.where((x) => x.endsWith('_wake-verify.wav')), hasLength(1));
+      final cand = out.listSync().whereType<File>().singleWhere(
+        (f) => f.path.endsWith('_wake-cand.wav'),
+      );
+      final wav = Wav.parse(cand.readAsBytesSync());
+      final line = devLines.singleWhere((l) => l.contains('wake-cand.wav'));
+      expect(line, contains('engine=wake'));
+      expect(line, contains('file="${cand.uri.pathSegments.last}"'));
+      // Länge in der Logzeile = Länge der Datei; Kandidat 200 ms (Anfang des
+      // Stroms) vor dem Ende des Treffers, Nachlauf 2 s.
+      final ms = wav.samples.length * 1000 ~/ 16000;
+      expect(line, contains(' ms=$ms '));
+      expect(line, contains('postMs=2000'));
+      expect(line, contains('candMs=${ms - 2000}'));
+    });
+
+    test('ohne dev im run: nichts gespeichert, kein Ordner', () async {
+      await start(verify: true, p: _Parts(verdict: false));
+      await hear(FakeWakeWordEngine.markerFrame(1600));
+      for (var i = 0; i < 25; i++) {
+        await hear(Int16List(1600));
+      }
+      await until(() => logs.any((l) => l.contains('wake-verify')));
+      await devAudioIdle;
+      expect(names(), isEmpty);
+      expect(devLines.where((l) => l.contains('audio')), isEmpty);
+    });
+
+    test(
+      'devMode-Aufruf schaltet ohne Neustart um; alles außer true ist aus',
+      () async {
+        await start(verify: true, p: _Parts(verdict: false));
+        expect(devLogEnabled, isFalse);
+        await fromKotlin('devMode', {'on': true});
+        expect(devLogEnabled, isTrue);
+        await rejectedCandidate();
+        expect(
+          names().where((x) => x.endsWith('_wake-cand.wav')),
+          hasLength(1),
+        );
+        await fromKotlin('devMode', {'on': 'yes'});
+        expect(devLogEnabled, isFalse);
+        await fromKotlin('devMode', {'on': true});
+        await fromKotlin('devMode');
+        expect(devLogEnabled, isFalse);
+        // Ein neues run ohne Angabe (Kotlin kennt den Wert nicht): aus.
+        await fromKotlin('devMode', {'on': true});
+        await fromKotlin('run', {'verify': true});
+        expect(devLogEnabled, isFalse);
+      },
+    );
   });
 
   test('Konflikt (Telefonat) pausiert, Ende setzt fort; Konflikt und Overlay '

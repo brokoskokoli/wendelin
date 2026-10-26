@@ -32,7 +32,12 @@ final class _Agent implements AgentRun {
 /// once (24 frames = 720 ms of speech from the end of the answer on) while
 /// the follow-up microphone opens ~480 ms late and hears the last 8 frames.
 final class W {
-  W({bool tail = false, Duration idle = Duration.zero, int maxFollowUps = 1}) {
+  W({
+    bool tail = false,
+    Duration idle = Duration.zero,
+    int maxFollowUps = 1,
+    DevClips? devClips,
+  }) {
     audio = FakeAudioInput(
       frames: AudioFrames.pattern('.....${'S' * 20}${'.' * 30}', frame: frame),
       frameInterval: frame,
@@ -61,7 +66,7 @@ final class W {
       clock: FixedClock(DateTime.utc(2026, 10, 25, 9)),
       bargeInDetector: detector,
       diagnostics: diag.add,
-    );
+    )..devClips = devClips;
   }
 
   late final FakeAudioInput audio;
@@ -113,6 +118,30 @@ void main() {
         w.diag.singleWhere((l) => l.startsWith('bridge-tail')),
         contains('gap=100 trim=0 silence=100'),
       );
+    });
+  });
+
+  test('Tonaufnahme: Vorlauf, eingefügte Stille und Mikrofon in einer Datei (WP148)', () {
+    fakeAsync((async) {
+      final clips = <DevClip>[];
+      final w = W(
+        tail: true,
+        idle: const Duration(milliseconds: 130),
+        devClips: DevClips(enabled: () => true, write: clips.add),
+      )..run(async);
+      expect(w.agent.inputs, ['Eins', 'Zwei']);
+      // Die Folgerunde ist die zweite Aufnahme.
+      final rec = clips.where((c) => c.event == 'rec').toList()[1];
+      final m = rec.marksMs;
+      // Vorlauf (16 Frames, 30 ms gekürzt = 450 ms? hier 0 Kürzung) 480 ms,
+      // dann 100 ms Stille, dann das Mikrofon.
+      expect(m['tail'], 0);
+      expect(m['silence'], 480);
+      expect(m['mic'], 580);
+      // Die eingefügte Stille ist wirklich Stille, der Vorlauf nicht.
+      expect(rec.pcm.sublist(480 * 16, 580 * 16).every((s) => s == 0), isTrue);
+      expect(loud(rec.pcm.sublist(0, 480 * 16)), greaterThan(0));
+      expect(rec.pcm.length, greaterThan(580 * 16));
     });
   });
 

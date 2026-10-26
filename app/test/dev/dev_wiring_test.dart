@@ -1,11 +1,14 @@
 // WP148: Verdrahtung des Entwicklerlogs – Werkzeugzeilen im Tipp-Chat und im
 // Sprachweg (je genau einmal), Schalter wirkt ohne Neustart (Flag wird je
 // Sitzung/Anfrage aus der Datenbank gelesen), stt-reject aus der Pipeline.
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/voice_providers.dart';
+import 'package:wendelin/voice/dev_audio.dart';
 import 'package:wendelin/voice/dev_log.dart';
 import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin/voice/voice_controller.dart';
@@ -145,6 +148,49 @@ void main() {
         await speak(env);
         expect(only('stt-reject'), on ? hasLength(1) : isEmpty);
         if (on) expect(only('stt-reject').single, contains('Wetter morgen'));
+      }
+    });
+
+    test('WP148: eine Sprachrunde legt die ganze Aufnahme ab (rec), nur mit '
+        'Flag, Logzeile nennt die Datei', () async {
+      final saved = devAudioDirectory;
+      final dir = Directory.systemTemp.createTempSync('wiringaudio');
+      devAudioDirectory = () async => dir;
+      addTearDown(() {
+        devAudioDirectory = saved;
+        dir.deleteSync(recursive: true);
+      });
+      for (final on in [true, false]) {
+        lines.clear();
+        for (final f in dir.listSync()) {
+          f.deleteSync();
+        }
+        final env = TestEnv(
+          providerConfig: scripted(FakeLlmProvider(_turns())),
+          extraOverrides: [
+            activeVoiceProvider.overrideWith(
+              (ref) async => _components(
+                const Transcript(
+                  text: 'Trag mir morgen um 10 Tauchen ein',
+                  language: 'de',
+                  confidence: 0.9,
+                ),
+              ),
+            ),
+          ],
+        );
+        await _store(env, on: on);
+        devLogEnabled = false;
+        await speak(env);
+        await devAudioIdle;
+        final recs = dir.listSync().map((f) => f.uri.pathSegments.last);
+        if (on) {
+          final file = recs.singleWhere((n) => n.endsWith('_rec.wav'));
+          expect(only('audio').single, contains('file="$file"'));
+        } else {
+          expect(recs, isEmpty);
+          expect(only('audio'), isEmpty);
+        }
       }
     });
   });

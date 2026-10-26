@@ -403,6 +403,12 @@ class WakeWordService : Service() {
             s.main.post { s.micDeferral.appVoiceChanged() }
         }
 
+        /** WP148: the developer mode changed; the running wake engine follows without a restart. */
+        fun onDevMode(on: Boolean) {
+            val s = instance ?: return
+            s.main.post { s.engine?.send("devMode", mapOf("on" to on)) }
+        }
+
         /** The assistant overlay was closed: the service listens again. */
         fun onOverlayClosed() {
             val s = instance ?: return
@@ -411,6 +417,6 @@ class WakeWordService : Service() {
     }
 }
 
-/** Channel arguments of `run` for the wake engine: stage 2, detector choice, station flag (WP129). */
+/** Channel arguments of `run` for the wake engine: stage 2, detector choice, station flag (WP129), developer mode (WP148). */
 internal fun WakeSettings.runArgs(stationActive: Boolean): Map<String, Any> =
-    mapOf("verify" to verify, "detector" to detector, "station" to stationActive)
+    mapOf("verify" to verify, "detector" to detector, "station" to stationActive, "dev" to devMode)

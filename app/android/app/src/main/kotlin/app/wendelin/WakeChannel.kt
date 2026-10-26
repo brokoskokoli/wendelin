@@ -52,6 +52,13 @@ class WakeChannel(private val context: Context, messenger: BinaryMessenger) :
                 WakeStarter.sync(context, "app")
                 result.success(null)
             }
+            // WP148: the app's developer mode; the wake engine records audio only while it is on.
+            "devMode" -> {
+                val on = call.argument<Boolean>("on") == true
+                WakeSettingsStore.setDevMode(context, on)
+                WakeWordService.onDevMode(on)
+                result.success(null)
+            }
             "status" -> {
                 val s = WakeSettingsStore.load(context)
                 result.success(
