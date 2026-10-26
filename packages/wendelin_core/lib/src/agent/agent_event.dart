@@ -29,6 +29,10 @@ enum AgentErrorKind {
   /// Maximum number of tool rounds (8) reached.
   toolRoundLimit,
 
+  /// The model repeated the same tool call with the same arguments and got
+  /// the same error three times; the run stops with that error as message.
+  repeatedToolError,
+
   /// Token budget per request exhausted.
   tokenBudget,
 
@@ -510,7 +514,24 @@ final class AgentDone extends AgentEvent {
 /// The run failed (terminal).
 final class AgentFailed extends AgentEvent {
   /// Creates the event.
-  const AgentFailed({required this.error, required this.message, this.cause});
+  const AgentFailed({
+    required this.error,
+    required this.message,
+    this.cause,
+    this.tool,
+    this.detail,
+    this.repeats,
+  });
+
+  /// The tool behind the failure (`repeatedToolError`), for the log only.
+  final String? tool;
+
+  /// Technical detail (full error text of [tool]); never shown or spoken,
+  /// only written to the developer log.
+  final String? detail;
+
+  /// How often the same failing call was made (`repeatedToolError`).
+  final int? repeats;
 
   /// Kind of failure.
   final AgentErrorKind error;

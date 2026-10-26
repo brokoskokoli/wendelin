@@ -48,6 +48,10 @@ void main() {
     'de-ha-rollo-rauf': (1, 1, 0),
     'de-ha-rollo-50': (1, 1, 0),
     'de-ha-kaffee-an': (1, 1, 0),
+    // WP150: „100“ als String führt nicht mehr zu einem Fehlaufruf.
+    'de-ha-annas-licht-an': (1, 1, 0),
+    'de-ha-annas-licht-aus': (1, 1, 0),
+    'de-ha-annas-licht-100': (1, 1, 0),
     // Ein nacktes „Licht an“ ist mehrdeutig: das Modell antwortet.
     'de-ha-licht-nackt': (1, 0, 0),
   };
@@ -61,6 +65,8 @@ void main() {
     'de-ha-rollo-rauf': (0, 1, 0),
     'de-ha-rollo-50': (0, 1, 0),
     'de-ha-kaffee-an': (0, 1, 0),
+    'de-ha-annas-licht-an': (0, 1, 0),
+    'de-ha-annas-licht-aus': (0, 1, 0),
     'de-ha-licht-nackt': (1, 0, 0),
   };
 

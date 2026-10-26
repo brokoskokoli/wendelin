@@ -482,6 +482,8 @@ final class _Run implements RunControl {
     _budget.onRound();
     await _state.append(assistant);
     final round = await _tools.execute(calls, step);
+    final stop = await _tools.stopOnRepeatedFailure(round, config); // WP150
+    if (stop != null) throw stop;
     // WP122: every call succeeded and has a template → no second model call.
     final sentence = _fixed.sentenceFor(
       round,

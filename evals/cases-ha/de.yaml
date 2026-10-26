@@ -51,3 +51,25 @@ cases:
     setup: {backends: [ha]}
     expect:
       no_tools: true
+  # WP150: Personenname im Genitiv; das Modell schickt Zahlen als String.
+  - id: de-ha-annas-licht-an
+    category: smarthome
+    prompt: Annas Licht an.
+    setup: {backends: [ha]}
+    expect:
+      calls:
+        - tool: ha__call
+  - id: de-ha-annas-licht-aus
+    category: smarthome
+    prompt: Annas Licht aus.
+    setup: {backends: [ha]}
+    expect:
+      calls:
+        - tool: ha__call
+  - id: de-ha-annas-licht-100
+    category: smarthome
+    prompt: Annas Licht auf hundert Prozent.
+    setup: {backends: [ha]}
+    expect:
+      calls:
+        - tool: ha__call

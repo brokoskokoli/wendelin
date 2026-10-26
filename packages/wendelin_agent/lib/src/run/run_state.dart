@@ -129,16 +129,24 @@ final class RunState {
 }
 
 /// The terminal event for a run that ended with [kind] under [config].
-AgentFailed failedEvent(AgentErrorKind kind, AgentConfig config) => AgentFailed(
+AgentFailed failedEvent(
+  AgentErrorKind kind,
+  AgentConfig config, {
+  String? tool,
+  String? detail,
+  int? repeats,
+}) => AgentFailed(
+  tool: tool,
+  detail: detail,
+  repeats: repeats,
   error: kind,
   message: switch (kind) {
     AgentErrorKind.cancelled => 'Abgebrochen.',
     AgentErrorKind.timeout =>
       'Das hat zu lange gedauert, ich habe nach '
           '${config.maxDuration.inSeconds} Sekunden abgebrochen.',
-    AgentErrorKind.toolRoundLimit =>
-      'Ich bin nach ${config.maxToolRounds} Tool-Runden zu keinem '
-          'Ergebnis gekommen und habe abgebrochen.',
+    AgentErrorKind.toolRoundLimit || AgentErrorKind.repeatedToolError =>
+      'Das hat gerade nicht geklappt, es gab einen technischen Fehler.',
     AgentErrorKind.tokenBudget =>
       'Das Token-Budget für diese Anfrage ist aufgebraucht.',
     AgentErrorKind.budgetBlocked =>

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/voice/dev_agent_log.dart';
 import 'package:wendelin/voice/dev_log.dart';
 import 'package:wendelin/voice/latency_trace.dart';
+import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 ToolCallBlock _call(int i, [String args = '{"name":"Licht"}']) =>
@@ -145,6 +146,35 @@ void main() {
   });
 
   group('DevAgentTrace', () {
+    const repeated = AgentFailed(
+      error: AgentErrorKind.repeatedToolError,
+      message: 'Das hat gerade nicht geklappt.',
+      tool: 'ha__call',
+      detail: 'erwartet integer, erhalten string',
+      repeats: 3,
+    );
+
+    test('Wiederholungsabbruch: normales Log ohne Details, Dev-Log voll', () {
+      final normal = <String>[];
+      final saved = voiceLogSink;
+      voiceLogSink = normal.add;
+      addTearDown(() => voiceLogSink = saved);
+      DevAgentTrace().event(repeated);
+      expect(normal.single, contains('agent-failed'));
+      expect(normal.single, contains('kind=repeatedToolError'));
+      expect(normal.single, contains('tool=ha__call'));
+      expect(normal.single, contains('repeats=3'));
+      expect(normal.single, isNot(contains('integer')));
+      expect(lines, isEmpty);
+
+      devLogEnabled = true;
+      DevAgentTrace().event(repeated);
+      final dev = lines.firstWhere((l) => l.contains('agent-failed'));
+      expect(dev, contains('tool="ha__call"'));
+      expect(dev, contains('repeats=3'));
+      expect(dev, contains('error="erwartet integer, erhalten string"'));
+    });
+
     test('Werkzeug, Argumente, Ergebnis und Modelltext sind sichtbar', () {
       devLogEnabled = true;
       final t = DevAgentTrace()
