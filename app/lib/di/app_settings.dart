@@ -110,6 +110,10 @@ abstract final class AppSettings {
   /// (WP157): JSON `{sessionId: profileId}`.
   static final sessionLocks = SettingKey.json('security.sessionLocks');
 
+  /// When the chat window left the screen (epoch ms), until it is visible
+  /// again; ends the session after a minute away (WP157 part B).
+  static final backgroundSince = SettingKey.integer('session.backgroundSince');
+
   /// Restrictions of the TEE provider [profileId] with [model] the user saw
   /// and accepted (JSON `{"stages": [stage ids]}`, WP78). Bound to the model.
   static SettingKey<Map<String, Object?>> teeAccepted(

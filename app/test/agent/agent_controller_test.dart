@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/agent/absence.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_state.dart';
@@ -451,6 +452,66 @@ void main() {
     addTearDown(fresh.dispose);
     await fresh.read(agentControllerProvider.notifier).restore();
     expect(fresh.read(agentControllerProvider).entries, isEmpty);
+  });
+
+  test('1 min nicht sichtbar: Chat leer, Verlauf bleibt (WP157 B)', () async {
+    start([ScriptedTurn.text('Eins'), ScriptedTurn.text('Zwei')]);
+    await sendAndWait(c, 'A');
+    final a = c.read(sessionManagerProvider).currentId;
+    c.read(sessionManagerProvider).leftScreen();
+    env.clock.advance(const Duration(seconds: 59));
+    await returnedToScreen(c.read);
+    expect(c.read(agentControllerProvider).entries, isNotEmpty);
+
+    c.read(sessionManagerProvider).leftScreen();
+    env.clock.advance(const Duration(minutes: 1));
+    await returnedToScreen(c.read);
+    expect(c.read(agentControllerProvider).entries, isEmpty);
+    await sendAndWait(c, 'B');
+    expect(c.read(sessionManagerProvider).currentId, isNot(a));
+    final history = await env.storage.conversations.sessions();
+    expect(history.map((s) => s.id), contains(a));
+  });
+
+  test('restore nach Kill: über 1 min weg = leerer Chat', () async {
+    start([ScriptedTurn.text('Eins')]);
+    await sendAndWait(c, 'A');
+    c.read(sessionManagerProvider).leftScreen();
+    await pumpEventQueue();
+    c.dispose();
+    env.clock.advance(const Duration(minutes: 2));
+    c = env.container();
+    await restoreChat(c.read);
+    expect(c.read(agentControllerProvider).entries, isEmpty);
+  });
+
+  test('restore nach Kill: unter 1 min weg = Sitzung wie zuvor', () async {
+    start([ScriptedTurn.text('Eins')]);
+    await sendAndWait(c, 'A');
+    c.read(sessionManagerProvider).leftScreen();
+    await pumpEventQueue();
+    c.dispose();
+    env.clock.advance(const Duration(seconds: 30));
+    c = env.container();
+    await restoreChat(c.read);
+    expect(
+      c.read(agentControllerProvider).entries.whereType<UserEntry>(),
+      hasLength(1),
+    );
+  });
+
+  test('Overlay-Sitzungen kennen keinen Absence-Stempel', () {
+    start([]);
+    final o = ProviderContainer(
+      overrides: [
+        ...env.overrides,
+        sessionOriginProvider.overrideWithValue(SessionOrigin.overlay),
+      ],
+      retry: (_, _) => null,
+    );
+    addTearDown(o.dispose);
+    expect(o.read(sessionManagerProvider).absence, isNull);
+    expect(c.read(sessionManagerProvider).absence, isNotNull);
   });
 
   test('restore zeigt keine Overlay-Sitzung (WP67)', () async {

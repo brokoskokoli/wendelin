@@ -106,6 +106,9 @@ final sessionManagerProvider = Provider<SessionManager>((ref) {
     conversations: ref.watch(storageProvider).conversations,
     clock: ref.watch(clockProvider),
     origin: ref.watch(sessionOriginProvider),
+    absence: ref.watch(sessionOriginProvider) == SessionOrigin.app
+        ? SettingsAbsenceStamp(ref.watch(storageProvider).settings)
+        : null,
     onSessionEnd: (id) {
       // „Unterhaltung privat“ ends with its session.
       ref.read(agentControllerProvider.notifier).sessionEnded(id);
