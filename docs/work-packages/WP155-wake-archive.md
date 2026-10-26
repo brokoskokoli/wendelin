@@ -16,7 +16,13 @@
 - **Aufbewahrung:** keine 1-Tage-Löschung für das Archiv; eigene Obergrenze (Vorschlag 1 GB, älteste zuerst raus, Zahl im Paket begründen). In den Entwickler-Einstellungen: Anzahl/Größe des Archivs und „Archiv löschen“ (mit Rückfrage).
 - **Doku:** Abrufweg und Format in `docs/testing/m5/wp155.md` (wie ziehen, wie `index.jsonl` lesen), Datenschutz-Abschnitt aus WP148 ergänzen.
 
+## Zusatz aus dem Projekt-Review (2026-10-26, Entscheidung Maintainer)
+- **Ausschalten:** Beim Ausschalten des Entwicklermodus werden die kurzlebigen Dev-Aufnahmen (`dev-audio/` ohne Archiv) sofort gelöscht (`app/lib/voice/dev_audio.dart:19,135-140`, `app_language_screen.dart:51-52`). Das Weckwort-Archiv bleibt; beim Ausschalten fragt die App einmal, ob es mitgelöscht werden soll.
+- **Schwärzung:** `packages/wendelin_storage/lib/src/redaction.dart:65-78,111-115` kennt die Schlüssel `pin`, `otp`, `code`, `state` nicht; Werkzeugargumente als JSON (`{"pin":"1234"}`) und URLs mit `?code=` erscheinen im Dev-Log (`dev_agent_log.dart:57-59`). Schlüssel ergänzen, Tests für JSON und Query-Parameter, dazu die WP148-Folgepunkte („PIN – 1234“, Überschwärzung „TAN 123456. Danke“).
+
 ## Abnahmekriterien
+- [ ] Ausschalten löscht Dev-Aufnahmen, Archiv nur nach Rückfrage (Tests).
+- [ ] Schwärzung für `pin`/`otp`/`code`/`state` in JSON und Query (Tests mit Mutationsbeleg).
 - [ ] Ohne Entwicklermodus: kein Archiv, keine Zeile (Test, Mutationsbeleg).
 - [ ] Mit Modus: je Fallart (angenommen, abgelehnt, busy, near-miss, Barge-in) genau ein Eintrag mit WAV und `index.jsonl`-Zeile (Tests mit Fake-Erkennung).
 - [ ] Archiv übersteht den Neustart (keine 1-Tage-Löschung), Obergrenze greift (Test).
