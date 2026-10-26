@@ -316,8 +316,11 @@ void main() {
         final cand = lines.firstWhere((l) => l.contains('barge-cand'));
         expect(cand, contains('kind=wake'));
         expect(cand, contains('sim=0.85'));
+        // WP151: score of the candidate itself.
+        expect(cand, contains('cand=0.85'));
         final v = lines.firstWhere((l) => l.contains('barge-verify'));
         expect(v, contains('result=wake'));
+        expect(v, contains('verifier=transcript'));
         // Kein Inhalt außer dem erkannten Schlüsselwort.
         expect(lines.join('\n'), isNot(contains('hör mal')));
       });
@@ -355,6 +358,20 @@ void main() {
         expect(asked, 0);
         await run(make([tpl(0.88)], atSim(0.85), verifier: spy()));
         expect(asked, greaterThan(0));
+      });
+
+      ftest('WP151: Prüfer B im Log mit Label und Score', () async {
+        final d = make(
+          [tpl(0.88)],
+          atSim(0.85),
+          verifier: (_) => _FixedVerdict(
+            const BargeVerdict('wake', BargeInKeyword.wake, null, 'b', 0.91),
+          ),
+        );
+        expect(await run(d), ['keyword-wake']);
+        final v = lines.firstWhere((l) => l.contains('barge-verify'));
+        expect(v, contains('verifier=b'));
+        expect(v, contains('score=0.9100'));
       });
 
       ftest('Gegenprüfung verwirft: kein Signal, Log result=no', () async {
@@ -562,6 +579,27 @@ void main() {
       });
     });
 
+    ftest(
+      'WP151: dispose ruft onDispose genau einmal (Prüfer B schließen)',
+      () async {
+        var closed = 0;
+        final d = LazyWakeBargeInDetector(
+          audio: FakeAudioInput(),
+          templates: () async => [tpl(0.9)],
+          onDispose: () async => closed++,
+          features: () => FakeWakeFeatureExtractor(
+            windowEvery: 480,
+            windowFor: (end, _) =>
+                WakeWindow(endSample: end, embedding: Float32List(2)),
+          ),
+        );
+        await d.start();
+        await d.dispose();
+        await d.dispose();
+        expect(closed, 1);
+      },
+    );
+
     ftest('Neubau im Leerlauf beendet den Detektor sofort', () async {
       final d = make([tpl(0.9)], Float32List.fromList([1, 0]));
       await d.disposeWhenIdle();
@@ -605,6 +643,40 @@ void main() {
       expect(lines.join(), contains('barge-in-off'));
       await d.stop();
       await d.dispose();
+    });
+  });
+
+  group('chooseBargeVerifier (WP151)', () {
+    final transcript = _FixedVerdict(BargeVerdict.no);
+    final scorer = VerifierBScorer(
+      mu: Float32List(96),
+      threshold: 0.6,
+      templates: () async => [],
+      features: () => FakeWakeFeatureExtractor(),
+    );
+
+    ftest('Platzhalter-mu: nur das Transkript', () async {
+      expect(
+        chooseBargeVerifier(
+          transcript: transcript,
+          scorer: scorer,
+          spokenText: () => '',
+          muIsPlaceholder: true,
+        ),
+        same(transcript),
+      );
+    });
+
+    ftest('gemessenes mu: Prüfer B mit Transkript als Rückfall', () async {
+      final v = chooseBargeVerifier(
+        transcript: transcript,
+        scorer: scorer,
+        spokenText: () => 'Ich bin Wendelin.',
+        muIsPlaceholder: false,
+      );
+      expect(v, isA<VerifierBBargeVerifier>());
+      expect((v as VerifierBBargeVerifier).spokenText(), 'Ich bin Wendelin.');
+      expect(v.fallback, same(transcript));
     });
   });
 
@@ -774,4 +846,15 @@ void main() {
       },
     );
   });
+}
+
+final class _FixedVerdict implements BargeVerifier {
+  _FixedVerdict(this.verdict);
+  final BargeVerdict verdict;
+
+  @override
+  Future<BargeVerdict> verify(
+    Int16List pcm, {
+    required BargeInKeyword candidate,
+  }) async => verdict;
 }

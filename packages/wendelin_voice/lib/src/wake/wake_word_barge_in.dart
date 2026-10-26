@@ -6,6 +6,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../dev/dev_clips.dart';
 import '../io/audio_input.dart';
 import '../io/barge_in_detector.dart';
+import 'barge_candidates.dart';
 import 'barge_clip.dart';
 import 'barge_tail_collector.dart';
 import 'barge_verifier.dart';
@@ -102,11 +103,16 @@ final class WakeWordBargeInDetector
   /// A check that takes longer counts as failed (fail closed).
   final Duration verifyTimeout;
 
-  /// Called for every stage 1 candidate; [busy]: a check is running or in
+  /// Called for every stage 1 candidate with its [score] (the confidence of
+  /// the engine, WP151); [busy]: a check is running or in
   /// cooldown, the candidate is kept and checked again afterwards. A candidate whose confidence is
   /// [strongerMargin] above the one just rejected is not busy in the
   /// cooldown: it gets its own check (WP126).
-  final void Function(BargeInKeyword candidate, {required bool busy})?
+  final void Function(
+    BargeInKeyword candidate, {
+    required bool busy,
+    required double score,
+  })?
   onCandidate;
 
   /// Confidence a candidate must exceed the one rejected last by to skip
@@ -140,11 +146,9 @@ final class WakeWordBargeInDetector
   // candidate whose check ended without a keyword (the cooldown holds it).
   int _lastLoud = -1 << 40;
   double _rejected = 0;
-  // Candidate waiting for the end of its word (-1: none), and the best one
-  // that came during a check or the cooldown.
-  int _pendingAt = -1, _deferredAt = 0;
-  double _deferredScore = 0, _pendingScore = 0, _checkedScore = 0;
-  BargeInKeyword? _pendingKind, _deferredKind;
+  // Candidate waiting for the end of its word, and the best one that came
+  // during a check or the cooldown.
+  final _cand = BargeCandidates();
   Future<void> _chain = Future.value();
   Future<void> _lifecycle = Future.value();
 
@@ -179,9 +183,7 @@ final class WakeWordBargeInDetector
     _fed = _blockedUntil = _ignoreUntil = 0;
     _lastLoud = -1 << 40;
     _rejected = 0;
-    _pendingAt = -1;
-    _pendingKind = _deferredKind = null;
-    _deferredScore = _pendingScore = _checkedScore = 0;
+    _cand.clear();
     _verifying = false;
     final gen = ++_generation;
     _chain = Future.value();
@@ -252,47 +254,31 @@ final class WakeWordBargeInDetector
       final score = h.confidence ?? 0;
       final stronger = score > _rejected + strongerMargin;
       final busy = _verifying || (_fed < _blockedUntil && !stronger);
-      onCandidate?.call(keyword, busy: busy);
+      onCandidate?.call(keyword, busy: busy, score: score);
       _dev.startLast('barge-cand', _ring);
       if (busy) {
-        // The window follows the strongest busy candidate; a weaker later one
-        // must not push it back.
-        if (_deferredKind == null || score > _deferredScore) _deferredAt = _fed;
-        _deferredKind = keyword;
-        if (score > _deferredScore) _deferredScore = score;
+        _cand.defer(keyword, score, _fed, _lastLoud);
       } else {
         // Waiting (or already waiting): the check starts after the word.
-        _pendingKind = keyword;
-        if (score > _pendingScore) _pendingScore = score;
-        if (_pendingAt < 0) _pendingAt = _fed + durationToSamples(settle);
+        _cand.addPending(keyword, score, _fed + durationToSamples(settle));
       }
     }
     final v = verifier;
+    _cand.follow(_fed, _lastLoud, durationToSamples(settle));
     // A candidate from the cooldown (after a check): once the cooldown is
     // over it is checked, if its word is still inside the clip.
-    if (v != null &&
-        !_verifying &&
-        _fed >= _blockedUntil &&
-        _deferredKind != null) {
-      final kind = _deferredKind!;
-      _deferredKind = null;
-      final score = _deferredScore;
-      _deferredScore = 0;
-      if (_fed - _deferredAt <= durationToSamples(clip)) {
-        _pendingKind = kind;
-        if (score > _pendingScore) _pendingScore = score;
-        if (_pendingAt < 0) {
-          final after = _deferredAt + durationToSamples(settle);
-          _pendingAt = after > _fed ? after : _fed;
-        }
-      }
+    if (v != null && !_verifying && _fed >= _blockedUntil) {
+      _cand.promoteAfterCooldown(
+        _fed,
+        durationToSamples(clip),
+        durationToSamples(settle),
+      );
     }
-    if (v != null && _pendingAt >= 0 && _fed >= _pendingAt && !_verifying) {
-      final kind = _pendingKind!;
-      _pendingAt = -1;
-      _pendingKind = null;
-      _checkedScore = _pendingScore;
-      _pendingScore = 0;
+    if (v != null &&
+        _cand.pendingAt >= 0 &&
+        _fed >= _cand.pendingAt &&
+        !_verifying) {
+      final kind = _cand.takePending();
       unawaited(_verify(v, kind, gen));
     }
   }
@@ -301,7 +287,7 @@ final class WakeWordBargeInDetector
     final pcm = clipEndingAtSpeech(
       _ring.snapshot(),
       fed: _fed,
-      lastLoud: _lastLoud,
+      lastLoud: _cand.checkedLoud >= 0 ? _cand.checkedLoud : _lastLoud,
       settle: settle,
       clip: clip,
     );
@@ -334,28 +320,24 @@ final class WakeWordBargeInDetector
     final keyword = verdict.keyword;
     if (keyword == null) {
       _blockedUntil = _fed + durationToSamples(cooldown);
-      _rejected = _checkedScore;
-      // A candidate that came meanwhile is checked once the cooldown ends,
-      // if its word is still inside the clip; a clearly stronger one (the
-      // real word after an echo) right after its own settle time.
-      final kind = _deferredKind;
-      final deferredScore = _deferredScore;
-      _deferredKind = null;
-      _deferredScore = 0;
-      var at = _blockedUntil > _fed ? _blockedUntil : _fed;
-      if (deferredScore > _checkedScore + strongerMargin) {
-        final own = _deferredAt + durationToSamples(settle);
-        at = own > _fed ? own : _fed;
-      }
-      if (kind != null && at - _deferredAt <= durationToSamples(clip)) {
-        _pendingKind = kind;
-        if (deferredScore > _pendingScore) _pendingScore = deferredScore;
-        _pendingAt = at;
+      _rejected = _cand.checkedScore;
+      // A candidate that came meanwhile is checked once the cooldown ends, a
+      // clearly stronger one (the real word after an echo) right after its
+      // own settle time; it is lost only when its word left the ring.
+      final kept = _cand.rescheduleAfterReject(
+        fed: _fed,
+        blockedUntil: _blockedUntil,
+        settle: durationToSamples(settle),
+        ring: durationToSamples(clip + clip),
+        margin: strongerMargin,
+      );
+      if (!kept) {
+        onVerdict?.call(const BargeVerdict('skip', null, 'stale'), 0);
       }
       return;
     }
-    _deferredKind = null;
-    _deferredScore = 0;
+    _cand.deferredKind = null;
+    _cand.deferredScore = 0;
     _signals.add(BargeInSignal.keyword(keyword));
   }
 
@@ -365,12 +347,10 @@ final class WakeWordBargeInDetector
     _running = false;
     _generation++;
     _dev.flush();
-    if (_pendingKind != null) {
+    if (_cand.pendingKind != null) {
       onVerdict?.call(const BargeVerdict('skip', null, 'stopped'), 0);
     }
-    _pendingAt = -1;
-    _pendingKind = _deferredKind = null;
-    _deferredScore = _pendingScore = 0;
+    _cand.clear();
     final sub = _sub;
     _sub = null;
     final detached = _detached;
@@ -398,9 +378,7 @@ final class WakeWordBargeInDetector
     // Pending candidates and checks are void: nobody speaks to an answer
     // that is over, and the engine gets no more frames.
     _generation++;
-    _pendingAt = -1;
-    _pendingKind = _deferredKind = null;
-    _deferredScore = _pendingScore = 0;
+    _cand.clear();
     _tail.begin(() => unawaited(stop()));
     return true;
   }

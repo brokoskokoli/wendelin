@@ -25,14 +25,11 @@ import 'package:wendelin/bootstrap/run_app.dart';
 import 'package:wendelin/debug/device_test_overrides.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/voice_providers.dart';
-import 'package:wendelin/di/wake_providers.dart';
 import 'package:wendelin/main.dart' as app show openAppStorage;
 import 'package:wendelin/platform/secure_secret_store.dart';
 import 'package:wendelin/platform/voice/pcm.dart';
-import 'package:wendelin/platform/voice/wav_audio_input.dart';
 import 'package:wendelin/ui/overlay/assistant_overlay.dart';
 import 'package:wendelin/voice/voice_log.dart';
-import 'package:wendelin/voice/wake/wake_enroller.dart';
 import 'package:wendelin/voice/wake/wake_storage.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_voice/testing.dart' show FakeTextToSpeech;
@@ -41,6 +38,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import 'support/barge_log.dart';
 import 'support/e2e.dart';
 import 'support/voice_e2e.dart';
+import 'support/wake_enroll_e2e.dart';
 
 /// The overlay's entry point: as `assistantMain`, but with a fake voice that
 /// "speaks" four seconds per sentence (the AOSP emulator has no system TTS
@@ -86,24 +84,16 @@ void main() {
         if (spec.existsSync()) spec.deleteSync();
       });
 
-      // Einlernen (ohne Oberfläche) in den echten Secret-Store.
+      // Einlernen (ohne Oberfläche) in den echten Secret-Store, wie die App
+      // (WP142: „Hey Wendelin“, Prüfer = die eingestellte Spracherkennung).
       final host = E2eApp();
+      await host.storage.settings.set(
+        voiceSettingsKey,
+        VoiceSettings(sttModel: 'whisper-base'),
+      );
       final c = await host.pump(tester);
       final real = SecretWakeTemplateStore(SecureSecretStore());
-      final enroller = WakeEnroller(
-        audio: WavAudioInput.sequence([
-          for (var i = 1; i <= 15; i++)
-            WavAudioInput.file('$wavs/Anna_${i.toString().padLeft(2, '0')}.wav')
-                .samples,
-        ], speed: 4),
-        features: c.read(wakeFeaturesFactoryProvider)(),
-        store: real,
-        speakerId: 'anna',
-        pause: Duration.zero,
-      );
-      await enroller.run();
-      expect(enroller.error, isNull);
-      await enroller.finish();
+      final enroller = await enrollAnnaDirect(c, real, wavs);
       await real.saveSpeakers(const [WakeSpeaker(id: 'anna', name: 'Anna')]);
       // ignore: avoid_print
       print('WP64 eingelernt: ${enroller.accepted} Aufnahmen');
@@ -180,7 +170,7 @@ void main() {
       // nach `no`/`echo`/`skip`.
       final lines = voiceLogFile.readAsLinesSync();
       expect(
-        bargeLogProblem(lines, hitKind: 'keyword-wake'),
+        bargeLogProblem(lines, hitKind: 'keyword-wake', verifier: 'b'),
         isNull,
         reason: lines.where((l) => l.contains('barge-')).join('\n'),
       );

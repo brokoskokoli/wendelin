@@ -1,5 +1,5 @@
 // Gerätetest WP50 a: Wake-Word-Dienst. Einlernen mit synthetischer Stimme
-// (wie wake_enroll_e2e_test.dart), Dienst an (Bedingung „immer“), Speicher
+// „Hey Wendelin“ (AnnaHey_*, wie wake_enroll_e2e_test.dart, seit WP142), Dienst an (Bedingung „immer“), Speicher
 // im Ruhezustand ohne Whisper, dann zehn Durchläufe: Bildschirm aus, die
 // eingespeiste WAV („Wendelin“) öffnet das Overlay mit
 // TriggerKind.wakeWord, Antwort im Overlay, BACK. Zuletzt der Speicher mit
@@ -35,6 +35,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import 'support/e2e.dart';
 import 'support/voice_e2e.dart';
+import 'support/wake_enroll_e2e.dart';
 
 final class _SwitchableAudio implements AudioInput {
   AudioInput? inner;
@@ -84,6 +85,7 @@ void main() {
     'Dienst: einlernen, an, zehn Treffer bei ausgeschaltetem Bildschirm',
     (tester) async {
       final dir = await e2eDirectory();
+      final enrollLog = captureVoiceLog();
       final wavs = '${dir.path}/wake';
       final audio = _SwitchableAudio();
       final app = E2eApp(
@@ -104,26 +106,23 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       await tester.pump(const Duration(seconds: 1));
-      audio.inner = WavAudioInput.sequence([
-        for (var i = 1; i <= 15; i++)
-          WavAudioInput.file('$wavs/Anna_${i.toString().padLeft(2, '0')}.wav')
-              .samples,
-      ], speed: 4);
+      audio.inner = WavAudioInput.sequence(annaHeyClips(wavs), speed: 4);
       await tester.tap(find.text('Stimme einlernen'));
       await pumpUntil(tester, find.text('Weiter'));
       await tester.enterText(find.byType(TextField), 'Anna');
       await tester.tap(find.text('Weiter'));
+      // Exact „Speichern“ appears only at the end state (15 recordings); the
+      // earlier „Mit n Aufnahmen speichern“ would save too early.
       await pumpUntil(
         tester,
-        find.textContaining(RegExp(r'^(Mit \d+ Aufnahmen )?[Ss]peichern$')),
+        find.text('Speichern'),
         timeout: const Duration(minutes: 3),
       );
-      await tester.tap(
-        find.textContaining(RegExp(r'^(Mit \d+ Aufnahmen )?[Ss]peichern$')),
-      );
-      await pumpUntil(tester, find.textContaining(RegExp(r'\d+ Aufnahmen')));
+      await tester.tap(find.text('Speichern'));
+      await pumpUntil(tester, find.textContaining('15 Aufnahmen'));
       final speakers = await c.read(wakeSpeakersProvider.future);
       expect(speakers, hasLength(1));
+      expect(enrollLogProblem(enrollLog), isNull);
       // The service runs in another engine and reads the device's secret
       // store; the test app keeps its own: copy the voice over.
       final real = SecretWakeTemplateStore(SecureSecretStore());
