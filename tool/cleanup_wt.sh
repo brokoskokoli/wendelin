@@ -5,7 +5,9 @@
 # (ein Branch ohne `/` gilt unter seinem Namen als <wp>).
 # Entfernt, falls vorhanden: Worktree ../james-wt/<wp>, Prüf-Worktree
 # ../james-wt/rev-<wp>, den lokalen Branch, ../james-wt/handoff/<wp>.md und
-# handoff/<wp>-*; den Remote-Branch (origin) nur, wenn er in origin/main
+# handoff/<wp>-*. Urteile <wp>-review*.md löscht es nie: sie ziehen nach
+# ../james-wt/reviews/ um (dort liest sie tool/review_stats.dart; reviews/ selbst
+# bleibt unberührt). Den Remote-Branch (origin) entfernt es nur, wenn er in origin/main
 # enthalten ist (nach dem Push von main erneut aufrufen; --no-remote lässt ihn aus).
 # Gemergt heißt: Tip ist Vorfahr von main (origin/main bei Remote), oder
 # merge_wp.sh hat ihn als Squash vermerkt (<git-common-dir>/wendelin-merged-branches,
@@ -129,8 +131,20 @@ if [ $local_ok -eq 1 ]; then
       actions+=("branch|$branch")
     fi
   fi
+  # Urteile des Reviewers (<wp>-review*.md) sind Messdaten für review_stats:
+  # sie wandern nach reviews/ statt gelöscht zu werden (nie überschreiben).
   for f in "$wtdir/handoff/$wp.md" "$wtdir"/handoff/"$wp"-*; do
-    [ -e "$f" ] && actions+=("file|$f")
+    [ -e "$f" ] || continue
+    case "${f##*/}" in
+      "$wp"-review.md|"$wp"-review[0-9]*.md)
+        dest="$wtdir/reviews/${f##*/}"
+        if [ -e "$dest" ] && ! cmp -s "$f" "$dest"; then
+          problems+=("$dest existiert schon und weicht von $f ab: bleibt")
+        else
+          actions+=("verdict|$f")
+        fi ;;
+      *) actions+=("file|$f") ;;
+    esac
   done
 fi
 
@@ -159,6 +173,7 @@ for a in "${actions[@]:-}"; do
   case "$kind" in
     worktree) git worktree remove "$what" && echo "cleanup_wt: Worktree $what entfernt" || { echo "cleanup_wt: Worktree $what nicht entfernbar" >&2; rc=1; } ;;
     branch) git branch -D "$what" >/dev/null && echo "cleanup_wt: Branch $what entfernt" || { echo "cleanup_wt: Branch $what nicht löschbar" >&2; rc=1; } ;;
+    verdict) mkdir -p "$wtdir/reviews" && mv -f -- "$what" "$wtdir/reviews/${what##*/}" && echo "cleanup_wt: Urteil $what nach reviews/ verschoben" || { echo "cleanup_wt: Urteil $what nicht verschiebbar" >&2; rc=1; } ;;
     file) rm -f -- "$what" && echo "cleanup_wt: $what entfernt" ;;
     remote) git push "$REMOTE" --delete "$what" "--force-with-lease=refs/heads/$what:$remote_tip" >/dev/null 2>&1 && echo "cleanup_wt: $REMOTE/$what entfernt" || { echo "cleanup_wt: $REMOTE/$what nicht löschbar" >&2; rc=1; } ;;
   esac

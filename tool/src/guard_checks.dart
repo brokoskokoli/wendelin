@@ -4,6 +4,7 @@ import 'channel_self_test.dart';
 import 'ci_self_test.dart';
 import 'claude_hooks_self_test.dart';
 import 'cleanup_self_test.dart';
+import 'concept_self_test.dart';
 import 'doc_check_self_test.dart';
 import 'git_guards_self_test.dart';
 import 'latency_report_self_test.dart';
@@ -21,6 +22,7 @@ Future<void> guardChecks(SelfCheck t) async {
   privacyChecks(t);
   latencyReportChecks(t);
   cleanupChecks(t);
+  conceptChecks(t);
   await claudeHooksChecks(t);
   ciChecks(t);
 }

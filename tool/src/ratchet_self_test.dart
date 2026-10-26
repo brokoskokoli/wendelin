@@ -87,6 +87,17 @@ ignore/avoid_print: 3
     low,
     'Baseline-Datei rundet',
   );
+  t.eq(
+    renderBaseline('#', {
+      'status/K100': 1,
+      'status/K5': 1,
+      'ref/K12': 1,
+      'a2': 1,
+      'a10': 1,
+    }).trim().split('\n').skip(1).map((l) => l.split(':').first).toList(),
+    ['a2', 'a10', 'ref/K12', 'status/K5', 'status/K100'],
+    'Baseline sortiert natürlich (K5 vor K100)',
+  );
 }
 
 void _ignoreCount(SelfCheck t) {

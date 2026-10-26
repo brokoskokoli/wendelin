@@ -2,8 +2,10 @@
 // und erzeugte Dateien auf Aktualität prüfen.
 import 'dart:io';
 
+import 'doc_idents.dart';
 import 'doc_paths.dart';
 import 'gen_docs.dart';
+import 'ratchet.dart';
 
 /// Dokumente, deren Pfadangaben aufgelöst werden müssen.
 const checkedDocs = [
@@ -64,7 +66,51 @@ DocCheck checkDocs(List<String> files, {String root = '.'}) {
       errors.add('$p: veraltet, `dart run tool/gen_docs.dart` ausführen');
     }
   }
+  errors.addAll(identErrors(files, root: root));
   return (errors: errors, count: count, docs: docsToCheck.length);
+}
+
+/// Datei mit dem Bestand unbekannter Bezeichner (Ratsche, nur abbauen).
+const identAllowlist = 'tool/doc_ident_allowlist.yaml';
+
+/// Ob [path] zu den Dokumenten des Bezeichner-Checks gehört.
+bool _isIdentDoc(String path) =>
+    path.startsWith('docs/architecture/') &&
+    path.endsWith('.md') &&
+    !path.contains('/generated/');
+
+/// Unbekannte Bezeichner (`<doc>#<name>` → Anzahl) in der Architekturdoku
+/// gegenüber dem Code (Dart, Kotlin, Rust) unter [root].
+Map<String, int> unknownDocIdents(List<String> files, {String root = '.'}) {
+  final code = <String>{};
+  final docs = <String, String>{};
+  for (final f in files) {
+    final isCode =
+        f.endsWith('.dart') || f.endsWith('.kt') || f.endsWith('.rs');
+    final isDoc = _isIdentDoc(f);
+    if (!isCode && !isDoc) continue;
+    final file = File('$root/$f');
+    if (!file.existsSync()) continue;
+    final text = file.readAsStringSync();
+    if (isCode) addCodeWords(text, code);
+    if (isDoc) docs[f] = text;
+  }
+  return unknownIdents(docs, code);
+}
+
+/// Fehler des Bezeichner-Checks gegen die Allowlist unter [root].
+List<String> identErrors(List<String> files, {String root = '.'}) {
+  final list = File('$root/$identAllowlist');
+  final allowed = list.existsSync()
+      ? parseBaseline(list.readAsStringSync())
+      : <String, int>{};
+  return ratchetErrors(
+    unknownDocIdents(files, root: root),
+    allowed,
+    what: 'Bezeichner nicht im Code',
+    file: identAllowlist,
+    fix: 'dart run tool/check_docs.dart --update-baseline',
+  );
 }
 
 String _dirOf(String path) {

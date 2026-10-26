@@ -4,21 +4,4 @@ Kotlin unter `app/android/app/src/main/kotlin/app/wendelin/`. Kanalnamen sind Ko
 
 Die Logik ohne Android-Abhängigkeit liegt in reinen Kotlin-Klassen mit JVM-Unit-Tests (`app/android/app/src/test/kotlin/app/wendelin/`, Gate-Schritt `kotlin-unit`): `ChannelArgs.kt` (Argumentprüfung), `CalendarRows.kt` (Zeilen → Maps, Zeitzonen, Dauer, Filter), `VaultTree.kt` (`VaultResolver`: Pfade, Ordner anlegen, Lesen/Schreiben auf einem `VaultTree`), `OAuthRedirect.kt` (Redirect-Prüfung). Die Android-Seite dazu: `CalendarStore.kt`, `SafVaultTree.kt`.
 
-| Kanal (`app.wendelin/…`) | Dart | Kotlin |
-| --- | --- | --- |
-| calendar | `app/lib/platform/device_calendar_port.dart` | `CalendarChannel.kt` |
-| files | `app/lib/platform/saf_list_file_port.dart`, `app/lib/platform/document_text_import.dart` | `FilesChannel.kt` |
-| vault | `app/lib/platform/saf_vault_port.dart` | `VaultChannel.kt` |
-| apps | `app/lib/platform/channel_app_presence_port.dart` | `AppsChannel.kt` |
-| station | `app/lib/platform/channel_station_port.dart`, `app/lib/station/station_host.dart` | `StationChannel.kt` |
-| torch | `app/lib/platform/channel_torch_port.dart` | `TorchChannel.kt` |
-| multicast | `app/lib/platform/ha_discovery.dart` | `MulticastChannel.kt` |
-| network | `app/lib/platform/channel_network_status.dart` | `NetworkChannel.kt` |
-| assistant | `app/lib/platform/assistant_platform.dart` | `AssistantChannel.kt` |
-| window | `app/lib/platform/screen_protection.dart` | `WindowChannel.kt` |
-| auth | `app/lib/platform/channel_authorization_browser.dart` | `AuthChannel.kt` (mit `OAuthRedirectActivity.kt`) |
-| notify (WP52) | `app/lib/platform/channel_notifier.dart` | `NotifyChannel.kt` |
-| memory (WP103, `onTrimMemory`) | `app/lib/platform/channel_memory_trim.dart` | `MemoryChannel.kt` (in `WendelinActivity.kt` eingehängt) |
-| recognizer | `app/lib/platform/recognizer/recognizer_host.dart` | `RecognizerEngine.kt` (mit `WendelinRecognitionService.kt`, `RecognizerSwitch.kt`) |
-| wake (WP50, Einstellungen der Haupt-App; WP93: `chatVisible`, `chatDone`, `debugHit`, von Kotlin `wakeHit`) | `app/lib/platform/wake/wake_platform.dart` | `WakeChannel.kt` (mit `WakeSettingsStore.kt`, `WakeStarter.kt`) |
-| wake-engine (WP50, kopflose Engine des Dienstes) | `app/lib/platform/wake/wake_host.dart`, `app/lib/platform/wake/service_audio_input.dart` | `WakeWordService.kt` (mit `RecognizerEngine.kt`, `WakeConflictWatcher.kt`, `WakeNotifications.kt`) |
+**Die Tabelle der Kanäle** (Dart-Dateien, Kotlin-Dateien, Methoden mit Argumentschlüsseln je Richtung) **wird aus `app/channels.json` erzeugt:** [generated/channels.md](generated/channels.md) (`dart run tool/gen_docs.dart`, im Gate geprüft). Ein neuer Kanal erscheint dort nach dem Eintrag im Manifest; hier steht keine zweite Tabelle.
