@@ -215,7 +215,7 @@ void main() {
     expect(features.isOpen, isFalse);
   });
 
-  test('frühes Speichern und Verlassen während der Aufnahme: run endet '
+  test('frühes Speichern und Verlassen in der Pause: run endet '
       'sauber ohne Zugriff auf den entsorgten Enroller (WP151)', () async {
     final store = FakeWakeTemplateStore();
     final features = fakeFeatures();
@@ -239,7 +239,75 @@ void main() {
     expect(t.embeddings, hasLength(2), reason: 'genau die angenommenen');
     expect((await store.load('a'))!.embeddings, hasLength(2));
     expect(features.isOpen, isFalse, reason: 'Modelle freigegeben');
-    expect(audio.starts, lessThanOrEqualTo(3), reason: 'keine weiteren');
+    expect(audio.starts, 2, reason: 'keine weiteren Aufnahmen');
+  });
+
+  test(
+    'Verlassen während einer laufenden Aufnahme (offener Audio-Strom): '
+    'run endet, Mikrofon gestoppt, gespeichert bleibt gespeichert (WP151)',
+    () async {
+      final store = FakeWakeTemplateStore();
+      final audio = OpenAfterAudio([recording(), recording()]);
+      final e = enroller(audio, store, target: 5);
+      var armed = false;
+      e.addListener(() {
+        if (e.accepted == 2 && !armed) {
+          armed = true;
+          unawaited(
+            audio.hanging.future.then((_) async {
+              await e.finish();
+              unawaited(e.cancel());
+              e.dispose();
+            }),
+          );
+        }
+      });
+      await e.run();
+      expect(audio.starts, 3, reason: 'dritte Aufnahme hing offen');
+      expect(audio.isRunning, isFalse);
+      expect((await store.load('a'))!.embeddings, hasLength(2));
+    },
+  );
+
+  test(
+    'finish liefert eine unveränderliche Kopie der Aufnahmen (WP151)',
+    () async {
+      final audio = SequenceAudio([recording(), recording()]);
+      final e = enroller(audio, FakeWakeTemplateStore(), target: 5, minimum: 2);
+      e.addListener(() {
+        if (e.accepted == 2) e.cancel();
+      });
+      await e.run();
+      final t = await e.finish();
+      expect(
+        () => t.embeddings.add(t.embeddings.first),
+        throwsUnsupportedError,
+      );
+    },
+  );
+
+  test('finish hält run an: Mikrofon aus, Zustand bleibt gespeichert, '
+      'zweites finish schreibt nicht (WP151)', () async {
+    final store = CountingStore();
+    final audio = SequenceAudio([for (var i = 0; i < 5; i++) recording()]);
+    final e = enroller(audio, store, target: 5, minimum: 2);
+    Future<WakeTemplates>? saving;
+    bool? canFinishWhileSaving;
+    e.addListener(() {
+      if (e.accepted == 2 && saving == null) {
+        saving = e.finish();
+        canFinishWhileSaving = e.canFinish; // zweites Tippen vor dem Ende
+      }
+    });
+    await e.run();
+    await saving;
+    expect(canFinishWhileSaving, isFalse);
+    expect(e.phase, EnrollPhase.saved);
+    expect(e.canFinish, isFalse);
+    expect(audio.starts, 2, reason: 'nach Speichern nimmt nichts mehr auf');
+    expect(audio.isRunning, isFalse);
+    expect(() => e.finish(), throwsStateError);
+    expect(store.saves, 1);
   });
 
   test('zu wenige Aufnahmen: finish lehnt ab, ab dem Minimum nicht', () async {
@@ -433,4 +501,45 @@ Future<void> enrollTwice(WakeTemplateStore store, String _) async {
     await e.run();
     await e.finish();
   }
+}
+
+/// Serves the scripted recordings, then hangs with an open stream until
+/// [stop].
+final class OpenAfterAudio extends SequenceAudio {
+  OpenAfterAudio(super.recordings);
+
+  final hanging = Completer<void>();
+  StreamController<Int16List>? _open;
+
+  @override
+  Stream<Int16List> start() {
+    if (starts < recordings.length) return super.start();
+    starts++;
+    _open = StreamController<Int16List>();
+    hanging.complete();
+    return _open!.stream;
+  }
+
+  @override
+  Future<void> stop() async {
+    await super.stop();
+    await _open?.close();
+  }
+}
+
+final class CountingStore implements WakeTemplateStore {
+  final _inner = FakeWakeTemplateStore();
+  int saves = 0;
+
+  @override
+  Future<WakeTemplates?> load(String speakerId) => _inner.load(speakerId);
+
+  @override
+  Future<void> save(WakeTemplates templates) {
+    saves++;
+    return _inner.save(templates);
+  }
+
+  @override
+  Future<void> delete(String speakerId) => _inner.delete(speakerId);
 }
