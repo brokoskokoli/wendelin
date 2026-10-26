@@ -38,6 +38,7 @@ HttpToolDefinition def({
   Duration timeout = const Duration(seconds: 15),
   String? responsePath,
   bool autoRun = false,
+  bool mayContainUntrustedContent = true,
 }) => HttpToolDefinition(
   id: 'id-$name',
   name: name,
@@ -67,6 +68,7 @@ HttpToolDefinition def({
   timeout: timeout,
   responsePath: responsePath,
   autoRun: autoRun,
+  mayContainUntrustedContent: mayContainUntrustedContent,
 );
 
 /// Requests seen by [mockRunner]'s client.

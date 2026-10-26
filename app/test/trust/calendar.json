@@ -1,8 +1,8 @@
 {
-  "calendar__list_calendars": false,
-  "calendar__list_events": false,
-  "calendar__find_free_slots": false,
-  "calendar__update_event": false,
-  "calendar__delete_event": false,
-  "calendar__create_event": true
+  "calendar__list_calendars": true,
+  "calendar__list_events": true,
+  "calendar__find_free_slots": true,
+  "calendar__create_event": true,
+  "calendar__update_event": true,
+  "calendar__delete_event": true
 }

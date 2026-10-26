@@ -277,6 +277,7 @@ final class McpServerConfig {
     this.enabled = true,
     this.sensitive = false,
     this.confirmAll = false,
+    this.mayContainUntrustedContent = true,
     Map<String, McpToolOverride> toolOverrides = const {},
   }) : toolOverrides = Map.unmodifiable(toolOverrides);
 
@@ -298,6 +299,8 @@ final class McpServerConfig {
       enabled: _opt<bool>(json, 'enabled') ?? true,
       sensitive: _opt<bool>(json, 'sensitive') ?? false,
       confirmAll: _opt<bool>(json, 'confirmAll') ?? false,
+      mayContainUntrustedContent:
+          _opt<bool>(json, 'mayContainUntrustedContent') ?? true,
       toolOverrides: {
         for (final MapEntry(:key, :value)
             in (_opt<Map<String, Object?>>(json, 'toolOverrides') ?? const {})
@@ -336,6 +339,12 @@ final class McpServerConfig {
   /// Whether every tool of this server needs confirmation (`external`).
   final bool confirmAll;
 
+  /// „Kann unsichere Inhalte enthalten“ (WP157, ADR 0023): the results of
+  /// this server may contain text of third parties. Default **on**
+  /// (fail-closed). After such a result tools with a network target ask
+  /// first.
+  final bool mayContainUntrustedContent;
+
   /// Per-tool settings by MCP tool name.
   final Map<String, McpToolOverride> toolOverrides;
 
@@ -351,6 +360,7 @@ final class McpServerConfig {
     bool? enabled,
     bool? sensitive,
     bool? confirmAll,
+    bool? mayContainUntrustedContent,
     Map<String, McpToolOverride>? toolOverrides,
   }) => McpServerConfig(
     id: id,
@@ -362,6 +372,8 @@ final class McpServerConfig {
     enabled: enabled ?? this.enabled,
     sensitive: sensitive ?? this.sensitive,
     confirmAll: confirmAll ?? this.confirmAll,
+    mayContainUntrustedContent:
+        mayContainUntrustedContent ?? this.mayContainUntrustedContent,
     toolOverrides: toolOverrides ?? this.toolOverrides,
   );
 
@@ -376,6 +388,7 @@ final class McpServerConfig {
     'enabled': enabled,
     'sensitive': sensitive,
     'confirmAll': confirmAll,
+    if (!mayContainUntrustedContent) 'mayContainUntrustedContent': false,
     if (toolOverrides.isNotEmpty)
       'toolOverrides': {
         for (final MapEntry(:key, :value) in toolOverrides.entries)
@@ -395,6 +408,7 @@ final class McpServerConfig {
       other.enabled == enabled &&
       other.sensitive == sensitive &&
       other.confirmAll == confirmAll &&
+      other.mayContainUntrustedContent == mayContainUntrustedContent &&
       const MapEquality<String, McpToolOverride>().equals(
         other.toolOverrides,
         toolOverrides,
@@ -411,6 +425,7 @@ final class McpServerConfig {
     enabled,
     sensitive,
     confirmAll,
+    mayContainUntrustedContent,
     const MapEquality<String, McpToolOverride>().hash(toolOverrides),
   );
 

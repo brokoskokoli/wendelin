@@ -1,9 +1,9 @@
 {
-  "spotify__search": false,
-  "spotify__now_playing": false,
-  "spotify__play": false,
-  "spotify__pause": false,
-  "spotify__queue_add": false,
+  "spotify__search": true,
+  "spotify__play": true,
+  "spotify__pause": true,
   "spotify__next": true,
-  "spotify__previous": true
+  "spotify__previous": true,
+  "spotify__now_playing": true,
+  "spotify__queue_add": true
 }

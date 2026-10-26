@@ -34,7 +34,7 @@ String _describeArgsSpan(ToolArgs args, tz.Location loc, {CalendarEvent? old}) {
 
 /// `calendar__create_event` (write, undo deletes the event).
 final class CreateEventTool extends IntegrationTool
-    implements TrustedContentSource, FixedConfirmationTool {
+    implements TrustedContentSource, FixedConfirmationTool, NoNetworkTarget {
   /// Creates the tool.
   const CreateEventTool(this.env);
 
@@ -176,7 +176,7 @@ final class CreateEventTool extends IntegrationTool
 
 /// `calendar__update_event` (write, undo restores the previous state).
 final class UpdateEventTool extends IntegrationTool
-    implements ConfirmationPreparer {
+    implements ConfirmationPreparer, NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const UpdateEventTool(this.env);
 
@@ -312,7 +312,7 @@ final class UpdateEventTool extends IntegrationTool
 
 /// `calendar__delete_event` (external: always confirmed).
 final class DeleteEventTool extends IntegrationTool
-    implements ConfirmationPreparer {
+    implements ConfirmationPreparer, NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const DeleteEventTool(this.env);
 

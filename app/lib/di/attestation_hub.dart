@@ -66,6 +66,7 @@ final class AttestationHub {
     required this.notifier,
     String Function(String profileId)? nameOf,
     AppLocalizations Function()? texts,
+    this._onRecheckedGreen,
   }) : _nameOf = nameOf ?? ((id) => id),
        _texts = texts ?? AppLocalizationsDe.new;
 
@@ -73,6 +74,10 @@ final class AttestationHub {
   final AttestationNotifier notifier;
 
   final String Function(String profileId) _nameOf;
+
+  /// Called when „neu prüfen“ of a profile ended green: the conversations a
+  /// red answer of that profile locked are released (WP157).
+  final void Function(String profileId)? _onRecheckedGreen;
 
   /// Texts in the current app language (read when a notification is shown).
   final AppLocalizations Function() _texts;
@@ -109,8 +114,13 @@ final class AttestationHub {
   bool isLocked(String profileId) => _providers[profileId]?.locked ?? false;
 
   /// Lifts the lock and attests [profileId] again.
-  Future<AttestationReport?> reattest(String profileId) =>
-      _providers[profileId]?.reattest() ?? Future.value();
+  Future<AttestationReport?> reattest(String profileId) async {
+    final report = await _providers[profileId]?.reattest();
+    if (report?.status == AttestationStatus.green) {
+      _onRecheckedGreen?.call(profileId);
+    }
+    return report;
+  }
 
   /// The next request to [profileId] goes out although the GPU check failed
   /// (valid once, user choice).

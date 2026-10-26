@@ -41,8 +41,11 @@ final class AssessingInvoker implements ToolInvoker, ToolRiskAssessor {
   final Set<String> stricter;
 
   @override
-  RiskLevel effectiveRisk(Tool tool, String sessionId) =>
-      stricter.contains(tool.name) ? RiskLevel.external : tool.risk;
+  RiskLevel effectiveRisk(
+    Tool tool,
+    String sessionId, {
+    bool foreignContent = false,
+  }) => stricter.contains(tool.name) ? RiskLevel.external : tool.risk;
 
   @override
   Stream<ToolInvocationEvent> invokeAll(

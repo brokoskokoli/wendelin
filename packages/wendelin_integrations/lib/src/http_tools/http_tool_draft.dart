@@ -96,6 +96,7 @@ final class HttpToolDraft {
       bodyFormat = d.bodyFormat,
       risk = d.risk,
       autoRun = d.autoRun,
+      mayContainUntrustedContent = d.mayContainUntrustedContent,
       sensitive = d.sensitive,
       homeNetwork = d.homeNetwork,
       enabled = d.enabled,
@@ -195,6 +196,9 @@ final class HttpToolDraft {
 
   /// „Ohne Nachfrage ausführen (kein Rückgängig)“.
   bool autoRun = false;
+
+  /// „Kann unsichere Inhalte enthalten“ (default on, WP157).
+  bool mayContainUntrustedContent = true;
 
   /// Only to providers above the sensitive minimum.
   bool sensitive = false;
@@ -372,6 +376,7 @@ final class HttpToolDraft {
           ? method.suggestedRisk
           : risk,
       autoRun: autoRun && autoRunAvailable,
+      mayContainUntrustedContent: mayContainUntrustedContent,
       sensitive: sensitive,
       homeNetwork: homeNetwork,
       enabled: enabled,

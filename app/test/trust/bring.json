@@ -1,7 +1,7 @@
 {
-  "bring__list_lists": false,
-  "bring__get_items": false,
-  "bring__add_items": false,
-  "bring__remove_item": false,
-  "bring__complete_item": false
+  "bring__list_lists": true,
+  "bring__get_items": true,
+  "bring__add_items": true,
+  "bring__remove_item": true,
+  "bring__complete_item": true
 }

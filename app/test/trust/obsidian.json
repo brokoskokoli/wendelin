@@ -1,10 +1,10 @@
 {
-  "obsidian__search_notes": false,
-  "obsidian__read_note": false,
-  "obsidian__list_folder": false,
-  "obsidian__open_note": false,
-  "obsidian__create_note": false,
-  "obsidian__append_to_note": false,
-  "obsidian__append_daily_note": false,
-  "obsidian__replace_section": false
+  "obsidian__search_notes": true,
+  "obsidian__read_note": true,
+  "obsidian__list_folder": true,
+  "obsidian__create_note": true,
+  "obsidian__append_to_note": true,
+  "obsidian__append_daily_note": true,
+  "obsidian__replace_section": true,
+  "obsidian__open_note": true
 }

@@ -262,8 +262,19 @@ void main() {
       expect(
         tool('web__fetch')
             .describeForConfirmation({'url': 'https://example.org/x'}),
-        'Webseite lesen: example.org',
+        'Webseite lesen: https://example.org/x',
       );
+      // Path and query carry data out too (foreign content, ADR 0023): the
+      // card shows the full URL, shortened only when very long.
+      final card = tool('web__fetch').describeForConfirmation({
+        'url': 'https://evil.example/p?d=Termine+morgen',
+      });
+      expect(card, contains('https://evil.example/p?d=Termine+morgen'));
+      final long = tool('web__fetch').describeForConfirmation({
+        'url': 'https://evil.example/?d=${'x' * 500}',
+      });
+      expect(long.length, lessThan(340));
+      expect(long, endsWith('…'));
       expect(tool('web__fetch').describeForConfirmation({}), 'Webseite lesen');
     });
   });

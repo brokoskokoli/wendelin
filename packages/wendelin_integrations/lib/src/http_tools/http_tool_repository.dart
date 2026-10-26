@@ -170,7 +170,8 @@ final class HttpToolRepository {
 
   /// Imports the definitions of an export [text]; each gets a new id and
   /// secret references of its own (the secrets must be entered again) and
-  /// `autoRun` off (asks again until the user switches it on). Does not
+  /// `autoRun` off (asks again until the user switches it on) and
+  /// „Kann unsichere Inhalte enthalten“ on. Does not
   /// switch the HTTP integrations on. Returns the imported definitions. Throws [FormatException] with a
   /// readable message (invalid JSON, invalid definition, name taken).
   Future<List<HttpToolDefinition>> importJson(String text) => _locked(() async {
@@ -205,9 +206,12 @@ final class HttpToolRepository {
       }),
       final other => other,
     };
-    // „Ohne Nachfrage“ entscheidet der Nutzer auf diesem Gerät selbst.
+    // „Ohne Nachfrage“ und „keine unsicheren Inhalte“ entscheidet der Nutzer
+    // auf diesem Gerät selbst (eine Datei darf sich nicht für sicher
+    // erklären).
     final json = {...d.toJson(), 'id': id, 'auth': auth.toJson()}
-      ..remove('autoRun');
+      ..remove('autoRun')
+      ..remove('mayContainUntrustedContent');
     return HttpToolDefinition.fromJson(json);
   }
 

@@ -1717,6 +1717,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get httpRunTimeout => 'Délai en secondes';
 
   @override
+  String get httpRunUntrusted => 'Peut contenir du contenu non sûr';
+
+  @override
+  String get httpRunUntrustedDetail =>
+      'Les réponses peuvent contenir des textes de tiers. Wendelin demande alors confirmation avant les appels vers une cible réseau. Ne désactiver que pour ses propres services aux données connues.';
+
+  @override
   String get httpSrcAddHeader => '+ En-tête';
 
   @override
@@ -2584,6 +2591,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get mcpDetailUnreachableLabel => 'injoignable';
+
+  @override
+  String get mcpDetailUntrusted => 'Peut contenir du contenu non sûr';
+
+  @override
+  String get mcpDetailUntrustedHint =>
+      'Les réponses peuvent contenir des textes de tiers. Wendelin demande alors confirmation avant les appels vers une cible réseau. Ne désactiver que pour ses propres services aux données connues.';
 
   @override
   String mcpDetailValueFor(String header) {

@@ -70,7 +70,11 @@ final class PolicyInvoker implements ToolInvoker, ToolRiskAssessor {
   final FakeToolInvoker inner;
 
   @override
-  RiskLevel effectiveRisk(Tool tool, String sessionId) => tool.risk;
+  RiskLevel effectiveRisk(
+    Tool tool,
+    String sessionId, {
+    bool foreignContent = false,
+  }) => tool.risk;
 
   @override
   Stream<ToolInvocationEvent> invokeAll(
@@ -87,8 +91,11 @@ final class HookInvoker implements ToolInvoker, ToolRiskAssessor {
   final void Function() onInvoke;
 
   @override
-  RiskLevel effectiveRisk(Tool tool, String sessionId) =>
-      inner.effectiveRisk(tool, sessionId);
+  RiskLevel effectiveRisk(
+    Tool tool,
+    String sessionId, {
+    bool foreignContent = false,
+  }) => inner.effectiveRisk(tool, sessionId, foreignContent: foreignContent);
 
   @override
   Stream<ToolInvocationEvent> invokeAll(

@@ -66,7 +66,8 @@ final class ClipboardIntegration implements Integration {
 }
 
 /// `clipboard__read` (read).
-final class ClipboardReadTool extends IntegrationTool {
+final class ClipboardReadTool extends IntegrationTool
+    implements NoNetworkTarget {
   /// Creates the tool.
   const ClipboardReadTool(this.port);
 
@@ -123,7 +124,7 @@ final class ClipboardReadTool extends IntegrationTool {
 /// until the undo action is dropped. Reading may show the iOS paste prompt
 /// and fails on Android in the background; then there is no undo.
 final class ClipboardWriteTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, NoNetworkTarget {
   /// Creates the tool; see [undoReadsPrevious].
   const ClipboardWriteTool(this.port, {this.undoReadsPrevious = true});
 

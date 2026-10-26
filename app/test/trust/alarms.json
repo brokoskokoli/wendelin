@@ -1,5 +1,5 @@
 {
-  "alarms__list": false,
   "alarms__set_alarm": true,
-  "alarms__set_timer": true
+  "alarms__set_timer": true,
+  "alarms__list": true
 }

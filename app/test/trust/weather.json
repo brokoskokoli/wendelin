@@ -1,4 +1,4 @@
 {
-  "weather__forecast": false,
-  "weather__marine": false
+  "weather__forecast": true,
+  "weather__marine": true
 }

@@ -115,7 +115,8 @@ String _oneOf(String key, Object? v, Set<String> allowed) {
 /// Shared logic of `ha__call` and `ha__call_secure`. A tool only touches
 /// the domains of its own table, so the risk class is a property of the
 /// tool and never of the model's arguments.
-abstract base class HaCallTool extends IntegrationTool {
+abstract base class HaCallTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const HaCallTool(this.ctx);
 
@@ -371,7 +372,12 @@ abstract base class HaCallTool extends IntegrationTool {
 /// `ha__call` (write): light, switch, scene, media player, climate. Runs
 /// without a question and offers undo to the previous state.
 final class HaCallDeviceTool extends HaCallTool
-    implements FixedConfirmationTool, PromptContributor, LevelPerDeviceTool {
+    implements
+        FixedConfirmationTool,
+        PromptContributor,
+        LevelPerDeviceTool,
+        NoNetworkTarget,
+        TrustedContentSource {
   /// Creates the tool.
   const HaCallDeviceTool(super.ctx);
 
@@ -426,7 +432,11 @@ final class HaCallDeviceTool extends HaCallTool
 /// `ha__call_secure` (external): locks, alarm panels and covers (garage,
 /// gate, door). Always needs the user's confirmation; no undo.
 final class HaCallSecureTool extends HaCallTool
-    implements ConfirmationPreparer, FixedConfirmationTool {
+    implements
+        ConfirmationPreparer,
+        FixedConfirmationTool,
+        NoNetworkTarget,
+        TrustedContentSource {
   /// Creates the tool.
   const HaCallSecureTool(super.ctx);
 

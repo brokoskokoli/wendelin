@@ -96,6 +96,30 @@ void main() {
       expect(verifier2.attests, 1);
     });
 
+    test('Neuprüfung grün meldet das Profil (hebt dessen Sitzungssperren), '
+        'rot nicht, unbekannt nicht', () async {
+      final greens = <String>[];
+      final h = AttestationHub(
+        notifier: notifier,
+        nameOf: (_) => 'Phala',
+        onRecheckedGreen: greens.add,
+      );
+      addTearDown(h.dispose);
+      h.register('phala', provider);
+      verifier.sessionStages = const [
+        StageResult.fail(AttestationStage.quote, 'x'),
+      ];
+      final red = await h.reattest('phala');
+      expect(red?.status, isNot(AttestationStatus.green));
+      expect(greens, isEmpty);
+      verifier.sessionStages = const [];
+      final green = await h.reattest('phala');
+      expect(green?.status, AttestationStatus.green);
+      expect(greens, ['phala']);
+      expect(await h.reattest('unbekannt'), isNull);
+      expect(greens, ['phala']);
+    });
+
     test('Ergebnisse tragen die Profil-Id', () async {
       hub.register('phala', provider);
       final seen = hub.reports.first;

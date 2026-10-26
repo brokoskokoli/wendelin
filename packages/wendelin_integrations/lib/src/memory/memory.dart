@@ -172,7 +172,7 @@ Map<String, Object?> _entryJson(MemoryEntry e) => {
 
 /// `memory__save` (write, undo forgets the entry).
 final class MemorySaveTool extends IntegrationTool
-    implements TrustedContentSource, FixedConfirmationTool {
+    implements TrustedContentSource, FixedConfirmationTool, NoNetworkTarget {
   /// Creates the tool.
   const MemorySaveTool(this.store);
 
@@ -270,7 +270,8 @@ final class MemorySaveTool extends IntegrationTool
 }
 
 /// `memory__search` (read).
-final class MemorySearchTool extends IntegrationTool {
+final class MemorySearchTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const MemorySearchTool(this.store);
 
@@ -339,7 +340,7 @@ final class MemorySearchTool extends IntegrationTool {
 /// Undo re-saves text, category and source; the entry gets a new id and new
 /// timestamps (`createdAt` = now, `lastUsedAt` empty).
 final class MemoryForgetTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, NoNetworkTarget {
   /// Creates the tool.
   const MemoryForgetTool(this.store);
 

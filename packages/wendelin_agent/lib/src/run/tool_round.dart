@@ -276,7 +276,11 @@ final class ToolRound {
     if (tool == null) return false;
     final invoker = runner.invoker;
     final risk = invoker is ToolRiskAssessor
-        ? (invoker as ToolRiskAssessor).effectiveRisk(tool, runner.sessionId)
+        ? (invoker as ToolRiskAssessor).effectiveRisk(
+            tool,
+            runner.sessionId,
+            foreignContent: _state.untrustedSeen,
+          )
         : (tool.risk == RiskLevel.read ? RiskLevel.read : RiskLevel.external);
     return risk == RiskLevel.external;
   }
@@ -297,6 +301,7 @@ final class ToolRound {
       // Tools persist with the run's (possibly tainted) floor.
       privacyFloor: current.privacyFloor,
       memoryOwner: runner.memoryOwner,
+      foreignContentSeen: _state.untrustedSeen,
     );
     await for (final event in runner.invoker.invokeAll(pending, ctx)) {
       switch (event) {
@@ -319,6 +324,7 @@ final class ToolRound {
             _privacy.catalog,
             call.name,
             isError: outcome.isError,
+            content: outcome.content,
           )) {
             _state.untrustedSeen = true;
           }

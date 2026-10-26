@@ -71,7 +71,8 @@ String _checkText(String v, String what) {
 }
 
 /// `bring__list_lists` (read).
-final class BringListListsTool extends IntegrationTool {
+final class BringListListsTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const BringListListsTool(this.session);
 
@@ -116,7 +117,8 @@ final class BringListListsTool extends IntegrationTool {
 }
 
 /// `bring__get_items` (read): open and recently bought items.
-final class BringGetItemsTool extends IntegrationTool {
+final class BringGetItemsTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const BringGetItemsTool(this.session);
 
@@ -182,7 +184,7 @@ ConfirmationSentence _sentence(String key, String? said, List<String> items) =>
 
 /// `bring__add_items` (write): undo removes exactly the added items.
 final class BringAddItemsTool extends IntegrationTool
-    implements FixedConfirmationTool {
+    implements FixedConfirmationTool, NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const BringAddItemsTool(this.session);
 
@@ -435,7 +437,8 @@ final class BringAddItemsTool extends IntegrationTool
 
 /// `bring__remove_item` (write): undo puts the item back with the same
 /// spec (and back to „recently“ if it was there).
-final class BringRemoveItemTool extends IntegrationTool {
+final class BringRemoveItemTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const BringRemoveItemTool(this.session);
 
@@ -510,7 +513,7 @@ final class BringRemoveItemTool extends IntegrationTool {
 /// `bring__complete_item` (write): marks an item as bought; undo puts it
 /// back on the open list.
 final class BringCompleteItemTool extends IntegrationTool
-    implements FixedConfirmationTool {
+    implements FixedConfirmationTool, NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const BringCompleteItemTool(this.session);
 

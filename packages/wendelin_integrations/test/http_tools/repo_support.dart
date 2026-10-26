@@ -13,6 +13,7 @@ HttpToolDefinition testHttpTool({
   bool autoRun = false,
   bool sensitive = false,
   AuthMethod? auth,
+  bool mayContainUntrustedContent = true,
 }) => HttpToolDefinition(
   id: id,
   name: name,
@@ -32,4 +33,5 @@ HttpToolDefinition testHttpTool({
   risk: risk,
   autoRun: autoRun,
   sensitive: sensitive,
+  mayContainUntrustedContent: mayContainUntrustedContent,
 );

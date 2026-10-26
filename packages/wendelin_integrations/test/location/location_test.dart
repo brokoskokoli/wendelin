@@ -293,7 +293,7 @@ void main() {
         'location__distance_to': RiskLevel.read,
       },
     );
-    expect(integration.tools.whereType<TrustedContentSource>(), isEmpty);
+    expect(integration.tools.whereType<TrustedContentSource>(), hasLength(3));
     expect((await integration.setupState()).missingSteps, isEmpty);
     port.permission = false;
     expect((await integration.setupState()).missingSteps, [

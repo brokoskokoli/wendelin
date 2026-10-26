@@ -1,5 +1,5 @@
 {
   "todoist__add": true,
-  "todoist__list": false,
-  "todoist__complete": false
+  "todoist__list": true,
+  "todoist__complete": true
 }

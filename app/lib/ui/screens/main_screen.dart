@@ -6,6 +6,7 @@ import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart'
     show PortException;
 
+import '../../agent/absence.dart';
 import '../../agent/agent_controller.dart';
 import '../../agent/chat_entry.dart';
 import '../../agent/conversation_state.dart';
@@ -101,6 +102,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
     _lifecycle = AppLifecycleListener(
       onStateChange: (state) {
         _wakeChat.setResumed(state == AppLifecycleState.resumed);
+        trackAbsence(ref.read, state);
         final voice = ref.read(voiceControllerProvider.notifier);
         if (state == AppLifecycleState.hidden ||
             state == AppLifecycleState.paused) {
@@ -126,7 +128,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
     });
     Future(() => unawaited(_openFromNotification()));
     if (widget.restoreSession) {
-      unawaited(ref.read(agentControllerProvider.notifier).restore());
+      unawaited(restoreChat(ref.read));
       // A TEE default provider is attested in the background (WP52).
       unawaited(
         Future(

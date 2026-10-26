@@ -167,7 +167,7 @@ final class ModelCall {
       _control.emit(const AgentTextComplete());
     }
     final step = await _reportAttestation(
-      target.provider,
+      target,
       request,
       blocks,
       failed: error != null,
@@ -214,16 +214,17 @@ final class ModelCall {
   /// waits for it, so it is reported now. With tool calls the tool round
   /// reports it (external tools wait for it).
   Future<AttestationStep> _reportAttestation(
-    LlmProvider provider,
+    Resolution target,
     ChatRequest request,
     List<ContentBlock> blocks, {
     required bool failed,
   }) async {
     final step = _attest.begin(
-      provider,
+      target.provider,
       request,
       failed: failed,
       sink: _control,
+      profileId: target.profileId,
     );
     if (failed || !blocks.any((b) => b is ToolCallBlock)) {
       await _attest.settle(step);
