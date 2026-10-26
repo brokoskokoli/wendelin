@@ -91,9 +91,9 @@ SensitiveFinding? detectSensitiveContent(String text) {
 /// (card number, IBAN, credential with its value, API key); the rest stays
 /// readable. A credential is replaced from its keyword up to the end of its
 /// clause (up to `.`, `!`, `?`, `;`, a line break or the end of the text:
-/// "Mein Passwort ist hunter2. Danke" becomes "Mein *** Danke"). Whitespace,
-/// line breaks and punctuation between keyword and value are skipped first,
-/// so the first value token is always masked. Known limit: a value with
+/// "Mein Passwort ist hunter2. Danke" becomes "Mein *** Danke"). Everything that is
+/// neither letter nor digit behind the keyword is skipped first,
+/// so the first value character is always masked. Known limit: a value with
 /// ". " inside releases the rest ("Dr. Who42" leaves "Who42"). Uses the same
 /// detection rules as [detectSensitiveContent], which stays unchanged.
 String redactSensitiveContent(String text, {String mask = '***'}) {
@@ -101,7 +101,7 @@ String redactSensitiveContent(String text, {String mask = '***'}) {
     ..._cardSpans(text),
     ..._ibanSpans(text),
     for (final m in _credential.allMatches(text))
-      (m.start, _clauseEnd(text, _valueStart(text, m.end))),
+      (m.start, _clauseEnd(text, _valueStart(text, m))),
     for (final m in _apiKey.allMatches(text)) (m.start, m.end),
   ]..sort((a, b) => a.$1.compareTo(b.$1));
   final out = StringBuffer();
@@ -121,26 +121,18 @@ String redactSensitiveContent(String text, {String mask = '***'}) {
   return out.toString() + text.substring(pos);
 }
 
-// Where the clause scan starts: the match's last character, or, if the match
-// ends in a bare separator (its last word is only punctuation, "ist" plus
-// punctuation, or ends in `:` or `=`: "ist... x", "PIN:   ;  4711", "ist:\nx"), the first character after
-// any whitespace, line breaks and punctuation behind it. A value that ends in
-// a full stop ("PIN 1234. Danke") keeps its clause end.
-int _valueStart(String text, int matchEnd) {
-  final m = text.substring(0, matchEnd);
-  final word = m.substring(m.lastIndexOf(RegExp(r'\s')) + 1);
-  final bare =
-      RegExp(
-        r'^(?:(?:ist|lautet|heißt|heisst|war|is|was)?\p{P}+)$',
-        unicode: true,
-        caseSensitive: false,
-      ).hasMatch(word) ||
-      word.endsWith(':') ||
-      word.endsWith('=');
-  if (!bare) return matchEnd - 1;
-  var e = matchEnd;
-  while (e < text.length &&
-      RegExp(r'[\s\p{P}]', unicode: true).hasMatch(text[e])) {
+// Where the value begins: the value token of the match (`v1`/`v2` for the
+// "keyword + value with a digit" forms) or else the match's last character
+// (the first character after the separator). From there every character that
+// is neither letter nor digit is skipped ("Passwort:. x", "PIN=! 1234",
+// "ist... x", line breaks included), so the clause end is only searched
+// behind at least one value character. "PIN 1234. Danke": the value token
+// starts at "1", its trailing full stop ends the clause.
+int _valueStart(String text, RegExpMatch m) {
+  final v = m.namedGroup('v1') ?? m.namedGroup('v2');
+  var e = v == null ? m.end - 1 : m.end - v.length;
+  final alnum = RegExp(r'[\p{L}\p{N}]', unicode: true);
+  while (e < text.length && !alnum.hasMatch(text[e])) {
     e++;
   }
   return e;
@@ -296,7 +288,7 @@ final _credential = RegExp(
   r'\s*\S'
   // Or keyword directly followed by a value containing a digit.
   '|$_keyword'
-  r'\s*[:=]?\s+(?=[^\s]*\p{N})[^\s]+'
+  r'\s*[:=]?\s+(?=[^\s]*\p{N})(?<v1>[^\s]+)'
   // Weak keyword, up to four words, `:`/`=` and any value.
   '|$_weakKeyword'
   r'(?:\s+[\p{L}\p{N}-]+){0,4}?\s*[:=]\s*\S'
@@ -304,7 +296,7 @@ final _credential = RegExp(
   // digit.
   '|$_weakKeyword'
   r'(?:\s+(?:ist|lautet|is|was|war)(?![\p{L}\p{N}]))?'
-  r'\s+(?=[^\s]*\p{N})[^\s]+',
+  r'\s+(?=[^\s]*\p{N})(?<v2>[^\s]+)',
   caseSensitive: false,
   unicode: true,
 );

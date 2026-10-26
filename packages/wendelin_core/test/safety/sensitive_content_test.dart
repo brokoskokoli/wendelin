@@ -232,6 +232,13 @@ void main() {
       ('Passwort ist. hunter2', '***', 'hunter2'),
       ('Das Passwort ist:\nhunter2', 'Das ***', 'hunter2'),
       ('PIN:   ;  4711', '***', '4711'),
+      ('Passwort:. hunter2', '***', 'hunter2'),
+      ('PIN=! 1234', '***', '1234'),
+      ('Kennwort:; geheim', '***', 'geheim'),
+      ('PIN=. 4711 Danke', '***', '4711'),
+      ('Passwort =. hunter2', '***', 'hunter2'),
+      ('PIN=:. 1', '***', '1'),
+      ('PIN 1234. Danke', '*** Danke', '1234'),
     ]) {
       test(text, () {
         final out = redactSensitiveContent(text);
@@ -239,6 +246,43 @@ void main() {
         expect(out, isNot(contains(secret)));
       });
     }
+
+    test('Stichwort x Trenner x Wert: kein Wert-Teil bleibt stehen', () {
+      const keywords = ['Passwort', 'PIN', 'Kennwort', 'TAN', 'CVV'];
+      const seps = [
+        ':',
+        '=',
+        ' ist',
+        ' lautet',
+        ' =',
+        ':.',
+        '=!',
+        ':;',
+        ' ist...',
+        ':\n',
+        ' :  ;  ',
+      ];
+      const values = {
+        'hunter2': ['hunter2'],
+        '1234': ['1234'],
+        '12 34': ['12', '34'],
+        'eins zwei': ['eins', 'zwei'],
+      };
+      for (final k in keywords) {
+        for (final s in seps) {
+          // TAN/CVV count with "ist" only for a value with a digit.
+          if ((k == 'TAN' || k == 'CVV') && s.contains('ist')) continue;
+          if ((k == 'TAN' || k == 'CVV') && s.contains('lautet')) continue;
+          for (final v in values.entries) {
+            final text = 'Mein $k$s ${v.key}';
+            final out = redactSensitiveContent(text);
+            for (final part in v.value) {
+              expect(out, isNot(contains(part)), reason: '"$text" -> "$out"');
+            }
+          }
+        }
+      }
+    });
 
     test('harmloser Text bleibt unverändert', () {
       const t = 'Wie wird das Wetter morgen in Berlin, 14 Uhr?';
