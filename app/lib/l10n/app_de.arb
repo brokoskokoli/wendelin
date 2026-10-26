@@ -734,19 +734,6 @@
     }
   },
   "haAddressLabel": "Adresse",
-  "haAlwaysConfirm": "Immer bestätigen",
-  "haAlwaysConfirmHelp": "Wendelin fragt vor jedem Schalten nach (z. B. Herd, Ofen).",
-  "haAlwaysConfirmSemantics": "{name}: {label}",
-  "@haAlwaysConfirmSemantics": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      },
-      "label": {
-        "type": "String"
-      }
-    }
-  },
   "haApproved": "{n, plural, one{1 Gerät freigegeben} other{{n} Geräte freigegeben}}",
   "@haApproved": {
     "placeholders": {
@@ -763,25 +750,15 @@
   "haDisconnect": "Trennen",
   "haDisconnectMessage": "Adresse, Token und die Auswahl der Geräte werden vom Gerät gelöscht.",
   "haDisconnectTitle": "Home Assistant trennen?",
-  "haEntityAlwaysAsks": "{entityId} · fragt immer nach",
-  "@haEntityAlwaysAsks": {
-    "placeholders": {
-      "entityId": {
-        "type": "String"
-      }
-    }
-  },
   "haErrorTitle": "Fehler – nicht erreichbar",
   "haFastPath": "Einfache Befehle sofort ausführen",
-  "haFastPathHelp": "„Rollo Wohnzimmer runter“ oder „Küche Deckenlicht aus“ führt Wendelin ohne KI aus, mit denselben Regeln. Schlösser, Alarmanlagen, Tore und Geräte mit „Immer bestätigen“ gehen nie so. Bei Unklarem fragt wie bisher die KI.",
+  "haFastPathHelp": "„Rollo Wohnzimmer runter“ oder „Küche Deckenlicht aus“ führt Wendelin ohne KI aus, mit denselben Regeln. Schlösser, Alarmanlagen, Tore und Geräte der Stufe D gehen nie so. Bei Unklarem fragt wie bisher die KI.",
   "haFilter": "Geräte filtern",
   "haFound": "Gefunden",
   "haGone": "Nicht mehr in Home Assistant",
   "haHttpNote": "Unverschlüsseltes http ist nur im Heimnetz, über Tailscale (100.x, *.ts.net) und bei *.local erlaubt, sonst nur https. Über Tailscale wird nichts automatisch gefunden: Adresse von Hand eingeben.",
   "haInputMissing": "Bitte Adresse und Token eingeben.",
   "haIntro": "Wendelin steuert deine freigegebenen Geräte über die Schnittstelle deines Home Assistant. Nur im Heimnetz oder über Tailscale. Adresse und Token bleiben im sicheren Speicher des Geräts.",
-  "haNoAsk": "Ohne Rückfrage",
-  "haNoAskHelp": "Wendelin bewegt dieses Rollo ohne Nachfrage (mit Rückgängig). Nur für Rollos, Jalousien, Markisen und Vorhänge; Garagentore und Türen fragen immer.",
   "haNoDevices": "Keine Geräte gefunden.",
   "haNoRoom": "Ohne Raum",
   "haNothingFound": "Nichts gefunden. Adresse von Hand eingeben (bei Tailscale nötig).",
@@ -971,6 +948,7 @@
   "comingSoonM3": "Kommt in M3",
   "integrationDetailBringAccount": "Bring!-Konto",
   "integrationDetailExternalAsks": "Außenwirkung · fragt immer nach",
+  "integrationDetailExternalNoAsk": "Außenwirkung · ohne Nachfrage (Stufe gelockert)",
   "integrationDetailIntegrationDetailHaSetup": "Adresse, Token und Geräte",
   "integrationDetailIntegrationDetailSpotifyAccount": "Spotify-Konto",
   "integrationDetailLevelAll": "An alle Provider",
@@ -993,7 +971,7 @@
   "integrationDetailSensitiveNote": "Sensibel: Die Tools gehen nur an Provider ab der Stufe, die du für sensible Integrationen festlegst.",
   "integrationDetailSensitiveTitle": "Sensible Integrationen",
   "integrationDetailSetUpSearch": "Suchdienst einrichten",
-  "integrationDetailTapTool": "Tippe auf ein Tool, um „Immer nachfragen“ ein- oder auszuschalten.",
+  "integrationDetailTapTool": "Unter „Details“ legst du je Tool die Sicherheitsstufe fest (A bis D).",
   "integrationDetailTitle": "Integration",
   "integrationDetailVaultDaily": "Vault und Tagesnotizen",
   "integrationDetailViewMemory": "Gedächtnis ansehen",
@@ -1089,6 +1067,40 @@
       }
     }
   },
+  "levelDetails": "Details",
+  "levelHelpA": "Immer, auch bei gesperrtem Gerät und ohne erkannte Stimme.",
+  "levelHelpB": "Bei erkannter Stimme (auch gesperrt) oder entsperrtem Gerät.",
+  "levelHelpC": "Nur bei entsperrtem Gerät.",
+  "levelHelpD": "Entsperrt und mit Bestätigung auf dem Display.",
+  "levelRestore": "Standard wiederherstellen",
+  "levelSemantics": "{name}: Stufe {level}",
+  "@levelSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "levelStateChanged": "geändert",
+  "levelStateDefault": "Standard",
+  "levelSummary": "Stufe {level} · {state}",
+  "@levelSummary": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "levelWarnConfirm": "Trotzdem ändern",
+  "levelWarnDeviceMessage": "Schloss, Alarm, Tor oder Tür lassen sich dann ohne Bestätigung bedienen, bei Stufe A sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.",
+  "levelWarnTitle": "Weniger Schutz?",
+  "levelWarnToolMessage": "Dieses Tool wirkt nach außen und kann dann ohne Bestätigung laufen, bei Stufe A sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.",
   "listsAccessLost": "Kein Zugriff mehr – Datei neu auswählen",
   "listsAdd": "+ Liste",
   "listsAliases": "Andere Namen, mit Komma getrennt (optional)",

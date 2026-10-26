@@ -78,6 +78,7 @@ final class ToolPrefs {
   const ToolPrefs({
     this.disabled = const {},
     this.alwaysConfirm = const {},
+    this.levels = const {},
     this.sensitiveMinimum,
     this.sensitive = const {},
   });
@@ -97,6 +98,13 @@ final class ToolPrefs {
     return ToolPrefs(
       disabled: names(json['disabled']),
       alwaysConfirm: names(json['alwaysConfirm']),
+      levels: {
+        if (json['levels'] case final Map<Object?, Object?> m)
+          for (final e in m.entries)
+            // A stored level that is no string stays invalid ('' → D).
+            if (e.key is String)
+              e.key! as String: e.value is String ? e.value! as String : '',
+      },
       sensitiveMinimum: level,
       sensitive: {
         if (marks is Map)
@@ -110,9 +118,20 @@ final class ToolPrefs {
   /// Tools switched off (not sent to the model).
   final Set<String> disabled;
 
-  /// `read`/`write` tools the user wants to confirm every time (risk levels
-  /// can only be made stricter, K8 b).
+  /// Legacy (before WP154): tools the user wants to confirm every time.
+  /// Counts as level D for a tool without an entry in [levels]; written
+  /// back unchanged until the user picks a level.
   final Set<String> alwaysConfirm;
+
+  /// The security level (`a`..`d`) the user chose per tool (WP154, ADR 0022);
+  /// a tool without entry has its default (`RiskPolicy.defaultLevelFor`).
+  /// Kept as text: anything else than `a`..`d` means D (fail-closed).
+  final Map<String, String> levels;
+
+  /// The stored level of [tool]: the chosen one, else D for the legacy
+  /// "always confirm", else `null` (default).
+  String? levelOf(String tool) =>
+      levels[tool] ?? (alwaysConfirm.contains(tool) ? 'd' : null);
 
   /// Tools of sensitive integrations only go to providers at least this
   /// private; `null` = no restriction.
@@ -126,6 +145,7 @@ final class ToolPrefs {
   Map<String, Object?> toJson() => {
     'disabled': disabled.toList()..sort(),
     'alwaysConfirm': alwaysConfirm.toList()..sort(),
+    if (levels.isNotEmpty) 'levels': levels,
     'sensitiveMinimum': ?sensitiveMinimum?.name,
     if (sensitive.isNotEmpty) 'sensitive': sensitive,
   };
@@ -134,16 +154,26 @@ final class ToolPrefs {
   ToolPrefs withEnabled(String tool, {required bool enabled}) => ToolPrefs(
     disabled: enabled ? ({...disabled}..remove(tool)) : {...disabled, tool},
     alwaysConfirm: alwaysConfirm,
+    levels: levels,
     sensitiveMinimum: sensitiveMinimum,
     sensitive: sensitive,
   );
 
-  /// A copy where [tool] always needs confirmation (or not).
-  ToolPrefs withConfirm(String tool, {required bool confirm}) => ToolPrefs(
+  /// A copy where [tool] always needs confirmation (level D) or has its
+  /// default again.
+  ToolPrefs withConfirm(String tool, {required bool confirm}) =>
+      withLevel(tool, confirm ? SecurityLevel.d : null);
+
+  /// A copy with the chosen [level] of [tool] (`null` = default). The
+  /// legacy "always confirm" of the tool is dropped: the level replaces it.
+  ToolPrefs withLevel(String tool, SecurityLevel? level) => ToolPrefs(
     disabled: disabled,
-    alwaysConfirm: confirm
-        ? {...alwaysConfirm, tool}
-        : ({...alwaysConfirm}..remove(tool)),
+    alwaysConfirm: {...alwaysConfirm}..remove(tool),
+    levels: {
+      for (final e in levels.entries)
+        if (e.key != tool) e.key: e.value,
+      if (level != null) tool: level.name,
+    },
     sensitiveMinimum: sensitiveMinimum,
     sensitive: sensitive,
   );
@@ -152,6 +182,7 @@ final class ToolPrefs {
   ToolPrefs withSensitiveMinimum(PrivacyLevel? level) => ToolPrefs(
     disabled: disabled,
     alwaysConfirm: alwaysConfirm,
+    levels: levels,
     sensitiveMinimum: level,
     sensitive: sensitive,
   );
@@ -165,6 +196,7 @@ final class ToolPrefs {
   }) => ToolPrefs(
     disabled: disabled,
     alwaysConfirm: alwaysConfirm,
+    levels: levels,
     sensitiveMinimum: sensitiveMinimum,
     sensitive: {
       for (final e in this.sensitive.entries)

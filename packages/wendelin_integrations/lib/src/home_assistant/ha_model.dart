@@ -1,4 +1,7 @@
 import 'package:meta/meta.dart';
+import 'package:wendelin_core/wendelin_core.dart' show SecurityLevel;
+
+import 'ha_policy.dart';
 
 /// Address and long-lived access token of a Home Assistant instance. The
 /// token is a secret: [toString] hides it, [url] is normalized by
@@ -94,6 +97,7 @@ final class HaEntity {
     this.missing = false,
     this.deviceClass,
     this.noConfirm = false,
+    this.level,
   });
 
   /// Reads [toJson] output; `null` if malformed.
@@ -111,6 +115,10 @@ final class HaEntity {
       missing: json['missing'] == true,
       deviceClass: json['class'] is String ? json['class'] as String : null,
       noConfirm: json['quiet'] == true,
+      // A stored level that is no string is kept as '' (invalid → D).
+      level: json.containsKey('level')
+          ? (json['level'] is String ? json['level'] as String : '')
+          : null,
     );
   }
 
@@ -143,6 +151,12 @@ final class HaEntity {
   /// [haQuietCoverClasses]; the check happens at every call.
   final bool noConfirm;
 
+  /// Security level the user chose (WP154: `a`..`d`), `null` = default
+  /// ([haDefaultLevel], derived from the legacy flags [alwaysConfirm] and
+  /// [noConfirm] too). Any other stored text means D (fail-closed, see
+  /// [haEffectiveLevel]).
+  final String? level;
+
   /// Domain part of [entityId].
   String get domain => haDomainOf(entityId);
 
@@ -155,6 +169,7 @@ final class HaEntity {
     missing: missing,
     deviceClass: deviceClass,
     noConfirm: noConfirm,
+    level: level,
   );
 
   /// Copy with a different [noConfirm] (cover „ohne Rückfrage“).
@@ -166,6 +181,31 @@ final class HaEntity {
     missing: missing,
     deviceClass: deviceClass,
     noConfirm: value,
+    level: level,
+  );
+
+  /// Copy with the security choice (level and the legacy flags) of [from].
+  HaEntity withChoice(HaEntity from) => HaEntity(
+    entityId: entityId,
+    name: name,
+    area: area,
+    alwaysConfirm: from.alwaysConfirm,
+    missing: missing,
+    deviceClass: deviceClass,
+    noConfirm: from.noConfirm,
+    level: from.level,
+  );
+
+  /// Copy with the chosen [level] (`null` = default). Both legacy flags are
+  /// cleared: the level replaces them, and „Standard wiederherstellen“ then
+  /// really means the default of the domain.
+  HaEntity withLevel(SecurityLevel? value) => HaEntity(
+    entityId: entityId,
+    name: name,
+    area: area,
+    missing: missing,
+    deviceClass: deviceClass,
+    level: value?.name,
   );
 
   /// Copy with the name, room, class and presence from Home Assistant.
@@ -182,6 +222,7 @@ final class HaEntity {
     missing: missing,
     deviceClass: deviceClass,
     noConfirm: noConfirm,
+    level: level,
   );
 
   /// JSON for the entity store.
@@ -193,6 +234,7 @@ final class HaEntity {
     if (missing) 'missing': true,
     if (deviceClass != null) 'class': deviceClass,
     if (noConfirm) 'quiet': true,
+    if (level != null) 'level': level,
   };
 
   @override
@@ -204,7 +246,8 @@ final class HaEntity {
       other.alwaysConfirm == alwaysConfirm &&
       other.missing == missing &&
       other.deviceClass == deviceClass &&
-      other.noConfirm == noConfirm;
+      other.noConfirm == noConfirm &&
+      other.level == level;
 
   @override
   int get hashCode => Object.hash(
@@ -215,6 +258,7 @@ final class HaEntity {
     missing,
     deviceClass,
     noConfirm,
+    level,
   );
 
   @override

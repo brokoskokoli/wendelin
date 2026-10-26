@@ -466,9 +466,6 @@
     }
   },
   "haAddressLabel": "Adresse",
-  "haAlwaysConfirm": "Toujours confirmer",
-  "haAlwaysConfirmHelp": "Wendelin demande confirmation avant chaque commande (p. ex. cuisinière, four).",
-  "haAlwaysConfirmSemantics": "{name} : {label}",
   "haApproved": "{n, plural, one{1 appareil autorisé} other{{n} appareils autorisés}}",
   "haConnect": "Connecter",
   "haConnected": "Connecté",
@@ -478,18 +475,15 @@
   "haDisconnect": "Déconnecter",
   "haDisconnectMessage": "L’adresse, le jeton et la sélection des appareils sont supprimés de l’appareil.",
   "haDisconnectTitle": "Déconnecter Home Assistant ?",
-  "haEntityAlwaysAsks": "{entityId} · demande toujours",
   "haErrorTitle": "Erreur – injoignable",
   "haFastPath": "Exécuter tout de suite les commandes simples",
-  "haFastPathHelp": "« Volet du salon, descends » ou « Lumière de la cuisine, éteins » s’exécute sans IA, avec les mêmes règles. Serrures, alarmes, portails et appareils réglés sur « Toujours confirmer » ne passent jamais par là. Pour tout ce qui est flou, l’IA répond comme avant.",
+  "haFastPathHelp": "« Volet du salon, descends » ou « Lumière de la cuisine, éteins » s’exécute sans IA, avec les mêmes règles. Serrures, alarmes, portails et appareils du niveau D ne passent jamais par là. Pour tout ce qui est flou, l’IA répond comme avant.",
   "haFilter": "Filtrer les appareils",
   "haFound": "Trouvés",
   "haGone": "Plus dans Home Assistant",
   "haHttpNote": "Le http non chiffré n’est autorisé que sur le réseau local, via Tailscale (100.x, *.ts.net) et pour *.local, sinon uniquement https. Rien n’est détecté automatiquement via Tailscale : saisissez l’adresse à la main.",
   "haInputMissing": "Saisissez l’adresse et le jeton.",
   "haIntro": "Wendelin pilote vos appareils autorisés via l’interface de votre Home Assistant. Uniquement sur le réseau local ou via Tailscale. L’adresse et le jeton restent dans le stockage sécurisé de l’appareil.",
-  "haNoAsk": "Sans confirmation",
-  "haNoAskHelp": "Wendelin actionne ce volet sans demander (avec annulation). Seulement pour volets, stores, bannes et rideaux ; les portes de garage et les portes demandent toujours.",
   "haNoDevices": "Aucun appareil trouvé.",
   "haNoRoom": "Sans pièce",
   "haNothingFound": "Rien trouvé. Saisissez l’adresse à la main (nécessaire avec Tailscale).",
@@ -569,6 +563,7 @@
   "comingSoonM3": "Prévu pour M3",
   "integrationDetailBringAccount": "Compte Bring!",
   "integrationDetailExternalAsks": "Effet externe · demande toujours",
+  "integrationDetailExternalNoAsk": "Effet externe · sans confirmation (niveau assoupli)",
   "integrationDetailIntegrationDetailHaSetup": "Adresse, jeton et appareils",
   "integrationDetailIntegrationDetailSpotifyAccount": "Compte Spotify",
   "integrationDetailLevelAll": "À tous les fournisseurs",
@@ -584,7 +579,7 @@
   "integrationDetailSensitiveNote": "Sensible : les outils ne vont qu’aux fournisseurs du niveau défini pour les intégrations sensibles ou au-dessus.",
   "integrationDetailSensitiveTitle": "Intégrations sensibles",
   "integrationDetailSetUpSearch": "Configurer le service de recherche",
-  "integrationDetailTapTool": "Touchez un outil pour activer ou désactiver « Toujours demander ».",
+  "integrationDetailTapTool": "Sous « Détails », vous réglez le niveau de sécurité (A à D) par outil.",
   "integrationDetailTitle": "Intégration",
   "integrationDetailVaultDaily": "Vault et notes quotidiennes",
   "integrationDetailViewMemory": "Voir la mémoire",
@@ -652,6 +647,40 @@
       }
     }
   },
+  "levelDetails": "Détails",
+  "levelHelpA": "Toujours, même verrouillé et sans voix reconnue.",
+  "levelHelpB": "Avec une voix reconnue (même verrouillé) ou appareil déverrouillé.",
+  "levelHelpC": "Seulement appareil déverrouillé.",
+  "levelHelpD": "Déverrouillé et avec confirmation à l’écran.",
+  "levelRestore": "Rétablir le réglage par défaut",
+  "levelSemantics": "{name} : niveau {level}",
+  "@levelSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "levelStateChanged": "modifié",
+  "levelStateDefault": "par défaut",
+  "levelSummary": "Niveau {level} · {state}",
+  "@levelSummary": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "levelWarnConfirm": "Modifier quand même",
+  "levelWarnDeviceMessage": "Une serrure, une alarme, un portail ou une porte pourra alors être commandé sans confirmation, au niveau A même appareil verrouillé. La responsabilité vous incombe.",
+  "levelWarnTitle": "Moins de protection ?",
+  "levelWarnToolMessage": "Cet outil agit vers l’extérieur et pourra alors s’exécuter sans confirmation, au niveau A même appareil verrouillé. La responsabilité vous incombe.",
   "listsAccessLost": "Plus d’accès – choisissez à nouveau le fichier",
   "listsAdd": "+ Liste",
   "listsAliases": "Autres noms, séparés par des virgules (facultatif)",

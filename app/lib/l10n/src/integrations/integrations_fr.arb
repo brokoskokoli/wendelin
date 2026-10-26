@@ -18,7 +18,7 @@
   "integrationDetailSensitiveNote": "Sensible : les outils ne vont qu’aux fournisseurs du niveau défini pour les intégrations sensibles ou au-dessus.",
   "integrationDetailSensitiveTitle": "Intégrations sensibles",
   "integrationDetailSetUpSearch": "Configurer le service de recherche",
-  "integrationDetailTapTool": "Touchez un outil pour activer ou désactiver « Toujours demander ».",
+  "integrationDetailTapTool": "Sous « Détails », vous réglez le niveau de sécurité (A à D) par outil.",
   "integrationDetailTitle": "Intégration",
   "integrationDetailVaultDaily": "Vault et notes quotidiennes",
   "integrationDetailViewMemory": "Voir la mémoire",
@@ -85,5 +85,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "integrationDetailExternalNoAsk": "Effet externe · sans confirmation (niveau assoupli)"
 }

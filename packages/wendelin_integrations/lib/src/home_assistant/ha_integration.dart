@@ -112,12 +112,12 @@ final class HaIntegration implements Integration {
     }
   }
 
-  /// Hook for the speaker recognition (WP92): whether the call of
-  /// [toolName] with [args] may run on a locked device. Only `ha__call` on
-  /// light, scene and media player ([haLockSafeDomains]); reading (it would
-  /// read house details aloud) and locks, alarms, covers and climate are
-  /// not. The lock policy itself is not part of WP91; this only answers the
-  /// question. Unknown or unresolvable entities are not allowed.
+  /// Hook for the lock and speaker policy (WP92, WP154): whether the call
+  /// of [toolName] with [args] may run on a locked device **for a
+  /// recognized voice**, according to the policy table ([haDecide], level
+  /// B or A). Only `ha__call`; reading (it would read house details aloud)
+  /// never. Unknown or unresolvable entities are not allowed. Nothing calls
+  /// this yet (the locked path is WP154 L2, the voice L3).
   Future<bool> allowedWhileLocked(
     String toolName,
     Map<String, Object?> args,
@@ -127,17 +127,19 @@ final class HaIntegration implements Integration {
     if (query is! String || query.trim().isEmpty) return false;
     try {
       final e = await context.resolve(query);
-      if (e.alwaysConfirm || !haLockSafeDomains.contains(e.domain)) {
-        return false;
-      }
-      if (e.domain != 'scene') return true;
-      // A scene with a lock, alarm or cover is as critical as the member.
-      final scene = await context.api.state(e.entityId);
-      return haSceneHasMembers(scene) &&
-          !haSceneHasSecureMember(
-            scene,
-            confirmIds: await context.confirmIds(),
-          );
+      final state = e.domain == 'scene' || e.domain == 'cover'
+          ? await context.api.state(e.entityId)
+          : null;
+      return haDecide(
+            e,
+            state: state,
+            criticalIds: e.domain == 'scene'
+                ? await context.confirmIds()
+                : const {},
+            locked: true,
+            speakerRecognized: true,
+          ) ==
+          LevelAccess.allowed;
     } on PortException {
       return false;
     }

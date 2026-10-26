@@ -1501,18 +1501,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get haAddressLabel => 'Adresse';
 
   @override
-  String get haAlwaysConfirm => 'Immer bestätigen';
-
-  @override
-  String get haAlwaysConfirmHelp =>
-      'Wendelin fragt vor jedem Schalten nach (z. B. Herd, Ofen).';
-
-  @override
-  String haAlwaysConfirmSemantics(String name, String label) {
-    return '$name: $label';
-  }
-
-  @override
   String haApproved(int n) {
     String _temp0 = intl.Intl.pluralLogic(
       n,
@@ -1550,11 +1538,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get haDisconnectTitle => 'Home Assistant trennen?';
 
   @override
-  String haEntityAlwaysAsks(String entityId) {
-    return '$entityId · fragt immer nach';
-  }
-
-  @override
   String get haErrorTitle => 'Fehler – nicht erreichbar';
 
   @override
@@ -1562,7 +1545,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get haFastPathHelp =>
-      '„Rollo Wohnzimmer runter“ oder „Küche Deckenlicht aus“ führt Wendelin ohne KI aus, mit denselben Regeln. Schlösser, Alarmanlagen, Tore und Geräte mit „Immer bestätigen“ gehen nie so. Bei Unklarem fragt wie bisher die KI.';
+      '„Rollo Wohnzimmer runter“ oder „Küche Deckenlicht aus“ führt Wendelin ohne KI aus, mit denselben Regeln. Schlösser, Alarmanlagen, Tore und Geräte der Stufe D gehen nie so. Bei Unklarem fragt wie bisher die KI.';
 
   @override
   String get haFilter => 'Geräte filtern';
@@ -1583,13 +1566,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get haIntro =>
       'Wendelin steuert deine freigegebenen Geräte über die Schnittstelle deines Home Assistant. Nur im Heimnetz oder über Tailscale. Adresse und Token bleiben im sicheren Speicher des Geräts.';
-
-  @override
-  String get haNoAsk => 'Ohne Rückfrage';
-
-  @override
-  String get haNoAskHelp =>
-      'Wendelin bewegt dieses Rollo ohne Nachfrage (mit Rückgängig). Nur für Rollos, Jalousien, Markisen und Vorhänge; Garagentore und Türen fragen immer.';
 
   @override
   String get haNoDevices => 'Keine Geräte gefunden.';
@@ -1873,6 +1849,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get integrationDetailExternalAsks => 'Außenwirkung · fragt immer nach';
 
   @override
+  String get integrationDetailExternalNoAsk =>
+      'Außenwirkung · ohne Nachfrage (Stufe gelockert)';
+
+  @override
   String get integrationDetailIntegrationDetailHaSetup =>
       'Adresse, Token und Geräte';
 
@@ -1926,7 +1906,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get integrationDetailTapTool =>
-      'Tippe auf ein Tool, um „Immer nachfragen“ ein- oder auszuschalten.';
+      'Unter „Details“ legst du je Tool die Sicherheitsstufe fest (A bis D).';
 
   @override
   String get integrationDetailTitle => 'Integration';
@@ -2049,6 +2029,56 @@ class AppLocalizationsDe extends AppLocalizations {
   String reconnectErrUnavailable(String service) {
     return '$service ist nicht erreichbar oder antwortet nicht. Später erneut versuchen.';
   }
+
+  @override
+  String get levelDetails => 'Details';
+
+  @override
+  String get levelHelpA =>
+      'Immer, auch bei gesperrtem Gerät und ohne erkannte Stimme.';
+
+  @override
+  String get levelHelpB =>
+      'Bei erkannter Stimme (auch gesperrt) oder entsperrtem Gerät.';
+
+  @override
+  String get levelHelpC => 'Nur bei entsperrtem Gerät.';
+
+  @override
+  String get levelHelpD => 'Entsperrt und mit Bestätigung auf dem Display.';
+
+  @override
+  String get levelRestore => 'Standard wiederherstellen';
+
+  @override
+  String levelSemantics(String name, String level) {
+    return '$name: Stufe $level';
+  }
+
+  @override
+  String get levelStateChanged => 'geändert';
+
+  @override
+  String get levelStateDefault => 'Standard';
+
+  @override
+  String levelSummary(String level, String state) {
+    return 'Stufe $level · $state';
+  }
+
+  @override
+  String get levelWarnConfirm => 'Trotzdem ändern';
+
+  @override
+  String get levelWarnDeviceMessage =>
+      'Schloss, Alarm, Tor oder Tür lassen sich dann ohne Bestätigung bedienen, bei Stufe A sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.';
+
+  @override
+  String get levelWarnTitle => 'Weniger Schutz?';
+
+  @override
+  String get levelWarnToolMessage =>
+      'Dieses Tool wirkt nach außen und kann dann ohne Bestätigung laufen, bei Stufe A sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.';
 
   @override
   String get listsAccessLost => 'Kein Zugriff mehr – Datei neu auswählen';

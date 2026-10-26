@@ -1,0 +1,36 @@
+{
+  "levelDetails": "Details",
+  "levelSummary": "Level {level} · {state}",
+  "@levelSummary": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "levelStateDefault": "default",
+  "levelStateChanged": "changed",
+  "levelRestore": "Restore default",
+  "levelHelpA": "Always, also when locked and without a recognized voice.",
+  "levelHelpB": "With a recognized voice (also when locked) or when unlocked.",
+  "levelHelpC": "Only when the device is unlocked.",
+  "levelHelpD": "Unlocked and with a confirmation on the display.",
+  "levelWarnTitle": "Less protection?",
+  "levelWarnDeviceMessage": "A lock, alarm, gate or door can then be operated without a confirmation, at level A even while the device is locked. The responsibility is yours.",
+  "levelWarnToolMessage": "This tool acts on the outside world and can then run without a confirmation, at level A even while the device is locked. The responsibility is yours.",
+  "levelWarnConfirm": "Change anyway",
+  "levelSemantics": "{name}: level {level}",
+  "@levelSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  }
+}

@@ -3,6 +3,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../common/matching.dart';
 import '../common/port_exception.dart';
 import 'ha_model.dart';
+import 'ha_policy.dart';
 import 'ha_ports.dart';
 import 'ha_sync.dart';
 
@@ -96,10 +97,12 @@ final class HaContext {
     }
   }
 
-  /// Ids of the approved entities with "always confirm".
+  /// Ids of the approved entities on level D (confirmation; WP154, from the
+  /// chosen level or the legacy "always confirm"). A scene with such a
+  /// member is critical (K57).
   Future<Set<String>> confirmIds() async => {
     for (final e in await store.load())
-      if (e.alwaysConfirm) e.entityId,
+      if (haEffectiveLevel(e) == SecurityLevel.d) e.entityId,
   };
 
   /// The entity that [query] (name, "room name" or entity id) names among

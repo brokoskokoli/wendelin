@@ -122,22 +122,19 @@ abstract base class HaCallTool extends IntegrationTool {
   /// Shared context.
   final HaContext ctx;
 
-  /// Domains and services this tool may call.
-  HaServices get table;
+  /// What [haDecide] must answer for this tool to take the call:
+  /// [LevelAccess.allowed] for `ha__call`, [LevelAccess.confirm] for
+  /// `ha__call_secure` (the risk class is a property of the tool).
+  LevelAccess get handles;
 
-  /// The services of [e] this tool may call, `null` if [e] belongs to the
-  /// other tool. [confirmed]: the entity needs a confirmation (the user
-  /// marked it „immer bestätigen“, or it is a scene with a lock, alarm or
-  /// cover among its members). [quiet]: a cover the user let move without
-  /// a confirmation and whose live class allows it ([haCoverIsQuiet]).
-  Map<String, Set<String>>? servicesFor(
-    HaEntity e, {
-    required bool confirmed,
-    bool quiet = false,
-  });
+  /// Whether this tool takes a call on [domain] that [haDecide] answered
+  /// with [access]. Default: exactly [handles].
+  bool accepts(LevelAccess access, String domain) => access == handles;
 
   /// Service names offered in the tool schema.
-  Set<String> get serviceNames => {for (final s in table.values) ...s.keys};
+  Set<String> get serviceNames => {
+    for (final s in haAllServices.values) ...s.keys,
+  };
 
   /// Name of the tool for the other class of domains.
   String get otherTool;
@@ -213,19 +210,28 @@ abstract base class HaCallTool extends IntegrationTool {
     Future<HaState> read() => ctx.guard(() => ctx.api.state(e.entityId));
     HaState? prior;
     if (e.domain == 'scene' || e.domain == 'cover') prior = await read();
-    // E: the live state decides, not the stored class (fail-closed).
-    final quiet = prior != null && haCoverIsQuiet(e, prior);
-    final confirmed =
-        e.alwaysConfirm ||
-        (e.domain == 'scene' &&
-            prior != null &&
-            haSceneHasSecureMember(prior, confirmIds: await ctx.confirmIds()));
-    final services = servicesFor(e, confirmed: confirmed, quiet: quiet);
+    // WP154: one policy decides (level, live class, scene members).
+    final access = haDecide(
+      e,
+      state: prior,
+      criticalIds: e.domain == 'scene' ? await ctx.confirmIds() : const {},
+    );
+    final services = haAllServices[e.domain];
     if (services == null) {
       return ToolOutcome.error(
-        haRiskForDomain(e.domain) == null
-            ? '„${e.name}“ (${e.domain}) kann nur gelesen werden (ha__state).'
-            : '„${e.name}“ (${e.domain}) wird mit $otherTool gesteuert.',
+        '„${e.name}“ (${e.domain}) kann nur gelesen werden (ha__state).',
+        summary: 'Falsches Tool',
+      );
+    }
+    if (access == LevelAccess.unlock) {
+      return ToolOutcome.error(
+        '„${e.name}“ ist nur bei entsperrtem Gerät steuerbar.',
+        summary: 'Entsperren nötig',
+      );
+    }
+    if (!accepts(access, e.domain)) {
+      return ToolOutcome.error(
+        '„${e.name}“ (${e.domain}) wird mit $otherTool gesteuert.',
         summary: 'Falsches Tool',
       );
     }
@@ -396,25 +402,7 @@ final class HaCallDeviceTool extends HaCallTool
   }
 
   @override
-  HaServices get table => haOpenServices;
-
-  @override
-  Set<String> get serviceNames => {
-    ...super.serviceNames,
-    // Quiet blinds (WP135 E); other covers are refused at the call.
-    ...?haSecureServices['cover']?.keys,
-  };
-
-  @override
-  Map<String, Set<String>>? servicesFor(
-    HaEntity e, {
-    required bool confirmed,
-    bool quiet = false,
-  }) => confirmed
-      ? null
-      : e.domain == 'cover'
-      ? (quiet ? haSecureServices['cover'] : null)
-      : haOpenServices[e.domain];
+  LevelAccess get handles => LevelAccess.allowed;
 
   @override
   String get otherTool => 'ha__call_secure';
@@ -452,29 +440,15 @@ final class HaCallSecureTool extends HaCallTool
   };
 
   @override
-  HaServices get table => haSecureServices;
+  LevelAccess get handles => LevelAccess.confirm;
 
+  /// A cover that would run without a question (quiet blind, level A–C)
+  /// may also go through this tool: it asks first, which is only stricter,
+  /// and the description names covers here.
   @override
-  Set<String> get serviceNames => {
-    ...super.serviceNames,
-    // Switches and scenes the user or the scene's members make critical.
-    ...?haOpenServices['switch']?.keys,
-    ...?haOpenServices['scene']?.keys,
-  };
-
-  @override
-  Map<String, Set<String>>? servicesFor(
-    HaEntity e, {
-    required bool confirmed,
-    bool quiet = false,
-  }) =>
-      haSecureServices[e.domain] ??
-      (confirmed &&
-              (e.alwaysConfirm
-                  ? haOpenServices.containsKey(e.domain)
-                  : e.domain == 'scene')
-          ? haOpenServices[e.domain]
-          : null);
+  bool accepts(LevelAccess access, String domain) =>
+      access == LevelAccess.confirm ||
+      (access == LevelAccess.allowed && domain == 'cover');
 
   @override
   String get otherTool => 'ha__call';

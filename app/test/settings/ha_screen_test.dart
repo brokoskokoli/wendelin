@@ -89,27 +89,33 @@ void main() {
       ),
     );
 
-    // Schalter: „Immer bestätigen“ erscheint erst nach der Freigabe und
-    // bleibt gespeichert, auch wenn danach andere Geräte geändert werden.
-    const confirmKey = ValueKey('haConfirm_switch.coffee');
-    expect(find.byKey(confirmKey), findsNothing);
+    // Sicherheitsstufe (WP154): Der Reiter „Details“ erscheint erst nach der
+    // Freigabe; die Wahl bleibt gespeichert, auch wenn danach andere Geräte
+    // geändert werden. Standard des Schalters ist C.
+    const detailsKey = ValueKey('levelDetails_switch.coffee');
+    expect(find.byKey(detailsKey), findsNothing);
     await tester.ensureVisible(
       find.byKey(const ValueKey('haEntity_switch.coffee')),
     );
     await tester.tap(find.byKey(const ValueKey('haEntity_switch.coffee')));
     await settle(tester);
-    await tester.ensureVisible(find.byKey(confirmKey));
-    await tester.tap(find.byKey(confirmKey));
+    expect(find.textContaining('Stufe C · Standard'), findsWidgets);
+    await tester.ensureVisible(find.byKey(detailsKey));
+    await tester.tap(find.byKey(detailsKey));
     await settle(tester);
-    Future<bool?> confirmed(String id) async => (await store.load())
+    const dKey = ValueKey('level_switch.coffee_d');
+    await tester.ensureVisible(find.byKey(dKey));
+    await tester.tap(find.byKey(dKey));
+    await settle(tester);
+    Future<String?> levelOf(String id) async => (await store.load())
         .where((e) => e.entityId == id)
-        .map((e) => e.alwaysConfirm)
+        .map((e) => e.level)
         .firstOrNull;
-    expect(await confirmed('switch.coffee'), isTrue);
-    expect(await confirmed('light.kitchen'), isFalse);
+    expect(await levelOf('switch.coffee'), 'd');
+    expect(await levelOf('light.kitchen'), isNull);
     await tester.tap(find.byKey(const ValueKey('haEntity_light.kitchen')));
     await settle(tester);
-    expect(await confirmed('switch.coffee'), isTrue);
+    expect(await levelOf('switch.coffee'), 'd');
 
     // Schnellweg: standardmäßig an, der Schalter speichert und wirkt auf die
     // nächste Anfrage (WP135 D).

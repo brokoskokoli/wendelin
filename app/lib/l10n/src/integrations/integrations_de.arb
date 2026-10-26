@@ -25,7 +25,7 @@
   "integrationDetailSensitiveNote": "Sensibel: Die Tools gehen nur an Provider ab der Stufe, die du für sensible Integrationen festlegst.",
   "integrationDetailSensitiveTitle": "Sensible Integrationen",
   "integrationDetailSetUpSearch": "Suchdienst einrichten",
-  "integrationDetailTapTool": "Tippe auf ein Tool, um „Immer nachfragen“ ein- oder auszuschalten.",
+  "integrationDetailTapTool": "Unter „Details“ legst du je Tool die Sicherheitsstufe fest (A bis D).",
   "integrationDetailTitle": "Integration",
   "integrationDetailVaultDaily": "Vault und Tagesnotizen",
   "integrationDetailViewMemory": "Gedächtnis ansehen",
@@ -120,5 +120,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "integrationDetailExternalNoAsk": "Außenwirkung · ohne Nachfrage (Stufe gelockert)"
 }

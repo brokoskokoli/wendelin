@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_tools/wendelin_tools.dart' show RiskPolicy;
 
 import '../../di/preference_models.dart';
 import '../../di/preferences.dart';
@@ -11,6 +12,7 @@ import '../../di/sensitivity.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import '../routes.dart';
+import 'security_level_picker.dart';
 import 'settings_page.dart';
 import 'settings_routes.dart';
 
@@ -105,24 +107,16 @@ class IntegrationDetailScreen extends ConsumerWidget {
     required void Function(ToolPrefs next) update,
   }) => SectionCard(
     children: [
-      for (final tool in integration.tools)
+      for (final tool in integration.tools) ...[
         SettingsRow(
           title: tool.name,
           mono: true,
           detail: riskText(
             context.l10n,
             tool.risk,
-            prefs.alwaysConfirm.contains(tool.name),
+            _levelOf(prefs, tool) == SecurityLevel.d,
             hasUndo: hasUndo,
           ),
-          onTap: tool.risk == RiskLevel.external
-              ? null
-              : () => update(
-                  prefs.withConfirm(
-                    tool.name,
-                    confirm: !prefs.alwaysConfirm.contains(tool.name),
-                  ),
-                ),
           trailing: WSwitch(
             value: !prefs.disabled.contains(tool.name),
             semanticLabel: tool.name,
@@ -130,8 +124,43 @@ class IntegrationDetailScreen extends ConsumerWidget {
                 update(prefs.withEnabled(tool.name, enabled: on)),
           ),
         ),
+        // The Home Assistant call tools take the level of the device.
+        if (!toolLevelPerDevice(tool.name))
+          _picker(context, tool, prefs, update),
+      ],
     ],
   );
+
+  /// The level that counts for [tool] (chosen, legacy "always confirm" =
+  /// D, else the default of its risk; anything invalid = D).
+  static SecurityLevel _levelOf(ToolPrefs prefs, Tool tool) =>
+      SecurityLevel.effective(
+        prefs.levelOf(tool.name),
+        RiskPolicy.defaultLevelFor(tool.risk),
+      );
+
+  Widget _picker(
+    BuildContext context,
+    Tool tool,
+    ToolPrefs prefs,
+    void Function(ToolPrefs next) update,
+  ) {
+    final base = RiskPolicy.defaultLevelFor(tool.risk);
+    final level = _levelOf(prefs, tool);
+    return SecurityLevelPicker(
+      idKey: tool.name,
+      name: tool.name,
+      level: level,
+      isDefault: prefs.levelOf(tool.name) == null,
+      // Loosening a tool with outside effect gets the hint once.
+      warnLevels: tool.risk == RiskLevel.external
+          ? const {SecurityLevel.a, SecurityLevel.b, SecurityLevel.c}
+          : const {},
+      warnMessage: context.l10n.levelWarnToolMessage,
+      onChanged: (l) =>
+          update(prefs.withLevel(tool.name, l == base ? null : l)),
+    );
+  }
 
   Widget _sensitiveCard(
     BuildContext context,
@@ -179,7 +208,10 @@ String riskText(
         : hasUndo
         ? l.integrationDetailWritesUndo
         : l.integrationDetailWritesNoUndo,
-  RiskLevel.external => l.integrationDetailExternalAsks,
+  RiskLevel.external =>
+    alwaysConfirm
+        ? l.integrationDetailExternalAsks
+        : l.integrationDetailExternalNoAsk,
 };
 
 /// Minimum privacy level for tools of sensitive integrations.
