@@ -1,6 +1,6 @@
 {
-  "ha__list_entities": false,
-  "ha__state": false,
-  "ha__call": false,
-  "ha__call_secure": false
+  "ha__list_entities": true,
+  "ha__state": true,
+  "ha__call": true,
+  "ha__call_secure": true
 }

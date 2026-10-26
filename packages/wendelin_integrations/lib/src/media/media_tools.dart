@@ -27,7 +27,8 @@ Future<MediaSnapshot?> _peek(MediaControlPort port) async {
 
 /// `media__now_playing` (read): app, title, position of the active player.
 /// Titles come from third-party apps, so the result is untrusted content.
-final class NowPlayingTool extends IntegrationTool {
+final class NowPlayingTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const NowPlayingTool(this.port);
 
@@ -92,7 +93,7 @@ final class NowPlayingTool extends IntegrationTool {
 /// Play and pause undo each other; skipping has no undo (there is no
 /// way back to the track that was skipped). The result holds no titles.
 final class MediaCommandTool extends IntegrationTool
-    implements TrustedContentSource, FixedConfirmationTool {
+    implements TrustedContentSource, FixedConfirmationTool, NoNetworkTarget {
   /// Creates the tool for [command].
   const MediaCommandTool(this.port, this.command);
 
@@ -194,7 +195,7 @@ final class MediaCommandTool extends IntegrationTool
 /// `media__seek` (write): relative (`seconds`, negative = back) or
 /// absolute (`position_seconds`). Undo jumps back to the old position.
 final class MediaSeekTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, NoNetworkTarget {
   /// Creates the tool.
   const MediaSeekTool(this.port);
 
@@ -301,7 +302,7 @@ final class MediaSeekTool extends IntegrationTool
 /// `media__open_audible` (write): opens the Audible app, optionally with a
 /// title search, only if it is installed.
 final class OpenAudibleTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, NoNetworkTarget {
   /// Creates the tool.
   const OpenAudibleTool(this.port, this.apps);
 

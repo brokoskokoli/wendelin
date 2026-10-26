@@ -50,7 +50,7 @@ void main() {
         'media__open_audible': RiskLevel.write,
       },
     );
-    expect(tool('media__now_playing'), isNot(isA<TrustedContentSource>()));
+    expect(tool('media__now_playing'), isA<TrustedContentSource>());
     expect(tool('media__pause'), isA<TrustedContentSource>());
   });
 

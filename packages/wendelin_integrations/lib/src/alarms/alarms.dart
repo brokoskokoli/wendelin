@@ -194,7 +194,7 @@ final class AlarmsIntegration implements Integration {
 
 /// `alarms__set_alarm` (write; undo only if the platform returns an id).
 final class SetAlarmTool extends IntegrationTool
-    implements TrustedContentSource, FixedConfirmationTool {
+    implements TrustedContentSource, FixedConfirmationTool, NoNetworkTarget {
   /// Creates the tool.
   const SetAlarmTool(this.port);
 
@@ -282,7 +282,7 @@ final class SetAlarmTool extends IntegrationTool
 
 /// `alarms__set_timer` (write; undo only if the platform returns an id).
 final class SetTimerTool extends IntegrationTool
-    implements TrustedContentSource, FixedConfirmationTool {
+    implements TrustedContentSource, FixedConfirmationTool, NoNetworkTarget {
   /// Creates the tool.
   const SetTimerTool(this.port);
 
@@ -351,7 +351,8 @@ final class SetTimerTool extends IntegrationTool
 }
 
 /// `alarms__list` (read; not supported on every platform).
-final class ListAlarmsTool extends IntegrationTool {
+final class ListAlarmsTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const ListAlarmsTool(this.port);
 

@@ -1,5 +1,5 @@
 {
-  "location__current": false,
-  "location__navigate_to": false,
-  "location__distance_to": false
+  "location__current": true,
+  "location__navigate_to": true,
+  "location__distance_to": true
 }

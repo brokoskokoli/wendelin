@@ -49,7 +49,8 @@ final class TodoistAddTool extends IntegrationTool
     implements
         TrustedContentSource,
         AuditArgumentsRedactor,
-        FixedConfirmationTool {
+        FixedConfirmationTool,
+        NoNetworkTarget {
   /// Creates the tool.
   const TodoistAddTool(this.session);
 
@@ -192,7 +193,8 @@ final class TodoistAddTool extends IntegrationTool
 }
 
 /// `todoist__list` (read).
-final class TodoistListTool extends IntegrationTool {
+final class TodoistListTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const TodoistListTool(this.session);
 
@@ -295,7 +297,11 @@ final class TodoistListTool extends IntegrationTool {
 
 /// `todoist__complete` (write; undo reopens the task).
 final class TodoistCompleteTool extends IntegrationTool
-    implements AuditArgumentsRedactor, FixedConfirmationTool {
+    implements
+        AuditArgumentsRedactor,
+        FixedConfirmationTool,
+        NoNetworkTarget,
+        TrustedContentSource {
   /// Creates the tool.
   const TodoistCompleteTool(this.session);
 

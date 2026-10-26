@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:http/http.dart' as http;
@@ -86,6 +87,7 @@ void main() {
     Uri? url,
     McpCacheStore? cache,
     McpCallObserver? onCall,
+    bool mayContainUntrusted = true,
   }) {
     final client = McpClient(
       config: McpServerConfig(
@@ -97,6 +99,7 @@ void main() {
         confirmAll: confirmAll,
         sensitive: sensitive,
         toolOverrides: overrides,
+        mayContainUntrustedContent: mayContainUntrusted,
       ),
       httpClient: httpClient,
       secrets: secrets ?? FakeMcpSecrets(),
@@ -292,8 +295,41 @@ void main() {
     final long = tools['note_add']!.describeForConfirmation({
       'text': 'y' * 500,
     });
-    expect(long.length, lessThan(140));
+    expect(long.length, lessThan(340));
     expect(long, endsWith('…'));
+  });
+
+  test('WP157: Haken „Kann unsichere Inhalte enthalten“ (Standard an, '
+      'Netzziel, nicht abschaltbar über die Datei)', () async {
+    for (final may in [true, false]) {
+      final tools = await integration(mayContainUntrusted: may).loadTools();
+      for (final t in tools) {
+        expect(t, isA<ContentTrustAware>());
+        expect((t as ContentTrustAware).mayContainUntrustedContent, may);
+        expect(t, isNot(isA<NoNetworkTarget>()), reason: 'Netzziel');
+      }
+    }
+    final defaults = McpServerConfig(
+      id: 'a',
+      name: 'A',
+      slug: 'a',
+      url: Uri.parse('https://mcp.example.org/'),
+      auth: const McpNoAuth(),
+    );
+    expect(defaults.mayContainUntrustedContent, isTrue);
+    expect(
+      defaults.toJson().containsKey('mayContainUntrustedContent'),
+      isFalse,
+    );
+    final off = defaults.copyWith(mayContainUntrustedContent: false);
+    final back = McpServerConfig.fromJson(
+      jsonDecode(jsonEncode(off.toJson())) as Map<String, Object?>,
+    );
+    expect(back.mayContainUntrustedContent, isFalse);
+    expect(back, off);
+    expect(back == defaults, isFalse);
+    final broken = off.toJson()..['mayContainUntrustedContent'] = 'nein';
+    expect(() => McpServerConfig.fromJson(broken), throwsFormatException);
   });
 
   test('Cache: Tools ohne Serverkontakt', () async {

@@ -272,7 +272,7 @@ final class McpIntegration implements Integration {
 ///
 /// No undo (`ToolOutcome.undo` stays `null`): the effect happens on the
 /// server and cannot be reverted by the app.
-final class McpTool implements Tool {
+final class McpTool implements Tool, ContentTrustAware {
   /// Creates the tool.
   McpTool({
     required this.integration,
@@ -294,6 +294,10 @@ final class McpTool implements Tool {
 
   @override
   final RiskLevel risk;
+
+  @override
+  bool get mayContainUntrustedContent =>
+      integration.config.mayContainUntrustedContent;
 
   /// Name on the server.
   String get mcpName => info.name;
@@ -347,7 +351,7 @@ final class McpTool implements Tool {
 
   @override
   String describeForConfirmation(Map<String, Object?> args) {
-    final shown = args.isEmpty ? '' : ' ${ellipsize(jsonEncode(args), 120)}';
+    final shown = args.isEmpty ? '' : ' ${ellipsize(jsonEncode(args), 300)}';
     return '${integration.config.name}: ${info.name}$shown';
   }
 

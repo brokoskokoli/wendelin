@@ -8,7 +8,7 @@ import 'markdown_list.dart';
 
 /// `lists__add_items` (write; undo removes exactly the added lines).
 final class AddItemsTool extends IntegrationTool
-    implements TrustedContentSource, FixedConfirmationTool {
+    implements TrustedContentSource, FixedConfirmationTool, NoNetworkTarget {
   /// Creates the tool.
   const AddItemsTool(this.env);
 
@@ -200,7 +200,7 @@ final class AddItemsTool extends IntegrationTool
 
 /// `lists__complete_item` (write; undo unchecks again).
 final class CompleteItemTool extends IntegrationTool
-    implements FixedConfirmationTool {
+    implements FixedConfirmationTool, NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const CompleteItemTool(this.env);
 
@@ -297,7 +297,8 @@ final class CompleteItemTool extends IntegrationTool
 
 /// `lists__remove_item` (write; undo puts the lines back at the same
 /// place).
-final class RemoveItemTool extends IntegrationTool {
+final class RemoveItemTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const RemoveItemTool(this.env);
 
@@ -420,7 +421,8 @@ final class RemoveItemTool extends IntegrationTool {
 }
 
 /// `lists__clear_completed` (external: always confirmed).
-final class ClearCompletedTool extends IntegrationTool {
+final class ClearCompletedTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const ClearCompletedTool(this.env);
 

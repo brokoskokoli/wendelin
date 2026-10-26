@@ -107,6 +107,8 @@
   "mcpDetailSignOutHint": "Vergisst die Tokens auf diesem Gerät",
   "mcpDetailTools": "Tools",
   "mcpDetailUnreachableLabel": "nicht erreichbar",
+  "mcpDetailUntrusted": "Kann unsichere Inhalte enthalten",
+  "mcpDetailUntrustedHint": "Antworten können Texte Dritter enthalten. Danach fragt Wendelin vor Aufrufen mit Netzziel nach. Nur für eigene Dienste mit bekannten Daten ausschalten.",
   "mcpDetailValueFor": "Wert für {header}",
   "@mcpDetailValueFor": {
     "placeholders": {

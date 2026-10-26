@@ -880,6 +880,8 @@
   "httpRunOnlyWrite": "Nur bei POST/PUT/PATCH mit Stufe write",
   "httpRunSensitiveDetail": "Nur an Provider ab der Stufe für sensible Integrationen",
   "httpRunTimeout": "Zeitlimit in Sekunden",
+  "httpRunUntrusted": "Kann unsichere Inhalte enthalten",
+  "httpRunUntrustedDetail": "Antworten können Texte Dritter enthalten. Danach fragt Wendelin vor Aufrufen mit Netzziel nach. Nur für eigene Dienste mit bekannten Daten ausschalten.",
   "httpSrcAddHeader": "+ Header",
   "httpSrcBodyHelp": "{example} wird typgerecht ersetzt; leer = kein Body",
   "@httpSrcBodyHelp": {
@@ -1496,6 +1498,8 @@
   "mcpDetailSignOutHint": "Vergisst die Tokens auf diesem Gerät",
   "mcpDetailTools": "Tools",
   "mcpDetailUnreachableLabel": "nicht erreichbar",
+  "mcpDetailUntrusted": "Kann unsichere Inhalte enthalten",
+  "mcpDetailUntrustedHint": "Antworten können Texte Dritter enthalten. Danach fragt Wendelin vor Aufrufen mit Netzziel nach. Nur für eigene Dienste mit bekannten Daten ausschalten.",
   "mcpDetailValueFor": "Wert für {header}",
   "@mcpDetailValueFor": {
     "placeholders": {

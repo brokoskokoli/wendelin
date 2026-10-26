@@ -51,6 +51,8 @@
   "mcpDetailSignOutHint": "Oubliez les jetons sur cet appareil",
   "mcpDetailTools": "Outils",
   "mcpDetailUnreachableLabel": "injoignable",
+  "mcpDetailUntrusted": "Peut contenir du contenu non sûr",
+  "mcpDetailUntrustedHint": "Les réponses peuvent contenir des textes de tiers. Wendelin demande alors confirmation avant les appels vers une cible réseau. Ne désactiver que pour ses propres services aux données connues.",
   "mcpDetailValueFor": "Valeur pour {header}",
   "mcpDetailValueNeverShown": "La valeur ne sera plus jamais affichée",
   "mcpLabelsAlwaysAsks": "demande toujours",

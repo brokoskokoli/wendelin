@@ -76,13 +76,24 @@ final class PromptSection {
 }
 
 /// Whether a result of the tool [name] is trusted: only a successful result
-/// of a tool marked [TrustedContentSource]. Fail-closed: unknown tools
-/// (`lookup == null`) and every error text count as untrusted.
+/// of a tool marked [TrustedContentSource], or of a [ContentTrustAware] tool
+/// the user ticked as safe. Fail-closed: unknown tools (`lookup == null`)
+/// and every error text count as untrusted (foreign content, ADR 0023).
 bool isTrustedResult(
   ToolCatalog catalog,
   String name, {
   bool isError = false,
-}) => !isError && catalog.lookup(name) is TrustedContentSource;
+  List<ContentBlock> content = const [],
+}) {
+  if (isError) return false;
+  final tool = catalog.lookup(name);
+  if (tool is ResultTrustAware) {
+    return (tool as ResultTrustAware).isResultTrusted(content);
+  }
+  if (tool is TrustedContentSource) return true;
+  return tool is ContentTrustAware &&
+      !(tool as ContentTrustAware).mayContainUntrustedContent;
+}
 
 /// Whether [messages] hold a tool result that is not trusted (results
 /// without a matching call count as untrusted).
@@ -97,7 +108,12 @@ bool hasUntrustedResult(ToolCatalog catalog, List<Message> messages) {
       if (b is ToolResultBlock) {
         final name = names[b.callId];
         if (name == null ||
-            !isTrustedResult(catalog, name, isError: b.isError)) {
+            !isTrustedResult(
+              catalog,
+              name,
+              isError: b.isError,
+              content: b.content,
+            )) {
           return true;
         }
       }

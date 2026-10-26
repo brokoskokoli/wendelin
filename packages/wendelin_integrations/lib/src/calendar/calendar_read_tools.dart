@@ -8,7 +8,8 @@ import 'calendar_tools.dart';
 import 'free_slots.dart';
 
 /// `calendar__list_calendars` (read).
-final class ListCalendarsTool extends IntegrationTool {
+final class ListCalendarsTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const ListCalendarsTool(this.env);
 
@@ -58,7 +59,8 @@ final class ListCalendarsTool extends IntegrationTool {
 }
 
 /// `calendar__list_events` (read).
-final class ListEventsTool extends IntegrationTool {
+final class ListEventsTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const ListEventsTool(this.env);
 
@@ -155,7 +157,8 @@ final class ListEventsTool extends IntegrationTool {
 
 /// `calendar__find_free_slots` (read): free time between events within a
 /// daily window, see [findFreeSlots].
-final class FindFreeSlotsTool extends IntegrationTool {
+final class FindFreeSlotsTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const FindFreeSlotsTool(this.env);
 

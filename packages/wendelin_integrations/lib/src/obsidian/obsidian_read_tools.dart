@@ -12,7 +12,8 @@ import 'obsidian_tool_support.dart';
 import 'vault_path.dart';
 
 /// `obsidian__search_notes` (read).
-final class SearchNotesTool extends IntegrationTool {
+final class SearchNotesTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const SearchNotesTool(this.env);
 
@@ -76,7 +77,8 @@ final class SearchNotesTool extends IntegrationTool {
 
 /// `obsidian__read_note` (read): content marked as data, optionally one
 /// section.
-final class ReadNoteTool extends IntegrationTool {
+final class ReadNoteTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const ReadNoteTool(this.env);
 
@@ -166,7 +168,8 @@ final class ReadNoteTool extends IntegrationTool {
 }
 
 /// `obsidian__list_folder` (read).
-final class ListFolderTool extends IntegrationTool {
+final class ListFolderTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const ListFolderTool(this.env);
 
@@ -241,7 +244,8 @@ final class ListFolderTool extends IntegrationTool {
 
 /// `obsidian__open_note` (write): opens the note in the Obsidian app via
 /// an `obsidian://open` link.
-final class OpenNoteTool extends IntegrationTool {
+final class OpenNoteTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const OpenNoteTool(this.env);
 

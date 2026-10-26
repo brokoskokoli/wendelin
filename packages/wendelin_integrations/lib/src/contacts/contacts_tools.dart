@@ -14,7 +14,8 @@ const maxSmsChars = 1000;
 /// matches (or several numbers of one contact) are reported as a choice
 /// the model must put to the user. The names come from third parties, so
 /// the result is untrusted content.
-final class ContactsFindTool extends IntegrationTool {
+final class ContactsFindTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const ContactsFindTool(this.finder);
 
@@ -109,7 +110,9 @@ final class SmsComposeTool extends IntegrationTool
     implements
         ConfirmationPreparer,
         AuditArgumentsRedactor,
-        FixedConfirmationTool {
+        FixedConfirmationTool,
+        NoNetworkTarget,
+        TrustedContentSource {
   /// Creates the tool.
   const SmsComposeTool(this.finder, this.phone, this.edits);
 
@@ -221,7 +224,9 @@ final class PhoneCallTool extends IntegrationTool
     implements
         ConfirmationPreparer,
         AuditArgumentsRedactor,
-        FixedConfirmationTool {
+        FixedConfirmationTool,
+        NoNetworkTarget,
+        TrustedContentSource {
   /// Creates the tool.
   const PhoneCallTool(this.finder, this.phone);
 

@@ -64,7 +64,8 @@ Map<String, Object?> haStateJson(HaEntity e, HaState s, {bool full = true}) {
 }
 
 /// `ha__list_entities` (read): the approved devices with name and room.
-final class HaListEntitiesTool extends IntegrationTool {
+final class HaListEntitiesTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const HaListEntitiesTool(this.ctx);
 
@@ -127,7 +128,8 @@ final class HaListEntitiesTool extends IntegrationTool {
 }
 
 /// `ha__state` (read): state of one device, or of several.
-final class HaStateTool extends IntegrationTool {
+final class HaStateTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const HaStateTool(this.ctx);
 

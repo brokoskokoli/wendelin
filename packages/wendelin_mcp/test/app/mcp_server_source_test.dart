@@ -295,6 +295,21 @@ void main() {
     await expectLater(source.reload('unbekannt'), throwsArgumentError);
   });
 
+  test(
+    'Import setzt den Haken „kann Fremdes enthalten“ zurück auf an',
+    () async {
+      await source.add(draft());
+      final data =
+          jsonDecode(source.exportJson(enabled: (_) => true))!
+              as Map<String, Object?>;
+      for (final e in data['servers']! as List) {
+        (e as Map<String, Object?>)['mayContainUntrustedContent'] = false;
+      }
+      final added = await source.importJson(jsonEncode(data));
+      expect(added.single.config.mayContainUntrustedContent, isTrue);
+    },
+  );
+
   test('Export ohne Secrets, Import mit neuen Ids, Referenzen und '
       'ausgeschaltet', () async {
     server.auth = FakeAuthMode.bearer;

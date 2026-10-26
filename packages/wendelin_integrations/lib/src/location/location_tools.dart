@@ -84,7 +84,8 @@ TravelMode readMode(ToolArgs args) {
 
 /// `location__current` (read): where the user is, as a place name if the
 /// device knows one, else with rounded coordinates.
-final class LocationCurrentTool extends IntegrationTool {
+final class LocationCurrentTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const LocationCurrentTool(this.port);
 
@@ -138,7 +139,8 @@ final class LocationCurrentTool extends IntegrationTool {
 
 /// `location__navigate_to` (write): starts navigation in Google Maps if it
 /// is installed, else in any map app through a `geo:` intent.
-final class LocationNavigateToTool extends IntegrationTool {
+final class LocationNavigateToTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const LocationNavigateToTool(this.launcher, this.apps);
 
@@ -197,7 +199,8 @@ final class LocationNavigateToTool extends IntegrationTool {
 
 /// `location__distance_to` (read): straight-line distance from the current
 /// position to a place name or to coordinates.
-final class LocationDistanceToTool extends IntegrationTool {
+final class LocationDistanceToTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool; without [geocoder] only coordinates work.
   const LocationDistanceToTool(this.port, this.geocoder);
 

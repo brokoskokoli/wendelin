@@ -28,6 +28,7 @@ import 'preferences.dart';
 import 'provider_config.dart';
 import 'routing.dart';
 import 'sensitivity.dart';
+import 'session_lock_store.dart';
 import 'session_manager.dart';
 import 'voice_providers.dart' show voiceSettingsProvider;
 
@@ -39,7 +40,9 @@ bool toolLevelPerDevice(String tool) =>
 /// Risk policy with the user's per-tool security levels (WP154, ADR 0022):
 /// the level replaces the old "always confirm" and may also loosen a tool.
 final riskPolicyProvider = Provider<RiskPolicy>((ref) {
-  final policy = RiskPolicy();
+  final policy = RiskPolicy(
+    lockStore: SettingsSessionLockStore(ref.watch(storageProvider).settings),
+  );
   var known = <String>{};
   void apply(ToolPrefs prefs) {
     // The call tools of Home Assistant only keep the legacy "always
@@ -103,9 +106,14 @@ final sessionManagerProvider = Provider<SessionManager>((ref) {
     conversations: ref.watch(storageProvider).conversations,
     clock: ref.watch(clockProvider),
     origin: ref.watch(sessionOriginProvider),
+    absence: ref.watch(sessionOriginProvider) == SessionOrigin.app
+        ? SettingsAbsenceStamp(ref.watch(storageProvider).settings)
+        : null,
     onSessionEnd: (id) {
       // „Unterhaltung privat“ ends with its session.
       ref.read(agentControllerProvider.notifier).sessionEnded(id);
+      // A red receipt locked its conversation; it ends with it (WP157).
+      ref.read(riskPolicyProvider).endSession(id);
       // Read lazily: the registry may have been rebuilt meanwhile.
       ref.read(toolRegistryProvider).endSession(id);
       final integrations = ref.read(integrationsProvider);
