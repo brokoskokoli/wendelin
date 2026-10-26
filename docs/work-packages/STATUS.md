@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete, solange der Maintainer am Rechner ist (
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-26 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP151; Test-APK v0.1.0-rc7; als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-26 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP151, WP157; Test-APK v0.1.0-rc7; als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -103,7 +103,7 @@ Stand: 2026-10-26 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP151; Tes
 | WP154 | Home Assistant: Sicherheitsstufe je Gerät (A–D) | gemergt ffed7c83 | Stufen A–D für jedes Werkzeug und HA-Gerät, Gesperrt-Pfad über Policy/Executor (Projekt-Review Befund 1 erledigt), Stimme (B), ADR 0022, K123 offen; Folgepunkte: Gerätetest mit echten Stimmen/Wiedergabe/Kaltstart (`docs/testing/m5/wp154.md`), Goldens zeigen Material-Icons als Kästchen (Schrift in flutter_test_config nicht geladen), Undo nach gesperrtem Lauf im Audit unter Sitzung „locked“ |
 | WP155 | Entwicklermodus: Weckwort-Archiv für Training | geplant | Wunsch Maintainer 2026-10-26: alle Weckwort-/Barge-in-Fälle inkl. verworfen und knapp verfehlt dauerhaft sammeln (eigenes Verzeichnis, index.jsonl); Prüfseite später; nach WP151 |
 | WP156 | „Hey Wendelin“ konsequent in Texten und Doku | geplant | Entscheidung Maintainer 2026-10-26 (K115-Nachtrag): Anzeige überall „Hey Wendelin“, Erkennung vorerst beide Wörter; nach WP151 |
-| WP157 | Sicherheit: Sperre nach roter Quittung je Unterhaltung, Netz-Lesewerkzeuge nach fremden Inhalten | geplant | Projekt-Review 2026-10-26 (Befunde 2, 5), Entscheidung Maintainer: Sperre echt, Rückfrage (K122); nach WP154 |
+| WP157 | Sicherheit: Sperre nach roter Quittung je Unterhaltung, Netz-Lesewerkzeuge nach fremden Inhalten | in Arbeit | Projekt-Review 2026-10-26 (Befunde 2, 5), Entscheidung Maintainer: Sperre echt, Rückfrage (K122); nach WP154 |
 | WP158 | Robustheit: Fehler beim Mikrofonstart, Stationskanal | geplant | Projekt-Review 2026-10-26 (Befunde 6, 7); nicht parallel zu WP153 |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
