@@ -101,6 +101,7 @@ Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP151, WP1
 | WP152 | Hauptmenü: MCP-Server und HTTP-Tools nur unter Integrationen | gemergt (24c76bde) | „+ HTTP-Tool“ öffnet jetzt die Liste (Beschriftung ggf. „HTTP-Tools“); `AppRoutes.httpToolNew` ohne Aufrufer (Soll) |
 | WP153 | Gesperrtes Gerät: nach dem Entsperren sauber weitermachen | geplant | Gerätebefund rc5: nach Entsperren keine Anzeige, Fenster zu; Analyse zuerst, nach WP148 |
 | WP154 | Home Assistant: Sicherheitsstufe je Gerät (A–D) | in Arbeit | Wunsch Maintainer 2026-10-26: Stufen A–D für jedes Werkzeug (HA je Gerät), Standard = Empfehlung (confirm/external = D), frei überschreibbar, kein globaler Schalter, gesperrt mit aktuellem Anbieter/Datenschutzstufe; enthält WP92c; weicht von K85/K92 ab (K folgt) |
+| WP155 | Entwicklermodus: Weckwort-Archiv für Training | geplant | Wunsch Maintainer 2026-10-26: alle Weckwort-/Barge-in-Fälle inkl. verworfen und knapp verfehlt dauerhaft sammeln (eigenes Verzeichnis, index.jsonl); Prüfseite später; nach WP151 |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
