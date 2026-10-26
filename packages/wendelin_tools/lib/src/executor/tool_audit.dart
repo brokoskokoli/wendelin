@@ -58,6 +58,7 @@ final class ToolAuditEntry {
     required this.decision,
     required this.status,
     required this.duration,
+    this.whileLocked = false,
   });
 
   /// Session of the run.
@@ -80,6 +81,9 @@ final class ToolAuditEntry {
 
   /// Time from start to finish (including waiting for confirmation).
   final Duration duration;
+
+  /// The call came from a locked device (WP154 L2).
+  final bool whileLocked;
 
   @override
   String toString() =>

@@ -138,7 +138,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
   static SecurityLevel _levelOf(ToolPrefs prefs, Tool tool) =>
       SecurityLevel.effective(
         prefs.levelOf(tool.name),
-        RiskPolicy.defaultLevelFor(tool.risk),
+        RiskPolicy.defaultLevelOf(tool),
       );
 
   /// The old "always confirm" of a Home Assistant call tool: it still holds
@@ -171,7 +171,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
     ToolPrefs prefs,
     void Function(ToolPrefs next) update,
   ) {
-    final base = RiskPolicy.defaultLevelFor(tool.risk);
+    final base = RiskPolicy.defaultLevelOf(tool);
     final level = _levelOf(prefs, tool);
     return SecurityLevelPicker(
       idKey: tool.name,

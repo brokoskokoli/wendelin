@@ -270,7 +270,7 @@ void main() {
         final gate = LockGateAgentRun(
           inner: _Spy(() => innerCalled = true),
           locked: () => true,
-          runCommand: (_, _) async => true,
+          runCommand: (_, _) async => LockedCommandResult.done,
           onRefused: (t, _) => refused.add(t),
           trigger: () => 'assistant',
         );

@@ -124,7 +124,7 @@ final class ToolPrefs {
   final Set<String> alwaysConfirm;
 
   /// The security level (`a`..`d`) the user chose per tool (WP154, ADR 0022);
-  /// a tool without entry has its default (`RiskPolicy.defaultLevelFor`).
+  /// a tool without entry has its default (`RiskPolicy.defaultLevelOf`).
   /// Kept as text: anything else than `a`..`d` means D (fail-closed).
   final Map<String, String> levels;
 

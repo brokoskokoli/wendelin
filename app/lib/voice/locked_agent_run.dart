@@ -2,10 +2,14 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_tools/wendelin_tools.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../agent/agent_controller.dart';
+import '../di/locked_scope.dart';
 import '../di/preferences.dart';
 import '../di/providers.dart';
+import 'controller_agent_run.dart';
 import 'voice_log.dart';
 
 /// Whether the device is locked while the assistant overlay listens
@@ -82,8 +86,22 @@ final class LockedPending extends Notifier<LockedPendingRequest?> {
   }
 }
 
-/// Runs a locally recognized [LockedCommand]; returns whether it worked.
-typedef LockedCommandRunner = Future<bool> Function(
+/// How a locally recognized [LockedCommand] ended.
+enum LockedCommandResult {
+  /// The tool ran.
+  done,
+
+  /// The tool ran but failed (no LED, camera busy, timeout) or is not
+  /// reachable.
+  failed,
+
+  /// The policy needs the unlocked device (the level of the tool, WP154):
+  /// nothing ran.
+  needsUnlock,
+}
+
+/// Runs a locally recognized [LockedCommand] through policy and executor.
+typedef LockedCommandRunner = Future<LockedCommandResult> Function(
   LockedCommand command,
   String trigger,
 );
@@ -109,7 +127,12 @@ String lockedToolName(LockedCommand c) => switch (c) {
 
 /// Runs [LockedCommand]s as tools without a model and without the
 /// conversation: audit entry marked `whileLocked`, no history, no undo
-/// card. Only tools of integrations with `allowedWhileLocked` are reachable.
+/// card. Only tools of integrations with `allowedWhileLocked` are reachable,
+/// and like every call the tool goes through the **policy and the executor**
+/// (WP154 L2): the level of the tool decides locked (the flashlight is A by
+/// default), a tool the user raised to B–D, a confirm-only mark or a
+/// disabled tool does not run, and a tool that hangs ends at the executor's
+/// timeout.
 final lockedCommandRunnerProvider = Provider<LockedCommandRunner>((ref) {
   return (command, trigger) async {
     final name = lockedToolName(command);
@@ -126,28 +149,68 @@ final lockedCommandRunnerProvider = Provider<LockedCommandRunner>((ref) {
         if (t.name == name && !prefs.disabled.contains(name)) tool = t;
       }
     }
-    var ok = false;
-    if (tool != null) {
-      final device = ref.read(deviceInfoProvider);
-      try {
-        final outcome = await tool.execute(
-          const <String, Object?>{},
-          ToolContext(
-            sessionId: 'locked',
-            clock: ref.read(clockProvider),
-            locale: device.locale,
-            timeZone: device.timeZone,
-          ),
-        );
-        ok = !outcome.isError;
-      } on Object {
-        ok = false;
-      }
+    if (tool == null) {
+      audit.lockedToolCall(tool: name, trigger: trigger, ok: false);
+      return LockedCommandResult.failed;
     }
-    audit.lockedToolCall(tool: name, trigger: trigger, ok: ok);
-    return ok;
+    final device = ref.read(deviceInfoProvider);
+    final executor = ToolExecutor(
+      catalog: _OneTool(tool),
+      policy: ref.read(riskPolicyProvider),
+      access: AccessContext.lockedUnknownVoice,
+    );
+    var result = LockedCommandResult.failed;
+    try {
+      final events = executor.invokeAll(
+        [ToolCallBlock(id: 'locked', name: name, argumentsJson: '{}')],
+        ToolContext(
+          sessionId: 'locked',
+          clock: ref.read(clockProvider),
+          locale: device.locale,
+          timeZone: device.timeZone,
+        ),
+      );
+      await for (final event in events) {
+        switch (event) {
+          // Never asked while locked; fail-closed if it ever is.
+          case ConfirmationNeeded():
+            event.respond(false);
+          case ToolFinished(:final outcome):
+            result = !outcome.isError
+                ? LockedCommandResult.done
+                : outcome.summary == ToolExecutor.unlockSummary
+                ? LockedCommandResult.needsUnlock
+                : LockedCommandResult.failed;
+          case ToolStarted():
+        }
+      }
+    } on Object {
+      result = LockedCommandResult.failed;
+    }
+    // A refusal is logged by the gate ([LockGateAgentRun.onRefused]).
+    if (result != LockedCommandResult.needsUnlock) {
+      audit.lockedToolCall(
+        tool: name,
+        trigger: trigger,
+        ok: result == LockedCommandResult.done,
+      );
+    }
+    return result;
   };
 });
+
+/// The single tool of a locked command as a catalog.
+final class _OneTool implements ToolCatalog {
+  const _OneTool(this.tool);
+
+  final Tool tool;
+
+  @override
+  List<ToolSpec> activeSpecs() => [tool.spec];
+
+  @override
+  Tool? lookup(String name) => name == tool.name ? tool : null;
+}
 
 /// Fixed sentences of the lock screen (no content, three languages).
 abstract final class LockedTexts {
@@ -178,11 +241,15 @@ abstract final class LockedTexts {
 }
 
 /// The agent run of the voice pipeline with the lock gate in front
-/// (WP53): while [locked] is `true` the transcript never reaches the
-/// [inner] agent (no model, no tools, no history). A flashlight command
-/// ([matchLockedCommand]) runs via [runCommand]; everything else only gets
-/// the fixed „unlock“ sentence, the utterance is dropped. Any trigger
-/// (`TriggerKind.assistant` now, the wake word later) takes the same path.
+/// (WP53, WP154 L2): while [locked] is `true` the transcript reaches the
+/// [inner] agent never. A flashlight command ([matchLockedCommand]) runs via
+/// [runCommand] (policy and executor, no model). Anything else runs the
+/// model only if [modelRun] offers a run (at least one tool or Home
+/// Assistant device is allowed locked, [LockedScope]) and then only with
+/// those tools; otherwise it only gets the fixed „unlock“ sentence and the
+/// utterance is remembered 30 s ([onRefused], K92). A tool call the policy
+/// refuses („Entsperren nötig“) remembers it the same way. Any trigger
+/// (`TriggerKind.assistant`, the wake word) takes the same path.
 final class LockGateAgentRun implements AgentRun {
   /// Creates the gate.
   LockGateAgentRun({
@@ -191,6 +258,7 @@ final class LockGateAgentRun implements AgentRun {
     required this.runCommand,
     required this.onRefused,
     required this.trigger,
+    this.modelRun,
     this.log,
   });
 
@@ -208,11 +276,18 @@ final class LockGateAgentRun implements AgentRun {
   /// (WP114; memory only).
   final void Function(String trigger, UserInput input) onRefused;
 
+  /// The run for a request on a locked device in [access] (the voice comes
+  /// with WP157), or `null` if nothing beyond the local commands is allowed.
+  /// `null` here = never a model while locked (tests, K85 behaviour).
+  final Future<AgentRun?> Function(AccessContext access)? modelRun;
+
   /// Diagnostics without any content (`locked-cmd …`).
   final void Function(String line)? log;
 
   /// Name of the trigger that started the request (audit).
   final String Function() trigger;
+
+  AgentRun? _lockedRun;
 
   @override
   Stream<AgentEvent> run(UserInput input) {
@@ -222,20 +297,51 @@ final class LockGateAgentRun implements AgentRun {
 
   Stream<AgentEvent> _locked(UserInput input) async* {
     final command = matchLockedCommand(input.text);
-    final String say;
     log?.call('locked-cmd match=${command?.name ?? 'none'}');
-    if (command == null) {
-      onRefused(trigger(), input);
-      say = LockedTexts.unlock(input.language);
-    } else {
-      final ok = await runCommand(command, trigger());
-      say = ok
-          ? LockedTexts.flashlight(
-              input.language,
-              on: command == LockedCommand.flashlightOn,
-            )
-          : LockedTexts.failed(input.language);
+    if (command != null) {
+      final result = await runCommand(command, trigger());
+      if (result == LockedCommandResult.needsUnlock) {
+        onRefused(trigger(), input);
+      }
+      yield* _say(switch (result) {
+        LockedCommandResult.done => LockedTexts.flashlight(
+          input.language,
+          on: command == LockedCommand.flashlightOn,
+        ),
+        LockedCommandResult.needsUnlock => LockedTexts.unlock(input.language),
+        LockedCommandResult.failed => LockedTexts.failed(input.language),
+      });
+      return;
     }
+    // Voice recognition is WP157: until then the voice is unknown.
+    const access = AccessContext.lockedUnknownVoice;
+    AgentRun? model;
+    try {
+      model = await modelRun?.call(access);
+    } on Object {
+      model = null; // fail-closed: refused as before
+    }
+    log?.call('locked-model run=${model != null}');
+    if (model == null) {
+      onRefused(trigger(), input);
+      yield* _say(LockedTexts.unlock(input.language));
+      return;
+    }
+    _lockedRun = model;
+    var remembered = false;
+    await for (final event in model.run(input)) {
+      // A call the policy turned down: the request waits for the unlock.
+      if (!remembered &&
+          event is ToolCallFinished &&
+          event.outcome.summary == ToolExecutor.unlockSummary) {
+        remembered = true;
+        onRefused(trigger(), input);
+      }
+      yield event;
+    }
+  }
+
+  Stream<AgentEvent> _say(String say) async* {
     yield AgentTextDelta(say);
     yield AgentDone(finalText: say, stopReason: StopReason.endTurn);
   }
@@ -244,6 +350,7 @@ final class LockGateAgentRun implements AgentRun {
   void cancel() {
     // Always: the lock state may have changed since the run started.
     inner.cancel();
+    _lockedRun?.cancel();
   }
 }
 
@@ -258,6 +365,15 @@ LockGateAgentRun lockGateFor(
   inner: inner,
   locked: () => ref.read(lockedModeProvider),
   runCommand: (c, t) => ref.read(lockedCommandRunnerProvider)(c, t),
+  modelRun: (access) async {
+    final scope = await ref.read(lockedScopeProvider)(access);
+    if (scope == null) return null;
+    return ControllerAgentRun(
+      ref.read(agentControllerProvider.notifier),
+      trigger: trigger,
+      locked: scope,
+    );
+  },
   onRefused: (t, input) {
     ref.read(auditRecorderProvider).lockedRefused(trigger: t);
     ref.read(lockedPendingProvider.notifier).keep(input.text);

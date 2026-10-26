@@ -11,6 +11,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 import '../di/attestation_hub.dart';
 import '../di/attestation_providers.dart';
 import '../di/audit_recorder.dart';
+import '../di/locked_scope.dart';
 import '../di/preferences.dart';
 import '../di/provider_config.dart';
 import '../di/providers.dart';
@@ -230,8 +231,14 @@ final class AgentController extends Notifier<ConversationState> {
   /// agent events of this request; the stream ends after `AgentDone` or
   /// `AgentFailed`. [trigger] names what started it (audit log, e.g.
   /// `assistant`). If the request cannot start (busy, no provider), the
-  /// stream holds a single `AgentFailed`.
-  Stream<AgentEvent> submit(UserInput input, {String? trigger}) {
+  /// stream holds a single `AgentFailed`. [locked] (WP154 L2) is the scope
+  /// of a request on a locked device: only its tools, nothing stored, the
+  /// wording not in the audit log.
+  Stream<AgentEvent> submit(
+    UserInput input, {
+    String? trigger,
+    LockedScope? locked,
+  }) {
     final out = StreamController<AgentEvent>();
     final text = input.text.trim();
     if (text.isEmpty || state.running) {
@@ -255,7 +262,7 @@ final class AgentController extends Notifier<ConversationState> {
         ..close();
       return out.stream;
     }
-    unawaited(_start(input, trigger: trigger, out: out));
+    unawaited(_start(input, trigger: trigger, out: out, locked: locked));
     return out.stream;
   }
 
@@ -263,6 +270,7 @@ final class AgentController extends Notifier<ConversationState> {
     UserInput input, {
     required String? trigger,
     required StreamController<AgentEvent>? out,
+    LockedScope? locked,
   }) async {
     final trimmed = input.text.trim();
     // Corrected note names only count for their spoken request (WP33, B8).
@@ -331,10 +339,15 @@ final class AgentController extends Notifier<ConversationState> {
       interfaceLanguage: uiTexts(ref).localeName,
       requestEscalation: input.requestEscalation,
     );
-    _audit.request(sessionId, request, trigger: trigger);
+    _audit.request(
+      sessionId,
+      request,
+      trigger: trigger,
+      whileLocked: locked != null,
+    );
     final run = ref
         .read(agentFactoryProvider)
-        .create(scoped, sessionId, person: scope);
+        .create(scoped, sessionId, person: scope, locked: locked);
     _run = run;
     _events = run
         .run(request)

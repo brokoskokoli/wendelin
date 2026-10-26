@@ -121,6 +121,7 @@ final class ContextBuilder {
     required this.catalog,
     this.memory,
     this.history,
+    this.access = AccessContext.unlocked,
   });
 
   /// Persona and limits.
@@ -140,6 +141,9 @@ final class ContextBuilder {
 
   /// Session history; `null` = no history.
   final HistoryProvider? history;
+
+  /// Lock state of the request, given to the prompt sections (WP154 L2).
+  final AccessContext access;
 
   /// Builds the context for [input].
   Future<AgentContext> build(UserInput input) async {
@@ -177,7 +181,10 @@ final class ContextBuilder {
       final tool = catalog.lookup(spec.name);
       if (tool is! PromptContributor) continue;
       try {
-        final section = await (tool as PromptContributor).promptSection(text);
+        final section = await (tool as PromptContributor).promptSection(
+          text,
+          access: access,
+        );
         if (section != null && section.trim().isNotEmpty) {
           out.add(PromptSection(spec.name, section.trim()));
         }

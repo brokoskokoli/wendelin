@@ -8,6 +8,7 @@ import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_state.dart';
 import 'package:wendelin/di/agent_factory.dart';
 import 'package:wendelin/di/integration_specs.dart';
+import 'package:wendelin/di/locked_scope.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/session_manager.dart';
@@ -815,6 +816,7 @@ final class _BrokenFactory implements AgentRunFactory {
     ProviderConfig providers,
     String sessionId, {
     PersonScope person = PersonScope.standard,
+    LockedScope? locked,
   }) => _BrokenRun();
 }
 

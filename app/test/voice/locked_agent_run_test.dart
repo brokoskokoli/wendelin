@@ -21,7 +21,7 @@ void main() {
       final gate = LockGateAgentRun(
         inner: inner,
         locked: () => locked,
-        runCommand: (_, _) async => true,
+        runCommand: (_, _) async => LockedCommandResult.done,
         onRefused: (_, _) {},
         trigger: () => 'assistant',
       );

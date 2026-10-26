@@ -204,6 +204,11 @@ abstract base class HaCallTool extends IntegrationTool {
   Future<ToolOutcome> run(ToolArgs args, ToolContext c) async {
     final query = args.requireString('entity');
     final service = args.requireString('service');
+    // Locked: nobody can answer a confirmation card, so only a device the
+    // table allows for this context runs, and only through `ha__call`.
+    if (c.access.locked && handles != LevelAccess.allowed) {
+      return _unlock(query);
+    }
     final e = await ctx.resolve(query);
     // A scene is as critical as its members: look at them before choosing
     // the tool (K57).
@@ -215,6 +220,8 @@ abstract base class HaCallTool extends IntegrationTool {
       e,
       state: prior,
       criticalIds: e.domain == 'scene' ? await ctx.confirmIds() : const {},
+      locked: c.access.locked,
+      speakerRecognized: c.access.speakerRecognized,
     );
     final services = haAllServices[e.domain];
     if (services == null) {
@@ -223,12 +230,7 @@ abstract base class HaCallTool extends IntegrationTool {
         summary: 'Falsches Tool',
       );
     }
-    if (access == LevelAccess.unlock) {
-      return ToolOutcome.error(
-        '„${e.name}“ ist nur bei entsperrtem Gerät steuerbar.',
-        summary: 'Entsperren nötig',
-      );
-    }
+    if (access == LevelAccess.unlock) return _unlock(e.name);
     if (!accepts(access, e.domain)) {
       return ToolOutcome.error(
         '„${e.name}“ (${e.domain}) wird mit $otherTool gesteuert.',
@@ -276,6 +278,12 @@ abstract base class HaCallTool extends IntegrationTool {
       fixed: _fixed(e, service, data),
     );
   }
+
+  static ToolOutcome _unlock(String device) => ToolOutcome.error(
+    '„$device“ ist nur bei entsperrtem Gerät steuerbar. Sag dem Nutzer kurz, '
+    'dass er das Telefon entsperren soll.',
+    summary: 'Entsperren nötig',
+  );
 
   /// The fixed confirmation of a call that ran (WP122, WP135 C), built from
   /// the entity and the validated service data Home Assistant accepted;
@@ -362,7 +370,7 @@ abstract base class HaCallTool extends IntegrationTool {
 /// `ha__call` (write): light, switch, scene, media player, climate. Runs
 /// without a question and offers undo to the previous state.
 final class HaCallDeviceTool extends HaCallTool
-    implements FixedConfirmationTool, PromptContributor {
+    implements FixedConfirmationTool, PromptContributor, LevelPerDeviceTool {
   /// Creates the tool.
   const HaCallDeviceTool(super.ctx);
 
@@ -393,9 +401,12 @@ final class HaCallDeviceTool extends HaCallTool
   };
 
   @override
-  Future<String?> promptSection(String requestText) async {
+  Future<String?> promptSection(
+    String requestText, {
+    AccessContext access = AccessContext.unlocked,
+  }) async {
     try {
-      return await haPromptSection(ctx, requestText);
+      return await haPromptSection(ctx, requestText, access: access);
     } on Object {
       return null;
     }

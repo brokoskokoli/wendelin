@@ -112,6 +112,31 @@ final class HaIntegration implements Integration {
     }
   }
 
+  /// Whether at least one approved device may be controlled in [access]
+  /// (WP154 L2): the locked path then lets the model run with `ha__call`. The
+  /// stored data decide (no live state): fail-closed for covers and scenes
+  /// without a chosen level. Unreadable data mean no.
+  Future<bool> anyAllowedWhileLocked(AccessContext access) async {
+    try {
+      final critical = await context.confirmIds();
+      for (final e in await context.approved()) {
+        if (haRiskForDomain(e.domain) == null) continue;
+        if (haDecide(
+              e,
+              criticalIds: critical,
+              locked: access.locked,
+              speakerRecognized: access.speakerRecognized,
+            ) ==
+            LevelAccess.allowed) {
+          return true;
+        }
+      }
+    } on Object {
+      return false;
+    }
+    return false;
+  }
+
   /// Hook for the lock and speaker policy (WP92, WP154): whether the call
   /// of [toolName] with [args] may run on a locked device **for a
   /// recognized voice**, according to the policy table ([haDecide], level
@@ -120,8 +145,12 @@ final class HaIntegration implements Integration {
   /// this yet (the locked path is WP154 L2, the voice L3).
   Future<bool> allowedWhileLocked(
     String toolName,
-    Map<String, Object?> args,
-  ) async {
+    Map<String, Object?> args, {
+    AccessContext access = const AccessContext(
+      locked: true,
+      speakerRecognized: true,
+    ),
+  }) async {
     if (toolName != 'ha__call') return false;
     final query = args['entity'];
     if (query is! String || query.trim().isEmpty) return false;
@@ -137,7 +166,7 @@ final class HaIntegration implements Integration {
                 ? await context.confirmIds()
                 : const {},
             locked: true,
-            speakerRecognized: true,
+            speakerRecognized: access.speakerRecognized,
           ) ==
           LevelAccess.allowed;
     } on PortException {

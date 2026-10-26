@@ -68,3 +68,61 @@ LevelAccess levelAccess(
       return locked ? LevelAccess.unlock : LevelAccess.confirm;
   }
 }
+
+/// Who asks and in which device state (WP154 L2, ADR 0022): the input of
+/// [levelAccess] as one value that travels with a request. WP157 adds more
+/// fields (e.g. the speaker) without touching every call site.
+///
+/// Fail-closed: the default is the **unlocked** device only where a request
+/// comes from the typed or spoken app itself; everything that runs while the
+/// device is locked names it explicitly ([lockedUnknownVoice]).
+final class AccessContext {
+  /// Creates the context.
+  const AccessContext({this.locked = false, this.speakerRecognized = false});
+
+  /// The device is unlocked (typed or spoken request in the app).
+  static const unlocked = AccessContext();
+
+  /// The device is locked and the voice is not recognized (until WP92 L3).
+  static const lockedUnknownVoice = AccessContext(locked: true);
+
+  /// Whether the device is locked.
+  final bool locked;
+
+  /// Whether the voice belongs to a recognized person (only meaningful while
+  /// locked, level B).
+  final bool speakerRecognized;
+
+  /// The table [levelAccess] for [level] in this context.
+  LevelAccess of(SecurityLevel? level) =>
+      levelAccess(level, locked: locked, speakerRecognized: speakerRecognized);
+
+  @override
+  bool operator ==(Object other) =>
+      other is AccessContext &&
+      other.locked == locked &&
+      other.speakerRecognized == speakerRecognized;
+
+  @override
+  int get hashCode => Object.hash(locked, speakerRecognized);
+
+  @override
+  String toString() =>
+      'AccessContext(locked: $locked, speakerRecognized: $speakerRecognized)';
+}
+
+/// Optional capability of a `Tool`: the tool's standard level when the user
+/// chose none, instead of the one of its risk (`RiskPolicy.defaultLevelOf`).
+/// Used where the recommendation differs from `read`/`write` = C (e.g. the
+/// flashlight: A, because it reads and sends nothing and affects nobody).
+abstract interface class DefaultLevelTool {
+  /// The standard level of this tool.
+  SecurityLevel get defaultLevel;
+}
+
+/// Optional capability of a `Tool`: the tool decides the level itself, per
+/// device (Home Assistant `ha__call`, ADR 0022). While locked the policy
+/// leaves the decision to the tool, which asks `ToolContext.access`; the tool
+/// must refuse ("Entsperren nötig") whatever it does not allow. Without a
+/// level a locked call of any other tool is refused.
+abstract interface class LevelPerDeviceTool {}

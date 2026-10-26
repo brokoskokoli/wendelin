@@ -20,7 +20,7 @@ enum PolicyAction {
 /// Outcome of [RiskPolicy.decide].
 @immutable
 final class PolicyDecision {
-  const PolicyDecision._(this.action, [this.reason]);
+  const PolicyDecision._(this.action, [this.reason, this.needsUnlock = false]);
 
   /// Execute without asking.
   static const allow = PolicyDecision._(PolicyAction.allow);
@@ -32,8 +32,19 @@ final class PolicyDecision {
   factory PolicyDecision.deny(String reason) =>
       PolicyDecision._(PolicyAction.deny, reason);
 
+  /// Do not execute: the device has to be unlocked first (WP154 L2). The
+  /// text for the model is [RiskPolicy.unlockReason].
+  static const unlock = PolicyDecision._(
+    PolicyAction.deny,
+    RiskPolicy.unlockReason,
+    true,
+  );
+
   /// The decided action.
   final PolicyAction action;
+
+  /// Whether the call only waits for the unlock ([unlock]).
+  final bool needsUnlock;
 
   /// Why the call is denied (only for [PolicyAction.deny]).
   final String? reason;
@@ -42,10 +53,11 @@ final class PolicyDecision {
   bool operator ==(Object other) =>
       other is PolicyDecision &&
       other.action == action &&
-      other.reason == reason;
+      other.reason == reason &&
+      other.needsUnlock == needsUnlock;
 
   @override
-  int get hashCode => Object.hash(action, reason);
+  int get hashCode => Object.hash(action, reason, needsUnlock);
 
   @override
   String toString() =>
@@ -77,6 +89,12 @@ final class RiskPolicy {
     RiskLevel.external => SecurityLevel.d,
   };
 
+  /// The standard level of [tool]: its own ([DefaultLevelTool]) or the one
+  /// of its risk ([defaultLevelFor]).
+  static SecurityLevel defaultLevelOf(Tool tool) => tool is DefaultLevelTool
+      ? (tool as DefaultLevelTool).defaultLevel
+      : defaultLevelFor(tool.risk);
+
   /// Default action for a risk level.
   static PolicyAction defaultFor(RiskLevel risk) => switch (risk) {
     RiskLevel.read || RiskLevel.write => PolicyAction.allow,
@@ -94,6 +112,12 @@ final class RiskPolicy {
   static const lockedReason =
       'Aktionen mit Außenwirkung sind in dieser Sitzung gesperrt, weil die '
       'Antwort des Anbieters nicht verifiziert werden konnte.';
+
+  /// Text given to the model when the call needs the unlocked device
+  /// (WP154 L2). The result summary is „Entsperren nötig“.
+  static const unlockReason =
+      'Entsperren nötig: Das ist bei gesperrtem Gerät nicht erlaubt. Sag dem '
+      'Nutzer kurz, dass er das Telefon entsperren soll.';
 
   /// Text given to the model when the user disabled a tool by override.
   static const deniedReason = 'Dieses Tool ist vom Nutzer gesperrt.';
@@ -128,20 +152,43 @@ final class RiskPolicy {
   bool isExternalLocked(String sessionId) =>
       _lockedSessions.contains(sessionId);
 
-  /// The decision for running [tool] in [sessionId].
-  PolicyDecision decide(Tool tool, String sessionId) {
+  /// The decision for running [tool] in [sessionId] in the context
+  /// [access] (default: unlocked).
+  ///
+  /// While locked ([AccessContext.locked]) the table [levelAccess] decides
+  /// alone: allowed runs, everything else (also a call that would only be
+  /// confirmed unlocked) waits for the unlock, because nobody can answer a
+  /// card on a locked device. The reservations stay: a tool the user
+  /// disabled and the session lock of `external` tools deny as before, and a
+  /// confirm-only override means "unlock". A tool that decides per device
+  /// ([LevelPerDeviceTool]) is let through here; it refuses itself.
+  PolicyDecision decide(
+    Tool tool,
+    String sessionId, {
+    AccessContext access = AccessContext.unlocked,
+  }) {
     if (tool.risk == RiskLevel.external && isExternalLocked(sessionId)) {
       return PolicyDecision.deny(lockedReason);
     }
+    final override = _overrides[tool.name];
+    if (access.locked) {
+      if (override == PolicyAction.deny) {
+        return PolicyDecision.deny(deniedReason);
+      }
+      if (override == PolicyAction.confirm) return PolicyDecision.unlock;
+      if (tool is LevelPerDeviceTool) return PolicyDecision.allow;
+      final level = _levels[tool.name] ?? defaultLevelOf(tool);
+      return access.of(level) == LevelAccess.allowed
+          ? PolicyDecision.allow
+          : PolicyDecision.unlock;
+    }
     final level = _levels[tool.name];
-    // The recipient is not locked and no voice is involved yet (WP154 L1).
     final base = level == null
         ? defaultFor(tool.risk)
-        : switch (levelAccess(level)) {
+        : switch (access.of(level)) {
             LevelAccess.allowed => PolicyAction.allow,
             LevelAccess.confirm || LevelAccess.unlock => PolicyAction.confirm,
           };
-    final override = _overrides[tool.name];
     final action = override == null ? base : base.atLeast(override);
     return switch (action) {
       PolicyAction.allow => PolicyDecision.allow,
