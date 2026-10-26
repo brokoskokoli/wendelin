@@ -126,7 +126,8 @@ void main() {
         cooldown: cooldown,
         settle: settle,
         verifyTimeout: timeout,
-        onCandidate: (k, {required busy}) => cands.add('${k.name} $busy'),
+        onCandidate: (k, {required busy, required score}) =>
+            cands.add('${k.name} $busy'),
         onVerdict: (r, ms) => verdicts.add(
           r.reason == null ? r.result : '${r.result}/${r.reason}',
         ),
@@ -430,6 +431,8 @@ void main() {
         await frames(10, loud: true);
         expect(v.calls, hasLength(1));
         expect(got, isEmpty);
+        // WP151: nicht still verworfen, das Log nennt den Grund.
+        expect(verdicts, contains('skip/stale'));
       });
 
       test('Stille im Ausschnitt: skip/silent ohne Erkenner', () async {
@@ -568,6 +571,75 @@ void main() {
             ..verdict = const BargeVerdict('wake', BargeInKeyword.wake);
           await frames(2, loud: true); // weit vor dem Ende des Cooldowns
           expect(v.calls, hasLength(2));
+          expect(got, ['keyword-wake']);
+        },
+      );
+
+      test(
+        'WP151: stärkerer Kandidat in langer Prüfung geht nicht verloren',
+        () async {
+          // Gerätelog 2026-10-26: sim 0,73 mit busy=true kam nie an die Reihe,
+          // weil die Prüfung des ersten länger als der Ausschnitt dauerte.
+          final script = _ScriptEngine(
+            {0: 'wake', 3: 'wake'},
+            conf: {0: 0.54, 3: 0.73},
+          );
+          await setUp0(
+            settle: const Duration(milliseconds: 200),
+            cooldown: const Duration(milliseconds: 1500),
+            custom: script,
+          );
+          v
+            ..verdict = BargeVerdict.no
+            ..hold = Completer<void>();
+          await frames(3, loud: true);
+          audio.push(Int16List(1600)..fillRange(0, 1600, 7000)); // Wort, busy
+          await pumpEventQueue();
+          await frames(40, loud: true); // die Prüfung dauert 4 s
+          expect(cands, ['wake false', 'wake true']);
+          v.hold!.complete();
+          await pumpEventQueue();
+          v
+            ..hold = null
+            ..decide = (pcm) => pcm.contains(7000)
+                ? const BargeVerdict('wake', BargeInKeyword.wake)
+                : BargeVerdict.no;
+          await frames(1, loud: true);
+          expect(v.calls, hasLength(2));
+          expect(got, ['keyword-wake']);
+        },
+      );
+
+      test(
+        'WP151: Wort des Kandidaten in der Prüfung läuft bis settle weiter',
+        () async {
+          final script = _ScriptEngine(
+            {0: 'wake', 3: 'wake'},
+            conf: {0: 0.54, 3: 0.73},
+          );
+          await setUp0(
+            settle: const Duration(milliseconds: 200),
+            cooldown: const Duration(milliseconds: 1500),
+            custom: script,
+          );
+          v
+            ..verdict = BargeVerdict.no
+            ..hold = Completer<void>();
+          await frames(3, loud: true);
+          audio.push(Int16List(1600)..fillRange(0, 1600, 5000)); // Kandidat
+          await frames(2, loud: true); // das Wort geht weiter
+          // Nachlauf des Wortes (leise, unter dem Pegel) mit Kennzeichen.
+          audio.push(Int16List(1600)..fillRange(0, 1600, 100));
+          await pumpEventQueue();
+          await frames(40, loud: true); // die Prüfung dauert 4 s
+          v.hold!.complete();
+          await pumpEventQueue();
+          v
+            ..hold = null
+            ..decide = (pcm) => pcm.contains(100)
+                ? const BargeVerdict('wake', BargeInKeyword.wake)
+                : BargeVerdict.no;
+          await frames(1, loud: true);
           expect(got, ['keyword-wake']);
         },
       );

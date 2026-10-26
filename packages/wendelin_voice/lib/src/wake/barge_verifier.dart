@@ -4,13 +4,21 @@ import 'package:meta/meta.dart';
 
 import '../io/barge_in_detector.dart';
 import '../io/speech_to_text.dart';
+import 'barge_clip.dart';
 import 'wake_verifier.dart';
+import 'wake_verifier_b.dart';
 
 /// Outcome of the check of a barge-in candidate by the big recognizer.
 @immutable
 final class BargeVerdict {
   /// Creates a verdict.
-  const BargeVerdict(this.result, [this.keyword, this.reason]);
+  const BargeVerdict(
+    this.result, [
+    this.keyword,
+    this.reason,
+    this.verifier,
+    this.score,
+  ]);
 
   /// The candidate was discarded, nothing recognized.
   static const no = BargeVerdict('no');
@@ -21,6 +29,13 @@ final class BargeVerdict {
 
   /// Why a check was skipped (`silent`, `timeout`, `error`); `null` otherwise.
   final String? reason;
+
+  /// Who decided (log, WP151): `b` (templates) or `transcript`; `null` for a
+  /// check that did not run.
+  final String? verifier;
+
+  /// Score of verifier B (`null` for the others).
+  final double? score;
 
   /// The recognized keyword; `null` = discard the candidate.
   final BargeInKeyword? keyword;
@@ -79,8 +94,55 @@ final class TranscriptBargeVerifier implements BargeVerifier {
     final text = (await stt.transcribe(audio, language: language)).text;
     // The own voice: a keyword that is part of the read text does not count.
     final wake = matchesWakeWord(text) && !matchesWakeWord(spoken);
-    if (wake) return const BargeVerdict('wake', BargeInKeyword.wake);
+    if (wake) {
+      return const BargeVerdict(
+        'wake',
+        BargeInKeyword.wake,
+        null,
+        'transcript',
+      );
+    }
     final echo = matchesWakeWord(text) && matchesWakeWord(spoken);
-    return echo ? const BargeVerdict('echo') : BargeVerdict.no;
+    return echo
+        ? const BargeVerdict('echo', null, null, 'transcript')
+        : const BargeVerdict('no', null, null, 'transcript');
+  }
+}
+
+/// [BargeVerifier] on verifier B (WP151): compares the clip with the
+/// enrolled „Hey Wendelin“ sequences instead of reading it. Parakeet often
+/// reads the short call at conversation volume as another word (device log
+/// 2026-10-26: 9 of 26 calls), B hits 24 of 26 and 0 of 519 TTS clips
+/// (offline). B has no text, so there is no echo filter: the own voice does
+/// not match the enrolled voice. Without usable sequences, or on an error of
+/// B, the [fallback] (transcript) decides, never both for one clip.
+final class VerifierBBargeVerifier implements BargeVerifier {
+  /// Creates the verifier.
+  VerifierBBargeVerifier({
+    required this.scorer,
+    required this.fallback,
+    this.minLevel = 150,
+  });
+
+  /// Scores clips against the enrolled sequences.
+  final VerifierBScorer scorer;
+
+  /// Decides when B cannot (no sequences, error).
+  final BargeVerifier fallback;
+
+  /// Level of a loud block (finds the end of the word in the clip).
+  final num minLevel;
+
+  @override
+  Future<BargeVerdict> verify(
+    Int16List pcm, {
+    required BargeInKeyword candidate,
+  }) async {
+    final end = speechEnd(pcm, minLevel);
+    final s = end == 0 ? null : await scorer.score(pcm, end);
+    if (s == null) return fallback.verify(pcm, candidate: candidate);
+    return s >= scorer.threshold
+        ? BargeVerdict('wake', BargeInKeyword.wake, null, 'b', s)
+        : BargeVerdict('no', null, null, 'b', s);
   }
 }

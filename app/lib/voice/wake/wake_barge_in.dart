@@ -43,6 +43,7 @@ final class LazyWakeBargeInDetector
     this.verifySettle = const Duration(milliseconds: 800),
     this.tailMax = const Duration(seconds: 3),
     this.devClips,
+    this.onDispose,
   });
 
   /// Microphone shared with the pipeline.
@@ -98,6 +99,10 @@ final class LazyWakeBargeInDetector
 
   /// WP148: audio of candidates and checks (developer mode only).
   final DevClips? devClips;
+
+  /// Called once when the detector ends for good (WP151: releases what the
+  /// verifier holds).
+  final Future<void> Function()? onDispose;
 
   /// Interval of the `barge-diag` lines while listening.
   final Duration diagInterval;
@@ -188,15 +193,22 @@ final class LazyWakeBargeInDetector
       settle: verifySettle,
       devClips: devClips,
       // Scores and kind only; the word itself stays out of the log.
-      onCandidate: (kind, {required busy}) => voiceLog('barge-cand', {
-        'kind': kind.name,
-        'busy': busy,
-        ...meter.maxima,
-      }),
+      onCandidate: (kind, {required busy, required score}) =>
+          voiceLog('barge-cand', {
+            'kind': kind.name,
+            'busy': busy,
+            // WP151: the candidate's own score; `sim` is the best of the
+            // session (not necessarily this candidate's).
+            'cand': score.toStringAsFixed(2),
+            ...meter.maxima,
+          }),
       onVerdict: (v, ms) => voiceLog('barge-verify', {
         'result': v.result,
         'ms': ms,
         if (v.reason != null) 'reason': v.reason,
+        // WP151: who decided and, for B, with which score.
+        if (v.verifier != null) 'verifier': v.verifier,
+        if (v.score != null) 'score': v.score!.toStringAsFixed(4),
       }),
     );
     _sub = inner.signals.listen((signal) {
@@ -263,5 +275,6 @@ final class LazyWakeBargeInDetector
     await _sub?.cancel();
     await _inner?.dispose();
     await _signals.close();
+    await onDispose?.call();
   }
 }

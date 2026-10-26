@@ -331,10 +331,19 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
   // have been rebuilt (disposed ref -> `UnmountedRefException`, no start).
   final settings = ref.read(storageProvider).settings;
   final listening = ref.read(bargeListeningProvider.notifier);
+  // One feature chain for B, opened at the first check, released with the
+  // detector.
+  final scorer = VerifierBScorer(
+    features: makeFeatures,
+    templates: () async => [
+      for (final s in await store.speakers()) ?await store.load(s.id),
+    ],
+  );
   final detector = LazyWakeBargeInDetector(
     audio: ref.watch(audioInputProvider),
     // WP148: audio of candidates and checks, only in developer mode.
     devClips: devAudioClips,
+    onDispose: scorer.close,
     // WP123: the capture before the answer primes the feature chain.
     warm: ref.read(micTailProvider).take,
     // Developer setting (WP72): other margin than +0.05.
@@ -342,12 +351,21 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
         double.tryParse(await settings.get(AppSettings.bargeMargin) ?? ''),
     // WP113 (K84): the big recognizer checks every candidate, unless stage 2
     // is switched off in the wake word settings.
+    // WP151: with enrolled „Hey Wendelin“ sequences verifier B decides (the
+    // transcript misreads the short call at conversation volume); without
+    // them the transcript check with the echo filter does.
     verifier: verify
-        ? (spoken) => LazyBargeVerifier(
-            stt: () => sttFuture!,
-            language: () => language,
-            spokenText: spoken,
-          )
+        ? (spoken) {
+            final transcript = LazyBargeVerifier(
+              stt: () => sttFuture!,
+              language: () => language,
+              spokenText: spoken,
+            );
+            // A placeholder `mu` (no measurement yet) has no B.
+            return wakeVerifierBMuIsPlaceholder
+                ? transcript
+                : VerifierBBargeVerifier(scorer: scorer, fallback: transcript);
+          }
         : null,
     onListening: ({required on}) {
       // The container may be gone (end of a test, rebuild).

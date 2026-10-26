@@ -271,17 +271,14 @@ typedef VerifierBDecision = void Function(
   double? threshold,
 );
 
-/// Stage 2 with verifier B (WP143): with enrolled sequences B decides, else
-/// (or on any error of B) the [fallback] (hw2) does. Never both for one clip.
-final class VerifierBWakeVerifier implements WakeEndAwareVerifier {
-  /// Creates the verifier.
-  VerifierBWakeVerifier({
+/// Scores a clip against the enrolled HW sequences (shared by the idle
+/// [VerifierBWakeVerifier] and the barge-in check, WP151).
+final class VerifierBScorer {
+  /// Creates the scorer.
+  VerifierBScorer({
     required this.templates,
     required this.features,
-    required this.fallback,
     Float32List? mu,
-    this.fallbackLabel = 'hw2',
-    this.onDecision,
     this.threshold = WakeClassifierRules.verifierBThresholdHw,
   }) : mu = mu ?? wakeVerifierBMu;
 
@@ -291,78 +288,28 @@ final class VerifierBWakeVerifier implements WakeEndAwareVerifier {
   /// New feature chain (the plain one, no classifier needed).
   final WakeFeatureExtractor Function() features;
 
-  /// Decides without enrolled sequences and when B fails.
-  final WakeVerifier fallback;
-
   /// `mu` of B.
   final Float32List mu;
-
-  /// Name of the fallback in the log.
-  final String fallbackLabel;
 
   /// Threshold of the HW head, valid whichever word was heard.
   final double threshold;
 
-  /// Called with every verdict.
-  final VerifierBDecision? onDecision;
-
   WakeFeatureExtractor? _extractor;
   Future<void>? _opening;
-  String _kind = 'b';
 
-  @override
-  String get kind => _kind;
-
-  @override
-  Future<bool> confirm(Int16List pcm) {
-    // The listener's clip ends [WakeClassifierRules.verifyTail] after the
-    // decision window.
-    return confirmAt(
-      pcm,
-      math.max(
-        0,
-        pcm.length - durationToSamples(WakeClassifierRules.verifyTail),
-      ),
-    );
-  }
-
-  @override
-  Future<bool> confirmAt(Int16List pcm, int endSample) async {
-    final templates = await _sequences();
-    if (templates.isEmpty) return _viaFallback(pcm);
-    ({double score, double threshold, bool ok})? verdict;
+  /// Score of the decision window ending at [endSample] of [pcm]: `null`
+  /// when B cannot decide (no usable sequences, or an error), `-1` when the
+  /// clip is too short for any window (rejected).
+  Future<double?> score(Int16List pcm, int endSample) async {
+    final tpl = await _sequences();
+    if (tpl.isEmpty) return null;
     try {
       final raw = await _sequence(verifierBLiveClip(pcm, endSample));
       final live = raw == null ? null : VerifierBSequence.prepare(raw, mu);
-      verdict = _decide(live, templates);
+      return live == null ? -1.0 : verifierBScore(live, tpl);
     } on Object {
-      verdict = null;
+      return null;
     }
-    if (verdict == null) return _viaFallback(pcm);
-    _kind = 'b';
-    onDecision?.call('b', verdict.score, verdict.threshold);
-    return verdict.ok;
-  }
-
-  /// Scores [live] against the HW templates; the clip passes at
-  /// `score >= threshold`. A [live] sequence that is `null` (clip too short
-  /// for any window) scores -1: rejected.
-  ({double score, double threshold, bool ok}) _decide(
-    VerifierBSequence? live,
-    List<VerifierBSequence> templates,
-  ) {
-    final s = live == null ? -1.0 : verifierBScore(live, templates);
-    return (score: s, threshold: threshold, ok: s >= threshold);
-  }
-
-  Future<bool> _viaFallback(Int16List pcm) async {
-    onDecision?.call(fallbackLabel, null, null);
-    _kind = fallback.kind;
-    final ok = await fallback.confirm(pcm);
-    // The fallback may pick its engine while it confirms (Parakeet or
-    // Whisper): [kind] is the one that decided.
-    _kind = fallback.kind;
-    return ok;
   }
 
   /// Prepared HW template sequences; only templates of the feature version
@@ -402,4 +349,79 @@ final class VerifierBWakeVerifier implements WakeEndAwareVerifier {
     _opening = null;
     await e?.close();
   }
+}
+
+/// Stage 2 with verifier B (WP143): with enrolled sequences B decides, else
+/// (or on any error of B) the [fallback] (hw2) does. Never both for one clip.
+final class VerifierBWakeVerifier implements WakeEndAwareVerifier {
+  /// Creates the verifier.
+  VerifierBWakeVerifier({
+    required Future<List<WakeTemplates>> Function() templates,
+    required WakeFeatureExtractor Function() features,
+    required this.fallback,
+    Float32List? mu,
+    this.fallbackLabel = 'hw2',
+    this.onDecision,
+    this.threshold = WakeClassifierRules.verifierBThresholdHw,
+  }) : scorer = VerifierBScorer(
+         templates: templates,
+         features: features,
+         mu: mu,
+         threshold: threshold,
+       );
+
+  /// Decides without enrolled sequences and when B fails.
+  final WakeVerifier fallback;
+
+  /// Name of the fallback in the log.
+  final String fallbackLabel;
+
+  /// Threshold of the HW head, valid whichever word was heard.
+  final double threshold;
+
+  /// Called with every verdict.
+  final VerifierBDecision? onDecision;
+
+  /// The scoring of B.
+  final VerifierBScorer scorer;
+
+  String _kind = 'b';
+
+  @override
+  String get kind => _kind;
+
+  @override
+  Future<bool> confirm(Int16List pcm) {
+    // The listener's clip ends [WakeClassifierRules.verifyTail] after the
+    // decision window.
+    return confirmAt(
+      pcm,
+      math.max(
+        0,
+        pcm.length - durationToSamples(WakeClassifierRules.verifyTail),
+      ),
+    );
+  }
+
+  @override
+  Future<bool> confirmAt(Int16List pcm, int endSample) async {
+    final s = await scorer.score(pcm, endSample);
+    if (s == null) return _viaFallback(pcm);
+    _kind = 'b';
+    onDecision?.call('b', s, threshold);
+    return s >= threshold;
+  }
+
+  Future<bool> _viaFallback(Int16List pcm) async {
+    onDecision?.call(fallbackLabel, null, null);
+    _kind = fallback.kind;
+    final ok = await fallback.confirm(pcm);
+    // The fallback may pick its engine while it confirms (Parakeet or
+    // Whisper): [kind] is the one that decided.
+    _kind = fallback.kind;
+    return ok;
+  }
+
+  /// Releases the feature models.
+  Future<void> close() => scorer.close();
 }
