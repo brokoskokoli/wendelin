@@ -2,11 +2,11 @@
 
 Einzige Stelle für den Stand der Meilensteine und Arbeitspakete. Gepflegt vom Orchestrator auf `main`, bei jedem Start, Merge oder Verwerfen eines Pakets (Paket-Branches ändern diese Datei nicht).
 
-Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); bei Abwesenheit mit Freigabe mehr (2026-10-19: bis 4, je 1 Sub-Agent).
+Gleichzeitig laufen höchstens 2 Pakete, solange der Maintainer am Rechner ist (Rechnerlast, Maintainer 2026-10-18); bei Abwesenheit mit Freigabe bis 4, je 1 Sub-Agent (2026-10-19; AGENTS.md nennt die Obergrenze 4).
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP154; Test-APK v0.1.0-rc7; als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-26 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP151, WP154; Test-APK v0.1.0-rc7; als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -18,7 +18,7 @@ Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP154; Tes
 | Refactoring R1–R6 | WP35–WP40 | erledigt |
 | M4 Wake Word und TEE (+ Gerätetest-Korrekturen) | WP41–WP78, WP80 | erledigt; Rest offen: K47 (nach Stopp-Test 11.6), Test 11.7a (Maintainer) |
 | M5 Ausbau Android | WP76b–d, WP79, WP81–WP98, WP102–WP110 | in Arbeit (Plan `M5-PLAN.md`) |
-| M6 Ausbau 2: Kamera/Bild, Stationsmodus, Wake-Word-Vergleich, Modell-Empfehlung | WP99–WP101 (Stationsmodus), Rest offen | in Arbeit: WP99 (Go Maintainer 2026-10-19, vor WP92c); Rest geplant (Plan `M6-PLAN.md`) |
+| M6 Ausbau 2: Kamera/Bild, Stationsmodus, Wake-Word-Vergleich, Modell-Empfehlung | WP99–WP101 (Stationsmodus), Rest offen | in Arbeit: WP99 (Go Maintainer 2026-10-19; WP92c ist in WP154 aufgegangen); Rest geplant (Plan `M6-PLAN.md`) |
 | M7 iOS | – | geplant |
 
 ## M5 im Detail
@@ -94,24 +94,28 @@ Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP154; Tes
 | WP145 | Nativer Speicher wächst je Overlay | gemergt (105e176e) | K118, ADR 0021; Lade-Leck (~400 MB whisper beim Schließen während Laden) und Container-Teardown behoben, Engine-Group (Overlay öffnet ~1,4 → ~1,0 s); offen: Restzuwachs ~3,9 MB/Overlay am Emulator in Impeller-GLES (gfxstream), echte GLES-Geräte ungeprüft; Prüfschritt von Hand (wp145.md) |
 | WP146 | Spracherkennung nach dem Wake Word unbrauchbar (Übergabelücke, verworfener Vorlauf, Modell-Freigabe unter dem Overlay, Mikrofon-Überlappung) | gemergt (6defefc6) | K119; Ursachen docs/notes/wp146-ursachen.md, Hotword-Messung docs/notes/hotword-bias-2026-10-25.md (synthetisch); offen: Gerätetest wp146.md (wake-gap, Befehl während Stufe 2, Folgerunde), Weckwortrest vor dem Befehl (wake-strip, nach Gerätebefund), Weckwort-Test mit Prüferkette, E2E-Aufbau echte Übergabe + Parakeet, zwei Parakeet-Instanzen (~2 GB) möglich |
 | WP147 | Doku generieren, Konzept schlank, Review-Messung | gemergt (99c07c22) | review_stats 89 gültig; Probelauf Konzept 131 → 48 KB; Teil B (Archiv auf main, STATUS-K, ref/-Bestand abbauen) beim Orchestrator |
-| WP148 | Entwicklermodus mit erweitertem Logging (10× „System“) | gemergt (7a59e0fe) | K120 offen; devLog (app/lib/voice/dev_log.dart), DevClips; Gerätetest (Mehrrunden, Overlay-Umschalten, Secrets, Bonus, Marken gegenhören); Folge: detectSensitiveContent erkennt „PIN – 1234“ u. ä. nicht, Tests Überschwärzung, Overlay übernimmt Umschalten erst ab nächster Sitzung, wake_service_e2e Einlernen 0/15 |
+| WP148 | Entwicklermodus mit erweitertem Logging (10× „System“) | gemergt (7a59e0fe) | K120 bestätigt; devLog (app/lib/voice/dev_log.dart), DevClips; Gerätetest (Mehrrunden, Overlay-Umschalten, Secrets, Bonus, Marken gegenhören); Folge: detectSensitiveContent erkennt „PIN – 1234“ u. ä. nicht, Tests Überschwärzung, Overlay übernimmt Umschalten erst ab nächster Sitzung, wake_service_e2e Einlernen 0/15 |
 | WP149 | Wake-Übergabe ohne Audiolücke | gemergt (ab06b1c0) | Ursache: WakeConflictWatcher stoppte Dienst-Mikro trotz keepOpen + verworfener Teil-Chunk; Handytest docs/testing/m5/wp149.md (xcorr nur synthetisch kalibriert); Folge: eigene vs. fremde Aufnahme per AppVoice-Session, ~690 ms Mikro-Öffnung |
-| WP150 | Home Assistant: Werkzeugschleife bei einem Licht mit Personennamen | gemergt (90a2a345) | K121 offen; Ursache: Zahl als String, Validator lehnt ab, Modell wiederholt (Dev-Log 12:28); Gerätetest docs/testing/m5/wp150.md mit neuer APK; Folge: Agent-Fehlertexte nur deutsch (l10n) |
-| WP151 | Unterbrechen mit Weckwort bei Gesprächston | geplant | Gerätelog rc5: barge-cand 0,54/0,56 erkannt, barge-verify (Parakeet, lp −2,2/−1,9) lehnt ab, Kandidat 0,73 bei busy verloren; startet nach WP148 (Tonaufnahmen) |
+| WP150 | Home Assistant: Werkzeugschleife bei einem Licht mit Personennamen | gemergt (90a2a345) | K121 bestätigt; Ursache: Zahl als String, Validator lehnt ab, Modell wiederholt (Dev-Log 12:28); Gerätetest docs/testing/m5/wp150.md mit neuer APK; Folge: Agent-Fehlertexte nur deutsch (l10n) |
+| WP151 | Unterbrechen mit Weckwort bei Gesprächston | in Arbeit | Gerätelog rc5: barge-cand 0,54/0,56 erkannt, barge-verify (Parakeet, lp −2,2/−1,9) lehnt ab, Kandidat 0,73 bei busy verloren; startet nach WP148 (Tonaufnahmen) |
 | WP152 | Hauptmenü: MCP-Server und HTTP-Tools nur unter Integrationen | gemergt (24c76bde) | „+ HTTP-Tool“ öffnet jetzt die Liste (Beschriftung ggf. „HTTP-Tools“); `AppRoutes.httpToolNew` ohne Aufrufer (Soll) |
 | WP153 | Gesperrtes Gerät: nach dem Entsperren sauber weitermachen | geplant | Gerätebefund rc5: nach Entsperren keine Anzeige, Fenster zu; Analyse zuerst, nach WP148 |
 | WP154 | Home Assistant: Sicherheitsstufe je Gerät (A–D) | in Arbeit | Wunsch Maintainer 2026-10-26: Stufen A–D für jedes Werkzeug (HA je Gerät), Standard = Empfehlung (confirm/external = D), frei überschreibbar, kein globaler Schalter, gesperrt mit aktuellem Anbieter/Datenschutzstufe; enthält WP92c; weicht von K85/K92 ab (K folgt) |
+| WP155 | Entwicklermodus: Weckwort-Archiv für Training | geplant | Wunsch Maintainer 2026-10-26: alle Weckwort-/Barge-in-Fälle inkl. verworfen und knapp verfehlt dauerhaft sammeln (eigenes Verzeichnis, index.jsonl); Prüfseite später; nach WP151 |
+| WP156 | „Hey Wendelin“ konsequent in Texten und Doku | geplant | Entscheidung Maintainer 2026-10-26 (K115-Nachtrag): Anzeige überall „Hey Wendelin“, Erkennung vorerst beide Wörter; nach WP151 |
+| WP157 | Sicherheit: Sperre nach roter Quittung je Unterhaltung, Netz-Lesewerkzeuge nach fremden Inhalten | geplant | Projekt-Review 2026-10-26 (Befunde 2, 5), Entscheidung Maintainer: Sperre echt, Rückfrage (K122); nach WP154 |
+| WP158 | Robustheit: Fehler beim Mikrofonstart, Stationskanal | geplant | Projekt-Review 2026-10-26 (Befunde 6, 7); nicht parallel zu WP153 |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
 ## Nächste Schritte
 
-Stand 2026-10-25 (Orchestrator):
-0. Gerätetest rc5 (WP146, wp146.md), danach Folgepunkte WP146 (wake-strip, Weckwort-Test-Prüferkette, E2E-Übergabe).
-1. WP143 mergen (v8a Stimmenset clean + Prüfer B), dann Release-Kandidat `v0.1.0-rc3` (Tag erst nach grünem Gate auf main), Testprotokoll der Runde ergänzen.
-2. rc4 bauen (WP145 gemergt), Gerätetest rc4 mit wp145.md.
-3. Gerätetest des Maintainers mit rc3/rc4 (Blöcke T24-*). Danach entscheiden: Stufe-1-Modell mit eigenem „Hey Wendelin“-Kopf (K115 wieder aufgreifen), Python-Tests von tool/train_wake_word/ in die CI.
-4. Offen aus M5/M6 (unverändert, nur mit Go): WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung (K99), WP132, WP138 (Gespräch).
+Stand 2026-10-26 (Orchestrator):
+0. Laufend: WP151 (Barge-in-Prüfung, echte Aufnahmen lokal), WP154 (Stufen A–D für alle Werkzeuge, Lieferung 1–3; Sperrpfad über die Policy, Projekt-Review Befund 1).
+1. Nach WP151: WP155 (Weckwort-Archiv + Dev-Datenschutz) und WP156 („Hey Wendelin“ in Texten), nacheinander oder parallel nur mit getrennten Schlüsseln.
+2. Nach WP154: WP157 (Sitzungssperre, Netz-Lesewerkzeuge, K122), dann WP153 (Entsperren) und WP158 (Mikrofonstart), nicht gleichzeitig.
+3. Gerätetest rc7 (T27-WP149, T27-WP150, T26-WP148); nach WP151 rc8.
+4. Später: Prüfseite für das Weckwort-Archiv (Anhören, Markieren), danach Hey-Pflicht in der Erkennung (K115) und Training mit eigenem HW-Kopf; offen aus M5/M6 nur mit Go: WP100/WP101, STT-Messung (K99), WP132, WP138.
 
 Ältere Reihenfolge M5 (bestätigt 2026-10-19, erledigt bzw. überholt):
 
