@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP149, WP154; Test-APK v0.1.0-rc6; als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP154; Test-APK v0.1.0-rc7; als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -95,12 +95,12 @@ Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP149, WP1
 | WP146 | Spracherkennung nach dem Wake Word unbrauchbar (Übergabelücke, verworfener Vorlauf, Modell-Freigabe unter dem Overlay, Mikrofon-Überlappung) | gemergt (6defefc6) | K119; Ursachen docs/notes/wp146-ursachen.md, Hotword-Messung docs/notes/hotword-bias-2026-10-25.md (synthetisch); offen: Gerätetest wp146.md (wake-gap, Befehl während Stufe 2, Folgerunde), Weckwortrest vor dem Befehl (wake-strip, nach Gerätebefund), Weckwort-Test mit Prüferkette, E2E-Aufbau echte Übergabe + Parakeet, zwei Parakeet-Instanzen (~2 GB) möglich |
 | WP147 | Doku generieren, Konzept schlank, Review-Messung | gemergt (99c07c22) | review_stats 89 gültig; Probelauf Konzept 131 → 48 KB; Teil B (Archiv auf main, STATUS-K, ref/-Bestand abbauen) beim Orchestrator |
 | WP148 | Entwicklermodus mit erweitertem Logging (10× „System“) | gemergt (7a59e0fe) | K120 offen; devLog (app/lib/voice/dev_log.dart), DevClips; Gerätetest (Mehrrunden, Overlay-Umschalten, Secrets, Bonus, Marken gegenhören); Folge: detectSensitiveContent erkennt „PIN – 1234“ u. ä. nicht, Tests Überschwärzung, Overlay übernimmt Umschalten erst ab nächster Sitzung, wake_service_e2e Einlernen 0/15 |
-| WP149 | Wake-Übergabe ohne Audiolücke | in Arbeit | Gerätelog rc5: wake-gap 674 ms mit Stille gefüllt; Entscheidung Maintainer: durchgehend aufnehmen |
+| WP149 | Wake-Übergabe ohne Audiolücke | gemergt (ab06b1c0) | Ursache: WakeConflictWatcher stoppte Dienst-Mikro trotz keepOpen + verworfener Teil-Chunk; Handytest docs/testing/m5/wp149.md (xcorr nur synthetisch kalibriert); Folge: eigene vs. fremde Aufnahme per AppVoice-Session, ~690 ms Mikro-Öffnung |
 | WP150 | Home Assistant: Werkzeugschleife bei einem Licht mit Personennamen | gemergt (90a2a345) | K121 offen; Ursache: Zahl als String, Validator lehnt ab, Modell wiederholt (Dev-Log 12:28); Gerätetest docs/testing/m5/wp150.md mit neuer APK; Folge: Agent-Fehlertexte nur deutsch (l10n) |
 | WP151 | Unterbrechen mit Weckwort bei Gesprächston | geplant | Gerätelog rc5: barge-cand 0,54/0,56 erkannt, barge-verify (Parakeet, lp −2,2/−1,9) lehnt ab, Kandidat 0,73 bei busy verloren; startet nach WP148 (Tonaufnahmen) |
 | WP152 | Hauptmenü: MCP-Server und HTTP-Tools nur unter Integrationen | gemergt (24c76bde) | „+ HTTP-Tool“ öffnet jetzt die Liste (Beschriftung ggf. „HTTP-Tools“); `AppRoutes.httpToolNew` ohne Aufrufer (Soll) |
 | WP153 | Gesperrtes Gerät: nach dem Entsperren sauber weitermachen | geplant | Gerätebefund rc5: nach Entsperren keine Anzeige, Fenster zu; Analyse zuerst, nach WP148 |
-| WP154 | Home Assistant: Sicherheitsstufe je Gerät (A–D) | in Arbeit | Wunsch Maintainer 2026-10-26, ersetzt „ohne Rückfrage“; Umfang erweitert um Gesperrt-Pfad und Stufe B mit Sprecher (enthält WP92c); Lieferung 2/3 nach WP149 |
+| WP154 | Home Assistant: Sicherheitsstufe je Gerät (A–D) | in Arbeit | Wunsch Maintainer 2026-10-26: Stufen A–D für jedes Werkzeug (HA je Gerät), Standard = Empfehlung (confirm/external = D), frei überschreibbar, kein globaler Schalter, gesperrt mit aktuellem Anbieter/Datenschutzstufe; enthält WP92c; weicht von K85/K92 ab (K folgt) |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
