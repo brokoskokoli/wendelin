@@ -2059,6 +2059,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get levelHelpD => 'Déverrouillé et avec confirmation à l’écran.';
 
   @override
+  String get levelLegacyRemove =>
+      'Retirer l’ancien « Toujours confirmer » (l’appareil fixe le niveau)';
+
+  @override
   String get levelRestore => 'Rétablir le réglage par défaut';
 
   @override
@@ -2076,6 +2080,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String levelSummary(String level, String state) {
     return 'Niveau $level · $state';
   }
+
+  @override
+  String get levelSummaryScene => 'par défaut : selon les membres';
 
   @override
   String get levelWarnConfirm => 'Modifier quand même';

@@ -652,6 +652,7 @@
   "levelHelpB": "Avec une voix reconnue (même verrouillé) ou appareil déverrouillé.",
   "levelHelpC": "Seulement appareil déverrouillé.",
   "levelHelpD": "Déverrouillé et avec confirmation à l’écran.",
+  "levelLegacyRemove": "Retirer l’ancien « Toujours confirmer » (l’appareil fixe le niveau)",
   "levelRestore": "Rétablir le réglage par défaut",
   "levelSemantics": "{name} : niveau {level}",
   "@levelSemantics": {
@@ -677,6 +678,7 @@
       }
     }
   },
+  "levelSummaryScene": "par défaut : selon les membres",
   "levelWarnConfirm": "Modifier quand même",
   "levelWarnDeviceMessage": "Une serrure, une alarme, un portail ou une porte pourra alors être commandé sans confirmation, au niveau A même appareil verrouillé. La responsabilité vous incombe.",
   "levelWarnTitle": "Moins de protection ?",

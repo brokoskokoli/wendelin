@@ -3550,6 +3550,12 @@ abstract class AppLocalizations {
   /// **'Entsperrt und mit Bestätigung auf dem Display.'**
   String get levelHelpD;
 
+  /// No description provided for @levelLegacyRemove.
+  ///
+  /// In de, this message translates to:
+  /// **'Altes „Immer bestätigen“ entfernen (das Gerät bestimmt die Stufe)'**
+  String get levelLegacyRemove;
+
   /// No description provided for @levelRestore.
   ///
   /// In de, this message translates to:
@@ -3579,6 +3585,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Stufe {level} · {state}'**
   String levelSummary(String level, String state);
+
+  /// No description provided for @levelSummaryScene.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard: je nach Mitgliedern'**
+  String get levelSummaryScene;
 
   /// No description provided for @levelWarnConfirm.
   ///

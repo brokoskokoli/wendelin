@@ -2027,6 +2027,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelHelpD => 'Unlocked and with a confirmation on the display.';
 
   @override
+  String get levelLegacyRemove =>
+      'Remove the old “Always confirm” (the device sets the level)';
+
+  @override
   String get levelRestore => 'Restore default';
 
   @override
@@ -2044,6 +2048,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String levelSummary(String level, String state) {
     return 'Level $level · $state';
   }
+
+  @override
+  String get levelSummaryScene => 'default: depends on the members';
 
   @override
   String get levelWarnConfirm => 'Change anyway';

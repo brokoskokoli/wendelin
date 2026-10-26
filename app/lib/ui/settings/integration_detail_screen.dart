@@ -126,7 +126,9 @@ class IntegrationDetailScreen extends ConsumerWidget {
         ),
         // The Home Assistant call tools take the level of the device.
         if (!toolLevelPerDevice(tool.name))
-          _picker(context, tool, prefs, update),
+          _picker(context, tool, prefs, update)
+        else if (prefs.alwaysConfirm.contains(tool.name))
+          _legacyConfirm(context, tool, prefs, update),
       ],
     ],
   );
@@ -138,6 +140,30 @@ class IntegrationDetailScreen extends ConsumerWidget {
         prefs.levelOf(tool.name),
         RiskPolicy.defaultLevelFor(tool.risk),
       );
+
+  /// The old "always confirm" of a Home Assistant call tool: it still holds
+  /// (D, fail-closed), so it is not dropped silently in the migration (that
+  /// would loosen the tool without a decision). The user can remove it here;
+  /// the device level then decides alone.
+  Widget _legacyConfirm(
+    BuildContext context,
+    Tool tool,
+    ToolPrefs prefs,
+    void Function(ToolPrefs next) update,
+  ) => Padding(
+    padding: const EdgeInsets.only(left: WSpace.xl),
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton(
+        key: ValueKey('levelLegacyRemove_${tool.name}'),
+        style: TextButton.styleFrom(
+          minimumSize: const Size(WSize.touchMin, WSize.touchMin),
+        ),
+        onPressed: () => update(prefs.withLevel(tool.name, null)),
+        child: Text(context.l10n.levelLegacyRemove, style: WText.caption),
+      ),
+    ),
+  );
 
   Widget _picker(
     BuildContext context,

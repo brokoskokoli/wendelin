@@ -2048,6 +2048,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get levelHelpD => 'Entsperrt und mit Bestätigung auf dem Display.';
 
   @override
+  String get levelLegacyRemove =>
+      'Altes „Immer bestätigen“ entfernen (das Gerät bestimmt die Stufe)';
+
+  @override
   String get levelRestore => 'Standard wiederherstellen';
 
   @override
@@ -2065,6 +2069,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String levelSummary(String level, String state) {
     return 'Stufe $level · $state';
   }
+
+  @override
+  String get levelSummaryScene => 'Standard: je nach Mitgliedern';
 
   @override
   String get levelWarnConfirm => 'Trotzdem ändern';

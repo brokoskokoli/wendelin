@@ -13,6 +13,8 @@
   },
   "levelStateDefault": "default",
   "levelStateChanged": "changed",
+  "levelSummaryScene": "default: depends on the members",
+  "levelLegacyRemove": "Remove the old “Always confirm” (the device sets the level)",
   "levelRestore": "Restore default",
   "levelHelpA": "Always, also when locked and without a recognized voice.",
   "levelHelpB": "With a recognized voice (also when locked) or when unlocked.",

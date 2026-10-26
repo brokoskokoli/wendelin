@@ -1072,6 +1072,7 @@
   "levelHelpB": "Bei erkannter Stimme (auch gesperrt) oder entsperrtem Gerät.",
   "levelHelpC": "Nur bei entsperrtem Gerät.",
   "levelHelpD": "Entsperrt und mit Bestätigung auf dem Display.",
+  "levelLegacyRemove": "Altes „Immer bestätigen“ entfernen (das Gerät bestimmt die Stufe)",
   "levelRestore": "Standard wiederherstellen",
   "levelSemantics": "{name}: Stufe {level}",
   "@levelSemantics": {
@@ -1097,6 +1098,7 @@
       }
     }
   },
+  "levelSummaryScene": "Standard: je nach Mitgliedern",
   "levelWarnConfirm": "Trotzdem ändern",
   "levelWarnDeviceMessage": "Schloss, Alarm, Tor oder Tür lassen sich dann ohne Bestätigung bedienen, bei Stufe A sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.",
   "levelWarnTitle": "Weniger Schutz?",

@@ -31,6 +31,7 @@ class SecurityLevelPicker extends StatefulWidget {
     required this.onChanged,
     this.warnLevels = const {},
     this.warnMessage = '',
+    this.summary,
     super.key,
   });
 
@@ -55,6 +56,10 @@ class SecurityLevelPicker extends StatefulWidget {
   /// Text of the hint.
   final String warnMessage;
 
+  /// Replaces „Stufe X · Standard“ in the header and leaves the choice
+  /// unmarked (a scene's level depends on its members at every call).
+  final String? summary;
+
   @override
   State<SecurityLevelPicker> createState() => _SecurityLevelPickerState();
 }
@@ -63,7 +68,7 @@ class _SecurityLevelPickerState extends State<SecurityLevelPicker> {
   bool _open = false;
 
   Future<void> _pick(SecurityLevel l) async {
-    if (l == widget.level) return;
+    if (widget.summary == null && l == widget.level) return;
     if (widget.warnLevels.contains(l)) {
       final ok = await confirm(
         context,
@@ -104,30 +109,38 @@ class _SecurityLevelPickerState extends State<SecurityLevelPicker> {
   Widget _header(BuildContext context) {
     final t = context.l10n;
     final state = widget.isDefault ? t.levelStateDefault : t.levelStateChanged;
-    return InkWell(
-      key: ValueKey('levelDetails_${widget.idKey}'),
-      onTap: () => setState(() => _open = !_open),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: WSpace.l,
-          vertical: WSpace.s,
-        ),
-        child: Row(
-          spacing: WSpace.s,
-          children: [
-            Icon(
-              _open ? Icons.expand_less : Icons.chevron_right,
-              size: WSize.iconDetail,
-              color: WColors.textMuted,
+    return Semantics(
+      button: true,
+      expanded: _open,
+      label: '${widget.name}: ${t.levelDetails}',
+      child: InkWell(
+        key: ValueKey('levelDetails_${widget.idKey}'),
+        onTap: () => setState(() => _open = !_open),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: WSize.touchMin),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: WSpace.l,
+              vertical: WSpace.s,
             ),
-            Expanded(
-              child: Text(
-                '${t.levelDetails} · '
-                '${t.levelSummary(widget.level.name.toUpperCase(), state)}',
-                style: WText.caption,
-              ),
+            child: Row(
+              spacing: WSpace.s,
+              children: [
+                Icon(
+                  _open ? Icons.expand_less : Icons.chevron_right,
+                  size: WSize.iconDetail,
+                  color: WColors.textMuted,
+                ),
+                Expanded(
+                  child: Text(
+                    '${t.levelDetails} · '
+                    '${widget.summary ?? t.levelSummary(widget.level.name.toUpperCase(), state)}',
+                    style: WText.caption,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -135,7 +148,7 @@ class _SecurityLevelPickerState extends State<SecurityLevelPicker> {
 
   Widget _option(BuildContext context, SecurityLevel l) {
     final t = context.l10n;
-    final on = l == widget.level;
+    final on = widget.summary == null && l == widget.level;
     return Semantics(
       button: true,
       selected: on,
@@ -143,26 +156,31 @@ class _SecurityLevelPickerState extends State<SecurityLevelPicker> {
       child: InkWell(
         key: ValueKey('level_${widget.idKey}_${l.name}'),
         onTap: () => _pick(l),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: WSpace.l,
-            vertical: WSpace.xs,
-          ),
-          child: Row(
-            spacing: WSpace.s,
-            children: [
-              Icon(
-                on ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                size: WSize.iconDetail,
-                color: on ? WColors.accent : WColors.textMuted,
-              ),
-              Expanded(
-                child: Text(
-                  '${l.name.toUpperCase()} · ${levelHelp(t, l)}',
-                  style: WText.caption,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: WSize.touchMin),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: WSpace.l,
+              vertical: WSpace.xs,
+            ),
+            child: Row(
+              spacing: WSpace.s,
+              children: [
+                Icon(
+                  on
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  size: WSize.iconDetail,
+                  color: on ? WColors.accent : WColors.textMuted,
                 ),
-              ),
-            ],
+                Expanded(
+                  child: Text(
+                    '${l.name.toUpperCase()} · ${levelHelp(t, l)}',
+                    style: WText.caption,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

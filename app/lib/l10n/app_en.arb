@@ -652,6 +652,7 @@
   "levelHelpB": "With a recognized voice (also when locked) or when unlocked.",
   "levelHelpC": "Only when the device is unlocked.",
   "levelHelpD": "Unlocked and with a confirmation on the display.",
+  "levelLegacyRemove": "Remove the old “Always confirm” (the device sets the level)",
   "levelRestore": "Restore default",
   "levelSemantics": "{name}: level {level}",
   "@levelSemantics": {
@@ -677,6 +678,7 @@
       }
     }
   },
+  "levelSummaryScene": "default: depends on the members",
   "levelWarnConfirm": "Change anyway",
   "levelWarnDeviceMessage": "A lock, alarm, gate or door can then be operated without a confirmation, at level A even while the device is locked. The responsibility is yours.",
   "levelWarnTitle": "Less protection?",

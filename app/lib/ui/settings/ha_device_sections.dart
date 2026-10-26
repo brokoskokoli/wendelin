@@ -122,6 +122,11 @@ class HaAreaSection extends StatelessWidget {
       name: e.name,
       level: level,
       isDefault: isDefault,
+      // A scene without a chosen level runs on B or D, depending on its
+      // members at every call: do not claim „Stufe B · Standard“.
+      summary: e.domain == 'scene' && isDefault
+          ? context.l10n.levelSummaryScene
+          : null,
       warnLevels: dangerous(e)
           ? const {SecurityLevel.a, SecurityLevel.b}
           : const {},

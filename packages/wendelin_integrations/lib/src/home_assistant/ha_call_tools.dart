@@ -442,13 +442,12 @@ final class HaCallSecureTool extends HaCallTool
   @override
   LevelAccess get handles => LevelAccess.confirm;
 
-  /// A cover that would run without a question (quiet blind, level A–C)
-  /// may also go through this tool: it asks first, which is only stricter,
-  /// and the description names covers here.
+  /// A device that would run without a question (level A–C: lock, blind,
+  /// light ...) may also go through this tool: it asks first, which is only
+  /// stricter. So a card the user confirmed never ends in an error.
   @override
   bool accepts(LevelAccess access, String domain) =>
-      access == LevelAccess.confirm ||
-      (access == LevelAccess.allowed && domain == 'cover');
+      access == LevelAccess.confirm || access == LevelAccess.allowed;
 
   @override
   String get otherTool => 'ha__call';

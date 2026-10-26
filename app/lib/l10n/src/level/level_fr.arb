@@ -13,6 +13,8 @@
   },
   "levelStateDefault": "par défaut",
   "levelStateChanged": "modifié",
+  "levelSummaryScene": "par défaut : selon les membres",
+  "levelLegacyRemove": "Retirer l’ancien « Toujours confirmer » (l’appareil fixe le niveau)",
   "levelRestore": "Rétablir le réglage par défaut",
   "levelHelpA": "Toujours, même verrouillé et sans voix reconnue.",
   "levelHelpB": "Avec une voix reconnue (même verrouillé) ou appareil déverrouillé.",

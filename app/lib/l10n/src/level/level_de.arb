@@ -13,6 +13,8 @@
   },
   "levelStateDefault": "Standard",
   "levelStateChanged": "geändert",
+  "levelSummaryScene": "Standard: je nach Mitgliedern",
+  "levelLegacyRemove": "Altes „Immer bestätigen“ entfernen (das Gerät bestimmt die Stufe)",
   "levelRestore": "Standard wiederherstellen",
   "levelHelpA": "Immer, auch bei gesperrtem Gerät und ohne erkannte Stimme.",
   "levelHelpB": "Bei erkannter Stimme (auch gesperrt) oder entsperrtem Gerät.",

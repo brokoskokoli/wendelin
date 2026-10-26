@@ -195,10 +195,12 @@ void main() {
         expect(api.calls.single.service, 'unlock');
         expect(r.undo, isNull);
         api.calls.clear();
+        // Nur strenger: mit Rückfrage geht es auch über ha__call_secure.
         expect(
           (await run(open, 'ha__call_secure', 'lock.front', 'lock')).isError,
-          isTrue,
+          isFalse,
         );
+        api.calls.clear();
         final dflt = ha([_e('lock.front')]);
         final denied = await run(dflt, 'ha__call', 'lock.front', 'unlock');
         expect(denied.isError, isTrue);
@@ -237,7 +239,8 @@ void main() {
         );
         expect(viaSecure.isError, isFalse, reason: viaSecure.text);
         expect(api.calls, hasLength(2));
-        // Ein Licht auf B gehört nicht in das Tool mit Rückfrage.
+        // Auch ein Licht auf B darf mit Rückfrage laufen (nur strenger): nach
+        // der bestätigten Karte kein Fehler, kein Umweg über ha__call.
         api.calls.clear();
         final light = await run(
           h,
@@ -245,8 +248,18 @@ void main() {
           'light.kitchen',
           'turn_on',
         );
-        expect(light.isError, isTrue);
-        expect(api.calls, isEmpty);
+        expect(light.isError, isFalse, reason: light.text);
+        expect(api.calls.single.service, 'turn_on');
+        // Ebenso ein Schloss auf A.
+        api.calls.clear();
+        final lock = await run(
+          ha([_e('lock.front', level: 'a')]),
+          'ha__call_secure',
+          'lock.front',
+          'lock',
+        );
+        expect(lock.isError, isFalse, reason: lock.text);
+        expect(api.calls.single.service, 'lock');
       },
     );
 
@@ -278,6 +291,28 @@ void main() {
         isTrue,
       );
       expect(api.calls, isEmpty);
+    });
+
+    test('Szene mit Mitglied auf gewählter Stufe D läuft nur bestätigt', () async {
+      api.set('scene.movie', 'scening', {
+        'entity_id': ['light.dim'],
+      });
+      // Ohne Wahl ist das Licht harmlos: die Szene läuft über ha__call.
+      final plain = ha([_e('scene.movie'), _e('light.dim')]);
+      final r = await run(plain, 'ha__call', 'scene.movie', 'turn_on');
+      expect(r.isError, isFalse, reason: r.text);
+      api.calls.clear();
+      // Der Nutzer stellt das Licht auf D (nicht das alte „immer bestätigen“).
+      final h = ha([_e('scene.movie'), _e('light.dim', level: 'd')]);
+      expect(
+        (await run(h, 'ha__call', 'scene.movie', 'turn_on')).isError,
+        isTrue,
+      );
+      expect(api.calls, isEmpty);
+      expect(
+        (await run(h, 'ha__call_secure', 'scene.movie', 'turn_on')).isError,
+        isFalse,
+      );
     });
 
     test('allowedWhileLocked folgt der Tabelle (Hook, L1 ungenutzt)', () async {
