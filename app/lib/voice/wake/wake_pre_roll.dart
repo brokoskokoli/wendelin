@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:wendelin_voice/wendelin_voice.dart';
@@ -6,6 +7,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../../di/wake_settings.dart';
 import '../../platform/assistant_platform.dart';
 import '../voice_log.dart';
+import 'wake_align.dart';
 
 /// Takes the audio of the wake word hit from the service and, if [tone] is
 /// set, plays the tone (WP68); shared by the overlay and the chat (WP93).
@@ -48,6 +50,10 @@ Future<WakePreRoll?> takeWakePreRoll({
 /// microphone before it ends the service anyway (below the service's guard).
 const wakeFirstFrameWait = Duration(milliseconds: 2000);
 
+/// How much of the app's first audio is compared with the tail (samples,
+/// 400 ms: the usual overlap plus the search window).
+const wakeAlignHead = 6400;
+
 /// The longest hole that is filled with silence; a larger one is not a
 /// handover hole (WP146).
 const wakeHoleMax = Duration(milliseconds: 1500);
@@ -63,49 +69,84 @@ const wakeHoleMax = Duration(milliseconds: 1500);
 /// - a hole that remains (positive gap) is inserted as silence (at most
 ///   [wakeHoleMax]), so words are not glued together.
 ///
-/// Logs `wake-gap` (signed gap in ms, `tail`, `trim`, `silence`; numbers only).
+/// The overlap is cut by content when [appHead] (the first samples of the
+/// app's microphone, the same recording) allows it: [alignWakeTail] finds the
+/// offset to the time estimate; without enough signal the timestamps decide.
+///
+/// Logs `wake-gap` (signed gap in ms, `tail`, `trim`, `silence`, `tailZero` = percent of
+/// zero samples in the service's tail: a muted parallel recording shows up there;
+/// `align` = `xcorr`/`time`, `xcorrMs` = overlap by content minus by time,
+/// `peak` = correlation 0..100, `alignMs` = duration of the search in the
+/// isolate incl. spawn; numbers only).
 WakePreRoll bridgeWakeTail(
   WakePreRoll pre,
   WakeTail tail, {
   int? firstFrameAtMs,
   int? firstFrameSamples,
   int? afterTakeMs,
+  Int16List? appHead,
+  WakeAlign? alignedOffUi,
+  int? alignMs,
 }) {
   var audio = Int16List.fromList(tail.pcm);
+  var zeros = 0;
+  for (final v in audio) {
+    if (v == 0) zeros++;
+  }
   final muted = pre.muteMicSamples < audio.length
       ? pre.muteMicSamples
       : audio.length;
   audio.fillRange(0, muted, 0);
   final last = tail.lastSampleAtMs;
-  int? gap;
-  if (last != null && last > 0 && firstFrameAtMs != null) {
-    gap = wakeGapMs(
-      firstFrameAtMs: firstFrameAtMs,
-      frameSamples: firstFrameSamples ?? 0,
-      lastSampleAtMs: last,
-    );
-  }
+  final gap = firstFrameAtMs == null
+      ? null
+      : _tailGap(tail, firstFrameAtMs, firstFrameSamples);
   var trim = 0;
   var silence = 0;
-  if (gap != null && gap < 0) {
+  WakeAlign? aligned;
+  if (alignedOffUi != null) {
+    aligned = alignedOffUi;
+  } else if (gap != null && appHead != null && appHead.isNotEmpty) {
+    aligned = alignWakeTail(tail.pcm, appHead, estimate: -gap * 16);
+  }
+  final byContent = aligned?.overlap;
+  if (byContent != null) {
+    trim = byContent;
+    audio = Int16List.sublistView(audio, 0, audio.length - trim);
+  } else if (gap != null && gap < 0) {
     trim = (-gap * 16).clamp(0, audio.length).toInt();
     audio = Int16List.sublistView(audio, 0, audio.length - trim);
   } else if (gap != null && gap > 0) {
-    silence = durationToSamples(Duration(milliseconds: gap));
-    final max = durationToSamples(wakeHoleMax);
-    if (silence > max) silence = max;
+    // Clamp before converting: an absurd gap would overflow the conversion.
+    final capped = math.min(gap, wakeHoleMax.inMilliseconds);
+    silence = durationToSamples(Duration(milliseconds: capped));
   }
   final out = Int16List(pre.pcm.length + audio.length + silence)
     ..setAll(0, pre.pcm)
     ..setAll(pre.pcm.length, audio);
   final added = audio.length + silence;
+  if (silence > 0) {
+    // Emergency only (WP149): the service should record up to the first
+    // frame, so silence means the overlap broke (microphone closed early,
+    // no first frame, tail missing).
+    voiceLog('wake-gap-fallback', {
+      'reason': tail.pcm.isEmpty ? 'tail-empty' : 'hole-after-tail',
+      'silence': samplesToDuration(silence),
+      'tail': samplesToDuration(tail.pcm.length),
+    });
+  }
   voiceLog('wake-gap', {
     'ms': ?gap,
     'afterTake': ?afterTakeMs,
     'mode': 'overlap',
     'tail': samplesToDuration(tail.pcm.length),
+    'tailZero': tail.pcm.isEmpty ? null : zeros * 100 ~/ tail.pcm.length,
     'trim': samplesToDuration(trim),
     'silence': samplesToDuration(silence),
+    if (aligned != null) 'align': byContent != null ? 'xcorr' : 'time',
+    if (byContent != null) 'xcorrMs': (byContent + gap! * 16) ~/ 16,
+    if (aligned != null) 'peak': aligned.peak,
+    'alignMs': ?alignMs,
   });
   return pre.withAudio(
     out,
@@ -113,6 +154,18 @@ WakePreRoll bridgeWakeTail(
     // After a measured gap the audio is continuous up to the first frame;
     // without a first frame the first one is measured against the tail.
     lastSampleAtMs: gap != null ? null : last,
+  );
+}
+
+/// Signed gap (ms) between the tail's last sample and the app's first sample;
+/// `null` without a usable timestamp.
+int? _tailGap(WakeTail tail, int firstFrameAtMs, int? firstFrameSamples) {
+  final last = tail.lastSampleAtMs;
+  if (last == null || last <= 0) return null;
+  return wakeGapMs(
+    firstFrameAtMs: firstFrameAtMs,
+    frameSamples: firstFrameSamples ?? 0,
+    lastSampleAtMs: last,
   );
 }
 
@@ -179,6 +232,23 @@ int wakeGapMs({
 /// the app's microphone (WP68, WP73, WP146): the hit with the still recording
 /// service, the answer of its `finish`, and the first frame for `wake-gap`.
 final class WakeHandoffTracker {
+  /// [align] is the content search (injectable for tests).
+  WakeHandoffTracker({
+    Future<WakeAlign> Function(
+      Int16List tail,
+      Int16List app, {
+      required int estimate,
+    })?
+    align,
+  }) : _align = align ?? alignWakeTailOffUi;
+
+  final Future<WakeAlign> Function(
+    Int16List tail,
+    Int16List app, {
+    required int estimate,
+  })
+  _align;
+
   /// Wall clock of the service's last sample, as long as no first frame
   /// has been measured against it.
   int? lastSampleAt;
@@ -188,6 +258,7 @@ final class WakeHandoffTracker {
 
   Future<WakeTail?>? _tail;
   Completer<void>? _frame;
+  Int16List Function(int samples)? _appHead;
 
   /// The hit's service microphone still records. Without it no `await`
   /// separates the state change from the pipeline start (as before WP146).
@@ -203,13 +274,17 @@ final class WakeHandoffTracker {
     handoff = null;
     _tail = null;
     _frame = null;
+    _appHead = null;
   }
 
   /// The hit is taken, before the microphone opens: its first frame is
   /// measured against [pre]. Splits the hole (WP73): service close /
   /// hand-over (`ms` minus `afterTake`) and the opening of this microphone
-  /// (`afterTake`).
-  void begin(WakePreRoll? pre) {
+  /// (`afterTake`). [appHead] returns up to the given number of the first
+  /// samples the app's microphone recorded (not yet consumed): the overlap of
+  /// the tail is cut by content (WP149).
+  void begin(WakePreRoll? pre, [Int16List Function(int samples)? appHead]) {
+    _appHead = appHead;
     lastSampleAt = pre?.lastSampleAtMs;
     handoff = pre?.finish == null ? null : pre;
     _frame = handoff == null ? null : Completer<void>();
@@ -271,12 +346,37 @@ final class WakeHandoffTracker {
     handoff = null;
     _tail = null;
     if (tail == null) return pre;
+    final firstAt = _firstFrameAtMs;
+    final head = firstAt == null ? null : _appHead?.call(wakeAlignHead);
+    final gap = firstAt == null
+        ? null
+        : _tailGap(tail, firstAt, _firstFrameSamples);
+    // The search runs off the UI isolate (up to 6M multiply-adds). With a
+    // time gap (estimate < 0) it finds nothing: no isolate. If the search
+    // fails, the timestamps decide (fail-closed) and the microphone is closed
+    // as usual.
+    WakeAlign? aligned;
+    var failed = false;
+    int? alignMs;
+    if (gap != null && gap <= 0 && head != null && head.isNotEmpty) {
+      final watch = Stopwatch()..start();
+      try {
+        aligned = await _align(tail.pcm, head, estimate: -gap * 16);
+      } on Object catch (e) {
+        failed = true;
+        voiceLog('wake-align-error', {'type': errorCode(e)});
+      }
+      alignMs = watch.elapsedMilliseconds;
+    }
     return bridgeWakeTail(
       pre,
       tail,
       firstFrameAtMs: _firstFrameAtMs,
       firstFrameSamples: _firstFrameSamples,
       afterTakeMs: _afterTakeMs,
+      appHead: failed ? null : head,
+      alignMs: alignMs,
+      alignedOffUi: failed ? (overlap: null, peak: 0) : aligned,
     );
   }
 }

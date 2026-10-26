@@ -347,7 +347,12 @@ final class RecordAudioInput
       // Asked before the start, awaited after it: a channel that never
       // answers (tests, no plugin) must not keep stop() from ending this take.
       final mode = _audioMode?.call();
+      // WP149 (numbers only, so it reaches the log in every build): wall clock of the open call, of
+      // the stream being up and of the first chunk, to explain the time
+      // between opening the microphone and its first frame.
+      final openAt = DateTime.now().millisecondsSinceEpoch;
       final bytes = await take.recorder.startStream(_profile);
+      final startedAt = DateTime.now().millisecondsSinceEpoch;
       final profile = _profile;
       if (!identical(_take, take)) {
         // stop() came first.
@@ -355,8 +360,19 @@ final class RecordAudioInput
         return;
       }
       final decoder = PcmBytesDecoder();
+      var firstChunk = false;
       take.sub = bytes.listen(
         (chunk) {
+          if (!firstChunk) {
+            firstChunk = true;
+            final now = DateTime.now().millisecondsSinceEpoch;
+            voiceLog('mic-open-timing', {
+              'openAt': openAt,
+              'startMs': startedAt - openAt,
+              'firstChunkMs': now - startedAt,
+              'bytes': chunk.length,
+            });
+          }
           final frame = decoder.convert(chunk);
           if (frame.isNotEmpty && !take.out.isClosed) take.out.add(frame);
         },

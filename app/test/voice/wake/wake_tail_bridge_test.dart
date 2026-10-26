@@ -47,6 +47,29 @@ void main() {
     },
   );
 
+  test('tailZero: Anteil der Nullen im Rest (stumm geschaltete Doppelaufnahme '
+      'fiele auf)', () {
+    final half = Int16List(1600)..fillRange(800, 1600, 7);
+    bridgeWakeTail(
+      pre(),
+      (pcm: half, lastSampleAtMs: 1000),
+      firstFrameAtMs: 1060,
+      firstFrameSamples: 1600,
+    );
+    expect(lines.single, contains('tailZero=50'));
+    lines.clear();
+    bridgeWakeTail(
+      pre(),
+      (pcm: Int16List(1600), lastSampleAtMs: 1000),
+      firstFrameAtMs: 1060,
+      firstFrameSamples: 1600,
+    );
+    expect(lines.last, contains('tailZero=100'));
+    lines.clear();
+    bridgeWakeTail(pre(), (pcm: filled(5, 1600), lastSampleAtMs: 1000));
+    expect(lines.single, contains('tailZero=0'));
+  });
+
   test('ohne ersten Frame: der Rest wird am Ende des Dienst-Rests gemessen, '
       'nicht an der Übernahme (WP146)', () {
     final taken = WakePreRoll(
@@ -86,8 +109,42 @@ void main() {
     );
     expect(out.pcm, hasLength(1600 + 1600 + 130 * 16));
     expect(out.pcm.sublist(3200).every((s) => s == 0), isTrue);
-    expect(lines.single, contains('ms=130'));
-    expect(lines.single, contains('silence=130'));
+    final gap = lines.firstWhere((l) => l.contains(' wake-gap '));
+    expect(gap, contains('ms=130'));
+    expect(gap, contains('silence=130'));
+    // Emergency fill only: its own log line with the reason (WP149).
+    final fallback = lines.singleWhere((l) => l.contains('wake-gap-fallback'));
+    expect(fallback, contains('reason=hole-after-tail'));
+    expect(fallback, contains('silence=130'));
+  });
+
+  test('durchgehender Rest (Dienst nimmt bis zum ersten Frame auf): '
+      'keine Stille, kein Notfall-Log (WP149)', () {
+    // Tail 100 ms, last chunk at 1000; the first frame (100 ms) began at 1000.
+    final out = bridgeWakeTail(
+      pre(),
+      (pcm: filled(5, 1600), lastSampleAtMs: 1000),
+      firstFrameAtMs: 1100,
+      firstFrameSamples: 1600,
+    );
+    final gap = lines.singleWhere((l) => l.contains(' wake-gap '));
+    expect(gap, contains('silence=0'));
+    expect(gap, contains('ms=0'));
+    expect(lines.any((l) => l.contains('wake-gap-fallback')), isFalse);
+    expect(out.pcm.length, 3200);
+  });
+
+  test('leerer Rest mit Lücke: Notfall-Log mit Grund tail-empty', () {
+    bridgeWakeTail(
+      pre(),
+      (pcm: Int16List(0), lastSampleAtMs: 1000),
+      firstFrameAtMs: 1300,
+      firstFrameSamples: 0,
+    );
+    expect(
+      lines.singleWhere((l) => l.contains('wake-gap-fallback')),
+      contains('reason=tail-empty'),
+    );
   });
 
   test('Stille höchstens wakeHoleMax', () {
@@ -98,7 +155,10 @@ void main() {
       firstFrameSamples: 0,
     );
     expect(out.pcm, hasLength(3200 + wakeHoleMax.inMilliseconds * 16));
-    expect(lines.single, contains('silence=${wakeHoleMax.inMilliseconds}'));
+    expect(
+      lines.firstWhere((l) => l.contains(' wake-gap ')),
+      contains('silence=${wakeHoleMax.inMilliseconds}'),
+    );
   });
 
   test(

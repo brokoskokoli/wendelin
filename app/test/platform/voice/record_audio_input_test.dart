@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/platform/voice/record_audio_input.dart';
+import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
@@ -17,6 +18,24 @@ void main() {
     () => RecordAudioInput(FakePcmRecorder()),
     name: 'RecordAudioInput (Attrappe)',
   );
+
+  test('mic-open-timing: einmal je Start, nur Zahlen, ohne Entwicklermodus '
+      '(WP149)', () async {
+    final lines = <String>[];
+    final old = voiceLogSink;
+    voiceLogSink = lines.add;
+    addTearDown(() => voiceLogSink = old);
+    final input = RecordAudioInput(FakePcmRecorder());
+    final frames = input.start().take(3).toList();
+    await frames;
+    await input.stop();
+    final timing = lines.where((l) => l.contains(' mic-open-timing '));
+    expect(timing, hasLength(1));
+    expect(
+      timing.single,
+      matches(RegExp(r'openAt=\d+ startMs=\d+ firstChunkMs=\d+ bytes=640$')),
+    );
+  });
 
   test(
     'Frames sind 16-bit-Samples, ungerade Chunks werden zusammengesetzt',

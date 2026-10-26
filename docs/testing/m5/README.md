@@ -30,6 +30,7 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP145 – Nativer Speicher über Overlay-Zyklen (Gerätetest)](wp145.md)
 - [WP146 – Spracherkennung nach dem Wake Word (Gerätetest)](wp146.md)
 - [WP148 – Entwicklermodus (Gerätetest)](wp148.md)
+- [WP149 – Wake-Übergabe ohne Audiolücke (Gerätetest)](wp149.md)
 - [WP150 – Home Assistant: Zahl als Text und Wiederholungsabbruch (Gerätetest)](wp150.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)

@@ -55,7 +55,7 @@ interface RecognizerAudioSource {
 
 /** The microphone (`AudioRecord`, source `VOICE_RECOGNITION`), attributed to the calling app. */
 class MicAudioSource(private val context: Context) : RecognizerAudioSource {
-    @Volatile private var running = false
+    private val state = ReadState()
     private var thread: Thread? = null
 
     /** Audio session of the running recording (0 before the start): tells it from foreign ones. */
@@ -86,21 +86,23 @@ class MicAudioSource(private val context: Context) : RecognizerAudioSource {
         }
         record.startRecording()
         sessionId = record.audioSessionId
-        running = true
+        state.begin()
         thread = Thread({
-            val chunk = ByteArray(RecognizerAudioSource.CHUNK_SAMPLES * 2)
             try {
-                while (running) {
-                    var filled = 0
-                    while (running && filled < chunk.size) {
-                        val n = record.read(chunk, filled, chunk.size - filled)
-                        if (n < 0) throw IllegalStateException("AudioRecord.read: $n")
-                        filled += n
-                    }
-                    if (running) onChunk(chunk.copyOf())
-                }
+                readChunks(
+                    reader = object : PcmReader {
+                        override fun read(buf: ByteArray, off: Int, len: Int) = record.read(buf, off, len)
+
+                        override fun readAvailable(buf: ByteArray, off: Int, len: Int) =
+                            record.read(buf, off, len, AudioRecord.READ_NON_BLOCKING)
+                    },
+                    chunkBytes = RecognizerAudioSource.CHUNK_SAMPLES * 2,
+                    running = { state.running },
+                    flushOnStop = { state.flushOnStop },
+                    onChunk = onChunk,
+                )
             } catch (e: Throwable) {
-                if (running) onError(e)
+                if (state.running) onError(e)
             } finally {
                 record.stop()
                 record.release()
@@ -109,7 +111,7 @@ class MicAudioSource(private val context: Context) : RecognizerAudioSource {
     }
 
     override fun stop() {
-        running = false
+        state.stop()
         thread = null
     }
 
@@ -119,13 +121,85 @@ class MicAudioSource(private val context: Context) : RecognizerAudioSource {
      */
     fun stopAndWait(timeoutMs: Long) {
         val t = thread
-        stop()
+        state.stopForHandoff()
+        thread = null
         try {
             t?.join(timeoutMs)
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
         }
     }
+}
+
+/**
+ * Run state of [MicAudioSource]: [stopForHandoff] (WP149, [MicAudioSource.stopAndWait]) also asks for the
+ * unfinished chunk to be delivered (see [readChunks]); a plain [stop] does not. [begin] resets both.
+ */
+internal class ReadState {
+    @Volatile var running = false
+        private set
+
+    @Volatile var flushOnStop = false
+        private set
+
+    fun begin() {
+        flushOnStop = false
+        running = true
+    }
+
+    fun stop() {
+        running = false
+    }
+
+    fun stopForHandoff() {
+        flushOnStop = true
+        running = false
+    }
+}
+
+/** What [readChunks] reads from: the `AudioRecord` (or a fake in tests). */
+internal interface PcmReader {
+    /** Blocks until something is read; returns the bytes read, negative on error. */
+    fun read(buf: ByteArray, off: Int, len: Int): Int
+
+    /** Reads only what is buffered right now (no waiting); 0 if nothing, negative on error. */
+    fun readAvailable(buf: ByteArray, off: Int, len: Int): Int
+}
+
+/**
+ * The read loop of [MicAudioSource]: delivers chunks of [chunkBytes] while [running]. WP149: when it
+ * is stopped and [flushOnStop] holds (hand-over to the app), the chunk that was just being filled
+ * is delivered too, topped up with what is buffered, as a shorter chunk of whole samples. Before,
+ * up to 100 ms (the unfinished chunk) were dropped at the stop, so the service's recording ended
+ * before the first frame of the app's microphone and a hole of that size remained.
+ */
+internal fun readChunks(
+    reader: PcmReader,
+    chunkBytes: Int,
+    running: () -> Boolean,
+    flushOnStop: () -> Boolean,
+    onChunk: (ByteArray) -> Unit,
+) {
+    val chunk = ByteArray(chunkBytes)
+    var filled = 0
+    while (running()) {
+        while (running() && filled < chunk.size) {
+            val n = reader.read(chunk, filled, chunk.size - filled)
+            if (n < 0) throw IllegalStateException("AudioRecord.read: $n")
+            filled += n
+        }
+        if (filled == chunk.size && (running() || flushOnStop())) {
+            onChunk(chunk.copyOf())
+            filled = 0
+        }
+    }
+    if (!flushOnStop()) return
+    if (filled < chunk.size) {
+        val n = reader.readAvailable(chunk, filled, chunk.size - filled)
+        if (n > 0) filled += n
+    }
+    val whole = filled and 1.inv()
+    if (whole > 0) onChunk(chunk.copyOf(whole))
 }
 
 /**

@@ -1,0 +1,516 @@
+// WP149: the overlap of the service's tail and the app's first audio is cut
+// by content (normalized cross-correlation), not by arrival times.
+
+import 'dart:math' as math;
+import 'dart:typed_data';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/platform/voice/pcm.dart';
+import 'package:wendelin/voice/voice_log.dart';
+import 'package:wendelin/voice/wake/wake_align.dart';
+import 'package:wendelin/voice/wake/wake_pre_roll.dart';
+import 'package:wendelin_voice/wendelin_voice.dart';
+
+/// One recording both microphones hear: speech-like noise with an envelope.
+Int16List source(int n, {int seed = 7}) {
+  var x = seed;
+  final out = Int16List(n);
+  var lp = 0.0;
+  for (var i = 0; i < n; i++) {
+    x = (x * 1103515245 + 12345) & 0x7fffffff;
+    final white = (x >> 8) / (1 << 22) - 1; // -1..1
+    lp = 0.6 * lp + white;
+    out[i] = (lp * 3000 * (0.6 + 0.4 * math.sin(i / 700))).round();
+  }
+  return out;
+}
+
+/// A slow chirp is locally periodic (ambiguous, see below), so the test
+/// signal is the chirp plus noise.
+Int16List chirp(int n) {
+  final out = Int16List(n);
+  final noise = source(n, seed: 3);
+  for (var i = 0; i < n; i++) {
+    final t = i / 16000;
+    out[i] =
+        (6000 * math.sin(2 * math.pi * (300 * t + 1000 * t * t))).round() +
+        noise[i];
+  }
+  return out;
+}
+
+void main() {
+  final lines = <String>[];
+  late void Function(String) saved;
+  setUp(() {
+    lines.clear();
+    saved = voiceLogSink;
+    voiceLogSink = lines.add;
+  });
+  tearDown(() => voiceLogSink = saved);
+
+  // tail = s[0..b), app = s[b-overlap..); the true overlap is [overlap].
+  ({Int16List tail, Int16List app}) cut(Int16List s, int b, int overlap) => (
+    tail: Int16List.sublistView(s, 0, b),
+    app: Int16List.sublistView(
+      s,
+      b - overlap,
+      math.min(s.length, b - overlap + 6400),
+    ),
+  );
+
+  for (final (name, s) in [
+    ('Rauschen', source(24000)),
+    ('Chirp mit Rauschen', chirp(24000)),
+  ]) {
+    test('$name: Überlappung wird auf das Sample gefunden, auch bei falscher '
+        'Zeitschätzung', () {
+      for (final (overlap, est) in [
+        (1501, 1000), // timestamps too small by 31 ms
+        (1103, 1100),
+        (1900, 1000), // 56 ms off, the limit is 60 ms
+        (602, 700), // timestamps 6 ms too large
+      ]) {
+        final c = cut(s, 20000, overlap);
+        final r = alignWakeTail(c.tail, c.app, estimate: est);
+        expect(r.overlap, overlap, reason: '$name overlap=$overlap est=$est');
+        expect(r.peak, greaterThanOrEqualTo(wakeAlignMinPeak));
+      }
+    });
+  }
+
+  test('Fenster: Treffer außerhalb [Schätzung - 10 ms, Schätzung + 60 ms] '
+      'zählt nicht', () {
+    final s = source(24000);
+    for (final (overlap, est) in [
+      (1500, 500), // 62 ms above the estimate
+      (600, 800), // 12 ms below
+    ]) {
+      final c = cut(s, 20000, overlap);
+      expect(
+        alignWakeTail(c.tail, c.app, estimate: est).overlap,
+        isNull,
+        reason: 'overlap=$overlap est=$est',
+      );
+    }
+  });
+
+  test('Stille: kein Ergebnis (Rückfall auf die Zeit)', () {
+    final r = alignWakeTail(Int16List(20000), Int16List(6400), estimate: 1500);
+    expect(r.overlap, isNull);
+  });
+
+  test('leises Rauschen unter der Schwelle: kein Ergebnis', () {
+    final s = Int16List.fromList([for (final v in source(24000)) v ~/ 1000]);
+    final c = cut(s, 20000, 1500);
+    expect(alignWakeTail(c.tail, c.app, estimate: 1500).overlap, isNull);
+  });
+
+  test('periodisches Signal ist mehrdeutig: kein Ergebnis', () {
+    final s = Int16List.fromList([
+      for (var i = 0; i < 24000; i++)
+        (6000 * math.sin(2 * math.pi * 200 * i / 16000)).round(),
+    ]);
+    final c = cut(s, 20000, 1500);
+    final r = alignWakeTail(c.tail, c.app, estimate: 1500);
+    expect(r.overlap, isNull);
+    expect(
+      r.peak,
+      greaterThan(90),
+      reason: 'Spitze hoch, aber nicht eindeutig',
+    );
+  });
+
+  test('zwei verschiedene Aufnahmen: Spitze zu klein', () {
+    final a = source(20000, seed: 1);
+    final b = source(6400, seed: 2);
+    expect(alignWakeTail(a, b, estimate: 1500).overlap, isNull);
+  });
+
+  test('stark verrauschte Kopie: Spitze unter der Schwelle, kein Ergebnis', () {
+    final s = source(24000);
+    final c = cut(s, 20000, 1500);
+    final noisy = Int16List.fromList([
+      for (final (i, v) in c.app.indexed)
+        v + (source(c.app.length, seed: 99)[i] * 1.3).round(),
+    ]);
+    final r = alignWakeTail(c.tail, noisy, estimate: 1500);
+    expect(r.peak, inInclusiveRange(30, wakeAlignMinPeak - 1));
+    expect(r.overlap, isNull);
+  });
+
+  test('keine Überlappung (Lücke): kein Ergebnis', () {
+    final s = source(30000);
+    final tail = Int16List.sublistView(s, 0, 20000);
+    final app = Int16List.sublistView(s, 21000, 27400); // 1000 samples later
+    expect(alignWakeTail(tail, app, estimate: 800).overlap, isNull);
+  });
+
+  test('Fenster außerhalb der Grenzen: kein Ergebnis, kein Fehler', () {
+    expect(
+      alignWakeTail(source(100), source(100), estimate: 50).overlap,
+      isNull,
+    );
+    expect(
+      alignWakeTail(source(5000), source(5000), estimate: -5000).overlap,
+      isNull,
+    );
+  });
+
+  group('echte Sprache (Fixtures)', () {
+    final names = ['b6-05', 'de-05', 'en-05', 'fr-05', 'de-02', 'en-09'];
+    final speech = [
+      for (final n in names) Wav.read('test/fixtures/stt/$n.wav').samples,
+    ];
+
+    /// Calls [check] for deterministic cuts of every recording: tail =
+    /// s[b-10000..b), the app starts [overlap] samples before b (or, with
+    /// [other], somewhere else), [est] is the time estimate.
+    void forCuts(
+      void Function(Int16List tail, Int16List app, int overlap, int est)
+      check, {
+      bool other = false,
+      int perFile = 20,
+    }) {
+      final r = math.Random(1);
+      for (final s in speech) {
+        for (var t = 0; t < perFile; t++) {
+          final b = 12000 + r.nextInt(s.length - 12000 - 6400 - 4000);
+          final overlap = 1000 + r.nextInt(2000);
+          final est = overlap - 80 - r.nextInt(400); // cuts too little
+          final tail = Int16List.sublistView(s, b - 10000, b);
+          var from = b - overlap;
+          if (other) {
+            do {
+              from = r.nextInt(s.length - 6400);
+            } while (from > b - 12000 && from < b + 6400);
+          }
+          check(
+            tail,
+            Int16List.fromList(s.sublist(from, from + 6400)),
+            other ? 0 : overlap,
+            est,
+          );
+        }
+      }
+    }
+
+    test('identische Kopie: auf das Sample genau oder Rückfall, nie falsch, '
+        'und meist gefunden', () {
+      var n = 0;
+      var found = 0;
+      forCuts((tail, app, overlap, est) {
+        n++;
+        final r = alignWakeTail(tail, app, estimate: est);
+        if (r.overlap != null) {
+          found++;
+          expect(r.overlap, overlap, reason: 'est=$est');
+        }
+      });
+      expect(found / n, greaterThan(0.9), reason: '$found von $n');
+    });
+
+    test('leicht gefilterte Kopie: höchstens 1 ms daneben oder Rückfall', () {
+      forCuts((tail, app, overlap, est) {
+        var prev = 0;
+        final filtered = Int16List.fromList([
+          for (final v in app)
+            () {
+              final y = (v * 0.7 + prev * 0.3).round();
+              prev = v;
+              return y;
+            }(),
+        ]);
+        final r = alignWakeTail(tail, filtered, estimate: est);
+        if (r.overlap != null) {
+          expect((r.overlap! - overlap).abs(), lessThanOrEqualTo(16));
+        }
+      });
+    });
+
+    test('ohne echte Überlappung: nie eine Kürzung (fail-closed)', () {
+      forCuts((tail, app, overlap, est) {
+        expect(
+          alignWakeTail(tail, app, estimate: est).overlap,
+          isNull,
+          reason: 'est=$est',
+        );
+      }, other: true);
+    });
+  });
+
+  group('feste Fehltreffer-Schnitte (Fixtures)', () {
+    final names = ['b6-05', 'de-05', 'en-05', 'fr-05', 'de-02', 'en-09'];
+    final speech = [
+      for (final n in names) Wav.read('test/fixtures/stt/$n.wav').samples,
+    ];
+    Int16List tailOf(int file, int b) =>
+        Int16List.sublistView(speech[file], b - 10000, b);
+    Int16List appFrom(int file, int from) =>
+        Int16List.fromList(speech[file].sublist(from, from + 6400));
+
+    // (file, b, hole in samples, estimate): the app continues [hole] samples
+    // after the tail, the timestamps see the gap (estimate < 0). Without
+    // the gap rule each of these finds a "match" 21-54 ms inside the tail
+    // (voiced speech repeats with every pitch period) and cuts real speech.
+    const holes = [
+      (0, 15149, 16, -361),
+      (0, 45321, 216, -234),
+      (0, 39367, 366, -682),
+      (0, 19718, 421, -620),
+      (1, 65119, 26, -340),
+      (2, 21542, 16, -52),
+    ];
+    test(
+      'Fortsetzung nach einem Loch: nie eine Kürzung (Stille wie bisher)',
+      () {
+        for (final (f, b, h, est) in holes) {
+          final r = alignWakeTail(
+            tailOf(f, b),
+            appFrom(f, b + h),
+            estimate: est,
+          );
+          expect(
+            r.overlap,
+            isNull,
+            reason: '${names[f]} b=$b hole=$h est=$est',
+          );
+        }
+      },
+    );
+
+    // (file, b, start of the unrelated app audio, estimate): not the same
+    // recording. Each is a chance match when one threshold is loosened
+    // (wakeAlignMinPeak 88 -> 80, wakeAlignSure 97 -> 90, no minimum
+    // overlap) and must stay `null`.
+    const elsewhere = [
+      (1, 43263, 28725, 2055), // MinPeak 80
+      (5, 19655, 30477, 1889), // MinPeak 80
+      (0, 54088, 26392, 313), // MinPeak 80
+      (0, 63311, 8106, 85), // MinPeak 80
+      (1, 22588, 65270, 742), // Sure 90
+      (0, 16645, 56913, 155), // Sure 90
+      (0, 16451, 46615, 327), // Sure 90
+      (0, 22050, 5134, 154), // no minimum overlap
+      (0, 29809, 40942, 16), // no minimum overlap
+      (0, 18376, 59537, 107), // no minimum overlap
+    ];
+    test('fremde Aufnahme: nie eine Kürzung, auch nicht bei kleiner '
+        'Schätzung', () {
+      for (final (f, b, from, est) in elsewhere) {
+        final r = alignWakeTail(tailOf(f, b), appFrom(f, from), estimate: est);
+        expect(r.overlap, isNull, reason: '${names[f]} b=$b from=$from');
+      }
+    });
+  });
+
+  group('bridgeWakeTail', () {
+    final s = source(40000);
+    final pre = WakePreRoll(pcm: Int16List(1600), wakeEnd: 800);
+
+    test('lückenlos und ohne Doppel, obwohl der Zeitstempel 30 ms zu wenig '
+        'kürzt', () {
+      // tail = s[8000..20000), app = s[18500..): true overlap 1500 samples.
+      final tail = Int16List.sublistView(s, 8000, 20000);
+      final app = Int16List.sublistView(s, 18500, 18500 + 6400);
+      final out = bridgeWakeTail(
+        pre,
+        (pcm: tail, lastSampleAtMs: 1000),
+        // timestamps say 1000 samples overlap (62 ms), truth is 93 ms
+        firstFrameAtMs: 1000 - 62 + 100,
+        firstFrameSamples: 1600,
+        appHead: app,
+      );
+      // The tail part of the result plus the app audio is the source again.
+      final joined = [...out.pcm.sublist(1600), ...app];
+      expect(joined, s.sublist(8000, 18500 + 6400));
+      final log = lines.singleWhere((l) => l.contains(' wake-gap '));
+      expect(log, contains('align=xcorr'));
+      expect(log, contains('xcorrMs=${1500 ~/ 16 - 62}'));
+      expect(log, contains('trim=${1500 ~/ 16}'));
+      expect(log, contains('peak='));
+      expect(
+        log,
+        matches(
+          RegExp(
+            r'^Wendelin/voice: wake-gap engine=app( \w+=(-?\d+|overlap|xcorr))+$',
+          ),
+        ),
+      );
+    });
+
+    test('ohne Signal: Rückfall auf die Zeit, align=time', () {
+      final out = bridgeWakeTail(
+        pre,
+        (pcm: Int16List(12000), lastSampleAtMs: 1000),
+        firstFrameAtMs: 1000 - 62 + 100,
+        firstFrameSamples: 1600,
+        appHead: Int16List(6400),
+      );
+      expect(out.pcm, hasLength(1600 + 12000 - 62 * 16));
+      final log = lines.singleWhere((l) => l.contains(' wake-gap '));
+      expect(log, contains('align=time'));
+      expect(log, isNot(contains('xcorrMs')));
+    });
+
+    test('Loch mit Inhalt, der sich scheinbar wiederholt: Stille, keine '
+        'Kürzung', () {
+      final speech = Wav.read('test/fixtures/stt/b6-05.wav').samples;
+      // tail = speech[b-10000..b), the app continues 16 samples later.
+      const b = 15149;
+      final tail = Int16List.sublistView(speech, b - 10000, b);
+      final app = Int16List.fromList(speech.sublist(b + 16, b + 16 + 6400));
+      final out = bridgeWakeTail(
+        pre,
+        (pcm: tail, lastSampleAtMs: 1000),
+        firstFrameAtMs: 1000 + 22 + 100, // gap 22 ms, first frame 100 ms
+        firstFrameSamples: 1600,
+        appHead: app,
+      );
+      final log = lines.singleWhere((l) => l.contains(' wake-gap '));
+      expect(log, contains('align=time'));
+      expect(log, contains('trim=0'));
+      expect(out.pcm, hasLength(1600 + 10000 + 22 * 16));
+    });
+
+    test('absurd große Lücke (Zeitstempel ohne Epoche): auf wakeHoleMax '
+        'gekappt, kein Überlauf', () {
+      final out = bridgeWakeTail(
+        pre,
+        (pcm: Int16List(1000), lastSampleAtMs: 1),
+        firstFrameAtMs: 700000000000000,
+        firstFrameSamples: 1600,
+      );
+      expect(out.pcm, hasLength(1600 + 1000 + durationToSamples(wakeHoleMax)));
+    });
+
+    test('ohne Anfang des App-Audios: wie bisher (kein align)', () {
+      bridgeWakeTail(
+        pre,
+        (pcm: Int16List.sublistView(s, 8000, 20000), lastSampleAtMs: 1000),
+        firstFrameAtMs: 1038,
+        firstFrameSamples: 1600,
+      );
+      expect(lines.single, isNot(contains('align')));
+    });
+
+    test('Bestätigungston: der Rest wird nach dem Schnitt stummgeschaltet', () {
+      final tail = Int16List.sublistView(s, 8000, 20000);
+      final app = Int16List.sublistView(s, 18500, 18500 + 6400);
+      final out = bridgeWakeTail(
+        WakePreRoll(pcm: Int16List(1600), wakeEnd: 800, muteMicSamples: 800),
+        (pcm: tail, lastSampleAtMs: 1000),
+        firstFrameAtMs: 1038,
+        firstFrameSamples: 1600,
+        appHead: app,
+      );
+      expect(out.pcm.sublist(1600, 2400).every((v) => v == 0), isTrue);
+      expect(out.pcm.sublist(2400, 2500), s.sublist(8800, 8900));
+      expect(out.muteMicSamples, 0);
+    });
+
+    test('Zeit unterschätzt die Überlappung stark: Inhalt findet sie '
+        'trotzdem (keine Stille)', () {
+      final tail = Int16List.sublistView(s, 8000, 20000);
+      final app = Int16List.sublistView(s, 19000, 19000 + 6400);
+      final out = bridgeWakeTail(
+        pre,
+        (pcm: tail, lastSampleAtMs: 1000),
+        firstFrameAtMs: 1000 - 20 + 100, // time says 20 ms, truth is 62 ms
+        firstFrameSamples: 1600,
+        appHead: app,
+      );
+      expect([...out.pcm.sublist(1600), ...app], s.sublist(8000, 19000 + 6400));
+      expect(lines.any((l) => l.contains('wake-gap-fallback')), isFalse);
+    });
+  });
+
+  test('WakeHandoffTracker: der Anfang des App-Audios kommt von begin '
+      '(Verdrahtung)', () async {
+    final s = source(40000);
+    final tail = Int16List.sublistView(s, 8000, 20000);
+    final app = Int16List.sublistView(s, 18500, 18500 + 6400);
+    final last = DateTime.now().millisecondsSinceEpoch - 40;
+    final taken = WakePreRoll(
+      pcm: Int16List(1600),
+      wakeEnd: 800,
+      lastSampleAtMs: last,
+      finish: () async => (pcm: tail, lastSampleAtMs: last),
+    );
+    int? asked;
+    final tracker = WakeHandoffTracker()
+      ..begin(taken, (n) {
+        asked = n;
+        return app;
+      });
+    tracker.onFirstFrame(1600);
+    final out = await tracker.close(taken);
+    expect(asked, wakeAlignHead);
+    expect(out!.pcm, hasLength(1600 + 12000 - 1500));
+    expect(lines.where((l) => l.contains('align=xcorr')), hasLength(1));
+  });
+
+  group('WakeHandoffTracker: Suche scheitert oder entfällt', () {
+    final s = source(40000);
+    final tail = Int16List.sublistView(s, 8000, 20000);
+    final app = Int16List.sublistView(s, 18500, 18500 + 6400);
+
+    WakePreRoll taken(int last) => WakePreRoll(
+      pcm: Int16List(1600),
+      wakeEnd: 800,
+      lastSampleAtMs: last,
+      finish: () async => (pcm: tail, lastSampleAtMs: last),
+    );
+
+    test('Isolate-Fehler: close() liefert das nach Zeit gebrückte Pre-Roll '
+        '(align=time) und loggt wake-align-error', () async {
+      final last = DateTime.now().millisecondsSinceEpoch - 40;
+      final pre = taken(last);
+      final tracker = WakeHandoffTracker(
+        align: (t, a, {required estimate}) async => throw StateError('x'),
+      )..begin(pre, (n) => app);
+      tracker.onFirstFrame(1600);
+      final out = await tracker.close(pre);
+      expect(out!.pcm.length, greaterThan(1600));
+      final log = lines.singleWhere((l) => l.contains(' wake-gap '));
+      expect(log, contains('align=time'));
+      expect(log, isNot(contains('align=xcorr')));
+      expect(
+        lines.singleWhere((l) => l.contains('wake-align-error')),
+        contains('type=stateerror'),
+      );
+    });
+
+    test('Zeit-Lücke: die Suche wird nicht gestartet', () async {
+      // The service's last sample is 500 ms before the first frame: gap > 0.
+      final last = DateTime.now().millisecondsSinceEpoch - 500;
+      final pre = taken(last);
+      var calls = 0;
+      final tracker = WakeHandoffTracker(
+        align: (t, a, {required estimate}) async {
+          calls++;
+          return (overlap: null, peak: 0);
+        },
+      )..begin(pre, (n) => app);
+      tracker.onFirstFrame(1600);
+      await tracker.close(pre);
+      expect(calls, 0);
+      expect(
+        lines.singleWhere((l) => l.contains(' wake-gap ')),
+        contains('align=time'),
+      );
+    });
+
+    test('Suche läuft: alignMs steht im wake-gap-Log (nur Zahl)', () async {
+      final last = DateTime.now().millisecondsSinceEpoch - 40;
+      final pre = taken(last);
+      final tracker = WakeHandoffTracker()..begin(pre, (n) => app);
+      tracker.onFirstFrame(1600);
+      await tracker.close(pre);
+      expect(
+        lines.singleWhere((l) => l.contains(' wake-gap ')),
+        matches(RegExp(r'alignMs=\d+(\s|$)')),
+      );
+    });
+  });
+}

@@ -34,8 +34,10 @@ class WakeWordService : Service() {
     private val handoffCheck = TimedGuard(main)
     private val hitFlow = WakeHitFlow(this, main, handoffCheck, ::stopMic) { engine?.send("overlayClosed", null) }
     private val overlapGuard = TimedGuard(main)
+
+    /** WP149: while [overlapGuard] is armed the hit is taken with the capture kept open. */
+    private val conflicts = WakeConflictReaction(overlapGuard, ::stopMic)
     private val micDeferral = WakeMicDeferral(main, hasMic = { mic != null }, startMic = ::startMic)
-    private var lastConflict: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -110,10 +112,9 @@ class WakeWordService : Service() {
         engine = e
         e.send("run", settings.runArgs(StationState.active))
         watcher = WakeConflictWatcher(this, main, { mic?.sessionId ?: 0 }) { reason ->
-            VoiceLog.i("wake-conflict reason=${reason ?: "none"}")
-            lastConflict = reason
-            // Do not depend on Dart alone: a call or foreign recording closes the microphone here.
-            if (WakePolicy.closesMicFor(reason)) stopMic()
+            // Do not depend on Dart alone: a call or foreign recording closes the microphone here
+            // (WP149: not the app's own AudioRecord in the hand-over overlap).
+            conflicts.react(reason)
             engine?.send("conflict", mapOf("reason" to reason))
         }.also { it.start() }
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager)
@@ -143,8 +144,8 @@ class WakeWordService : Service() {
 
     private fun startMic() {
         if (mic != null) return
-        if (!WakePolicy.mayStartMic(lastConflict)) {
-            VoiceLog.i("wake-mic-start skipped=conflict reason=$lastConflict")
+        if (!WakePolicy.mayStartMic(conflicts.last)) {
+            VoiceLog.i("wake-mic-start skipped=conflict reason=${conflicts.last}")
             return
         }
         val source = MicAudioSource(this)
@@ -273,7 +274,7 @@ class WakeWordService : Service() {
         micDeferral.clear()
         watcher?.stop()
         watcher = null
-        lastConflict = null
+        conflicts.reset()
         stopMic()
         // A hit that was being handed over dies with the service (else `capturing` stays set).
         WakeHandoff.clear()
