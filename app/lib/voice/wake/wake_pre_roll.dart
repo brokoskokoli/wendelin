@@ -63,7 +63,8 @@ const wakeHoleMax = Duration(milliseconds: 1500);
 /// - a hole that remains (positive gap) is inserted as silence (at most
 ///   [wakeHoleMax]), so words are not glued together.
 ///
-/// Logs `wake-gap` (signed gap in ms, `tail`, `trim`, `silence`; numbers only).
+/// Logs `wake-gap` (signed gap in ms, `tail`, `trim`, `silence`, `tailZero` = percent of
+/// zero samples in the service's tail: a muted parallel recording shows up there; numbers only).
 WakePreRoll bridgeWakeTail(
   WakePreRoll pre,
   WakeTail tail, {
@@ -72,6 +73,10 @@ WakePreRoll bridgeWakeTail(
   int? afterTakeMs,
 }) {
   var audio = Int16List.fromList(tail.pcm);
+  var zeros = 0;
+  for (final v in audio) {
+    if (v == 0) zeros++;
+  }
   final muted = pre.muteMicSamples < audio.length
       ? pre.muteMicSamples
       : audio.length;
@@ -114,6 +119,7 @@ WakePreRoll bridgeWakeTail(
     'afterTake': ?afterTakeMs,
     'mode': 'overlap',
     'tail': samplesToDuration(tail.pcm.length),
+    'tailZero': tail.pcm.isEmpty ? null : zeros * 100 ~/ tail.pcm.length,
     'trim': samplesToDuration(trim),
     'silence': samplesToDuration(silence),
   });

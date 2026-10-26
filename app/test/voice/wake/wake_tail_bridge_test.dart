@@ -47,6 +47,29 @@ void main() {
     },
   );
 
+  test('tailZero: Anteil der Nullen im Rest (stumm geschaltete Doppelaufnahme '
+      'fiele auf)', () {
+    final half = Int16List(1600)..fillRange(800, 1600, 7);
+    bridgeWakeTail(
+      pre(),
+      (pcm: half, lastSampleAtMs: 1000),
+      firstFrameAtMs: 1060,
+      firstFrameSamples: 1600,
+    );
+    expect(lines.single, contains('tailZero=50'));
+    lines.clear();
+    bridgeWakeTail(
+      pre(),
+      (pcm: Int16List(1600), lastSampleAtMs: 1000),
+      firstFrameAtMs: 1060,
+      firstFrameSamples: 1600,
+    );
+    expect(lines.last, contains('tailZero=100'));
+    lines.clear();
+    bridgeWakeTail(pre(), (pcm: filled(5, 1600), lastSampleAtMs: 1000));
+    expect(lines.single, contains('tailZero=0'));
+  });
+
   test('ohne ersten Frame: der Rest wird am Ende des Dienst-Rests gemessen, '
       'nicht an der Übernahme (WP146)', () {
     final taken = WakePreRoll(

@@ -219,6 +219,10 @@ object WakePolicy {
      * WP149: during a hand-over overlap ([handoffOverlap]: the hit was taken with the capture kept
      * open) a `recording` is the app's own new `AudioRecord` (same process, other session) and
      * does not close it, else the tail ends early and a hole remains; a `call` always does.
+     * Known cost: the service cannot tell the app's session from a truly foreign one here, so a
+     * foreign recording that starts inside the overlap is tolerated until the first app frame
+     * or the guard ([WakeWordService.OVERLAP_GUARD_MS], 2.5 s) ends it; then `recording` closes
+     * as usual. Telling them apart (the app reporting its session via [AppVoice]) is a follow-up.
      */
     fun closesMicFor(conflict: String?, handoffOverlap: Boolean = false): Boolean =
         conflict == "call" || (conflict == "recording" && !handoffOverlap)

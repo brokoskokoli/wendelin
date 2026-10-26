@@ -1,17 +1,18 @@
-// Gerätetest WP149: Übergabe vom Wake-Dienst an die App ohne Lücke. Wie
-// wake_service_e2e_test.dart (Dienst an, Bildschirm aus, eingespeiste WAV
-// öffnet das Overlay, zehn Durchläufe), prüft zusätzlich die Übergabe aus dem
-// Log: `wake-gap ms` < 50 und `silence=0` in jedem Durchlauf (das Skript
-// `wake-loop` schreibt `gaps`, `gapMaxMs`, `silenceMaxMs` ins Ergebnis).
+// Gerätetest WP149: Übergabe vom Wake-Dienst an die App ohne Lücke, mit echtem
+// Mikrofon (Dienst-AudioRecord und App-AudioRecord laufen gleichzeitig, das ist
+// die Ursache des Fehlers). Den Treffer löst der Test selbst aus
+// (`WakePlatform.debugHit`, nur Debug-Builds): das Skript `wake-loop`
+// (WAKE_HIT=debug) schaltet den Bildschirm aus und legt `hit-request` ab, der
+// Test sieht die Datei und ruft `debugHit`; das Overlay öffnet und nimmt mit
+// dem Mikrofon auf. Das Skript wertet das Log aus und schreibt `gaps`,
+// `gapMaxMs`, `silenceMaxMs`, `tailZeroMaxPct`, `conflicts`, `keeps` nach
+// `wake-result.txt`.
 //
-//   WENDELIN_MODELS=~/wendelin-models WAKE_LOG=<datei> \
+//   WENDELIN_MODELS=~/wendelin-models WAKE_HIT=debug WAKE_LOG=<datei> \
 //     tool/e2e_android.sh integration_test/wp149_wake_gapless_e2e_test.dart
 //
-// Hinweis: Der Dienst liest hier eine WAV statt des Mikrofons; die Ursache
-// (App-AudioRecord als fremde Aufnahme, `wake-conflict reason=recording`)
-// tritt nur mit echtem Dienst-Mikrofon auf und ist am Handy zu prüfen
-// (docs/testing/m5/wp149.md). Der Lauf schützt die Übergabe-Logik und die
-// Messung.
+// Erwartung je Lauf: `wake-conflict reason=recording handoff=kept action=keep`
+// (Ursache belegt), `wake-gap` mit ms < 50 und silence=0, der Rest nicht stumm.
 
 import 'dart:async';
 import 'dart:io';
@@ -73,7 +74,6 @@ void main() {
     'Wake-Übergabe: zehn Treffer ohne Lücke (wake-gap < 50 ms, silence=0)',
     (tester) async {
       final dir = await e2eDirectory();
-      final wavs = '${dir.path}/wake';
       final audio = _SwitchableAudio();
       final app = E2eApp(
         extraOverrides: [wakeAudioProvider.overrideWithValue(audio)],
@@ -86,11 +86,13 @@ void main() {
       // Bedingung „immer“ (der Emulator lädt nicht), Rolle, Dienst an.
       await askHost('role');
       final service = c.read(wakeServiceProvider.notifier);
-      const detector = 'model';
-      if (detector.isNotEmpty) {
-        await c
-            .read(wakeDetectorProvider.notifier)
-            .set(WakeDetectorChoice.parse(detector));
+      await c
+          .read(wakeDetectorProvider.notifier)
+          .set(WakeDetectorChoice.parse('model'));
+      // Kein wake.json/overlay.json (Reste eines Laufs): echtes Mikrofon.
+      for (final f in ['wake.json', 'overlay.json']) {
+        final file = File('${dir.path}/$f');
+        if (file.existsSync()) file.deleteSync();
       }
       await service.setCondition(WakeCondition.always);
       expect(await service.setEnabled(enabled: true), isTrue);
@@ -100,24 +102,19 @@ void main() {
       await real0.close();
       await platform.setDevMode(enabled: true);
       await _until(() async => (await platform.status()).running, 'Dienst');
-      // Ruhezustand: kein Whisper geladen, keine WAV.
+      // Ruhezustand: kein Whisper geladen.
       await Future<void>.delayed(const Duration(seconds: 20));
 
-      // WAV statt Mikrofon: Neustart des Dienstes liest wake.json.
-      File('${dir.path}/wake-in.wav')
-          .writeAsBytesSync(File('$wavs/test-solo.wav').readAsBytesSync());
-      File('${dir.path}/wake.json')
-          .writeAsStringSync('{"audio": "wake-in.wav", "leadingSilence": 14}');
-      File(
-        '${dir.path}/command.wav',
-      ).writeAsBytesSync(File('${dir.path}/stt/de-05.wav').readAsBytesSync());
-      File('${dir.path}/overlay.json').writeAsStringSync(
-        '{"audio": "command.wav", "turns": [{"text": "Alles klar."}]}',
-      );
-      await service.setEnabled(enabled: false);
-      await _until(() async => !(await platform.status()).running, 'Stopp');
-      await service.setEnabled(enabled: true);
-      await _until(() async => (await platform.status()).running, 'Neustart');
+      // Das Skript legt je Durchlauf `hit-request` ab: dann löst der Dienst
+      // einen Treffer aus (wie ein bestätigtes Weckwort, Vorlauf Stille).
+      final request = File('${dir.path}/hit-request');
+      var hits = 0;
+      final poll = Timer.periodic(const Duration(milliseconds: 200), (_) async {
+        if (!request.existsSync()) return;
+        request.deleteSync();
+        if (await platform.debugHit()) hits++;
+      });
+      addTearDown(poll.cancel);
 
       // Zum Untersuchen von Hand: `run-as app.wendelin touch files/e2e/hold`
       // hält den Test an, bis die Datei gelöscht wird.
@@ -130,7 +127,8 @@ void main() {
       await _until(() async => result.existsSync(), 'Ergebnis');
       final text = result.readAsStringSync().trim();
       final m = RegExp(r'wakeWord=(\d+)/(\d+)').firstMatch(text)!;
-      expect(m[1], m[2], reason: 'Stufe 1 muss jedes Mal treffen');
+      expect(hits, 10, reason: 'debugHit muss jedes Mal den Dienst treffen');
+      expect(m[1], m[2], reason: 'Der Treffer öffnet jedes Mal das Overlay');
       // WP149: Übergabe ohne Lücke und ohne eingefügte Stille.
       final gaps = int.parse(RegExp(r'gaps=(\d+)').firstMatch(text)![1]!);
       final gapMax = int.parse(
@@ -139,7 +137,16 @@ void main() {
       final silenceMax = int.parse(
         RegExp(r'silenceMaxMs=(\d+)').firstMatch(text)![1]!,
       );
+      int field(String name) =>
+          int.parse(RegExp('$name=(\\d+)').firstMatch(text)![1]!);
       expect(gaps, greaterThan(0), reason: 'kein wake-gap im Log');
+      // Ursache belegt: der Dienst sah die App-Aufnahme in der Überlappung
+      // und behielt sein Mikrofon (sonst bleibt der Rest bei ~200 ms).
+      expect(field('keeps'), greaterThan(0), reason: 'wake-conflict …keep');
+      expect(field('conflicts'), field('keeps'), reason: 'nie close');
+      // Der Rest darf nicht stumm sein (Android schaltet eine Doppelaufnahme
+      // ggf. stumm): `silence=0` allein beweist das nicht.
+      expect(field('tailZeroMaxPct'), lessThan(100), reason: 'Rest stumm');
       expect(gapMax, lessThan(50), reason: 'Lücke der Übergabe in ms');
       expect(silenceMax, 0, reason: 'keine Stillefüllung (Notfall)');
       // WENDELIN_KEEP: Dienst an lassen (Neustart-Prüfung, WP54).

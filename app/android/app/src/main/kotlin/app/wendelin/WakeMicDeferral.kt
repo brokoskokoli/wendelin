@@ -49,7 +49,9 @@ internal class WakeMicDeferral(
 }
 
 /** One delayed task at a time on the main thread (re-arming replaces it). */
-internal class TimedGuard(private val main: Handler) {
+internal class TimedGuard(private val scheduler: HitScheduler) {
+    constructor(main: Handler) : this(HandlerScheduler(main))
+
     private var task: Runnable? = null
 
     fun arm(delayMs: Long, run: () -> Unit) {
@@ -59,15 +61,53 @@ internal class TimedGuard(private val main: Handler) {
             run()
         }
         task = t
-        main.postDelayed(t, delayMs)
+        scheduler.postDelayed(delayMs, t)
     }
 
     /** Whether the guard is waiting to fire. */
     val armed: Boolean get() = task != null
 
     fun disarm() {
-        task?.let { main.removeCallbacks(it) }
+        task?.let { scheduler.cancel(it) }
         task = null
+    }
+}
+
+/** [HitScheduler] on a [Handler] (main thread). */
+internal class HandlerScheduler(private val main: Handler) : HitScheduler {
+    override fun postDelayed(delayMs: Long, task: Runnable) {
+        main.postDelayed(task, delayMs)
+    }
+
+    override fun cancel(task: Runnable) = main.removeCallbacks(task)
+}
+
+/**
+ * WP149: the reaction of the service to a report of [WakeConflictWatcher]. During the hand-over
+ * overlap ([guard] armed: the hit was taken with the capture kept open) a `recording` is the app's
+ * own new `AudioRecord` (same process, other session) and does not close the microphone; a `call`
+ * always does. [last] is the latest reason (Dart may not start the microphone while it closes).
+ */
+internal class WakeConflictReaction(
+    private val guard: TimedGuard,
+    private val stopMic: () -> Unit,
+    private val log: (String) -> Unit = VoiceLog::i,
+) {
+    var last: String? = null
+        private set
+
+    /** Logs, remembers and, if the policy says so, closes the microphone; returns whether it closed. */
+    fun react(reason: String?): Boolean {
+        val overlap = guard.armed
+        val closes = WakePolicy.closesMicFor(reason, overlap)
+        log(WakePolicy.conflictLog(reason, overlap, closes))
+        last = reason
+        if (closes) stopMic()
+        return closes
+    }
+
+    fun reset() {
+        last = null
     }
 }
 

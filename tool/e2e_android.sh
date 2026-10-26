@@ -51,7 +51,8 @@
 #      gelöscht (`pm clear`, auch die Modell-Kopien).
 #
 # Wake-Word-Dienst (WP50): integration_test/wake_service_e2e_test.dart nutzt die
-# Aufträge `role` und `wake-loop` (WAKE_RUNS, WAKE_LOG=<datei> für das Log).
+# Aufträge `role` und `wake-loop` (WAKE_RUNS, WAKE_LOG=<datei> für das Log;
+# WAKE_HIT=debug: der Test löst den Treffer per `debugHit` aus, WP149).
 # WENDELIN_KEEP=1 lässt Rolle, App-Daten und den eingeschalteten Dienst stehen
 # (Neustart-Test, WP54: `adb -s <emulator> reboot`, dann `wake-start source=vis`).
 #
@@ -256,11 +257,14 @@ station_tap_end() { # „Beenden“ (de) bzw. End/Terminer antippen
   adb shell input tap $(((n[0] + n[2]) / 2)) $(((n[1] + n[3]) / 2))
 }
 wake_loop() { # <Durchläufe>
-  local n="$1" i ok=0 answered=0 found log gapmax=-9999 silmax=0 gaps=0 g line m sl
+  local n="$1" i ok=0 answered=0 found log gapmax=-9999 silmax=0 gaps=0 g line m sl zmax=0 z conflicts=0 keeps=0
   log="${WAKE_LOG:-/dev/null}"
   for i in $(seq 1 "$n"); do
     adb shell input keyevent KEYCODE_SLEEP
     sleep 2
+    # WP149 (WAKE_HIT=debug): statt der eingespeisten WAV löst der Test den Treffer des
+    # Dienstes selbst aus (`debugHit`); er sieht diese Datei und löscht sie.
+    [ "${WAKE_HIT:-}" = debug ] && in_app sh -c "'touch files/e2e/hit-request'"
     found=0
     for _ in $(seq 1 120); do
       resumed | grep -q AssistantActivity && { found=1; break; }
@@ -285,7 +289,12 @@ wake_loop() { # <Durchläufe>
         sl="$(grep -oE ' silence=[0-9]+' <<<"$line" | head -1 | tr -dc '0-9' || true)"
         [ -n "$m" ] && [ "$m" -gt "$gapmax" ] && gapmax="$m"
         [ -n "$sl" ] && [ "$sl" -gt "$silmax" ] && silmax="$sl"
+        z="$(grep -oE ' tailZero=[0-9]+' <<<"$line" | head -1 | tr -dc '0-9' || true)"
+        [ -n "$z" ] && [ "$z" -gt "$zmax" ] && zmax="$z"
       done <<<"$g"
+      # Beleg der Ursache (nur Zahlen): Konflikt in der Überlappung gesehen und behalten.
+      conflicts=$((conflicts + $(adb logcat -d | grep -c 'wake-conflict reason=recording handoff=kept' || true)))
+      keeps=$((keeps + $(adb logcat -d | grep -c 'wake-conflict reason=recording handoff=kept action=keep' || true)))
       adb logcat -c
       adb shell input keyevent KEYCODE_BACK
       for _ in $(seq 1 40); do
@@ -301,7 +310,7 @@ wake_loop() { # <Durchläufe>
     echo "Durchlauf $i: overlay=$found scenario=$(in_app cat files/e2e/scenario 2>/dev/null)" >>"$log"
   done
   adb shell input keyevent KEYCODE_WAKEUP
-  echo "wakeWord=$ok/$n answered=$answered/$n gaps=$gaps gapMaxMs=$gapmax silenceMaxMs=$silmax" |
+  echo "wakeWord=$ok/$n answered=$answered/$n gaps=$gaps gapMaxMs=$gapmax silenceMaxMs=$silmax tailZeroMaxPct=$zmax conflicts=$conflicts keeps=$keeps" |
     adb shell run-as "$PKG" sh -c "'cat > files/e2e/wake-result.txt'"
 }
 host_request() {
