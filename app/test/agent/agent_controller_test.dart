@@ -515,6 +515,7 @@ void main() {
   });
 
   test('restore zeigt keine Overlay-Sitzung (WP67)', () async {
+    start([]);
     final s = await env.storage.conversations.startNew(
       env.clock.now(),
       origin: SessionOrigin.overlay,
