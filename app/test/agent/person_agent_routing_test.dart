@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
+import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/di/locked_scope.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/routing.dart';
@@ -260,6 +263,49 @@ void main() {
       expect(c.read(sessionManagerProvider).currentId, open);
       await ask('Und jetzt?', speaker: 'pa');
       expect(llm['claude']!.requests, hasLength(2));
+    });
+
+    test('gesperrt bleibt die Anzeige der offenen Unterhaltung unverändert '
+        '(kein Trenner, „privat“ bleibt)', () async {
+      await setUp0();
+      await ask('Privat: erinnere mich an den Arzttermin', speaker: 'pa');
+      int starts() => c
+          .read(agentControllerProvider)
+          .entries
+          .whereType<SessionStartEntry>()
+          .length;
+      expect(starts(), 1);
+      expect(c.read(agentControllerProvider).privateSince, isNotNull);
+      await askLocked('Licht an');
+      expect(starts(), 1, reason: 'kein neuer Sitzungsbeginn');
+      expect(c.read(agentControllerProvider).privateSince, isNotNull);
+      await askLocked('Licht aus');
+      expect(starts(), 1);
+      await ask('Und jetzt?', speaker: 'pa');
+      expect(starts(), 1, reason: 'entsperrt läuft in derselben Sitzung');
+    });
+
+    test('ein gesperrter Lauf verlängert die offene Unterhaltung nicht', () {
+      fakeAsync((async) {
+        void settle(Future<void> f) {
+          unawaited(f);
+          async.flushMicrotasks();
+        }
+
+        settle(setUp0());
+        settle(ask('Wie spät ist es?', speaker: 'pa'));
+        final manager = c.read(sessionManagerProvider);
+        expect(manager.currentId, isNotNull);
+        async.elapse(const Duration(minutes: 4));
+        settle(askLocked('Licht an'));
+        expect(manager.currentId, isNotNull, reason: 'noch offen');
+        async.elapse(const Duration(minutes: 1, seconds: 1));
+        expect(
+          manager.currentId,
+          isNull,
+          reason: 'Ende nach der Inaktivitätszeit ab dem entsperrten Lauf',
+        );
+      });
     });
   });
 }

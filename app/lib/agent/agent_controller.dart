@@ -310,7 +310,7 @@ final class AgentController extends Notifier<ConversationState> {
     _sessionId = sessionId;
     final scoped = providers.withDefaultProfile(scope.agentProfileId);
     _providers = scoped;
-    final isNew = sessionId != _shownSessionId;
+    final isNew = locked == null && sessionId != _shownSessionId;
     if (locked == null) _shownSessionId = sessionId;
     state = _reducer.userMessage(
       isNew ? state.copyWith(clearPrivate: true) : state,
