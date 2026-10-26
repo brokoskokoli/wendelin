@@ -30,6 +30,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import 'support/e2e.dart';
 import 'support/voice_e2e.dart';
+import 'support/wake_enroll_e2e.dart';
 
 final class _SwitchableAudio implements AudioInput {
   AudioInput? inner;
@@ -78,12 +79,10 @@ void main() {
           scrollable: find.byType(Scrollable).first,
         );
         await tester.pump(const Duration(seconds: 1));
-        audio.inner = WavAudioInput.sequence([
-          for (var i = 1; i <= 15; i++)
-            WavAudioInput.file(
-              '${dir.path}/wake/Anna_${i.toString().padLeft(2, '0')}.wav',
-            ).samples,
-        ], speed: 4);
+        audio.inner = WavAudioInput.sequence(
+          annaHeyClips('${dir.path}/wake'),
+          speed: 4,
+        );
         await tester.tap(find.text('Stimme einlernen'));
         await pumpUntil(tester, find.text('Weiter'));
         await tester.enterText(find.byType(TextField), 'Anna');
