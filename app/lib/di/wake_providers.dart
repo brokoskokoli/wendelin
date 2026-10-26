@@ -305,6 +305,21 @@ final wakeEnrollPauseProvider = Provider<Duration>(
   (ref) => const Duration(milliseconds: 900),
 );
 
+/// Stage 2 of the barge-in (WP151): verifier B, or the [transcript] check
+/// alone while `mu` is a placeholder (no measurement yet, so no B).
+BargeVerifier chooseBargeVerifier({
+  required BargeVerifier transcript,
+  required VerifierBScorer scorer,
+  required String Function() spokenText,
+  required bool muIsPlaceholder,
+}) => muIsPlaceholder
+    ? transcript
+    : VerifierBBargeVerifier(
+        scorer: scorer,
+        fallback: transcript,
+        spokenText: spokenText,
+      );
+
 /// Barge-in on the wake word chain (WP50): „Wendelin“ interrupts the spoken
 /// answer in the conversation mode. `null` while the conversation
 /// mode is off. `bootstrap/run_app.dart` puts it in place of the empty
@@ -361,10 +376,12 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
               language: () => language,
               spokenText: spoken,
             );
-            // A placeholder `mu` (no measurement yet) has no B.
-            return wakeVerifierBMuIsPlaceholder
-                ? transcript
-                : VerifierBBargeVerifier(scorer: scorer, fallback: transcript);
+            return chooseBargeVerifier(
+              transcript: transcript,
+              scorer: scorer,
+              spokenText: spoken,
+              muIsPlaceholder: wakeVerifierBMuIsPlaceholder,
+            );
           }
         : null,
     onListening: ({required on}) {

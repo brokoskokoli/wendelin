@@ -113,16 +113,25 @@ final class TranscriptBargeVerifier implements BargeVerifier {
 /// enrolled „Hey Wendelin“ sequences instead of reading it. Parakeet often
 /// reads the short call at conversation volume as another word (device log
 /// 2026-10-26: 9 of 26 calls), B hits 24 of 26 and 0 of 519 TTS clips
-/// (offline). B has no text, so there is no echo filter: the own voice does
-/// not match the enrolled voice. Without usable sequences, or on an error of
-/// B, the [fallback] (transcript) decides, never both for one clip.
+/// (offline). B has no text, so it cannot filter the own voice; that is fine
+/// while the answer does not contain the wake word (own voice vs. enrolled
+/// voice). If the text read aloud contains it, TTS saying „Wendelin“ scored
+/// up to 0.665 against the threshold 0.6815 offline, so the [fallback]
+/// (transcript with the echo filter, K84) decides. The same happens without
+/// usable sequences or on an error of B, never both for one clip.
 final class VerifierBBargeVerifier implements BargeVerifier {
   /// Creates the verifier.
   VerifierBBargeVerifier({
     required this.scorer,
     required this.fallback,
+    this.spokenText = _noText,
     this.minLevel = 150,
   });
+
+  static String _noText() => '';
+
+  /// The text read aloud so far in this answer (for the echo filter).
+  final String Function() spokenText;
 
   /// Scores clips against the enrolled sequences.
   final VerifierBScorer scorer;
@@ -138,6 +147,10 @@ final class VerifierBBargeVerifier implements BargeVerifier {
     Int16List pcm, {
     required BargeInKeyword candidate,
   }) async {
+    // The answer says the wake word: only the text can tell echo from call.
+    if (matchesWakeWord(spokenText())) {
+      return fallback.verify(pcm, candidate: candidate);
+    }
     final end = speechEnd(pcm, minLevel);
     final s = end == 0 ? null : await scorer.score(pcm, end);
     if (s == null) return fallback.verify(pcm, candidate: candidate);

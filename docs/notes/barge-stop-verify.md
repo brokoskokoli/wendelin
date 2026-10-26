@@ -50,3 +50,5 @@ Anlass: Gerätelog 2026-10-26, Gesprächston. Parakeet las das kurze „(Hey) We
 - **Kandidat während einer Prüfung:** geht nicht mehr verloren. Er merkt sich das Ende seines Wortes (`_deferredLoud`); sein Ausschnitt wird dort geschnitten, nicht am Ende der Sprache „jetzt“. Verworfen wird nur, wenn das Wort aus dem Ring (2 × Ausschnitt) gefallen ist, dann mit `barge-verify result=skip reason=stale`.
 - **Log:** `barge-verify` nennt `verifier=b|transcript` und bei B `score=`; `barge-cand` nennt den Wert des Kandidaten (`cand=`), `sim` bleibt das Maximum der Sitzung.
 - Gerätetest: `docs/testing/m5/wp151.md`.
+
+Nachtrag WP151 Runde 1: Enthält der zuletzt vorgelesene Text das Weckwort, entscheidet nicht B, sondern das Transkript mit Echo-Filter (K84); offline kam TTS mit „(Hey) Wendelin“ auf B bis 0,665 (Schwelle 0,6815). Ein Kandidat aus dem Cooldown behält sein Wortende (`pendingLoud`) wie nach einer Ablehnung.

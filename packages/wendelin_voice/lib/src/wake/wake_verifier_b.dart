@@ -296,11 +296,13 @@ final class VerifierBScorer {
 
   WakeFeatureExtractor? _extractor;
   Future<void>? _opening;
+  bool _closed = false;
 
   /// Score of the decision window ending at [endSample] of [pcm]: `null`
   /// when B cannot decide (no usable sequences, or an error), `-1` when the
   /// clip is too short for any window (rejected).
   Future<double?> score(Int16List pcm, int endSample) async {
+    if (_closed) return null;
     final tpl = await _sequences();
     if (tpl.isEmpty) return null;
     try {
@@ -334,6 +336,8 @@ final class VerifierBScorer {
   }
 
   Future<Float32List?> _sequence(Int16List clip) async {
+    // Closed while waiting for the templates: open nothing that never closes.
+    if (_closed) throw StateError('Prüfer B geschlossen');
     final extractor = _extractor ??= features();
     if (extractor is! WakeSequenceExtractor) {
       throw StateError('Merkmalskette kann keine Folge');
@@ -344,6 +348,7 @@ final class VerifierBScorer {
 
   /// Releases the feature models.
   Future<void> close() async {
+    _closed = true;
     final e = _extractor;
     _extractor = null;
     _opening = null;

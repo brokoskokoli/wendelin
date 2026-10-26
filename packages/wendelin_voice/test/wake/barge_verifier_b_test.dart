@@ -1,4 +1,5 @@
 // WP151: Prüfer B beim Unterbrechen (Vorlagen statt Transkript).
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -42,13 +43,15 @@ void main() {
     required _Fallback fallback,
     bool templates = true,
     Object? error,
+    double threshold = 0.6815,
+    String Function()? spoken,
   }) {
     final row = _vec([cos, math.sqrt(1 - cos * cos)]);
     final live = Float32List(96)..[0] = 1;
     return VerifierBBargeVerifier(
       scorer: VerifierBScorer(
         mu: Float32List(96),
-        threshold: 0.6815,
+        threshold: threshold,
         templates: () async => [
           if (templates)
             WakeTemplates(
@@ -71,6 +74,7 @@ void main() {
         ),
       ),
       fallback: fallback,
+      spokenText: spoken ?? () => '',
     );
   }
 
@@ -126,13 +130,95 @@ void main() {
     expect(fb.calls, 1);
   });
 
-  test('Stille im Ausschnitt: kein Signal von B', () async {
+  test('Stille im Ausschnitt: B kann nicht entscheiden, Transkript', () async {
     final fb = _Fallback();
     final v = await make(
       cos: 0.9,
       fallback: fb,
     ).verify(Int16List(16000), candidate: BargeInKeyword.wake);
     expect(v.keyword, isNull);
+    expect(v.verifier, 'transcript');
+    expect(fb.calls, 1);
+  });
+
+  test('Score genau auf der Schwelle: wake (>=)', () async {
+    final probe = await make(
+      cos: 0.9,
+      fallback: _Fallback(),
+    ).verify(clip, candidate: BargeInKeyword.wake);
+    final v = await make(
+      cos: 0.9,
+      fallback: _Fallback(),
+      threshold: probe.score!,
+    ).verify(clip, candidate: BargeInKeyword.wake);
+    expect(v.keyword, BargeInKeyword.wake);
+    expect(v.verifier, 'b');
+  });
+
+  test(
+    'Antwort enthält das Weckwort: Transkript mit Echo-Filter, B schweigt',
+    () async {
+      final fb = _Fallback();
+      final v = await make(
+        cos: 0.9,
+        fallback: fb,
+        spoken: () => 'Ich heiße Wendelin.',
+      ).verify(clip, candidate: BargeInKeyword.wake);
+      expect(fb.calls, 1);
+      expect(v.verifier, 'transcript');
+      expect(v.score, isNull);
+    },
+  );
+
+  test('Antwort ohne Weckwort: B entscheidet', () async {
+    final fb = _Fallback();
+    final v = await make(
+      cos: 0.9,
+      fallback: fb,
+      spoken: () => 'Das Wetter ist schön.',
+    ).verify(clip, candidate: BargeInKeyword.wake);
+    expect(fb.calls, 0);
+    expect(v.verifier, 'b');
+  });
+
+  test('Prüfer B nach close(): kein neuer Extraktor, kein Score', () async {
+    final gate = Completer<List<WakeTemplates>>();
+    var made = 0;
+    var loaded = 0;
+    final scorer = VerifierBScorer(
+      mu: Float32List(96),
+      threshold: 0.6815,
+      templates: () {
+        loaded++;
+        return gate.future;
+      },
+      features: () {
+        made++;
+        return FakeWakeFeatureExtractor(
+          featureVersion: wakeVerifierBFeatureVersion,
+          sequenceFor: (_) => Float32List(96 * 25),
+        );
+      },
+    );
+    final pending = scorer.score(clip, clip.length);
+    await scorer.close();
+    final row = _vec([1]);
+    gate.complete([
+      WakeTemplates(
+        speakerId: 's',
+        featureVersion: wakeVerifierBFeatureVersion,
+        threshold: 0.5,
+        embeddings: [Float32List(4)],
+        sequences: [
+          WakeTemplateSequence(word: 'hw', values: _flat([row, row])),
+        ],
+      ),
+    ]);
+    expect(await pending, isNull);
+    expect(loaded, 1);
+    expect(await scorer.score(clip, clip.length), isNull);
+    expect(loaded, 1, reason: 'nach close() wird nichts mehr geladen');
+    expect(made, 0);
   });
 
   test('Echo-Filter bleibt im Transkript-Pfad', () async {

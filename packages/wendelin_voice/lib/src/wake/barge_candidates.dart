@@ -75,12 +75,15 @@ final class BargeCandidates {
     final kind = deferredKind;
     if (kind == null) return;
     final score = deferredScore;
+    final loud = deferredLoud;
     deferredKind = null;
     deferredScore = 0;
     deferredLoud = -1;
     if (fed - deferredAt > clip) return;
     final after = deferredAt + settle;
     addPending(kind, score, after > fed ? after : fed);
+    // Keep the end of its word (as after a reject): the check cuts there.
+    if (loud > 0) pendingLoud = loud;
   }
 
   /// Takes the pending candidate to check it; its score and word position

@@ -579,6 +579,27 @@ void main() {
       });
     });
 
+    ftest(
+      'WP151: dispose ruft onDispose genau einmal (Prüfer B schließen)',
+      () async {
+        var closed = 0;
+        final d = LazyWakeBargeInDetector(
+          audio: FakeAudioInput(),
+          templates: () async => [tpl(0.9)],
+          onDispose: () async => closed++,
+          features: () => FakeWakeFeatureExtractor(
+            windowEvery: 480,
+            windowFor: (end, _) =>
+                WakeWindow(endSample: end, embedding: Float32List(2)),
+          ),
+        );
+        await d.start();
+        await d.dispose();
+        await d.dispose();
+        expect(closed, 1);
+      },
+    );
+
     ftest('Neubau im Leerlauf beendet den Detektor sofort', () async {
       final d = make([tpl(0.9)], Float32List.fromList([1, 0]));
       await d.disposeWhenIdle();
@@ -622,6 +643,40 @@ void main() {
       expect(lines.join(), contains('barge-in-off'));
       await d.stop();
       await d.dispose();
+    });
+  });
+
+  group('chooseBargeVerifier (WP151)', () {
+    final transcript = _FixedVerdict(BargeVerdict.no);
+    final scorer = VerifierBScorer(
+      mu: Float32List(96),
+      threshold: 0.6,
+      templates: () async => [],
+      features: () => FakeWakeFeatureExtractor(),
+    );
+
+    ftest('Platzhalter-mu: nur das Transkript', () async {
+      expect(
+        chooseBargeVerifier(
+          transcript: transcript,
+          scorer: scorer,
+          spokenText: () => '',
+          muIsPlaceholder: true,
+        ),
+        same(transcript),
+      );
+    });
+
+    ftest('gemessenes mu: Prüfer B mit Transkript als Rückfall', () async {
+      final v = chooseBargeVerifier(
+        transcript: transcript,
+        scorer: scorer,
+        spokenText: () => 'Ich bin Wendelin.',
+        muIsPlaceholder: false,
+      );
+      expect(v, isA<VerifierBBargeVerifier>());
+      expect((v as VerifierBBargeVerifier).spokenText(), 'Ich bin Wendelin.');
+      expect(v.fallback, same(transcript));
     });
   });
 
