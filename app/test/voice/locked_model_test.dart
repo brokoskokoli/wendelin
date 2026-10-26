@@ -89,6 +89,25 @@ void main() {
       },
     );
 
+    test(
+      'Standard mit allen Integrationen: weiter kein Modell (null)',
+      () async {
+        final probe = _env(FakeLlmProvider(const []));
+        final c0 = probe.container();
+        addTearDown(c0.dispose);
+        final all = {for (final i in c0.read(integrationSpecsProvider)) i.id};
+        expect(all, containsAll(['flashlight', 'ha', 'memory']));
+        expect(
+          await scope(
+            const ToolPrefs(),
+            entities: '[{"id":"light.b","name":"L"}]',
+            enabled: all,
+          ),
+          isNull,
+        );
+      },
+    );
+
     test('Licht auf A: ha__call kommt dazu', () async {
       expect(
         await scope(
@@ -109,6 +128,16 @@ void main() {
         expect(await scope(const ToolPrefs(), entities: '[$entity]'), isNull);
       });
     }
+
+    test('altes „Immer bestätigen“ auf ha__call: nicht im Umfang', () async {
+      expect(
+        await scope(
+          const ToolPrefs(alwaysConfirm: {'ha__call'}),
+          entities: '[{"id":"light.a","name":"L","level":"a"}]',
+        ),
+        isNull,
+      );
+    });
 
     test('Taschenlampe auf D: fällt aus dem Umfang, Licht A bleibt', () async {
       expect(
@@ -296,9 +325,23 @@ void main() {
         ScriptedTurn.text('Tür offen.'),
       ]);
       final env = _env(llm);
-      await run(tester, env, 'Haustür auf', unlockSucceeds: true);
-      // Erst gesperrt nie, dann entsperrt (Stufe D: Rückfrage statt Lauf).
-      expect(llm.requests.length, greaterThanOrEqualTo(3));
+      final (c, platform, _) = await run(
+        tester,
+        env,
+        'Haustür auf',
+        unlockSucceeds: true,
+      );
+      // Genau 4 Anfragen: 1-2 gesperrt, 3-4 nach dem Entsperren wiederholt.
+      expect(llm.requests, hasLength(4));
+      Set<String> names(int i) => {
+        for (final t in llm.requests[i].tools) t.name,
+      };
+      expect(names(0), {'ha__call', 'flashlight__on', 'flashlight__off'});
+      expect(names(1), names(0));
+      expect(names(2), contains('ha__call_secure'), reason: 'voller Katalog');
+      expect(names(2).length, greaterThan(names(0).length));
+      expect(platform.unlockRequests, 1);
+      expect(c.read(lockedPendingProvider), isNull);
       expect(
         env.ha.calls.where((x) => x.domain == 'lock'),
         isEmpty,

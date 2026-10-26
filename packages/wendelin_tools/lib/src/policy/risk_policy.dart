@@ -162,7 +162,7 @@ final class RiskPolicy {
   /// card on a locked device. The reservations stay: a tool the user
   /// disabled and the session lock of `external` tools deny as before, and a
   /// confirm-only override means "unlock". A tool that decides per device
-  /// ([LevelPerDeviceTool]) is let through here; it refuses itself.
+  /// ([LevelPerDeviceTool]) is let through here; it refuses itself unless a stored level of the tool is stricter.
   PolicyDecision decide(
     Tool tool,
     String sessionId, {
@@ -177,8 +177,14 @@ final class RiskPolicy {
         return PolicyDecision.deny(deniedReason);
       }
       if (override == PolicyAction.confirm) return PolicyDecision.unlock;
-      if (tool is LevelPerDeviceTool) return PolicyDecision.allow;
-      final level = _levels[tool.name] ?? defaultLevelOf(tool);
+      final stored = _levels[tool.name];
+      // A per-device tool is let through (it refuses itself), but a stored
+      // tool level (the legacy "always confirm" = D) still counts: locked is
+      // never looser than unlocked, the stricter of both wins.
+      if (tool is LevelPerDeviceTool && stored == null) {
+        return PolicyDecision.allow;
+      }
+      final level = stored ?? defaultLevelOf(tool);
       return access.of(level) == LevelAccess.allowed
           ? PolicyDecision.allow
           : PolicyDecision.unlock;

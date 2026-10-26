@@ -11,6 +11,15 @@ import 'package:wendelin_storage/fakes.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
+final class _SpyFastPath implements FastPath {
+  int calls = 0;
+  @override
+  Future<FastPathCall?> match(String text, {required String? language}) async {
+    calls++;
+    return null;
+  }
+}
+
 /// WP154 L2: a request on a locked device runs with the tools the policy
 /// allows only. Every context source is checked: tool specs, history,
 /// recording, memory, prompt sections, user name, audit mark.
@@ -22,6 +31,8 @@ void main() {
   late WendelinStorage storage;
   late AuditRecorder audit;
   late AgentFactory factory;
+  late ToolRegistry registry;
+  late RiskPolicy policy;
   late String session;
 
   const lockedA = LockedScope(
@@ -36,7 +47,7 @@ void main() {
     allowed = FakeTool(name: 'a__read', section: 'Abschnitt A');
     refused = FakeTool(name: 'b__read', section: 'Abschnitt B');
     memoryTool = FakeTool(name: 'memory__search');
-    final registry = ToolRegistry(sensitiveMinimum: PrivacyLevel.tee);
+    registry = ToolRegistry(sensitiveMinimum: PrivacyLevel.tee);
     for (final (id, tool) in [
       ('a', allowed),
       ('b', refused),
@@ -48,7 +59,7 @@ void main() {
       );
     }
     addTearDown(registry.dispose);
-    final policy = RiskPolicy()
+    policy = RiskPolicy()
       ..setLevel('a__read', SecurityLevel.a)
       ..setLevel('b__read', SecurityLevel.c)
       ..setLevel('memory__search', SecurityLevel.c);
@@ -62,7 +73,10 @@ void main() {
       device: const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
       costEstimator: const FlatCostEstimator(),
       budgetGuard: FixedBudgetGuard(),
-      config: const AgentConfig(userName: 'Erfundener Name'),
+      config: const AgentConfig(
+        userName: 'Erfundener Name',
+        personaAddon: 'Privater Zusatz',
+      ),
     );
   });
 
@@ -70,9 +84,26 @@ void main() {
     List<ScriptedTurn> turns, {
     LockedScope? locked,
     String text = 'Mach das',
+    FastPath? fastPath,
   }) async {
+    final fac = fastPath == null
+        ? factory
+        : AgentFactory(
+            registry: registry,
+            storage: storage,
+            policy: policy,
+            audit: audit,
+            clock: const SystemClock(),
+            device: const DeviceInfo(
+              locale: 'de-DE',
+              timeZone: 'Europe/Berlin',
+            ),
+            costEstimator: const FlatCostEstimator(),
+            budgetGuard: FixedBudgetGuard(),
+            fastPath: fastPath,
+          );
     provider = FakeLlmProvider(turns);
-    final events = await factory
+    final events = await fac
         .create(
           ProviderConfig(
             primary: ProviderTarget(
@@ -100,6 +131,7 @@ void main() {
     await run([ScriptedTurn.text('ok')]);
     expect(toolNames(), containsAll(['a__read', 'b__read']));
     expect(prompt(), contains('Erfundener Name'));
+    expect(prompt(), contains('Privater Zusatz'));
     expect(prompt(), contains('Abschnitt B'));
   });
 
@@ -109,6 +141,32 @@ void main() {
     expect(prompt(), contains('Abschnitt A'));
     expect(prompt(), isNot(contains('Abschnitt B')));
     expect(allowed.sectionAccess.single, AccessContext.lockedUnknownVoice);
+  });
+
+  test('gesperrt: freier Persona-Zusatz nicht im Prompt', () async {
+    await run([ScriptedTurn.text('ok')], locked: lockedA);
+    expect(prompt(), isNot(contains('Privater Zusatz')));
+    expect(prompt(), isNot(contains('Persönlichkeit')));
+  });
+
+  group('Schnellpfad', () {
+    const withHa = LockedScope(
+      access: AccessContext.lockedUnknownVoice,
+      tools: {'a__read', 'ha__call'},
+    );
+    Future<int> calls(LockedScope? locked) async {
+      final spy = _SpyFastPath();
+      await run([ScriptedTurn.text('ok')], locked: locked, fastPath: spy);
+      return spy.calls;
+    }
+
+    test('entsperrt läuft er', () async => expect(await calls(null), 1));
+    test('gesperrt ohne ha__call im Umfang: nie gefragt', () async {
+      expect(await calls(lockedA), 0);
+    });
+    test('gesperrt mit ha__call im Umfang: gefragt', () async {
+      expect(await calls(withHa), 1);
+    });
   });
 
   test('gesperrt: Nutzername nicht im Prompt (an den Anbieter)', () async {

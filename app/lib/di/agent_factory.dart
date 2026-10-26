@@ -207,7 +207,7 @@ final class AgentFactory implements AgentRunFactory {
   /// Locked: the name is no tool data and goes to the provider; omitted.
   AgentConfig _configFor(PersonScope person, LockedScope? locked) =>
       locked != null
-      ? config.withUserName(null)
+      ? config.withoutPersonal()
       : person.address == null
       ? config
       : config.withUserName(person.address);

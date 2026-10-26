@@ -11,13 +11,14 @@ import '../helpers.dart';
 /// flags.
 HaEntity _e(
   String id, {
+  String name = 'Gerät',
   String? level,
   bool confirm = false,
   bool quiet = false,
   String? cls,
 }) => HaEntity(
   entityId: id,
-  name: 'Gerät',
+  name: name,
   alwaysConfirm: confirm,
   noConfirm: quiet,
   deviceClass: cls,
@@ -400,10 +401,10 @@ void main() {
         'Promptabschnitt listet nur erlaubte Geräte, ohne list_entities',
         () async {
           final h = ha([
-            _e('light.kitchen', level: 'a'),
-            _e('light.hall'),
-            _e('lock.front', level: 'a'),
-            _e('switch.coffee'),
+            _e('light.kitchen', name: 'Küchenlicht', level: 'a'),
+            _e('light.hall', name: 'Flurampel'),
+            _e('lock.front', name: 'Haustürschloss'),
+            _e('switch.coffee', name: 'Kaffeesteckdose'),
           ]);
           final section = await h.tools
               .whereType<PromptContributor>()
@@ -413,10 +414,21 @@ void main() {
                 access: AccessContext.lockedUnknownVoice,
               );
           expect(section, isNotNull);
-          expect(section, contains('light.kitchen'));
-          expect(section, isNot(contains('light.hall')));
-          expect(section, isNot(contains('switch.coffee')));
+          expect(section, contains('Küchenlicht'));
+          expect(section, isNot(contains('Flurampel')));
+          expect(section, isNot(contains('Haustürschloss')));
+          expect(section, isNot(contains('Kaffeesteckdose')));
           expect(section, isNot(contains('ha__list_entities')));
+          expect(
+            RegExp('\\((light|lock|switch)\\)').allMatches(section!),
+            hasLength(1),
+          );
+          // Entsperrt stehen die Namen (Gegenprobe, der Test prüft etwas).
+          final open = await h.tools
+              .whereType<PromptContributor>()
+              .first
+              .promptSection('Licht an');
+          expect(open, contains('Flurampel'));
         },
       );
 

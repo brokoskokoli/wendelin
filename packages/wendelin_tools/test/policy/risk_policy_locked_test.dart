@@ -113,6 +113,18 @@ void main() {
       );
     });
 
+    test('gespeichertes D (altes „Immer bestätigen“): nie lockerer', () {
+      final p = RiskPolicy()..setLevel('h__call', SecurityLevel.d);
+      expect(p.decide(ha, 's').action, PolicyAction.confirm);
+      expect(p.decide(ha, 's', access: _locked), PolicyDecision.unlock);
+      expect(p.decide(ha, 's', access: _voice), PolicyDecision.unlock);
+    });
+
+    test('gespeichertes A auf dem Gerätetool: gesperrt durchgelassen', () {
+      final p = RiskPolicy()..setLevel('h__call', SecurityLevel.a);
+      expect(p.decide(ha, 's', access: _locked), PolicyDecision.allow);
+    });
+
     test('deaktiviert bleibt verweigert', () {
       final p = RiskPolicy()..setOverride('h__call', PolicyAction.deny);
       expect(p.decide(ha, 's', access: _locked).action, PolicyAction.deny);
