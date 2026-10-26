@@ -2,6 +2,7 @@
 // lokalem Bare-Remote. Nie gegen das echte Repo oder Remote.
 import 'dart:io';
 
+import 'review_stats.dart';
 import 'sandbox.dart';
 import 'self_check.dart';
 
@@ -19,6 +20,7 @@ void cleanupChecks(SelfCheck t) {
     _detached(t, c);
     _amendedSquash(t, c);
     _lease(t, c);
+    _verdicts(t, c);
   } finally {
     root.deleteSync(recursive: true);
   }
@@ -346,3 +348,68 @@ void _lease(SelfCheck t, _Env c) {
     'Remote-Branch, der inzwischen weitergewandert ist, bleibt (Lease)',
   );
 }
+
+/// Urteile des Reviewers (WP147): cleanup löscht sie nie, sie ziehen nach
+/// `reviews/` um und werden von review_stats als gültig gezählt.
+void _verdicts(SelfCheck t, _Env c) {
+  final wt = c.wt;
+  const verdict =
+      'URTEIL: FREIGABE\nRUNDE: 1\nMUTATIONEN: 4/0\nBEFUNDE: texte=0\n\nText\n';
+  c.pkg('18', 'urteil');
+  c.r.git(['merge', '-q', '--no-ff', '-m', 'Merge 18', 'wp/18-urteil']);
+  File('$wt/handoff/wp18-review.md').writeAsStringSync(verdict);
+  File('$wt/handoff/wp18-review2.md').writeAsStringSync(verdict);
+  Directory('$wt/reviews').createSync();
+  File('$wt/reviews/wp5-review.md').writeAsStringSync(verdict);
+  var res = c.run(['wp18']);
+  t.isTrue(
+    res.exitCode == 0 &&
+        '${res.stdout}'.contains('verdict') &&
+        c.exists('$wt/handoff/wp18-review.md'),
+    'Probelauf nennt das Urteil und lässt es liegen: ${res.stderr}',
+  );
+  res = c.run(['wp18', '--apply', '--no-remote']);
+  t.isTrue(
+    res.exitCode == 0 &&
+        !c.exists('$wt/handoff/wp18-review.md') &&
+        !c.exists('$wt/handoff/wp18-review2.md') &&
+        !c.exists('$wt/handoff/wp18.md') &&
+        !c.exists('$wt/handoff/wp18-log.txt') &&
+        _read('$wt/reviews/wp18-review.md') == verdict &&
+        File('$wt/reviews/wp18-review2.md').existsSync() &&
+        File('$wt/reviews/wp5-review.md').existsSync(),
+    'nach --apply: Urteile in reviews/ erhalten, Rest weg: ${res.stderr}',
+  );
+  final out = summarizeReviews(readReviews('$wt/reviews'));
+  t.isTrue(
+    out.contains('3 gültig') && !out.contains('ungültig'),
+    'review_stats zählt die erhaltenen Urteile als gültig: $out',
+  );
+  // Abweichendes Urteil gleichen Namens in reviews/: nichts wird überschrieben.
+  c.pkg('19', 'urteil2');
+  c.r.git(['merge', '-q', '--no-ff', '-m', 'Merge 19', 'wp/19-urteil2']);
+  File('$wt/handoff/wp19-review.md').writeAsStringSync(verdict);
+  File('$wt/reviews/wp19-review.md').writeAsStringSync('anders\n');
+  final before = c.snapshot();
+  res = c.run(['wp19', '--apply', '--no-remote']);
+  t.isTrue(
+    res.exitCode != 0 &&
+        c.snapshot() == before &&
+        _read('$wt/reviews/wp19-review.md') == 'anders\n',
+    'abweichendes Urteil in reviews/: nichts überschrieben, nichts gelöscht',
+  );
+  // Standardordner von review_stats: relativ zum Hauptcheckout, nicht zum cwd.
+  t.eq(
+    defaultReviewsDir((a) => '/x/ai/wendelin/.git'),
+    '/x/ai/james-wt/reviews',
+    'Standardordner aus git-common-dir',
+  );
+  t.eq(
+    defaultReviewsDir((a) => null),
+    '../james-wt/reviews',
+    'Standardordner ohne Git',
+  );
+}
+
+String _read(String p) =>
+    File(p).existsSync() ? File(p).readAsStringSync() : '';

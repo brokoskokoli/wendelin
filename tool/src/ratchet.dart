@@ -71,7 +71,8 @@ Map<String, int> lowerBaseline(
 
 /// Schreibt die Baseline (Kopfzeilen [header], Einträge sortiert).
 String renderBaseline(String header, Map<String, int> map) {
-  final keys = map.keys.toList()..sort();
+  final keys = map.keys.toList()..sort(naturalCompare);
+  if (keys.isEmpty) return '$header\n';
   return '$header\n${[for (final k in keys) '$k: ${map[k]}'].join('\n')}\n';
 }
 
@@ -83,4 +84,18 @@ String headerOf(String text) {
     lines.add(l);
   }
   return lines.join('\n');
+}
+
+/// Natürliche Sortierung: Zahlenfolgen zählen numerisch (`K5` vor `K100`).
+int naturalCompare(String a, String b) {
+  final re = RegExp(r'\d+|\D+');
+  final pa = re.allMatches(a).map((m) => m[0]!).toList();
+  final pb = re.allMatches(b).map((m) => m[0]!).toList();
+  for (var i = 0; i < pa.length && i < pb.length; i++) {
+    final x = pa[i], y = pb[i];
+    final nx = int.tryParse(x), ny = int.tryParse(y);
+    final c = nx != null && ny != null ? nx.compareTo(ny) : x.compareTo(y);
+    if (c != 0) return c;
+  }
+  return pa.length.compareTo(pb.length);
 }

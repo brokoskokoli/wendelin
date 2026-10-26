@@ -164,9 +164,10 @@ void _workflowChecks(SelfCheck t) {
   );
   t.isTrue(
     docs.contains('tool/check_docs.dart') &&
+        docs.contains('tool/check_concept.dart') &&
         !docs.contains('gate.dart') &&
         !docs.contains('flutter test'),
-    'docs-only führt nur check_docs aus',
+    'docs-only führt nur check_docs und check_concept aus',
   );
   t.isTrue(
     (jobs['scope'] ?? '').contains('tool/ci_scope.sh --ci'),
