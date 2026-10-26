@@ -45,16 +45,21 @@ final class AuditRecorder implements ToolAuditSink {
   Future<void> flush() => _tail;
 
   /// A user request was sent; [trigger] is what started it (`pushToTalk`,
-  /// `assistant`, …; `null` = typed in the app).
-  void request(String sessionId, UserInput input, {String? trigger}) =>
-      _write(AuditKind.request, sessionId, {
-        'source': input.source.name,
-        'trigger': ?trigger,
-        'text': input.text,
-        'language': ?input.language,
-        'sttConfidence': ?input.sttConfidence,
-        if (input.requestEscalation) 'requestEscalation': true,
-      });
+  /// `assistant`, …; `null` = typed in the app). A request made
+  /// [whileLocked] is marked and its wording is not logged (K85).
+  void request(
+    String sessionId,
+    UserInput input, {
+    String? trigger,
+    bool whileLocked = false,
+  }) => _write(AuditKind.request, sessionId, {
+    'source': input.source.name,
+    'trigger': ?trigger,
+    if (whileLocked) 'whileLocked': true else 'text': input.text,
+    'language': ?input.language,
+    'sttConfidence': ?input.sttConfidence,
+    if (input.requestEscalation) 'requestEscalation': true,
+  });
 
   /// The user answered a tool confirmation.
   void toolConfirmation(
@@ -230,6 +235,7 @@ final class AuditRecorder implements ToolAuditSink {
         'decision': entry.decision.name,
         'status': entry.status.name,
         'durationMs': entry.duration.inMilliseconds,
+        if (entry.whileLocked) 'whileLocked': true,
       });
 
   void _write(AuditKind kind, String? sessionId, Map<String, Object?> data) {

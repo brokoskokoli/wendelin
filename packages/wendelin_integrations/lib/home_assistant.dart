@@ -8,11 +8,14 @@ export 'src/home_assistant/ha_integration.dart';
 export 'src/home_assistant/ha_model.dart';
 export 'src/home_assistant/ha_policy.dart'
     show
-        haLockSafeDomains,
-        haRiskForDomain,
+        HaSceneKind,
         haDataNotice,
+        haDecide,
+        haDefaultLevel,
+        haEffectiveLevel,
         haQuietCoverClasses,
-        haCoverIsQuiet;
+        haRiskForDomain,
+        haSceneKindOf;
 export 'src/home_assistant/ha_ports.dart';
 export 'src/home_assistant/ha_registry.dart' show haEntitiesFrom;
 export 'src/home_assistant/ha_sync.dart' show haSyncInterval, haSyncStore;

@@ -114,14 +114,13 @@ void main() {
       });
     }
 
-    test('Licht über ha__call_secure wird abgelehnt', () async {
+    test('Licht über ha__call_secure läuft (nur strenger, WP154)', () async {
       final o = await run('ha__call_secure', {
         'entity': 'Küche Deckenlicht',
         'service': 'turn_off',
       });
-      expect(o.isError, isTrue);
-      expect(o.text, contains('ha__call'));
-      expect(api.calls, isEmpty);
+      expect(o.isError, isFalse, reason: o.text);
+      expect(api.calls.single.service, 'turn_off');
     });
 
     test('Sensor ist nur lesbar', () async {
@@ -506,18 +505,21 @@ void main() {
       expect(api.calls.single.domain, 'scene');
     });
 
-    test('Szene ohne kritische Mitglieder bleibt offen (Filmabend)', () async {
-      final o = await run('ha__call_secure', {
-        'entity': 'Filmabend',
-        'service': 'turn_on',
-      });
-      expect(o.isError, isTrue);
-      expect(api.calls, isEmpty);
-      expect(
-        (await call({'entity': 'Filmabend', 'service': 'turn_on'})).isError,
-        isFalse,
-      );
-    });
+    test(
+      'Szene ohne kritische Mitglieder: ha__call offen, secure auch',
+      () async {
+        final o = await run('ha__call_secure', {
+          'entity': 'Filmabend',
+          'service': 'turn_on',
+        });
+        expect(o.isError, isFalse, reason: o.text);
+        expect(api.calls.single.domain, 'scene');
+        expect(
+          (await call({'entity': 'Filmabend', 'service': 'turn_on'})).isError,
+          isFalse,
+        );
+      },
+    );
 
     test('Szene mit Rollo oder Alarm zählt ebenso', () async {
       for (final member in ['cover.garage', 'alarm_control_panel.home']) {
@@ -621,15 +623,18 @@ void main() {
       expect(api.at('switch.coffee')!.state, 'on');
     });
 
-    test('ohne die Option bleibt ha__call_secure für Schalter zu', () async {
-      store.entities = [for (final e in store.entities) e.withConfirm(false)];
-      final o = await run('ha__call_secure', {
-        'entity': 'Kaffeemaschine',
-        'service': 'turn_on',
-      });
-      expect(o.isError, isTrue);
-      expect(api.calls, isEmpty);
-    });
+    test(
+      'ohne die Option nimmt ha__call_secure den Schalter trotzdem',
+      () async {
+        store.entities = [for (final e in store.entities) e.withConfirm(false)];
+        final o = await run('ha__call_secure', {
+          'entity': 'Kaffeemaschine',
+          'service': 'turn_on',
+        });
+        expect(o.isError, isFalse, reason: o.text);
+        expect(api.calls.single.service, 'turn_on');
+      },
+    );
 
     test('Licht mit „Immer bestätigen“: gesperrt nicht erlaubt', () async {
       store.entities = [

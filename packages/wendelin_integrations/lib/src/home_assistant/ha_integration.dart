@@ -112,32 +112,63 @@ final class HaIntegration implements Integration {
     }
   }
 
-  /// Hook for the speaker recognition (WP92): whether the call of
-  /// [toolName] with [args] may run on a locked device. Only `ha__call` on
-  /// light, scene and media player ([haLockSafeDomains]); reading (it would
-  /// read house details aloud) and locks, alarms, covers and climate are
-  /// not. The lock policy itself is not part of WP91; this only answers the
-  /// question. Unknown or unresolvable entities are not allowed.
+  /// Whether at least one approved device may be controlled in [access]
+  /// (WP154 L2): the locked path then lets the model run with `ha__call`. The
+  /// stored data decide (no live state): fail-closed for covers and scenes
+  /// without a chosen level. Unreadable data mean no.
+  Future<bool> anyAllowedWhileLocked(AccessContext access) async {
+    try {
+      final critical = await context.confirmIds();
+      for (final e in await context.approved()) {
+        if (haRiskForDomain(e.domain) == null) continue;
+        if (haDecide(
+              e,
+              criticalIds: critical,
+              locked: access.locked,
+              speakerRecognized: access.speakerRecognized,
+            ) ==
+            LevelAccess.allowed) {
+          return true;
+        }
+      }
+    } on Object {
+      return false;
+    }
+    return false;
+  }
+
+  /// Hook for the lock and speaker policy (WP92, WP154): whether the call
+  /// of [toolName] with [args] may run on a locked device **for a
+  /// recognized voice**, according to the policy table ([haDecide], level
+  /// B or A). Only `ha__call`; reading (it would read house details aloud)
+  /// never. Unknown or unresolvable entities are not allowed. Nothing calls
+  /// this yet (the scope computation asks it with the access of the request).
   Future<bool> allowedWhileLocked(
     String toolName,
-    Map<String, Object?> args,
-  ) async {
+    Map<String, Object?> args, {
+    AccessContext access = const AccessContext(
+      locked: true,
+      speakerRecognized: true,
+    ),
+  }) async {
     if (toolName != 'ha__call') return false;
     final query = args['entity'];
     if (query is! String || query.trim().isEmpty) return false;
     try {
       final e = await context.resolve(query);
-      if (e.alwaysConfirm || !haLockSafeDomains.contains(e.domain)) {
-        return false;
-      }
-      if (e.domain != 'scene') return true;
-      // A scene with a lock, alarm or cover is as critical as the member.
-      final scene = await context.api.state(e.entityId);
-      return haSceneHasMembers(scene) &&
-          !haSceneHasSecureMember(
-            scene,
-            confirmIds: await context.confirmIds(),
-          );
+      final state = e.domain == 'scene' || e.domain == 'cover'
+          ? await context.api.state(e.entityId)
+          : null;
+      return haDecide(
+            e,
+            state: state,
+            criticalIds: e.domain == 'scene'
+                ? await context.confirmIds()
+                : const {},
+            locked: true,
+            speakerRecognized: access.speakerRecognized,
+          ) ==
+          LevelAccess.allowed;
     } on PortException {
       return false;
     }

@@ -47,21 +47,27 @@ void main() {
       });
   });
 
-  group('haCoverIsQuiet', () {
+  group('haDecide (Rollo ohne Rückfrage)', () {
     HaState state(String id, [String cls = 'blind']) =>
         HaState(entityId: id, state: 'open', attributes: {'device_class': cls});
 
     test('Klasse shade zählt als ruhig (echte HA-Klasse)', () {
       expect(haQuietCoverClasses, contains('shade'));
       expect(
-        haCoverIsQuiet(_cover('cover.a'), state('cover.a', 'shade')),
-        isTrue,
+        haDecide(_cover('cover.a'), state: state('cover.a', 'shade')),
+        LevelAccess.allowed,
       );
     });
 
     test('Live-Zustand mit anderer entity_id: nicht ruhig', () {
-      expect(haCoverIsQuiet(_cover('cover.a'), state('cover.a')), isTrue);
-      expect(haCoverIsQuiet(_cover('cover.a'), state('cover.b')), isFalse);
+      expect(
+        haDecide(_cover('cover.a'), state: state('cover.a')),
+        LevelAccess.allowed,
+      );
+      expect(
+        haDecide(_cover('cover.a'), state: state('cover.b')),
+        LevelAccess.confirm,
+      );
     });
   });
 

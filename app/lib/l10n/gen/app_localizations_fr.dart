@@ -1508,18 +1508,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get haAddressLabel => 'Adresse';
 
   @override
-  String get haAlwaysConfirm => 'Toujours confirmer';
-
-  @override
-  String get haAlwaysConfirmHelp =>
-      'Wendelin demande confirmation avant chaque commande (p. ex. cuisinière, four).';
-
-  @override
-  String haAlwaysConfirmSemantics(String name, String label) {
-    return '$name : $label';
-  }
-
-  @override
   String haApproved(int n) {
     String _temp0 = intl.Intl.pluralLogic(
       n,
@@ -1557,11 +1545,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get haDisconnectTitle => 'Déconnecter Home Assistant ?';
 
   @override
-  String haEntityAlwaysAsks(String entityId) {
-    return '$entityId · demande toujours';
-  }
-
-  @override
   String get haErrorTitle => 'Erreur – injoignable';
 
   @override
@@ -1569,7 +1552,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get haFastPathHelp =>
-      '« Volet du salon, descends » ou « Lumière de la cuisine, éteins » s’exécute sans IA, avec les mêmes règles. Serrures, alarmes, portails et appareils réglés sur « Toujours confirmer » ne passent jamais par là. Pour tout ce qui est flou, l’IA répond comme avant.';
+      '« Volet du salon, descends » ou « Lumière de la cuisine, éteins » s’exécute sans IA, avec les mêmes règles. Serrures, alarmes, portails et appareils du niveau D ne passent jamais par là. Pour tout ce qui est flou, l’IA répond comme avant.';
 
   @override
   String get haFilter => 'Filtrer les appareils';
@@ -1590,13 +1573,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get haIntro =>
       'Wendelin pilote vos appareils autorisés via l’interface de votre Home Assistant. Uniquement sur le réseau local ou via Tailscale. L’adresse et le jeton restent dans le stockage sécurisé de l’appareil.';
-
-  @override
-  String get haNoAsk => 'Sans confirmation';
-
-  @override
-  String get haNoAskHelp =>
-      'Wendelin actionne ce volet sans demander (avec annulation). Seulement pour volets, stores, bannes et rideaux ; les portes de garage et les portes demandent toujours.';
 
   @override
   String get haNoDevices => 'Aucun appareil trouvé.';
@@ -1883,6 +1859,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Effet externe · demande toujours';
 
   @override
+  String get integrationDetailExternalNoAsk =>
+      'Effet externe · sans confirmation (niveau assoupli)';
+
+  @override
   String get integrationDetailIntegrationDetailHaSetup =>
       'Adresse, jeton et appareils';
 
@@ -1937,7 +1917,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get integrationDetailTapTool =>
-      'Touchez un outil pour activer ou désactiver « Toujours demander ».';
+      'Sous « Détails », vous réglez le niveau de sécurité (A à D) par outil.';
 
   @override
   String get integrationDetailTitle => 'Intégration';
@@ -2061,6 +2041,66 @@ class AppLocalizationsFr extends AppLocalizations {
   String reconnectErrUnavailable(String service) {
     return '$service est injoignable ou ne répond pas. Réessayez plus tard.';
   }
+
+  @override
+  String get levelDetails => 'Détails';
+
+  @override
+  String get levelHelpA => 'Toujours, même verrouillé et sans voix reconnue.';
+
+  @override
+  String get levelHelpB =>
+      'Avec une voix reconnue (même verrouillé) ou appareil déverrouillé.';
+
+  @override
+  String get levelHelpC => 'Seulement appareil déverrouillé.';
+
+  @override
+  String get levelHelpD => 'Déverrouillé et avec confirmation à l’écran.';
+
+  @override
+  String get levelLegacyRemove =>
+      'Retirer l’ancien « Toujours confirmer » (l’appareil fixe le niveau)';
+
+  @override
+  String get levelRestore => 'Rétablir le réglage par défaut';
+
+  @override
+  String levelSemantics(String name, String level) {
+    return '$name : niveau $level';
+  }
+
+  @override
+  String get levelStateChanged => 'modifié';
+
+  @override
+  String get levelStateDefault => 'par défaut';
+
+  @override
+  String levelSummary(String level, String state) {
+    return 'Niveau $level · $state';
+  }
+
+  @override
+  String get levelSummaryScene => 'par défaut : selon les membres';
+
+  @override
+  String get levelWarnConfirm => 'Modifier quand même';
+
+  @override
+  String get levelWarnDeviceMessage =>
+      'Une serrure, une alarme, un portail ou une porte pourra alors être commandé sans confirmation, au niveau A même appareil verrouillé. La responsabilité vous incombe.';
+
+  @override
+  String get levelWarnPersonalMessage =>
+      'Cet outil lit ou modifie des contenus personnels. Au niveau A, il s’exécute même appareil verrouillé, avec n’importe quelle voix ; au niveau B avec une voix reconnue (un enregistrement peut tromper). La responsabilité vous incombe.';
+
+  @override
+  String get levelWarnTitle => 'Moins de protection ?';
+
+  @override
+  String get levelWarnToolMessage =>
+      'Cet outil agit vers l’extérieur et pourra alors s’exécuter sans confirmation, au niveau A même appareil verrouillé. La responsabilité vous incombe.';
 
   @override
   String get listsAccessLost =>

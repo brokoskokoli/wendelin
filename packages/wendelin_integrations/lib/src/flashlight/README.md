@@ -15,3 +15,5 @@ Keine Nachfrage, nicht sensibel, alle Datenschutzstufen, kein Netz. Undo stellt 
 **Berechtigung**: keine (`CAMERA` wird für `setTorchMode` nicht gebraucht). **Plattformen**: Android.
 
 **Gesperrtes Gerät (WP53)**: `IntegrationSpec.allowedWhileLocked` (App) ist hier `true` gesetzt; `LockGateAgentRun` (WP53) führt „Taschenlampe an/aus“ bei Sperre lokal aus, ohne Modell (`matchLockedCommand`).
+
+**Stufe (WP154 L2, ADR 0022)**: `flashlight__on` und `__off` haben Standard **A** (`DefaultLevelTool`), `__toggle` C; gesperrt läuft damit nur A, sonst „Entsperren nötig“. Der Nutzer kann jedes Tool umstellen (D: auch der lokale Befehl wird gesperrt verweigert). Ein Modelllauf gesperrt entsteht erst, wenn über die beiden lokalen Befehle hinaus ein Tool erlaubt ist.

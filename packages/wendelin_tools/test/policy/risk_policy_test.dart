@@ -41,6 +41,49 @@ void main() {
     expect(p.decide(_external, 's'), PolicyDecision.confirm);
   });
 
+  group('Stufe je Tool (WP154)', () {
+    final cases = <(Tool, SecurityLevel, PolicyAction)>[
+      (_read, SecurityLevel.a, PolicyAction.allow),
+      (_read, SecurityLevel.b, PolicyAction.allow),
+      (_read, SecurityLevel.c, PolicyAction.allow),
+      (_read, SecurityLevel.d, PolicyAction.confirm),
+      (_external, SecurityLevel.a, PolicyAction.allow),
+      (_external, SecurityLevel.b, PolicyAction.allow),
+      (_external, SecurityLevel.c, PolicyAction.allow),
+      (_external, SecurityLevel.d, PolicyAction.confirm),
+    ];
+    for (final (tool, level, expected) in cases) {
+      test('${tool.risk.name} auf ${level.name} → ${expected.name}', () {
+        final p = RiskPolicy()..setLevel(tool.name, level);
+        expect(p.decide(tool, 's').action, expected);
+      });
+    }
+
+    test('Stufe lockert external; Deaktivieren und Sperre bleiben', () {
+      final p = RiskPolicy()
+        ..setLevel('p__send', SecurityLevel.a)
+        ..setOverride('p__send', PolicyAction.deny);
+      expect(p.decide(_external, 's').action, PolicyAction.deny);
+      final q = RiskPolicy()
+        ..setLevel('p__send', SecurityLevel.a)
+        ..lockExternal('s');
+      expect(q.decide(_external, 's').action, PolicyAction.deny);
+    });
+
+    test('clearLevel stellt den Standard wieder her', () {
+      final p = RiskPolicy()..setLevel('p__send', SecurityLevel.a);
+      p.clearLevel('p__send');
+      expect(p.levelFor('p__send'), isNull);
+      expect(p.decide(_external, 's'), PolicyDecision.confirm);
+    });
+
+    test('Standardstufen je Risiko', () {
+      expect(RiskPolicy.defaultLevelFor(RiskLevel.read), SecurityLevel.c);
+      expect(RiskPolicy.defaultLevelFor(RiskLevel.write), SecurityLevel.c);
+      expect(RiskPolicy.defaultLevelFor(RiskLevel.external), SecurityLevel.d);
+    });
+  });
+
   test('clearOverride stellt den Standard wieder her', () {
     final p = RiskPolicy()..setOverride('p__read', PolicyAction.deny);
     expect(p.decide(_read, 's').action, PolicyAction.deny);

@@ -33,6 +33,7 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP149 – Wake-Übergabe ohne Audiolücke (Gerätetest)](wp149.md)
 - [WP150 – Home Assistant: Zahl als Text und Wiederholungsabbruch (Gerätetest)](wp150.md)
 - [WP151 – Unterbrechen mit Weckwort bei Gesprächston (Gerätetest)](wp151.md)
+- [WP154 – Sicherheitsstufe je Tool und Home-Assistant-Gerät (Gerätetest)](wp154.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)
 - [WP85 Kontakte, SMS und Anrufe (`contacts`)](wp85.md)

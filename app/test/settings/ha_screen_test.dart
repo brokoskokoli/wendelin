@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/agent_factory.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/hint_term_providers.dart';
 import 'package:wendelin/di/home_assistant.dart';
+import 'package:wendelin/di/preference_models.dart';
 import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/ui/settings/ha_screen.dart';
+import 'package:wendelin/ui/settings/integration_detail_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
@@ -89,27 +93,33 @@ void main() {
       ),
     );
 
-    // Schalter: „Immer bestätigen“ erscheint erst nach der Freigabe und
-    // bleibt gespeichert, auch wenn danach andere Geräte geändert werden.
-    const confirmKey = ValueKey('haConfirm_switch.coffee');
-    expect(find.byKey(confirmKey), findsNothing);
+    // Sicherheitsstufe (WP154): Der Reiter „Details“ erscheint erst nach der
+    // Freigabe; die Wahl bleibt gespeichert, auch wenn danach andere Geräte
+    // geändert werden. Standard des Schalters ist C.
+    const detailsKey = ValueKey('levelDetails_switch.coffee');
+    expect(find.byKey(detailsKey), findsNothing);
     await tester.ensureVisible(
       find.byKey(const ValueKey('haEntity_switch.coffee')),
     );
     await tester.tap(find.byKey(const ValueKey('haEntity_switch.coffee')));
     await settle(tester);
-    await tester.ensureVisible(find.byKey(confirmKey));
-    await tester.tap(find.byKey(confirmKey));
+    expect(find.textContaining('Stufe C · Standard'), findsWidgets);
+    await tester.ensureVisible(find.byKey(detailsKey));
+    await tester.tap(find.byKey(detailsKey));
     await settle(tester);
-    Future<bool?> confirmed(String id) async => (await store.load())
+    const dKey = ValueKey('level_switch.coffee_d');
+    await tester.ensureVisible(find.byKey(dKey));
+    await tester.tap(find.byKey(dKey));
+    await settle(tester);
+    Future<String?> levelOf(String id) async => (await store.load())
         .where((e) => e.entityId == id)
-        .map((e) => e.alwaysConfirm)
+        .map((e) => e.level)
         .firstOrNull;
-    expect(await confirmed('switch.coffee'), isTrue);
-    expect(await confirmed('light.kitchen'), isFalse);
+    expect(await levelOf('switch.coffee'), 'd');
+    expect(await levelOf('light.kitchen'), isNull);
     await tester.tap(find.byKey(const ValueKey('haEntity_light.kitchen')));
     await settle(tester);
-    expect(await confirmed('switch.coffee'), isTrue);
+    expect(await levelOf('switch.coffee'), 'd');
 
     // Schnellweg: standardmäßig an, der Schalter speichert und wirkt auf die
     // nächste Anfrage (WP135 D).
@@ -132,6 +142,122 @@ void main() {
     await settle(tester);
     expect(await env.secrets.listKeys(), isEmpty);
     expect(find.byKey(const ValueKey('haAddress')), findsOneWidget);
+  });
+
+  testWidgets('Hinweis beim Lockern: Schloss, Alarm, Tor auf A/B ja, Licht und '
+      'C/D nein; Szene zeigt „je nach Mitgliedern“ (WP154)', (tester) async {
+    final env = TestEnv(enabled: const {'ha'});
+    await pumpIntegrations(tester, env);
+    await openHa(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('haAddress')),
+      '192.168.1.20:8123',
+    );
+    await tester.enterText(find.byKey(const ValueKey('haToken')), haToken);
+    await tester.tap(find.text('Verbinden'));
+    await settle(tester);
+    for (final id in [
+      'lock.front',
+      'alarm_control_panel.home',
+      'cover.garage',
+      'light.living',
+      'scene.movie',
+    ]) {
+      final sw = find.byKey(ValueKey('haEntity_$id'));
+      await tester.ensureVisible(sw);
+      await tester.tap(sw);
+      await settle(tester);
+    }
+
+    Future<void> pick(String id, String level) async {
+      final details = find.byKey(ValueKey('levelDetails_$id'));
+      await tester.ensureVisible(details);
+      // Touch-Ziel mindestens 44 hoch (DESIGN.md).
+      expect(tester.getSize(details).height, greaterThanOrEqualTo(44));
+      final l = find.byKey(ValueKey('level_${id}_$level'));
+      if (l.evaluate().isEmpty) {
+        await tester.tap(details);
+        await settle(tester);
+      }
+      await tester.ensureVisible(l);
+      expect(tester.getSize(l).height, greaterThanOrEqualTo(44));
+      await tester.tap(l);
+      await settle(tester);
+    }
+
+    // Schloss, Alarm, Tor: A und B fragen vorher, „Abbrechen“ ändert nichts.
+    for (final id in [
+      'lock.front',
+      'alarm_control_panel.home',
+      'cover.garage',
+    ]) {
+      for (final level in ['a', 'b']) {
+        await pick(id, level);
+        expect(
+          find.text('Weniger Schutz?'),
+          findsOneWidget,
+          reason: '$id $level',
+        );
+        await tester.tap(find.text('Abbrechen'));
+        await settle(tester);
+      }
+      // C: kein Hinweis (die Stufe wird einfach gesetzt).
+      await pick(id, 'c');
+      expect(find.text('Weniger Schutz?'), findsNothing, reason: '$id c');
+      // Zurück auf D: ebenfalls kein Hinweis.
+      await pick(id, 'd');
+      expect(find.text('Weniger Schutz?'), findsNothing, reason: '$id d');
+    }
+
+    // Licht: auch A ohne Hinweis.
+    await pick('light.living', 'a');
+    expect(find.text('Weniger Schutz?'), findsNothing);
+
+    // Szene ohne eigene Wahl: keine falsche Stufe im Kopf.
+    expect(
+      find.text('Details · Standard: je nach Mitgliedern'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Stufe B · Standard'), findsNothing);
+  });
+
+  testWidgets('Altes „Immer bestätigen“ auf ha__call lässt sich entfernen '
+      '(WP154)', (tester) async {
+    final env = TestEnv(enabled: const {'ha'});
+    final c = await pumpIntegrations(tester, env);
+    await openHa(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('haAddress')),
+      '192.168.1.20:8123',
+    );
+    await tester.enterText(find.byKey(const ValueKey('haToken')), haToken);
+    await tester.tap(find.text('Verbinden'));
+    await settle(tester);
+    await tester.runAsync(
+      () => c
+          .read(toolPrefsProvider.notifier)
+          .set(const ToolPrefs(alwaysConfirm: {'ha__call'})),
+    );
+    unawaited(
+      Navigator.of(tester.element(find.byType(HaScreen))).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const IntegrationDetailScreen('ha'),
+        ),
+      ),
+    );
+    await settle(tester);
+    // Für die Geräte-Tools gibt es keine Stufenwahl, nur den Knopf zum Alten.
+    expect(find.byKey(const ValueKey('levelDetails_ha__call')), findsNothing);
+    final remove = find.byKey(const ValueKey('levelLegacyRemove_ha__call'));
+    expect(remove, findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('levelLegacyRemove_ha__call_secure')),
+      findsNothing,
+    );
+    await tester.tap(remove);
+    await settle(tester);
+    expect(c.read(toolPrefsProvider).alwaysConfirm, isEmpty);
+    expect(remove, findsNothing);
   });
 
   testWidgets('Freigabe ändern und Trennen: Hinweisbegriffe folgen', (

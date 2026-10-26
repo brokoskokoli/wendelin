@@ -36,6 +36,14 @@ void main() {
     }
   });
 
+  test('Standardstufe: on/off A (gesperrt erlaubt), toggle C', () {
+    SecurityLevel levelOf(String n) =>
+        (tool(n) as DefaultLevelTool).defaultLevel;
+    expect(levelOf('flashlight__on'), SecurityLevel.a);
+    expect(levelOf('flashlight__off'), SecurityLevel.a);
+    expect(levelOf('flashlight__toggle'), SecurityLevel.c);
+  });
+
   test('on: schaltet ein, Undo schaltet zurück aus', () async {
     final o = await tool('flashlight__on').execute({}, ctx());
     expect(o.isError, isFalse);

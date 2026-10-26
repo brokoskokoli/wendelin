@@ -31,18 +31,37 @@ import 'sensitivity.dart';
 import 'session_manager.dart';
 import 'voice_providers.dart' show voiceSettingsProvider;
 
-/// Risk policy with the user's per-tool confirmations (only stricter).
+/// Tools whose level is not chosen per tool: the Home Assistant call tools
+/// take the level of the device (WP154), a tool level would bypass it.
+bool toolLevelPerDevice(String tool) =>
+    tool == 'ha__call' || tool == 'ha__call_secure';
+
+/// Risk policy with the user's per-tool security levels (WP154, ADR 0022):
+/// the level replaces the old "always confirm" and may also loosen a tool.
 final riskPolicyProvider = Provider<RiskPolicy>((ref) {
   final policy = RiskPolicy();
-  var confirmed = <String>{};
+  var known = <String>{};
   void apply(ToolPrefs prefs) {
-    for (final name in confirmed.difference(prefs.alwaysConfirm)) {
-      policy.clearOverride(name);
+    // The call tools of Home Assistant only keep the legacy "always
+    // confirm" (D); a chosen level would bypass the device's own level.
+    String? raw(String n) => toolLevelPerDevice(n)
+        ? (prefs.alwaysConfirm.contains(n) ? 'd' : null)
+        : prefs.levelOf(n);
+    final names = {
+      for (final n in {...prefs.levels.keys, ...prefs.alwaysConfirm})
+        if (raw(n) != null) n,
+    };
+    for (final name in known.difference(names)) {
+      policy.clearLevel(name);
     }
-    for (final name in prefs.alwaysConfirm) {
-      policy.setOverride(name, PolicyAction.confirm);
+    for (final name in names) {
+      // Fail-closed: a stored level that is not a..d means D.
+      policy.setLevel(
+        name,
+        SecurityLevel.effective(raw(name), SecurityLevel.d),
+      );
     }
-    confirmed = prefs.alwaysConfirm;
+    known = names;
   }
 
   apply(ref.read(toolPrefsProvider));

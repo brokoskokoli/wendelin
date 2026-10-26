@@ -4,6 +4,7 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
+import 'security_level_picker.dart';
 import 'settings_page.dart';
 
 /// Devices that Home Assistant no longer lists (WP135 A), with a button to
@@ -36,19 +37,18 @@ class HaGoneSection extends StatelessWidget {
   );
 }
 
-/// The devices of one room with the switch "to the model" and, for switches,
-/// "always confirm".
+/// The devices of one room with the switch "to the model" and, for
+/// devices that can be controlled, the collapsed „Details“ row with the
+/// security level (WP154).
 class HaAreaSection extends StatelessWidget {
   /// Creates the section.
   const HaAreaSection({
     required this.title,
     required this.entities,
     required this.approved,
-    required this.alwaysConfirm,
-    required this.noAsk,
+    required this.choiceOf,
     required this.onToggle,
-    required this.onToggleConfirm,
-    required this.onToggleNoAsk,
+    required this.onLevel,
     super.key,
   });
 
@@ -61,28 +61,28 @@ class HaAreaSection extends StatelessWidget {
   /// Ids of the approved devices.
   final Set<String> approved;
 
-  /// Ids of the devices with "always confirm".
-  final Set<String> alwaysConfirm;
-
-  /// Ids of the covers with „ohne Rückfrage“ (WP135 E).
-  final Set<String> noAsk;
+  /// The device with the user's choice (level, legacy flags) applied.
+  final HaEntity Function(HaEntity entity) choiceOf;
 
   /// Approves or revokes a device.
   final void Function(HaEntity entity, bool on) onToggle;
 
-  /// Sets "always confirm" of a device.
-  final void Function(HaEntity entity, bool on) onToggleConfirm;
+  /// Sets the level of a device, `null` = default.
+  final void Function(HaEntity entity, SecurityLevel? level) onLevel;
 
-  /// Sets „ohne Rückfrage“ of a cover.
-  final void Function(HaEntity entity, bool on) onToggleNoAsk;
+  /// Domains whose A/B level gets the hint (lock, alarm, gate, door).
+  static bool dangerous(HaEntity e) =>
+      e.domain == 'lock' ||
+      e.domain == 'alarm_control_panel' ||
+      e.domain == 'cover';
 
-  /// Whether the option „ohne Rückfrage“ is offered: blinds and the like
-  /// only (garage, gate, door and an unknown class always ask).
-  static bool offersNoAsk(HaEntity e) =>
-      e.domain == 'cover' && haQuietCoverClasses.contains(e.deviceClass);
-
-  static bool _secure(HaEntity e) =>
-      haRiskForDomain(e.domain) == RiskLevel.external;
+  /// The default level shown for [e] (without the legacy flags). Scenes are
+  /// checked at every call; B is their usual default.
+  static SecurityLevel defaultOf(HaEntity e) => haDefaultLevel(
+    HaEntity(entityId: e.entityId, name: e.name, deviceClass: e.deviceClass),
+    liveClass: e.deviceClass,
+    scene: HaSceneKind.safe,
+  );
 
   @override
   Widget build(BuildContext context) => SettingsSection(
@@ -91,9 +91,7 @@ class HaAreaSection extends StatelessWidget {
       for (final e in entities) ...[
         SettingsRow(
           title: e.name,
-          detail: _secure(e)
-              ? context.l10n.haEntityAlwaysAsks(e.entityId)
-              : e.entityId,
+          detail: e.entityId,
           trailing: WSwitch(
             key: ValueKey('haEntity_${e.entityId}'),
             value: approved.contains(e.entityId),
@@ -101,35 +99,39 @@ class HaAreaSection extends StatelessWidget {
             onChanged: (on) => onToggle(e, on),
           ),
         ),
-        if (e.domain == 'switch' && approved.contains(e.entityId))
-          SettingsRow(
-            title: context.l10n.haAlwaysConfirm,
-            detail: context.l10n.haAlwaysConfirmHelp,
-            trailing: WSwitch(
-              key: ValueKey('haConfirm_${e.entityId}'),
-              value: alwaysConfirm.contains(e.entityId),
-              semanticLabel: context.l10n.haAlwaysConfirmSemantics(
-                e.name,
-                context.l10n.haAlwaysConfirm,
-              ),
-              onChanged: (on) => onToggleConfirm(e, on),
-            ),
-          ),
-        if (offersNoAsk(e) && approved.contains(e.entityId))
-          SettingsRow(
-            title: context.l10n.haNoAsk,
-            detail: context.l10n.haNoAskHelp,
-            trailing: WSwitch(
-              key: ValueKey('haNoAsk_${e.entityId}'),
-              value: noAsk.contains(e.entityId),
-              semanticLabel: context.l10n.haAlwaysConfirmSemantics(
-                e.name,
-                context.l10n.haNoAsk,
-              ),
-              onChanged: (on) => onToggleNoAsk(e, on),
-            ),
-          ),
+        if (haRiskForDomain(e.domain) != null && approved.contains(e.entityId))
+          _picker(context, e),
       ],
     ],
   );
+
+  Widget _picker(BuildContext context, HaEntity e) {
+    final chosen = choiceOf(e);
+    final level = haEffectiveLevel(
+      chosen,
+      liveClass: e.deviceClass,
+      scene: HaSceneKind.safe,
+    );
+    final isDefault =
+        chosen.level == null &&
+        !chosen.alwaysConfirm &&
+        !chosen.noConfirm &&
+        level == defaultOf(e);
+    return SecurityLevelPicker(
+      idKey: e.entityId,
+      name: e.name,
+      level: level,
+      isDefault: isDefault,
+      // A scene without a chosen level runs on B or D, depending on its
+      // members at every call: do not claim „Stufe B · Standard“.
+      summary: e.domain == 'scene' && isDefault
+          ? context.l10n.levelSummaryScene
+          : null,
+      warnLevels: dangerous(e)
+          ? const {SecurityLevel.a, SecurityLevel.b}
+          : const {},
+      warnMessage: context.l10n.levelWarnDeviceMessage,
+      onChanged: (l) => onLevel(e, l),
+    );
+  }
 }

@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete, solange der Maintainer am Rechner ist (
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-26 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP151, WP154; Test-APK v0.1.0-rc7; als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-26 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP151, WP157; Test-APK v0.1.0-rc7; als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -100,10 +100,10 @@ Stand: 2026-10-26 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP151, WP1
 | WP151 | Unterbrechen mit Weckwort bei Gesprächston | in Arbeit | Gerätelog rc5: barge-cand 0,54/0,56 erkannt, barge-verify (Parakeet, lp −2,2/−1,9) lehnt ab, Kandidat 0,73 bei busy verloren; startet nach WP148 (Tonaufnahmen) |
 | WP152 | Hauptmenü: MCP-Server und HTTP-Tools nur unter Integrationen | gemergt (24c76bde) | „+ HTTP-Tool“ öffnet jetzt die Liste (Beschriftung ggf. „HTTP-Tools“); `AppRoutes.httpToolNew` ohne Aufrufer (Soll) |
 | WP153 | Gesperrtes Gerät: nach dem Entsperren sauber weitermachen | geplant | Gerätebefund rc5: nach Entsperren keine Anzeige, Fenster zu; Analyse zuerst, nach WP148 |
-| WP154 | Home Assistant: Sicherheitsstufe je Gerät (A–D) | in Arbeit | Wunsch Maintainer 2026-10-26: Stufen A–D für jedes Werkzeug (HA je Gerät), Standard = Empfehlung (confirm/external = D), frei überschreibbar, kein globaler Schalter, gesperrt mit aktuellem Anbieter/Datenschutzstufe; enthält WP92c; weicht von K85/K92 ab (K folgt) |
+| WP154 | Home Assistant: Sicherheitsstufe je Gerät (A–D) | gemergt ffed7c83 | Stufen A–D für jedes Werkzeug und HA-Gerät, Gesperrt-Pfad über Policy/Executor (Projekt-Review Befund 1 erledigt), Stimme (B), ADR 0022, K123 bestätigt 2026-10-26; Folgepunkte: Gerätetest mit echten Stimmen/Wiedergabe/Kaltstart (`docs/testing/m5/wp154.md`), Goldens zeigen Material-Icons als Kästchen (Schrift in flutter_test_config nicht geladen), Undo nach gesperrtem Lauf im Audit unter Sitzung „locked“ |
 | WP155 | Entwicklermodus: Weckwort-Archiv für Training | geplant | Wunsch Maintainer 2026-10-26: alle Weckwort-/Barge-in-Fälle inkl. verworfen und knapp verfehlt dauerhaft sammeln (eigenes Verzeichnis, index.jsonl); Prüfseite später; nach WP151 |
 | WP156 | „Hey Wendelin“ konsequent in Texten und Doku | geplant | Entscheidung Maintainer 2026-10-26 (K115-Nachtrag): Anzeige überall „Hey Wendelin“, Erkennung vorerst beide Wörter; nach WP151 |
-| WP157 | Sicherheit: Sperre nach roter Quittung je Unterhaltung, Netz-Lesewerkzeuge nach fremden Inhalten | geplant | Projekt-Review 2026-10-26 (Befunde 2, 5), Entscheidung Maintainer: Sperre echt, Rückfrage (K122); nach WP154 |
+| WP157 | Sicherheit: Sperre nach roter Quittung je Unterhaltung, Netz-Lesewerkzeuge nach fremden Inhalten | in Arbeit | Projekt-Review 2026-10-26 (Befunde 2, 5), Entscheidung Maintainer: Sperre echt, Rückfrage (K122); nach WP154 |
 | WP158 | Robustheit: Fehler beim Mikrofonstart, Stationskanal | geplant | Projekt-Review 2026-10-26 (Befunde 6, 7); nicht parallel zu WP153 |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
@@ -111,9 +111,9 @@ Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 ## Nächste Schritte
 
 Stand 2026-10-26 (Orchestrator):
-0. Laufend: WP151 (Barge-in-Prüfung, echte Aufnahmen lokal), WP154 (Stufen A–D für alle Werkzeuge, Lieferung 1–3; Sperrpfad über die Policy, Projekt-Review Befund 1).
+0. Laufend: WP151 (Barge-in-Prüfung, echte Aufnahmen lokal). WP154 gemergt (ffed7c83), K123 bestätigt. Läuft außerdem: WP157.
 1. Nach WP151: WP155 (Weckwort-Archiv + Dev-Datenschutz) und WP156 („Hey Wendelin“ in Texten), nacheinander oder parallel nur mit getrennten Schlüsseln.
-2. Nach WP154: WP157 (Sitzungssperre, Netz-Lesewerkzeuge, K122), dann WP153 (Entsperren) und WP158 (Mikrofonstart), nicht gleichzeitig.
+2. Jetzt startbar (WP154 gemergt): WP157 (Sitzungssperre, Netz-Lesewerkzeuge, K122), dann WP153 (Entsperren) und WP158 (Mikrofonstart), nicht gleichzeitig.
 3. Gerätetest rc7 (T27-WP149, T27-WP150, T26-WP148); nach WP151 rc8.
 4. Später: Prüfseite für das Weckwort-Archiv (Anhören, Markieren), danach Hey-Pflicht in der Erkennung (K115) und Training mit eigenem HW-Kopf; offen aus M5/M6 nur mit Go: WP100/WP101, STT-Messung (K99), WP132, WP138.
 

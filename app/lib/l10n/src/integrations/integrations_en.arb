@@ -18,7 +18,7 @@
   "integrationDetailSensitiveNote": "Sensitive: the tools only go to providers at or above the level you set for sensitive integrations.",
   "integrationDetailSensitiveTitle": "Sensitive integrations",
   "integrationDetailSetUpSearch": "Set up search service",
-  "integrationDetailTapTool": "Tap a tool to turn “Always ask” on or off.",
+  "integrationDetailTapTool": "Under “Details” you set the security level (A to D) per tool.",
   "integrationDetailTitle": "Integration",
   "integrationDetailVaultDaily": "Vault and daily notes",
   "integrationDetailViewMemory": "View memory",
@@ -85,5 +85,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "integrationDetailExternalNoAsk": "External effect · no confirmation (level loosened)"
 }

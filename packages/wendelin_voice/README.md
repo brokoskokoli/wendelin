@@ -36,3 +36,6 @@ Noch Aufgabe der Plattform:
 - `TextToSpeech.speak` bekommt die Antwortsprache, wenn keine Stimme gesetzt ist.
 
 **Abbruch.** Während der Sprachausgabe gibt es noch kein Barge-in (ab v0.4). Stoppen geht dann nur durch Antippen (`VoicePipeline.cancel`). Das Abbruchwort wirkt nur, wenn die ganze Äußerung ein Stopp-Befehl ist: Stoppwörter, Stopp-Phrasen („Hör auf“, „arrête ça“, „stop it“) und Füllwörter („bitte“, „nein“).
+
+## Sprecher und Sicherheitsstufe (WP154 L3)
+`VoicePipeline(speaker:)` liefert je Äußerung ein `SpeakerMatch` (`Transcript.speaker`); die Id einer erkannten Person (`SpeakerMatch.known`) geht als `UserInput.speakerId` zum Agenten. Gesperrt entscheidet daraus `AccessContext.lockedFor` (`wendelin_core`), ob Stufe B läuft: nur gesprochen **und** mit Id. Unbekannt, zu kurz, mehrdeutig, Fehler, Zeitlimit (`VoicePipeline.speakerTimeout`, 3 s), Erkennung aus und Tippen ergeben keine Id und damit „fremde Stimme“ (fail-closed). Die Erkennung ist kein Sicherheitsmerkmal im engeren Sinn: Wiedergabe einer Aufnahme kann täuschen (ADR 0022, „L3 Stimme“). Test-Fakes: `FakeSpeakerRecognizer`, `FakeSpeakerEmbedder` (`package:wendelin_voice/fakes.dart`).
