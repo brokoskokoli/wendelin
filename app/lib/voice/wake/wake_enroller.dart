@@ -489,6 +489,7 @@ class WakeEnroller extends ChangeNotifier {
     // so nothing listens on after saving.
     _finishing = true;
     _stopped = true;
+    notifyListeners(); // the save button goes away at once
     final templates = WakeTemplates(
       speakerId: speakerId,
       featureVersion: features.featureVersion,

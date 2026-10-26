@@ -69,6 +69,9 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
   WakeEnroller? _enroller;
   var _denied = false;
 
+  /// Why saving failed (the microphone is off then; saving can be retried).
+  Object? _saveError;
+
   @override
   void initState() {
     super.initState();
@@ -129,7 +132,14 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
   }
 
   Future<void> _finish(WakeEnroller e) async {
-    await e.finish();
+    if (!e.canFinish) return; // double tap while saving
+    try {
+      await e.finish();
+    } on Object catch (err) {
+      if (mounted) setState(() => _saveError = err);
+      return;
+    }
+    if (mounted && _saveError != null) setState(() => _saveError = null);
     await ref
         .read(wakeSpeakersProvider.notifier)
         .upsert(widget.speakerId, widget.name);
@@ -179,7 +189,7 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
 
   Widget _body(WakeEnroller e) {
     final done = e.phase == EnrollPhase.complete;
-    final failed = e.error != null;
+    final failed = e.error != null || _saveError != null;
     final word = context.l10n.wakeEnrollSpokenWord(context.l10n.appName);
     return SettingsPage(
       title: context.l10n.wakeWordEnroll,
@@ -223,7 +233,9 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
                     Text(
                       e.error is EnrollCheckUnavailable
                           ? context.l10n.wakeEnrollNoRecognizer
-                          : context.l10n.wakeEnrollFailed(e.error!),
+                          : context.l10n.wakeEnrollFailed(
+                              _saveError ?? e.error!,
+                            ),
                       style: WText.caption,
                     ),
                 ],
@@ -231,7 +243,7 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
             ),
           ],
         ),
-        if (done || e.canFinish)
+        if (e.canFinish)
           PrimaryButton(
             done
                 ? context.l10n.save
