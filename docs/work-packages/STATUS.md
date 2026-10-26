@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP149, WP150; Test-APK v0.1.0-rc6; als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP149; Test-APK v0.1.0-rc6; als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -96,7 +96,7 @@ Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP149, WP1
 | WP147 | Doku generieren, Konzept schlank, Review-Messung | gemergt (99c07c22) | review_stats 89 gültig; Probelauf Konzept 131 → 48 KB; Teil B (Archiv auf main, STATUS-K, ref/-Bestand abbauen) beim Orchestrator |
 | WP148 | Entwicklermodus mit erweitertem Logging (10× „System“) | gemergt (7a59e0fe) | K120 offen; devLog (app/lib/voice/dev_log.dart), DevClips; Gerätetest (Mehrrunden, Overlay-Umschalten, Secrets, Bonus, Marken gegenhören); Folge: detectSensitiveContent erkennt „PIN – 1234“ u. ä. nicht, Tests Überschwärzung, Overlay übernimmt Umschalten erst ab nächster Sitzung, wake_service_e2e Einlernen 0/15 |
 | WP149 | Wake-Übergabe ohne Audiolücke | in Arbeit | Gerätelog rc5: wake-gap 674 ms mit Stille gefüllt; Entscheidung Maintainer: durchgehend aufnehmen |
-| WP150 | Home Assistant: Werkzeugschleife bei einem Licht mit Personennamen | in Arbeit | Gerätelog rc5: calls=9 tools=8, toolRoundLimit |
+| WP150 | Home Assistant: Werkzeugschleife bei einem Licht mit Personennamen | gemergt (90a2a345) | K121 offen; Ursache: Zahl als String, Validator lehnt ab, Modell wiederholt (Dev-Log 12:28); Gerätetest docs/testing/m5/wp150.md mit neuer APK; Folge: Agent-Fehlertexte nur deutsch (l10n) |
 | WP151 | Unterbrechen mit Weckwort bei Gesprächston | geplant | Gerätelog rc5: barge-cand 0,54/0,56 erkannt, barge-verify (Parakeet, lp −2,2/−1,9) lehnt ab, Kandidat 0,73 bei busy verloren; startet nach WP148 (Tonaufnahmen) |
 | WP152 | Hauptmenü: MCP-Server und HTTP-Tools nur unter Integrationen | gemergt (24c76bde) | „+ HTTP-Tool“ öffnet jetzt die Liste (Beschriftung ggf. „HTTP-Tools“); `AppRoutes.httpToolNew` ohne Aufrufer (Soll) |
 | WP153 | Gesperrtes Gerät: nach dem Entsperren sauber weitermachen | geplant | Gerätebefund rc5: nach Entsperren keine Anzeige, Fenster zu; Analyse zuerst, nach WP148 |
