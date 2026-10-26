@@ -180,7 +180,11 @@ void main() {
           ],
         );
         await _store(env, on: on);
-        devLogEnabled = false;
+        // State of this engine: the app sets it itself when it switches
+        // (DeveloperModePref.set) and reads it at start. A stale value in
+        // another engine is no read before listen (WP149: no wait), see the
+        // test below.
+        devLogEnabled = on;
         await speak(env);
         await devAudioIdle;
         final recs = dir.listSync().map((f) => f.uri.pathSegments.last);
@@ -192,6 +196,33 @@ void main() {
           expect(only('audio'), isEmpty);
         }
       }
+    });
+
+    test('WP148: Engine mit veraltetem Flag (an), Datenbank sagt aus: '
+        'nichts wird abgelegt (fail-closed)', () async {
+      final saved = devAudioDirectory;
+      final dir = Directory.systemTemp.createTempSync('wiringstale');
+      devAudioDirectory = () async => dir;
+      addTearDown(() {
+        devAudioDirectory = saved;
+        dir.deleteSync(recursive: true);
+      });
+      final env = TestEnv(
+        providerConfig: scripted(FakeLlmProvider(_turns())),
+        extraOverrides: [
+          activeVoiceProvider.overrideWith(
+            (ref) async => _components(
+              const Transcript(text: 'Hallo', language: 'de', confidence: 0.9),
+            ),
+          ),
+        ],
+      );
+      await _store(env, on: false);
+      devLogEnabled = true;
+      await speak(env);
+      await devAudioIdle;
+      expect(dir.listSync(), isEmpty);
+      expect(devLogEnabled, isFalse);
     });
   });
 }

@@ -1,10 +1,8 @@
 // WP148: Der Entwicklermodus erreicht den Wake-Dienst (Kotlin) ohne Neustart:
 // Schalter und App-Start spiegeln das Flag über den Wake-Kanal.
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/developer_mode.dart';
-import 'package:wendelin/di/wake_providers.dart';
 import 'package:wendelin/platform/wake/wake_platform.dart';
 
 import '../support/test_env.dart';

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import '../io/audio_input.dart';
+import '../wake/pre_roll_buffer.dart';
 
 /// Audio on each side of a candidate in its clip (WP148).
 const devClipSpan = Duration(seconds: 2);
@@ -53,6 +54,18 @@ final class DevClips {
       return false;
     }
   }
+
+  /// Hands a clip of [pcm] (time stamp now) over, with the place [mark]
+  /// ([markSamples] into the clip).
+  void emitMarked(String event, Int16List pcm, String mark, int markSamples) =>
+      emit(
+        DevClip(
+          event: event,
+          pcm: pcm,
+          at: DateTime.now(),
+          marksMs: {mark: samplesToDuration(markSamples).inMilliseconds},
+        ),
+      );
 
   /// Hands [clip] over if the mode is on.
   void emit(DevClip clip) {
@@ -155,6 +168,21 @@ final class DevAroundSet {
     if (!on || _open.length >= maxOpen) return;
     _open.add(make());
   }
+
+  /// Starts the `event` collector with the last [devClipSpan] of [ring]
+  /// before the moment (taken only if the mode is on) and [devClipSpan]
+  /// after it.
+  void startLast(String event, PreRollBuffer ring) => start(
+    () => DevAround(
+      event: event,
+      before: ring.snapshot(last: devClipSpan),
+      afterWanted: durationToSamples(devClipSpan),
+    ),
+  );
+
+  /// [DevClips.emitMarked] if the hook is set.
+  void emitMarked(String event, Int16List pcm, String mark, int samples) =>
+      clips?.emitMarked(event, pcm, mark, samples);
 
   /// Gives [frame] to the open collectors; finished ones are emitted.
   void feed(Int16List frame) {

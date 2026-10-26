@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../platform/wake/wake_platform.dart';
 import '../voice/dev_audio.dart';
 import '../voice/dev_log.dart';
 import 'app_settings.dart';
-import '../platform/wake/wake_platform.dart';
 import 'providers.dart';
 
 /// Whether the developer mode is on (WP148): extended logging with content

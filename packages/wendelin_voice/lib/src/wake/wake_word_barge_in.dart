@@ -43,12 +43,8 @@ final class WakeWordBargeInDetector
     this.onVerdict,
     this.clock = const SystemClock(),
     this.tailMax = const Duration(seconds: 3),
-    this.devClips,
-  });
-
-  /// Developer mode (WP148): audio of every candidate (`barge-cand`, 2 s each
-  /// side) and of every check (`barge-verify`); `null` or off: nothing is kept.
-  final DevClips? devClips;
+    DevClips? devClips, // WP148: audio of candidates and checks
+  }) : _dev = DevAroundSet(devClips);
 
   /// Time source of the tail's idle time.
   final Clock clock;
@@ -137,7 +133,7 @@ final class WakeWordBargeInDetector
   bool _engineOpen = false;
   int _generation = 0;
   late final PreRollBuffer _ring = PreRollBuffer(capacity: clip + clip);
-  late final _dev = DevAroundSet(devClips);
+  final DevAroundSet _dev;
   bool _verifying = false;
   int _fed = 0, _blockedUntil = 0, _ignoreUntil = 0;
   // End of the last live block with speech level, and the confidence of the
@@ -256,7 +252,7 @@ final class WakeWordBargeInDetector
       final stronger = score > _rejected + strongerMargin;
       final busy = _verifying || (_fed < _blockedUntil && !stronger);
       onCandidate?.call(keyword, busy: busy);
-      _dev.start(_candidateClip);
+      _dev.startLast('barge-cand', _ring);
       if (busy) {
         // The window follows the strongest busy candidate; a weaker later one
         // must not push it back.
@@ -300,14 +296,6 @@ final class WakeWordBargeInDetector
     }
   }
 
-  // The candidate just reported: the last 2 s are in the ring (it holds the
-  // current frame), the next 2 s are collected.
-  DevAround _candidateClip() => DevAround(
-    event: 'barge-cand',
-    before: _ring.snapshot(last: devClipSpan),
-    afterWanted: durationToSamples(devClipSpan),
-  );
-
   Future<void> _verify(BargeVerifier v, BargeInKeyword cand, int gen) async {
     final pcm = clipEndingAtSpeech(
       _ring.snapshot(),
@@ -321,17 +309,7 @@ final class WakeWordBargeInDetector
       onVerdict?.call(const BargeVerdict('skip', null, 'silent'), 0);
       return;
     }
-    devClips?.emit(
-      DevClip(
-        event: 'barge-verify',
-        pcm: pcm,
-        at: DateTime.now(),
-        marksMs: {
-          'speechEnd': samplesToDuration(speechEnd(pcm, minLevel))
-              .inMilliseconds,
-        },
-      ),
-    );
+    _dev.emitMarked('barge-verify', pcm, 'speechEnd', speechEnd(pcm, minLevel));
     _verifying = true;
     final sw = Stopwatch()..start();
     var verdict = const BargeVerdict('skip', null, 'error');

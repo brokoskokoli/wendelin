@@ -7,10 +7,10 @@ import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../di/providers.dart';
-import '../platform/wake/wake_platform.dart';
 import '../di/startup.dart';
 import '../di/voice_providers.dart';
 import '../di/wake_providers.dart';
+import '../platform/wake/wake_platform.dart';
 import '../voice/dev_audio.dart';
 import '../voice/dev_log.dart';
 import 'device_info.dart';

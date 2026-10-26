@@ -16,6 +16,16 @@ mixin VoiceContentLog {
   /// (wake word pre-roll or barge-in tail, with inserted silence) and the
   /// microphone; nothing is collected unless it is on.
   DevClips? devClips;
+
+  void _finishRec(_DevRec? rec, Endpoint? result) {
+    if (rec == null) return;
+    if (identical(_devRec, rec)) _devRec = null;
+    final clip = rec.build(result);
+    if (clip != null) devClips?.emit(clip);
+  }
+
+  // The recording of the listening that runs (WP148), only in developer mode.
+  _DevRec? _devRec;
 }
 
 /// The whole recording of one listening (WP148): the audio in the order the
@@ -36,6 +46,12 @@ final class _DevRec {
     if (pcm.isEmpty) return;
     _parts.add(pcm);
     _len += pcm.length;
+  }
+
+  void addPreRoll(Int16List preRoll, int? wakeEnd) {
+    base = wakeEnd == null ? 0 : wakeEnd.clamp(0, preRoll.length);
+    add('preRoll', preRoll);
+    marks['wakeEnd'] = samplesToDuration(base).inMilliseconds;
   }
 
   DevClip? build(Endpoint? e) {

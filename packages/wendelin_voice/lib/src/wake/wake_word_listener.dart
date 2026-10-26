@@ -305,14 +305,7 @@ final class WakeWordListener {
     if (v != null && !hit.direct) {
       try {
         final at = rel(end) - rel(end - durationToSamples(verifyWindow));
-        devClips?.emit(
-          DevClip(
-            event: 'wake-verify',
-            pcm: lead,
-            at: DateTime.now(),
-            marksMs: {'wakeEnd': samplesToDuration(at).inMilliseconds},
-          ),
-        );
+        devClips?.emitMarked('wake-verify', lead, 'wakeEnd', at);
         ok =
             await (v is WakeEndAwareVerifier
                     ? v.confirmAt(lead, at)

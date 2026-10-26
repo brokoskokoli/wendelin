@@ -122,8 +122,6 @@ final class VoicePipeline with VoiceContentLog {
   // (WP146): the live audio is the continuation of a possible re-listen.
   bool _micHeld = false;
   final _listenLog = _ListenLog();
-  // The recording of the listening that runs (WP148), only in developer mode.
-  _DevRec? _devRec;
   Endpointer? _endpointer;
   SpeechQueue? _queue;
   bool _agentRunning = false;
