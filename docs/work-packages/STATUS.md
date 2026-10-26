@@ -43,7 +43,7 @@ Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP149, WP1
 | WP89 | Todoist/Google Tasks | gemergt b4777882 | K72 bestätigt; Gerätetest mit echten Konten `docs/testing/m5/wp89.md` (WP89.1–15); Live-Tests ungelaufen (keine Tokens); Audit-Titel tasks__ und deutsche Resttexte → WP105 |
 | WP90 | Mediensteuerung | gemergt eb2cf31 | K65 bestätigt; Gerätetest WP90.1–7 (Audible, Ducking mit echter TTS, Zugriffsdialog) |
 | WP91 | Home Assistant | gemergt 8caa7cb | K58 bestätigt; E2E Fake-HA als run_ha in e2e_android.sh (WP104); Folge: CI-Filter: Änderung nur an `tool/check_apk.sh` startet apk-Job nicht |
-| WP92a–c | Sprechererkennung | WP92a gemergt e46f48c7; WP92b gemergt 3145db56; 92c geplant | K74, K77 bestätigt (2 Fragen: Datenlizenz CAM++, Schwelle); Gerätetest mit echten Stimmen `docs/testing/m5/wp92a.md` und `wp92b.md` (echte STT/Pipeline nur in Unit-Tests) vor 92c; e2e_android.sh deinstalliert die App am Ende |
+| WP92a–c | Sprechererkennung | WP92a gemergt e46f48c7; WP92b gemergt 3145db56; 92c aufgegangen in WP154 (2026-10-26) | K74, K77 bestätigt (2 Fragen: Datenlizenz CAM++, Schwelle); Gerätetest mit echten Stimmen `docs/testing/m5/wp92a.md` und `wp92b.md` (echte STT/Pipeline nur in Unit-Tests) vor 92c; e2e_android.sh deinstalliert die App am Ende |
 | WP93 | Wake Word im Chat | gemergt 7a722cba | keine Abweichung; „App im Hintergrund/Sperre → Overlay“ nur Unit-/JVM-Test, Handprüfpunkt `docs/testing/m5/wp93.md`; Folge: voice_controller `trigger` bleibt nach einem Zug auf wakeWord stehen; Gate kotlin-unit lokal nur mit JAVA_HOME=openjdk@21 (JDK 23/27 rot) → WP110 |
 | WP94 | Schnellwechsel Agent | gemergt 112d4be | keine Abweichung; Gerätecheck WP94.1/.7/.8 (Vibration, TTS-Abbruch, TalkBack); Restlücke: startet zwischen setDefault und newTopic eine Anfrage (Overlay), bleibt der Chat stehen (kein Verlaufsleck) |
 | WP95 | CI als Gate | gemergt | – |
@@ -100,7 +100,7 @@ Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP149, WP1
 | WP151 | Unterbrechen mit Weckwort bei Gesprächston | geplant | Gerätelog rc5: barge-cand 0,54/0,56 erkannt, barge-verify (Parakeet, lp −2,2/−1,9) lehnt ab, Kandidat 0,73 bei busy verloren; startet nach WP148 (Tonaufnahmen) |
 | WP152 | Hauptmenü: MCP-Server und HTTP-Tools nur unter Integrationen | gemergt (24c76bde) | „+ HTTP-Tool“ öffnet jetzt die Liste (Beschriftung ggf. „HTTP-Tools“); `AppRoutes.httpToolNew` ohne Aufrufer (Soll) |
 | WP153 | Gesperrtes Gerät: nach dem Entsperren sauber weitermachen | geplant | Gerätebefund rc5: nach Entsperren keine Anzeige, Fenster zu; Analyse zuerst, nach WP148 |
-| WP154 | Home Assistant: Sicherheitsstufe je Gerät (A–D) | in Arbeit | Wunsch Maintainer 2026-10-26, ersetzt „ohne Rückfrage“; nach WP150 |
+| WP154 | Home Assistant: Sicherheitsstufe je Gerät (A–D) | in Arbeit | Wunsch Maintainer 2026-10-26, ersetzt „ohne Rückfrage“; Umfang erweitert um Gesperrt-Pfad und Stufe B mit Sprecher (enthält WP92c); Lieferung 2/3 nach WP149 |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
