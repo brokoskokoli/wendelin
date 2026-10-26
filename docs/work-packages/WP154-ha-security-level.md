@@ -16,13 +16,13 @@
 
 ## Inhalt
 - **Standard je Gerät = heutiges Verhalten** (Abbildung im Paket herleiten und als Tabelle belegen; Vorschlag: Licht/Szene/Medien B, Rollo mit „ohne Rückfrage“ und passender Klasse C, alle übrigen D). Nach dem Update ändert sich nichts, solange der Nutzer nichts umstellt (Migration von `noConfirm`/`alwaysConfirm`, Test).
-- **Je Gerät einstellbar.** Obergrenze nach Domäne (fail-closed, Vorschlag): Schlösser, Alarmanlagen, Garagentore/Türen/Tore und Gruppen höchstens C bzw. bleiben D; A nur für Domänen ohne Sicherheitsfolge (z. B. Licht, Szene ohne sichere Mitglieder, Medien). Unbekannte Domäne und unbekannte Klasse = D. Die Grenze gilt in der Policy, nicht nur in der UI (manipulierte Einstellung → D).
+- **Je Gerät frei einstellbar** (Entscheidung Maintainer 2026-10-26: keine Obergrenze je Domäne, auch Schloss, Alarm oder Tor dürfen auf A; die Verantwortung liegt beim Nutzer). Fail-closed bleibt: fehlende, unbekannte oder ungültige gespeicherte Stufe = D. Bei A/B für Schloss, Alarm, Tor/Tür einmal ein deutlicher Hinweis beim Umstellen.
 - **UI:** Im Geräteabschnitt ein kompakter, eingerückter Eintrag „Sicherheitsstufe“ (kleiner als die normalen Schalter), einklappbar und standardmäßig eingeklappt; eingeklappt zeigt er die aktuelle Stufe als kurzen Text. Auswahl A–D mit je einer Zeile Erklärung. Texte in allen Sprachen.
 - **Policy an einer Stelle** (`ha_policy.dart`): eine Funktion „darf ausgeführt werden / braucht Bestätigung / braucht Entsperren“ aus Stufe, Domäne, Klasse, Sperrzustand und Sprechererkennung. `locked_agent_run` und die Bestätigung nutzen nur sie.
 
 ## Abnahmekriterien
 - [ ] Tabelle Stufe × Sperrzustand × Stimme → Ergebnis als Tabellentest, je Zeile ein Fall; Mutationen an der Policy werden rot.
-- [ ] Obergrenzen je Domäne in der Policy, Test mit manipulierter Einstellung.
+- [ ] Ungültige oder fehlende Stufe = D in der Policy (Test mit manipulierter Einstellung); Hinweis beim Umstellen gefährlicher Domänen (Widget-Test).
 - [ ] Migration: ohne Nutzeränderung gleiches Verhalten wie vorher (Test mit alten Einstellungen).
 - [ ] UI: eingeklappt, eingerückt, kleiner; Widget-Test und Golden (macOS).
 - [ ] ADR „Sicherheitsstufe je HA-Gerät“; Abweichungen fürs Änderungsprotokoll im Bericht.
