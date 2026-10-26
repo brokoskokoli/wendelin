@@ -50,9 +50,9 @@ void devLog(String event, [Map<String, Object?> fields = const {}]) {
 }
 
 /// A value of [devLog] that is written as it is, without the masking of
-/// number-like text. Only for text that the app made up itself and that
-/// holds no user content (the names of the audio files: a time stamp such as
-/// `20261026-002349.507` would otherwise look like a card number).
+/// number-like text. Only the names of the audio files (`TIMESTAMP_EVENT.wav`;
+/// a time stamp such as `20261026-002349.507` would otherwise look like
+/// a card number) pass; any other text is masked like a normal value.
 final class DevLogLiteral {
   /// Wraps [text].
   const DevLogLiteral(this.text);
@@ -71,11 +71,16 @@ String devJson(String json) {
   }
 }
 
+final _audioFileName = RegExp(r'^\d{8}-\d{6}\.\d{3}_[a-z-]+(-\d+)?\.wav$');
+
 String _format(Object value) {
   if (value is num || value is bool) return '$value';
   if (value is Duration) return '${value.inMilliseconds}';
   if (value is Enum) return value.name;
-  if (value is DevLogLiteral) return jsonEncode(value.text);
+  if (value is DevLogLiteral && _audioFileName.hasMatch(value.text)) {
+    return jsonEncode(value.text);
+  }
+  if (value is DevLogLiteral) return jsonEncode(_text(value.text));
   return jsonEncode(_text('$value'));
 }
 

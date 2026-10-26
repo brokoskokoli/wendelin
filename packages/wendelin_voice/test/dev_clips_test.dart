@@ -242,6 +242,43 @@ void main() {
       expect(cand.pcm.length, 32000 + 8000);
     });
 
+    test('ohne Prüfer: Kandidat hat trotzdem die 2 s davor', () async {
+      sink = _Sink(on: true);
+      audio = FakeAudioInput();
+      d = WakeWordBargeInDetector(
+        audio: audio,
+        engine: FakeWakeWordEngine(),
+        devClips: sink.hook,
+      );
+      await d.start();
+      await loud(30);
+      audio.push(FakeWakeWordEngine.markerFrame(1600));
+      await pumpEventQueue();
+      await loud(25);
+      final cand = sink.byEvent('barge-cand');
+      expect(cand.pcm.length, 32000 + 32000);
+      expect(
+        cand.pcm.sublist(32000 - 1600, 32000),
+        FakeWakeWordEngine.markerFrame(1600),
+      );
+    });
+
+    test('ohne Prüfer und Modus aus: kein Clip', () async {
+      sink = _Sink(on: false);
+      audio = FakeAudioInput();
+      d = WakeWordBargeInDetector(
+        audio: audio,
+        engine: FakeWakeWordEngine(),
+        devClips: sink.hook,
+      );
+      await d.start();
+      await loud(30);
+      audio.push(FakeWakeWordEngine.markerFrame(1600));
+      await pumpEventQueue();
+      await loud(25);
+      expect(sink.clips, isEmpty);
+    });
+
     test('Entwicklermodus aus: weder Kandidat noch Prüf-Ausschnitt', () async {
       await setUpDetector(on: false);
       await loud(30);

@@ -84,6 +84,15 @@ void main() {
     expect(devAudioClips.on, isTrue);
   });
 
+  test('Flag nach dem Einreihen aus: nichts wird geschrieben', () async {
+    devLogEnabled = true;
+    saveDevClip(clip('rec'));
+    devLogEnabled = false;
+    await devAudioIdle;
+    expect(files(), isEmpty);
+    expect(logs, isEmpty);
+  });
+
   test(
     'gleicher Zeitstempel und Ereignis: Zähler statt Überschreiben',
     () async {

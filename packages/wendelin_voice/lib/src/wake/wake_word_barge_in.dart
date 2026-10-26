@@ -224,8 +224,8 @@ final class WakeWordBargeInDetector
   Future<void> _onFrame(Int16List frame, int gen) async {
     if (gen != _generation) return;
     _dev.feed(frame);
+    if (verifier != null || _dev.on) _ring.add(frame);
     if (verifier != null) {
-      _ring.add(frame);
       final loud = speechEnd(frame, minLevel);
       if (loud > 0) _lastLoud = _fed + loud;
     }
@@ -238,6 +238,7 @@ final class WakeWordBargeInDetector
       if (h.keywordId != 'wake') continue;
       const keyword = BargeInKeyword.wake;
       if (verifier == null) {
+        _dev.startLast('barge-cand', _ring);
         _signals.add(const BargeInSignal.keyword(keyword));
         continue;
       }

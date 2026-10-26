@@ -90,14 +90,15 @@ SensitiveFinding? detectSensitiveContent(String text) {
 /// [text] with every finding of [detectSensitiveContent] replaced by [mask]
 /// (card number, IBAN, credential with its value, API key); the rest stays
 /// readable. A credential is replaced from its keyword up to the end of the
-/// value word ("Mein Passwort ist hunter2." becomes "Mein ***"). Uses the
+/// end of its clause (up to `.`, `!`, `?`, `;`, a line break or the end of
+/// the text: "Mein Passwort ist hunter2. Danke" becomes "Mein *** Danke"). Uses the
 /// same detection rules as [detectSensitiveContent], which stays unchanged.
 String redactSensitiveContent(String text, {String mask = '***'}) {
   final spans = <(int, int)>[
     ..._cardSpans(text),
     ..._ibanSpans(text),
     for (final m in _credential.allMatches(text))
-      (m.start, _wordEnd(text, m.end)),
+      (m.start, _clauseEnd(text, m.end - 1)),
     for (final m in _apiKey.allMatches(text)) (m.start, m.end),
   ]..sort((a, b) => a.$1.compareTo(b.$1));
   final out = StringBuffer();
@@ -117,13 +118,19 @@ String redactSensitiveContent(String text, {String mask = '***'}) {
   return out.toString() + text.substring(pos);
 }
 
-// End of the non-whitespace run that contains the character before [end].
-int _wordEnd(String text, int end) {
-  var e = end;
-  while (e < text.length && text.codeUnitAt(e) > 0x20) {
-    e++;
+// End of the clause (scanned from [end], the match's last character) that holds the credential value: up to a `.`, `!`, `?` or
+// `;` followed by whitespace or the end, a line break, or the end of the text
+// (spoken values come in several words: "PIN 12 34", "eins zwei drei vier").
+// Better too much than too little.
+int _clauseEnd(String text, int end) {
+  for (var e = end; e < text.length; e++) {
+    final c = text.codeUnitAt(e);
+    if (c == 0x0A || c == 0x0D) return e;
+    if (c == 0x2E || c == 0x21 || c == 0x3F || c == 0x3B) {
+      if (e + 1 >= text.length || text.codeUnitAt(e + 1) <= 0x20) return e + 1;
+    }
   }
-  return e;
+  return text.length;
 }
 
 /// Luhn checksum over a string of ASCII digits.

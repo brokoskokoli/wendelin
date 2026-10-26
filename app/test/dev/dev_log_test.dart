@@ -50,6 +50,23 @@ void main() {
       expect(lines, isEmpty);
     });
 
+    test(
+      'DevLogLiteral: nur Audio-Dateinamen unverändert, sonst geschwärzt',
+      () {
+        devLogEnabled = true;
+        devLog('audio', {
+          'file': const DevLogLiteral('20261026-002349.507_barge-cand-2.wav'),
+          'other': const DevLogLiteral('Passwort ist hunter2'),
+        });
+        expect(
+          lines.single,
+          contains('file="20261026-002349.507_barge-cand-2.wav"'),
+        );
+        expect(lines.single, contains('other="***"'));
+        expect(lines.single, isNot(contains('hunter2')));
+      },
+    );
+
     test('mit Flag: Tag, Ereignis, Felder', () {
       devLogEnabled = true;
       devLog('stt-text', {
@@ -111,7 +128,7 @@ void main() {
     for (final (text, secret) in [
       ('Zahl mit Karte 4111 1111 1111 1111 bitte', '4111'),
       ('Überweise auf DE89 3704 0044 0532 0130 00 bitte', '0532'),
-      ('Meine PIN 1234 merken', '1234'),
+      ('Meine PIN 1234. Danke', '1234'),
       ('Nimm den Key sk-ABCDEFGHIJKLMNOPQRSTUVWX heute', 'ABCDEFGH'),
     ]) {
       test(text, () {

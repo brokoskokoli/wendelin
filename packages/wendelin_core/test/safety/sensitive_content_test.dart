@@ -214,10 +214,20 @@ void main() {
         'Konto *** und mehr',
         '0532',
       ),
-      ('Meine PIN 1234 merken', 'Meine *** merken', '1234'),
-      ('Das Passwort für das WLAN ist hunter2, ok?', 'Das *** ok?', 'hunter2'),
+      ('Meine PIN 1234 merken', 'Meine ***', '1234'),
+      ('Das Passwort für das WLAN ist hunter2, ok?', 'Das ***', 'hunter2'),
       ('Key sk-ABCDEFGHIJKLMNOPQRSTUVWX nutzen', 'Key *** nutzen', 'ABCDEFGH'),
-      ('Kennwort: geheim99 und Wetter', '*** und Wetter', 'geheim99'),
+      ('Kennwort: geheim99 und Wetter', '***', 'geheim99'),
+      ('Das Passwort ist: hunter2', 'Das ***', 'hunter2'),
+      ('mein passwort ist, hunter2', 'mein ***', 'hunter2'),
+      ('PIN ist 12 34', '***', '34'),
+      ('pin 1 2 3 4', '***', '4'),
+      ('Meine PIN lautet eins zwei drei vier', 'Meine ***', 'vier'),
+      ('Passwort ist Sonne Mond Sterne 42', '***', 'Sterne'),
+      ('Passwort = "abc def"', '***', 'def'),
+      ('PIN: 9 8 7 6! Danke', '*** Danke', '6'),
+      ('Code\nPasswort ist rot blau\nweiter', 'Code\n***\nweiter', 'blau'),
+      ('Passwort ist a.b. Ende', '*** Ende', 'b.'),
     ]) {
       test(text, () {
         final out = redactSensitiveContent(text);
@@ -235,7 +245,7 @@ void main() {
       final out = redactSensitiveContent(
         'Karte 4111111111111111 und PIN 1234 sowie Licht an',
       );
-      expect(out, 'Karte *** und *** sowie Licht an');
+      expect(out, 'Karte *** und ***');
     });
 
     test('eigene Maske', () {

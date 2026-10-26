@@ -64,6 +64,7 @@ void saveDevClip(DevClip clip) {
 Future<void> get devAudioIdle => _queue;
 
 Future<void> _write(DevClip clip) async {
+  if (!devLogEnabled) return; // fail-closed: the mode may have gone off
   final dir = await devAudioDirectory();
   if (dir == null) return;
   await dir.create(recursive: true);
