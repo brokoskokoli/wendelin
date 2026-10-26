@@ -1,5 +1,5 @@
 // Gerätetest WP50 a: Wake-Word-Dienst. Einlernen mit synthetischer Stimme
-// (wie wake_enroll_e2e_test.dart), Dienst an (Bedingung „immer“), Speicher
+// „Hey Wendelin“ (AnnaHey_*, wie wake_enroll_e2e_test.dart, seit WP142), Dienst an (Bedingung „immer“), Speicher
 // im Ruhezustand ohne Whisper, dann zehn Durchläufe: Bildschirm aus, die
 // eingespeiste WAV („Wendelin“) öffnet das Overlay mit
 // TriggerKind.wakeWord, Antwort im Overlay, BACK. Zuletzt der Speicher mit
@@ -35,6 +35,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import 'support/e2e.dart';
 import 'support/voice_e2e.dart';
+import 'support/wake_enroll_e2e.dart';
 
 final class _SwitchableAudio implements AudioInput {
   AudioInput? inner;
@@ -104,11 +105,7 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       await tester.pump(const Duration(seconds: 1));
-      audio.inner = WavAudioInput.sequence([
-        for (var i = 1; i <= 15; i++)
-          WavAudioInput.file('$wavs/Anna_${i.toString().padLeft(2, '0')}.wav')
-              .samples,
-      ], speed: 4);
+      audio.inner = WavAudioInput.sequence(annaHeyClips(wavs), speed: 4);
       await tester.tap(find.text('Stimme einlernen'));
       await pumpUntil(tester, find.text('Weiter'));
       await tester.enterText(find.byType(TextField), 'Anna');

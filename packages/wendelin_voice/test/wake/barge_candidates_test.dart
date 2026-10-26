@@ -86,6 +86,25 @@ void main() {
             wantLoud: 500,
             wantScore: 0.7,
           ),
+          // Gleichstand: der wartende (ältere) Kandidat behält Score und
+          // Schnitt, nur ein strikt stärkerer übernimmt (`score > old.score`).
+          (
+            name: 'Echo wartet, Ruf direkt gleich stark: Echo behält Schnitt',
+            waiting: (0.7, 500),
+            viaCooldown: false,
+            score: 0.7,
+            wantLoud: 500,
+            wantScore: 0.7,
+          ),
+          (
+            name:
+                'Echo wartet, Cooldown-Ende gleich stark: Echo behält Schnitt',
+            waiting: (0.7, 500),
+            viaCooldown: true,
+            score: 0.7,
+            wantLoud: 500,
+            wantScore: 0.7,
+          ),
           (
             name: 'Echo wartet, Cooldown-Ende stärker',
             waiting: (0.7, 500),
