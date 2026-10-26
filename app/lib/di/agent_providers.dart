@@ -27,8 +27,8 @@ import 'preference_models.dart';
 import 'preferences.dart';
 import 'provider_config.dart';
 import 'routing.dart';
-import 'session_lock_store.dart';
 import 'sensitivity.dart';
+import 'session_lock_store.dart';
 import 'session_manager.dart';
 import 'voice_providers.dart' show voiceSettingsProvider;
 

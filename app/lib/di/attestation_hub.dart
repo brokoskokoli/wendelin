@@ -66,9 +66,8 @@ final class AttestationHub {
     required this.notifier,
     String Function(String profileId)? nameOf,
     AppLocalizations Function()? texts,
-    void Function(String profileId)? onRecheckedGreen,
-  }) : _onRecheckedGreen = onRecheckedGreen,
-       _nameOf = nameOf ?? ((id) => id),
+    this._onRecheckedGreen,
+  }) : _nameOf = nameOf ?? ((id) => id),
        _texts = texts ?? AppLocalizationsDe.new;
 
   /// System notifications.
