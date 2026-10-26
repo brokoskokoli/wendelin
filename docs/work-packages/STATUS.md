@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP148, WP150; Test-APK v0.1.0-rc5; als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP150; Test-APK v0.1.0-rc5; als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -94,7 +94,7 @@ Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP148, WP1
 | WP145 | Nativer Speicher wächst je Overlay | gemergt (105e176e) | K118, ADR 0021; Lade-Leck (~400 MB whisper beim Schließen während Laden) und Container-Teardown behoben, Engine-Group (Overlay öffnet ~1,4 → ~1,0 s); offen: Restzuwachs ~3,9 MB/Overlay am Emulator in Impeller-GLES (gfxstream), echte GLES-Geräte ungeprüft; Prüfschritt von Hand (wp145.md) |
 | WP146 | Spracherkennung nach dem Wake Word unbrauchbar (Übergabelücke, verworfener Vorlauf, Modell-Freigabe unter dem Overlay, Mikrofon-Überlappung) | gemergt (6defefc6) | K119; Ursachen docs/notes/wp146-ursachen.md, Hotword-Messung docs/notes/hotword-bias-2026-10-25.md (synthetisch); offen: Gerätetest wp146.md (wake-gap, Befehl während Stufe 2, Folgerunde), Weckwortrest vor dem Befehl (wake-strip, nach Gerätebefund), Weckwort-Test mit Prüferkette, E2E-Aufbau echte Übergabe + Parakeet, zwei Parakeet-Instanzen (~2 GB) möglich |
 | WP147 | Doku generieren, Konzept schlank, Review-Messung | gemergt (99c07c22) | review_stats 89 gültig; Probelauf Konzept 131 → 48 KB; Teil B (Archiv auf main, STATUS-K, ref/-Bestand abbauen) beim Orchestrator |
-| WP148 | Entwicklermodus mit erweitertem Logging (10× „System“) | in Arbeit | Wunsch Maintainer 2026-10-26; Bonus Hinweisbegriffe nur im Entwicklermodus |
+| WP148 | Entwicklermodus mit erweitertem Logging (10× „System“) | gemergt (7a59e0fe) | K120 offen; devLog (app/lib/voice/dev_log.dart), DevClips; Gerätetest (Mehrrunden, Overlay-Umschalten, Secrets, Bonus, Marken gegenhören); Folge: detectSensitiveContent erkennt „PIN – 1234“ u. ä. nicht, Tests Überschwärzung, Overlay übernimmt Umschalten erst ab nächster Sitzung, wake_service_e2e Einlernen 0/15 |
 | WP149 | Wake-Übergabe ohne Audiolücke | geplant | Gerätelog rc5: wake-gap 674 ms mit Stille gefüllt; Entscheidung Maintainer: durchgehend aufnehmen |
 | WP150 | Home Assistant: Werkzeugschleife bei einem Licht mit Personennamen | in Arbeit | Gerätelog rc5: calls=9 tools=8, toolRoundLimit |
 | WP151 | Unterbrechen mit Weckwort bei Gesprächston | geplant | Gerätelog rc5: barge-cand 0,54/0,56 erkannt, barge-verify (Parakeet, lp −2,2/−1,9) lehnt ab, Kandidat 0,73 bei busy verloren; startet nach WP148 (Tonaufnahmen) |
