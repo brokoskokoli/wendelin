@@ -3160,9 +3160,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get areaHttpTools => 'Outils HTTP';
 
   @override
-  String get areaHttpToolsDetail => 'Définir et tester vos propres outils';
-
-  @override
   String get areaIntegrations => 'Intégrations';
 
   @override
@@ -3171,9 +3168,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get areaMcp => 'Serveurs MCP';
-
-  @override
-  String get areaMcpDetail => 'Serveurs, connexion, état, outils';
 
   @override
   String get areaPrivacy => 'Confidentialité et journaux';
