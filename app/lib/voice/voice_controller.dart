@@ -236,7 +236,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       unawaited(preRoll?.finish?.call());
       return false;
     }
-    _wake.begin(preRoll); // before the microphone opens
+    _wake.begin(preRoll, primed.head); // before the microphone opens
     primed.prime();
     final allowed = await prepare?.call() ?? true;
     if (!allowed || !ref.mounted) {

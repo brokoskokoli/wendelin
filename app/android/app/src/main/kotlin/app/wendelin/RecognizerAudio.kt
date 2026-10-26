@@ -55,10 +55,7 @@ interface RecognizerAudioSource {
 
 /** The microphone (`AudioRecord`, source `VOICE_RECOGNITION`), attributed to the calling app. */
 class MicAudioSource(private val context: Context) : RecognizerAudioSource {
-    @Volatile private var running = false
-
-    /** WP149: [stopAndWait] asks for the unfinished chunk to be delivered (see [readChunks]). */
-    @Volatile private var flushOnStop = false
+    private val state = ReadState()
     private var thread: Thread? = null
 
     /** Audio session of the running recording (0 before the start): tells it from foreign ones. */
@@ -89,7 +86,7 @@ class MicAudioSource(private val context: Context) : RecognizerAudioSource {
         }
         record.startRecording()
         sessionId = record.audioSessionId
-        running = true
+        state.begin()
         thread = Thread({
             try {
                 readChunks(
@@ -100,12 +97,12 @@ class MicAudioSource(private val context: Context) : RecognizerAudioSource {
                             record.read(buf, off, len, AudioRecord.READ_NON_BLOCKING)
                     },
                     chunkBytes = RecognizerAudioSource.CHUNK_SAMPLES * 2,
-                    running = { running },
-                    flushOnStop = { flushOnStop },
+                    running = { state.running },
+                    flushOnStop = { state.flushOnStop },
                     onChunk = onChunk,
                 )
             } catch (e: Throwable) {
-                if (running) onError(e)
+                if (state.running) onError(e)
             } finally {
                 record.stop()
                 record.release()
@@ -114,7 +111,7 @@ class MicAudioSource(private val context: Context) : RecognizerAudioSource {
     }
 
     override fun stop() {
-        running = false
+        state.stop()
         thread = null
     }
 
@@ -124,13 +121,39 @@ class MicAudioSource(private val context: Context) : RecognizerAudioSource {
      */
     fun stopAndWait(timeoutMs: Long) {
         val t = thread
-        flushOnStop = true
-        stop()
+        state.stopForHandoff()
+        thread = null
         try {
             t?.join(timeoutMs)
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
         }
+    }
+}
+
+/**
+ * Run state of [MicAudioSource]: [stopForHandoff] (WP149, [MicAudioSource.stopAndWait]) also asks for the
+ * unfinished chunk to be delivered (see [readChunks]); a plain [stop] does not. [begin] resets both.
+ */
+internal class ReadState {
+    @Volatile var running = false
+        private set
+
+    @Volatile var flushOnStop = false
+        private set
+
+    fun begin() {
+        flushOnStop = false
+        running = true
+    }
+
+    fun stop() {
+        running = false
+    }
+
+    fun stopForHandoff() {
+        flushOnStop = true
+        running = false
     }
 }
 

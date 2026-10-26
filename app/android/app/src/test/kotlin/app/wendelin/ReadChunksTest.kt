@@ -62,4 +62,27 @@ class ReadChunksTest {
         assertEquals(listOf(100), f.out.map { it.size })
         assertTrue(f.out.all { it.all { b -> b.toInt() == 1 } })
     }
+
+    @Test
+    fun aFullChunkAfterAPlainStopIsNotDelivered() {
+        // Plain stop (conflict, call): the chunk completed by the last read is dropped as before.
+        val f = Fake(listOf(100), stopAfterReads = 1, buffered = 30)
+        f.flush = false
+        f.run(100)
+        assertEquals(emptyList<Int>(), f.out.map { it.size })
+    }
+
+    @Test
+    fun onlyTheHandoffStopAsksForTheUnfinishedChunk() {
+        val s = ReadState()
+        s.begin()
+        assertTrue(s.running)
+        s.stop()
+        assertTrue(!s.running && !s.flushOnStop)
+        s.begin()
+        s.stopForHandoff()
+        assertTrue(!s.running && s.flushOnStop)
+        s.begin()
+        assertTrue(s.running && !s.flushOnStop)
+    }
 }

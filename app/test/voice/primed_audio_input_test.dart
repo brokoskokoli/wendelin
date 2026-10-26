@@ -7,6 +7,31 @@ import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 void main() {
+  test(
+    'head: Anfang des Gepufferten als Kopie, nach dem Start leer (WP149)',
+    () async {
+      final inner = FakeAudioInput(
+        frames: AudioFrames.pattern('S' * 5),
+        frameInterval: const Duration(milliseconds: 1),
+      );
+      final primed = PrimedAudioInput(inner)..prime();
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      final all = primed.head(1 << 20);
+      expect(all.length, greaterThan(0));
+      expect(primed.head(all.length + 5), hasLength(all.length));
+      final part = primed.head(all.length ~/ 2 + 1);
+      expect(part, hasLength(all.length ~/ 2 + 1));
+      expect(part, all.sublist(0, part.length));
+      final replayed = <int>[];
+      final sub = primed.start().listen(replayed.addAll);
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+      expect(replayed.take(all.length), all);
+      expect(primed.head(100), isEmpty, reason: 'Puffer übergeben');
+      await sub.cancel();
+      await primed.stop();
+    },
+  );
+
   test('zweiter Start während der Aufnahme: VoiceException busy', () async {
     final inner = FakeAudioInput(
       frames: AudioFrames.pattern('S' * 5),

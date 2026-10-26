@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:wendelin_voice/wendelin_voice.dart';
@@ -52,6 +53,20 @@ final class PrimedAudioInput implements AudioInput {
   /// Buffered audio (for tests and the log).
   Duration get buffered =>
       samplesToDuration(_buffer.fold<int>(0, (sum, f) => sum + f.length));
+
+  /// Up to [samples] of the first buffered audio (a copy; empty once the
+  /// recording was taken by [start]).
+  Int16List head(int samples) {
+    final out = Int16List(math.min(samples, _bufferedSamples));
+    var at = 0;
+    for (final f in _buffer) {
+      if (at >= out.length) break;
+      final n = math.min(f.length, out.length - at);
+      out.setRange(at, at + n, f);
+      at += n;
+    }
+    return out;
+  }
 
   @override
   bool get isRunning => _primed != null || inner.isRunning;
