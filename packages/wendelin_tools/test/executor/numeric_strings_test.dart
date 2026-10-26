@@ -84,4 +84,48 @@ void main() {
       expect(tool.callCount, 0);
     });
   }
+
+  for (final (name, value) in [
+    ('sehr lange Ziffernfolge', '1' * 40),
+    ('sehr lange Dezimalzahl', '${'9' * 400}.5'),
+  ]) {
+    test('$name wirft nicht, sondern wird als Typfehler gemeldet', () async {
+      final tool = FakeTool(
+        name: 'p__s',
+        inputSchema: const {
+          'type': 'object',
+          'properties': {
+            'pct': {'type': 'integer'},
+          },
+        },
+      );
+      final ex = ToolExecutor(catalog: FakeToolCatalog([tool]));
+      final o = (await _outcomes(ex, [
+        _call('1', 'p__s', '{"pct":"$value"}'),
+      ]))['1']!;
+      expect(o.isError, isTrue);
+      expect(o.text, contains('erwartet integer, erhalten string'));
+      expect(tool.callCount, 0);
+    });
+  }
+
+  test('Zahl-String außerhalb von minimum/maximum wird abgelehnt', () async {
+    final tool = FakeTool(
+      name: 'p__s',
+      inputSchema: const {
+        'type': 'object',
+        'properties': {
+          'pct': {'type': 'integer', 'minimum': 0, 'maximum': 100},
+        },
+      },
+    );
+    final ex = ToolExecutor(catalog: FakeToolCatalog([tool]));
+    for (final v in ['150', '-1']) {
+      final o = (await _outcomes(ex, [
+        _call('1', 'p__s', '{"pct":"$v"}'),
+      ]))['1']!;
+      expect(o.isError, isTrue, reason: v);
+      expect(tool.callCount, 0, reason: v);
+    }
+  });
 }

@@ -83,7 +83,8 @@ final class ArgumentValidator {
     }
     final t = s.trim();
     if (!_decimal.hasMatch(t)) return null;
-    final n = t.contains('.') ? double.parse(t) : int.parse(t);
+    final num? n = t.contains('.') ? double.tryParse(t) : int.tryParse(t);
+    if (n == null || (n is double && !n.isFinite)) return null;
     if (types.contains('number') || n is int) return n;
     // integer only: "70.0" is fine, "1.5" is not.
     return n == n.roundToDouble() ? n.toInt() : null;
