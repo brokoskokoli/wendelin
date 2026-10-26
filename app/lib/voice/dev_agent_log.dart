@@ -17,6 +17,20 @@ final class DevAgentTrace {
     _rounds.clear();
   }
 
+  /// The events of one request from [run], logged: reads the stored flag
+  /// first ([refresh]), so the switch works without a restart. Typed and
+  /// spoken requests both pass here once, so no line appears twice.
+  Stream<AgentEvent> observe(
+    Future<void> Function() refresh,
+    Stream<AgentEvent> Function() run,
+  ) => Stream.fromFuture(refresh()).asyncExpand((_) {
+    begin();
+    return run().map((e) {
+      event(e);
+      return e;
+    });
+  });
+
   /// An agent event of the running request.
   void event(AgentEvent e) {
     if (!devLogEnabled) return;

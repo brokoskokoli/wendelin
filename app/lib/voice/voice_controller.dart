@@ -23,8 +23,6 @@ import 'answer_capture.dart';
 import 'app_voice_reporter.dart';
 import 'confirm_prompts.dart';
 import 'controller_agent_run.dart';
-import 'dev_agent_log.dart';
-import 'dev_log.dart';
 import 'conversation_offer.dart';
 import 'level_meter.dart';
 import 'locked_agent_run.dart';
@@ -565,10 +563,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
       bargeInDetector: components.bargeInDetector,
       speaker: components.speaker,
       diagnostics: voiceLog,
-      contentLog: devLog,
       config: components.config,
       clock: ref.read(clockProvider),
-    );
+    ).withDevLog(ref);
     _components = components;
     _audio = audio;
     _pipeline = pipeline;

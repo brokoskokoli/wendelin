@@ -213,6 +213,8 @@ void main() {
           Transcript(text: 'Dillin schalte das Geheimlicht an'),
         ],
       );
+      final content = <(String, Map<String, Object?>)>[];
+      h.pipeline.contentLog = (event, fields) => content.add((event, fields));
       h.fakeAudio.script(AudioFrames.pattern('.' * 30, frame: frame));
       final pre = cat([speech(wakeMs), speech(900), quiet(900)]);
       h.pipeline.start(trigger: wake(pre, wakeEnd));
@@ -226,7 +228,7 @@ void main() {
       );
       expect(line, isNot(contains('Geheim')));
       // Developer mode (WP148): the content goes to contentLog only.
-      final c = h.content.singleWhere((e) => e.$1 == 'wake-strip').$2;
+      final c = content.singleWhere((e) => e.$1 == 'wake-strip').$2;
       expect(c['text'], 'Dillin schalte das Geheimlicht an');
       expect(c['rest'], contains('Geheimlicht'));
     });

@@ -7,6 +7,13 @@ import 'voice_pipeline_test.dart' show Harness, runFake, settle;
 Transcript _t(String text, double? conf) =>
     Transcript(text: text, language: 'de', confidence: conf);
 
+/// The events with content (developer mode) of [h]'s pipeline.
+List<(String, Map<String, Object?>)> _content(Harness h) {
+  final content = <(String, Map<String, Object?>)>[];
+  h.pipeline.contentLog = (event, fields) => content.add((event, fields));
+  return content;
+}
+
 void main() {
   group('SttConfidenceGate (WP140)', () {
     const gate = SttConfidenceGate();
@@ -70,11 +77,12 @@ void main() {
         'diagnostics nie (WP148)', () {
       runFake((async) {
         final h = Harness(transcripts: [_t('Wetter', 0.18)]);
+        final content = _content(h);
         h.pipeline.start();
         settle(async);
-        expect(h.content.single.$1, 'stt-reject');
-        expect(h.content.single.$2['text'], 'Wetter');
-        expect(h.content.single.$2['action'], 'askAgain');
+        expect(content.single.$1, 'stt-reject');
+        expect(content.single.$2['text'], 'Wetter');
+        expect(content.single.$2['action'], 'askAgain');
         expect(h.diagnostics.join(), isNot(contains('Wetter')));
       });
     });
@@ -82,9 +90,10 @@ void main() {
     test('angenommener Text erzeugt kein stt-reject im contentLog', () {
       runFake((async) {
         final h = Harness(transcripts: [_t('Wetter', 0.9)]);
+        final content = _content(h);
         h.pipeline.start();
         settle(async);
-        expect(h.content.where((e) => e.$1 == 'stt-reject'), isEmpty);
+        expect(content.where((e) => e.$1 == 'stt-reject'), isEmpty);
       });
     });
 

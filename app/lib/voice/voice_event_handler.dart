@@ -30,7 +30,6 @@ extension _VoiceEventHandler on VoiceController {
         voiceLogPipelineEvent(e);
       case VoiceTranscribed(:final transcript):
         _language = transcript.language;
-        ref.read(devAgentTraceProvider).begin();
         ref.read(latencyTraceProvider).sttDone();
       case VoiceNothingUnderstood(:final reason):
         voiceLog('nothing-understood', {'reason': reason});
@@ -53,7 +52,6 @@ extension _VoiceEventHandler on VoiceController {
         voiceLogPipelineEvent(e); // barge-in
       case VoiceAgentEvent(:final event):
         ref.read(latencyTraceProvider).agentEvent(event);
-        ref.read(devAgentTraceProvider).event(event);
     }
   }
 

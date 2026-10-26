@@ -16,8 +16,12 @@ const devLogPrefix = 'Wendelin/dev:';
 const devLogMaxChars = 300;
 
 /// Whether the developer mode is on (setting `debug.developerMode`). Set
-/// once per engine at start (`runWendelinApp`) and by the switch in the app
-/// language settings; without it [devLog] writes nothing.
+/// at engine start (`runWendelinApp`), by the switch in the app language
+/// settings and re-read from the database at each voice session and request
+/// (`refreshDevLogFlag`), so the switch works in every engine with storage
+/// (app, overlay, station) without a restart. The recognizer and wake
+/// engines have no database and stay off. Without it [devLog] writes
+/// nothing.
 bool devLogEnabled = false;
 
 /// Where the lines go (tests capture them).

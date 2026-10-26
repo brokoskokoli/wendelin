@@ -29,6 +29,7 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP143 – Modell v8a (Stimmenset clean) und Prüfer B als Stufe 2 (Gerätetest)](wp143.md)
 - [WP145 – Nativer Speicher über Overlay-Zyklen (Gerätetest)](wp145.md)
 - [WP146 – Spracherkennung nach dem Wake Word (Gerätetest)](wp146.md)
+- [WP148 – Entwicklermodus (Gerätetest)](wp148.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)
 - [WP85 Kontakte, SMS und Anrufe (`contacts`)](wp85.md)

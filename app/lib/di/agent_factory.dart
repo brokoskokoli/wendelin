@@ -38,6 +38,7 @@ final class AgentFactory implements AgentRunFactory {
     required this.budgetGuard,
     this.config = const AgentConfig(),
     this.fastPath,
+    this.observe,
   });
 
   /// Integrations and their tools.
@@ -69,6 +70,9 @@ final class AgentFactory implements AgentRunFactory {
 
   /// Recognizes simple requests without a model (WP135 D); `null` = off.
   final FastPath? fastPath;
+
+  /// Wraps the events of each run, typed or spoken (developer log, WP148).
+  final Stream<AgentEvent> Function(Stream<AgentEvent> Function() run)? observe;
 
   /// An agent for one request in [sessionId] with the targets of
   /// [providers].
@@ -165,6 +169,7 @@ final class AgentFactory implements AgentRunFactory {
       sessionId: sessionId,
       locale: device.locale,
       inner: runner,
+      observe: observe,
     );
   }
 
@@ -208,6 +213,7 @@ final class _PreloadingRun implements AgentRun {
     required this.sessionId,
     required this.locale,
     required this.inner,
+    this.observe,
   });
 
   final ToolRegistry registry;
@@ -215,6 +221,7 @@ final class _PreloadingRun implements AgentRun {
   final String sessionId;
   final String locale;
   final AgentRun inner;
+  final Stream<AgentEvent> Function(Stream<AgentEvent> Function() run)? observe;
 
   @override
   Stream<AgentEvent> run(UserInput input) {
@@ -224,7 +231,7 @@ final class _PreloadingRun implements AgentRun {
       sessionId: sessionId,
       languageTag: input.language ?? locale,
     );
-    return inner.run(input);
+    return observe?.call(() => inner.run(input)) ?? inner.run(input);
   }
 
   @override

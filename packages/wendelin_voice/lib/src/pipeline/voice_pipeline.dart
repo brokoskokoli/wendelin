@@ -49,7 +49,7 @@ part 'voice_pipeline_record.dart';
 /// - With a [BargeInDetector] and [VoicePipelineConfig.bargeIn] a signal
 ///   during [VoiceState.speaking] stops the speech at once: „Wendelin“ (or
 ///   speech) starts a new utterance.
-final class VoicePipeline {
+final class VoicePipeline with VoiceContentLog {
   /// Creates a pipeline. [textToSpeech] is asked for the engine before
   /// every answer with the answer language (see `TtsSelector.current`);
   /// `null` = text only.
@@ -64,7 +64,6 @@ final class VoicePipeline {
     TriggerSource? triggers,
     this.bargeInDetector,
     this.diagnostics,
-    this.contentLog,
     this.speaker,
   }) {
     _triggerSub = triggers?.triggers.listen(_onTrigger);
@@ -92,11 +91,6 @@ final class VoicePipeline {
   /// Receives secret-free diagnostic event names (`barge-wait-timeout`);
   /// the app writes them to its voice log.
   final void Function(String event)? diagnostics;
-
-  /// Developer mode (WP148): receives events **with content** (recognized
-  /// and dropped texts). The app passes a function that writes nothing
-  /// unless the developer mode is on; `null` = none.
-  final void Function(String event, Map<String, Object?> fields)? contentLog;
 
   /// Speaker recognition (WP92a), `null` = off (the default: no effort).
   /// It runs in parallel to the transcription; its result hangs at

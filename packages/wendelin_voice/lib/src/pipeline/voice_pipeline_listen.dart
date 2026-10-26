@@ -5,6 +5,14 @@ part of 'voice_pipeline.dart';
 /// took ~0.5 s on the device, more than twice that is a measuring error.
 const _bargeTailHoleMax = Duration(milliseconds: 1000);
 
+/// Developer mode (WP148): receives events **with content** (recognized
+/// and dropped texts). The app sets a function that writes nothing unless
+/// the developer mode is on; `null` = none.
+mixin VoiceContentLog {
+  /// The receiver of events with content.
+  void Function(String event, Map<String, Object?> fields)? contentLog;
+}
+
 /// Announcing the listening phase and the confidence gate (WP140).
 extension VoicePipelineListen on VoicePipeline {
   void _onTrigger(TriggerEvent e) {
