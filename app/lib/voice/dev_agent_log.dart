@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 import 'dev_log.dart';
+import 'voice_log.dart';
 
 /// Developer log of one agent run (WP148): which tool ran with which
 /// arguments and result, what the model answered, and on failure one line
@@ -36,6 +37,14 @@ final class DevAgentTrace {
 
   /// An agent event of the running request.
   void event(AgentEvent e) {
+    // Normal log (no content): reason, tool name and count only.
+    if (e is AgentFailed) {
+      voiceLog('agent-failed', {
+        'kind': e.error,
+        'tool': e.tool,
+        'repeats': e.repeats,
+      });
+    }
     if (!devLogEnabled) return;
     switch (e) {
       case AgentTextDelta(:final text):
@@ -62,11 +71,20 @@ final class DevAgentTrace {
         });
       case AgentDone():
         _flushText();
-      case AgentFailed(:final error, :final message):
+      case AgentFailed(
+        :final error,
+        :final message,
+        :final tool,
+        :final detail,
+        :final repeats,
+      ):
         _flushText();
         devLog('agent-failed', {
           'kind': error,
           'message': message,
+          'tool': tool,
+          'repeats': repeats,
+          'error': detail,
           'rounds': _rounds.length,
         });
         for (var i = 0; i < _rounds.length; i++) {

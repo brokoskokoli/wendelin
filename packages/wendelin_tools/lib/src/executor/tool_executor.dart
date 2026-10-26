@@ -165,15 +165,16 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
         AuditDecision.none,
       );
     }
-    final rawArgs = _decode(call);
-    if (rawArgs == null) {
+    final decoded = _decode(call);
+    if (decoded == null) {
       return (
         ToolOutcome.error(invalidJsonText),
         AuditStatus.invalidArguments,
         AuditDecision.none,
       );
     }
-    final problem = validator.validate(rawArgs, tool.inputSchema);
+    final args = validator.normalize(decoded, tool.inputSchema);
+    final problem = validator.validate(args, tool.inputSchema);
     if (problem != null) {
       return (
         ToolOutcome.error(
@@ -184,7 +185,6 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
         AuditDecision.none,
       );
     }
-    final args = validator.normalize(rawArgs, tool.inputSchema);
 
     final policyDecision = policy.decide(tool, ctx.sessionId);
     var decision = AuditDecision.allowed;

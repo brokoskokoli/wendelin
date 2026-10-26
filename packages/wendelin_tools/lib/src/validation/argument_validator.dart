@@ -33,8 +33,11 @@ final class ArgumentValidator {
   }
 
   /// [args] with integral numbers of `integer` fields as `int` (JSON may
-  /// deliver `3.0`), so tools can rely on the declared type. Call after a
-  /// successful [validate]; other values are returned unchanged.
+  /// deliver `3.0`), so tools can rely on the declared type. Strictly
+  /// decimal strings (`"100"`, `" 21.5 "`) become numbers where the schema
+  /// wants `integer`/`number` and not `string` (models often quote numbers);
+  /// `"1e3"`, `"100%"` or `"1.5"` for an integer stay unchanged and fail
+  /// [validate]. Call before [validate]; other values are returned unchanged.
   Map<String, Object?> normalize(
     Map<String, Object?> args,
     Map<String, Object?> schema,
@@ -42,6 +45,8 @@ final class ArgumentValidator {
 
   Object? _normalize(Object? value, Map<String, Object?> schema) {
     switch (value) {
+      case final String s when _numberFromString(s, schema) != null:
+        return _numberFromString(s, schema);
       case final double d when _types(schema).contains('integer'):
         return d == d.roundToDouble() ? d.toInt() : d;
       case final List<Object?> list:
@@ -66,6 +71,23 @@ final class ArgumentValidator {
       default:
         return value;
     }
+  }
+
+  static final _decimal = RegExp(r'^-?\d+(\.\d+)?$');
+
+  static num? _numberFromString(String s, Map<String, Object?> schema) {
+    final types = _types(schema);
+    final integer = types.contains('integer');
+    if (types.contains('string') || !(integer || types.contains('number'))) {
+      return null;
+    }
+    final t = s.trim();
+    if (!_decimal.hasMatch(t)) return null;
+    final num? n = t.contains('.') ? double.tryParse(t) : int.tryParse(t);
+    if (n == null || (n is double && !n.isFinite)) return null;
+    if (types.contains('number') || n is int) return n;
+    // integer only: "70.0" is fine, "1.5" is not.
+    return n == n.roundToDouble() ? n.toInt() : null;
   }
 
   static List<Object?> _types(Map<String, Object?> schema) {

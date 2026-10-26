@@ -177,7 +177,8 @@ void main() {
       expect(provider.requests, hasLength(9));
       final failed = terminal(events) as AgentFailed;
       expect(failed.error, AgentErrorKind.toolRoundLimit);
-      expect(failed.message, contains('8 Tool-Runden'));
+      expect(failed.message, isNot(contains('Runde')));
+      expect(failed.message, contains('technischen Fehler'));
       expect(events.whereType<ToolCallStarted>(), hasLength(8));
       // The refused call still has a result in the history.
       final last = h.conversation.messages.last;
