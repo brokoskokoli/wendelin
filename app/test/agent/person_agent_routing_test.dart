@@ -203,6 +203,32 @@ void main() {
       );
     }
 
+    test(
+      'ein gesperrter Lauf legt keine Sitzung an und ändert keine',
+      () async {
+        await setUp0();
+        final conversations = env.storage.conversations;
+        expect(await conversations.sessions(), isEmpty);
+        await askLocked('Licht an');
+        expect(await conversations.sessions(), isEmpty, reason: 'vorher leer');
+        expect(c.read(sessionManagerProvider).currentId, isNull);
+        expect(llm['phala']!.requests, hasLength(1), reason: 'Modell lief');
+        // Mit offener Unterhaltung: Liste und Aktivität unverändert.
+        await ask('Wie spät ist es?');
+        final before = await conversations.sessions();
+        expect(before, hasLength(1), reason: 'entsperrt: eine Sitzung');
+        await askLocked('Licht an');
+        final after = await conversations.sessions();
+        expect(after.map((s) => s.id), before.map((s) => s.id));
+        expect(
+          after.single.lastActivityAt,
+          before.single.lastActivityAt,
+          reason: 'Aktivität der offenen Unterhaltung unberührt',
+        );
+        expect(c.read(sessionManagerProvider).currentId, before.single.id);
+      },
+    );
+
     test('eine erkannte andere Person beendet die offene Unterhaltung nicht, '
         'sie läuft im eigenen Umfang', () async {
       await setUp0();

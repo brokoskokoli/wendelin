@@ -96,3 +96,6 @@ final lockedScopeProvider = Provider<LockedScopeOf>((ref) {
         : LockedScope(access: access, tools: names);
   };
 });
+
+/// Id of the transient session of a locked run: not in the database.
+const lockedSessionId = 'locked';

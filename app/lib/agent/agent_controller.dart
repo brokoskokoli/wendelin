@@ -311,7 +311,7 @@ final class AgentController extends Notifier<ConversationState> {
     final scoped = providers.withDefaultProfile(scope.agentProfileId);
     _providers = scoped;
     final isNew = sessionId != _shownSessionId;
-    _shownSessionId = sessionId;
+    if (locked == null) _shownSessionId = sessionId;
     state = _reducer.userMessage(
       isNew ? state.copyWith(clearPrivate: true) : state,
       trimmed,
@@ -348,13 +348,13 @@ final class AgentController extends Notifier<ConversationState> {
   /// gets a new conversation (no history); everything else continues the
   /// open one in its scope. After an app restart the scope comes from the
   /// person stored with the conversation; unreadable or deleted: new one.
-  /// [locked] (WP154 L3): no session change, no remembered scope; the
-  /// request runs in the scope of its own speaker only (unknown = standard).
+  /// [locked] (WP154 L3): no session created or changed ([lockedSessionId],
+  /// not in the DB), no remembered scope; only the speaker's own scope.
   Future<(String, PersonScope)> _sessionFor(String? who, bool locked) async {
     final sessions = ref.read(sessionManagerProvider);
     final resolver = ref.read(personScopeResolverProvider);
     final requested = await resolver.scopeOf(who);
-    if (locked) return (await sessions.ensure(), requested);
+    if (locked) return (lockedSessionId, requested);
     bool clashes(PersonScope open) =>
         !requested.isStandard && open.personId != requested.personId;
 
@@ -594,7 +594,7 @@ final class AgentController extends Notifier<ConversationState> {
       // The stream ended without a terminal event (should not happen).
       state = state.copyWith(running: false, clearPending: true);
     }
-    ref.read(sessionManagerProvider).touch();
+    if (_sessionId != lockedSessionId) ref.read(sessionManagerProvider).touch();
     _closeOut();
     _completeIdle();
   }

@@ -140,10 +140,7 @@ void main() {
       expect((await api.state('lock.front')).state, 'locked');
       // Nichts gespeichert (kein Verlauf einer gesperrten Anfrage).
       final storage = c.read(storageProvider);
-      // ensure() legt eine leere Sitzung an, aber ohne Nachrichten.
-      for (final x in await storage.conversations.sessions(limit: 5)) {
-        expect(await storage.conversations.messages(x.id), isEmpty);
-      }
+      expect(await storage.conversations.sessions(limit: 5), isEmpty);
     });
   });
 
@@ -151,7 +148,8 @@ void main() {
   Future<UserInput> spoken(SpeakerMatch match) async {
     final recognizer = FakeSpeakerRecognizer(match);
     final heard = const Transcript(
-      text: 'Mach bitte alles aus', // nicht 'Küche aus': Schnellpfad ohne Modell
+      text:
+          'Mach bitte alles aus', // nicht 'Küche aus': Schnellpfad ohne Modell
       language: 'de',
     ).withSpeaker(await recognizer.identify(FakeSpeakerEmbedder.audio(0)));
     return UserInput(
