@@ -98,6 +98,9 @@ Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP147, WP1
 | WP149 | Wake-Übergabe ohne Audiolücke | geplant | Gerätelog rc5: wake-gap 674 ms mit Stille gefüllt; Entscheidung Maintainer: durchgehend aufnehmen |
 | WP150 | Home Assistant: Werkzeugschleife bei einem Licht mit Personennamen | geplant | Gerätelog rc5: calls=9 tools=8, toolRoundLimit |
 | WP151 | Unterbrechen mit Weckwort bei Gesprächston | geplant | Gerätelog rc5: barge-cand 0,54/0,56 erkannt, barge-verify (Parakeet, lp −2,2/−1,9) lehnt ab, Kandidat 0,73 bei busy verloren; startet nach WP148 (Tonaufnahmen) |
+| WP152 | Hauptmenü: MCP-Server und HTTP-Tools nur unter Integrationen | geplant | Wunsch Maintainer 2026-10-26, reine UI |
+| WP153 | Gesperrtes Gerät: nach dem Entsperren sauber weitermachen | geplant | Gerätebefund rc5: nach Entsperren keine Anzeige, Fenster zu; Analyse zuerst, nach WP148 |
+| WP154 | Home Assistant: Sicherheitsstufe je Gerät (A–D) | geplant | Wunsch Maintainer 2026-10-26, ersetzt „ohne Rückfrage“; nach WP150 |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
