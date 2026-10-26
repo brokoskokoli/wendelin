@@ -106,6 +106,10 @@ abstract final class AppSettings {
   static SettingKey<Map<String, Object?>> releaseFloor(String key) =>
       SettingKey.json('tee.releaseFloor.$key');
 
+  /// Conversations whose `external` tools are locked after a red receipt
+  /// (WP157): JSON `{sessionId: profileId}`.
+  static final sessionLocks = SettingKey.json('security.sessionLocks');
+
   /// Restrictions of the TEE provider [profileId] with [model] the user saw
   /// and accepted (JSON `{"stages": [stage ids]}`, WP78). Bound to the model.
   static SettingKey<Map<String, Object?>> teeAccepted(

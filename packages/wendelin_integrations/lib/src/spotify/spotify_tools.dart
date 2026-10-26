@@ -96,7 +96,8 @@ Future<({String uri, SpotifyKind kind, String label})> _resolve(
 }
 
 /// `spotify__search` (read).
-final class SpotifySearchTool extends IntegrationTool {
+final class SpotifySearchTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const SpotifySearchTool(this.session);
 
@@ -157,7 +158,8 @@ final class SpotifySearchTool extends IntegrationTool {
 }
 
 /// `spotify__now_playing` (read).
-final class SpotifyNowPlayingTool extends IntegrationTool {
+final class SpotifyNowPlayingTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const SpotifyNowPlayingTool(this.session);
 
@@ -202,7 +204,7 @@ final class SpotifyNowPlayingTool extends IntegrationTool {
 
 /// `spotify__play` (write): undo pauses or restores the previous title.
 final class SpotifyPlayTool extends IntegrationTool
-    implements FixedConfirmationTool {
+    implements FixedConfirmationTool, NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const SpotifyPlayTool(this.session);
 
@@ -314,7 +316,7 @@ final class SpotifyPlayTool extends IntegrationTool
 
 /// `spotify__pause` (write): undo continues playing.
 final class SpotifyPauseTool extends IntegrationTool
-    implements FixedConfirmationTool {
+    implements FixedConfirmationTool, NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const SpotifyPauseTool(this.session);
 
@@ -367,7 +369,7 @@ final class SpotifyPauseTool extends IntegrationTool
 
 /// `spotify__next` (write, no undo: skipping cannot be taken back exactly).
 final class SpotifyNextTool extends IntegrationTool
-    implements TrustedContentSource, FixedConfirmationTool {
+    implements TrustedContentSource, FixedConfirmationTool, NoNetworkTarget {
   /// Creates the tool.
   const SpotifyNextTool(this.session);
 
@@ -408,7 +410,7 @@ final class SpotifyNextTool extends IntegrationTool
 
 /// `spotify__previous` (write, no undo).
 final class SpotifyPreviousTool extends IntegrationTool
-    implements TrustedContentSource, FixedConfirmationTool {
+    implements TrustedContentSource, FixedConfirmationTool, NoNetworkTarget {
   /// Creates the tool.
   const SpotifyPreviousTool(this.session);
 
@@ -453,7 +455,8 @@ final class SpotifyPreviousTool extends IntegrationTool
 
 /// `spotify__queue_add` (write; the Web API cannot remove from the queue, so
 /// there is no undo).
-final class SpotifyQueueAddTool extends IntegrationTool {
+final class SpotifyQueueAddTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const SpotifyQueueAddTool(this.session);
 

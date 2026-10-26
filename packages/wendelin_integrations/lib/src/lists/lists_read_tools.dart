@@ -8,7 +8,8 @@ import '../common/tool_args.dart';
 import 'lists.dart';
 
 /// `lists__list_lists` (read).
-final class ListListsTool extends IntegrationTool {
+final class ListListsTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const ListListsTool(this.env);
 
@@ -61,7 +62,8 @@ final class ListListsTool extends IntegrationTool {
 }
 
 /// `lists__get_items` (read).
-final class GetItemsTool extends IntegrationTool {
+final class GetItemsTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const GetItemsTool(this.env);
 

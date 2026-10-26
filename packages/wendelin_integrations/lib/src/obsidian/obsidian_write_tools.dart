@@ -16,7 +16,7 @@ import 'vault_path.dart';
 
 /// `obsidian__create_note` (write; undo deletes the note if unchanged).
 final class CreateNoteTool extends IntegrationTool
-    implements FixedConfirmationTool {
+    implements FixedConfirmationTool, NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const CreateNoteTool(this.env);
 
@@ -90,7 +90,7 @@ final class CreateNoteTool extends IntegrationTool
 
 /// `obsidian__append_to_note` (write; undo removes the appended lines).
 final class AppendToNoteTool extends IntegrationTool
-    implements FixedConfirmationTool {
+    implements FixedConfirmationTool, NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const AppendToNoteTool(this.env);
 
@@ -175,7 +175,7 @@ final class AppendToNoteTool extends IntegrationTool
 /// `obsidian__append_daily_note` (write; creates the daily note from the
 /// template if missing; undo removes the text or the new note).
 final class AppendDailyNoteTool extends IntegrationTool
-    implements FixedConfirmationTool {
+    implements FixedConfirmationTool, NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const AppendDailyNoteTool(this.env);
 
@@ -324,7 +324,7 @@ tz.TZDateTime tzNow(ToolContext ctx) =>
 /// `obsidian__replace_section` (external: always confirmed; the
 /// confirmation shows a diff prepared live).
 final class ReplaceSectionTool extends IntegrationTool
-    implements ConfirmationPreparer {
+    implements ConfirmationPreparer, NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const ReplaceSectionTool(this.env);
 

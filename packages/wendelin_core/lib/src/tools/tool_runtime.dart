@@ -52,8 +52,27 @@ abstract interface class ToolInvoker {
 /// until a TEE answer is verified. An invoker without it is judged by the
 /// static [Tool.risk].
 abstract interface class ToolRiskAssessor {
-  /// The risk level [tool] is treated as in [sessionId].
-  RiskLevel effectiveRisk(Tool tool, String sessionId);
+  /// The risk level [tool] is treated as in [sessionId]; [foreignContent]
+  /// tells that the run has seen foreign content (a tool with a network
+  /// target then counts as confirm-only).
+  RiskLevel effectiveRisk(
+    Tool tool,
+    String sessionId, {
+    bool foreignContent = false,
+  });
+}
+
+/// Optional capability of a [ToolInvoker]: locks the `external` tools of a
+/// conversation (WP157, ADR 0023). The agent calls it when the receipt of a
+/// TEE answer turns out red (also when the provider rolled out a new key).
+/// The lock belongs to the session id, survives a rebuild of the engine and
+/// an app restart, and ends with the conversation or a green recheck of the
+/// provider.
+abstract interface class SessionLockable {
+  /// Denies every `external` tool for [sessionId] from now on; [profileId]
+  /// is the provider whose answer failed (a green recheck of it lifts the
+  /// lock). Idempotent.
+  void lockExternal(String sessionId, {String? profileId});
 }
 
 /// Progress of [ToolInvoker.invokeAll].

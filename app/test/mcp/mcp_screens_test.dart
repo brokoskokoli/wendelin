@@ -174,6 +174,57 @@ void main() {
     await _unmount(tester);
   });
 
+  testWidgets('Schalter „Kann unsichere Inhalte enthalten“: Standard an, '
+      'aus macht die Tools des Servers vertrauenswürdig', (tester) async {
+    final env = TestEnv(
+      enabled: const {'mcp_homeserver'},
+      extraOverrides: mcpOverrides(),
+    );
+    await tester.runAsync(
+      () => seedServers(
+        env,
+        [
+          (
+            config: McpServerConfig(
+              id: 'srv',
+              name: 'Homeserver',
+              slug: 'homeserver',
+              url: Uri.parse('http://homeserver.local:3000/mcp'),
+              auth: McpBearerAuth(McpSecretRefs.bearer('srv')),
+            ),
+            tools: homeToolInfos(),
+            check: null,
+          ),
+        ],
+        secrets: {McpSecretRefs.bearer('srv'): 'token'},
+      ),
+    );
+    setView(tester, const Size(390, 1800));
+    await tester.pumpWidget(env.app(home: const McpServersScreen()));
+    final c = containerOf(tester, McpServersScreen);
+    await pumpUntil(
+      tester,
+      () => catalog(c).contains('mcp_homeserver__get_state'),
+    );
+    bool untrusted() => (registered(
+      c,
+      'mcp_homeserver__get_state',
+    ) as ContentTrustAware).mayContainUntrustedContent;
+    await settle(tester);
+    expect(untrusted(), isTrue);
+    await tapText(tester, 'Homeserver');
+    final sw = find.descendant(
+      of: find.widgetWithText(InkWell, 'Kann unsichere Inhalte enthalten'),
+      matching: find.byType(WSwitch),
+    );
+    await tester.ensureVisible(sw);
+    expect(tester.widget<WSwitch>(sw).value, isTrue);
+    await tester.tap(sw);
+    await pumpUntil(tester, () => !untrusted());
+    expect(tester.widget<WSwitch>(sw).value, isFalse);
+    await _unmount(tester);
+  });
+
   testWidgets('Tool-Schalter, „Immer nachfragen“ und „ohne Nachfrage“ wirken '
       'auf den Tool-Katalog; Löschen räumt Registry und Secrets auf', (
     tester,

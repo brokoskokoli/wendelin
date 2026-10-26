@@ -26,7 +26,8 @@ import 'tool_audit.dart';
 /// Everything a tool produced reaches the model inside the data envelope,
 /// including the text of exceptions it threw (sanitised, see
 /// [sanitizeErrorText]).
-final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
+final class ToolExecutor
+    implements ToolInvoker, ToolRiskAssessor, SessionLockable {
   /// Creates an executor over [catalog].
   ToolExecutor({
     required this.catalog,
@@ -63,11 +64,27 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
   final AccessContext access;
 
   @override
-  RiskLevel effectiveRisk(Tool tool, String sessionId) =>
-      RiskPolicy.effectiveRisk(
-        tool.risk,
-        policy.decide(tool, sessionId, access: access).action,
-      );
+  RiskLevel effectiveRisk(
+    Tool tool,
+    String sessionId, {
+    bool foreignContent = false,
+  }) => RiskPolicy.effectiveRisk(
+    tool.risk,
+    policy
+        .decide(tool, sessionId, access: access, foreignContent: foreignContent)
+        .action,
+  );
+
+  @override
+  void lockExternal(String sessionId, {String? profileId}) =>
+      policy.lockExternal(sessionId, profileId: profileId);
+
+  PolicyDecision _decide(Tool tool, ToolContext ctx) => policy.decide(
+    tool,
+    ctx.sessionId,
+    access: access,
+    foreignContent: ctx.foreignContentSeen,
+  );
 
   /// Checks arguments against the tool's input schema.
   final ArgumentValidator validator;
@@ -88,6 +105,8 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
   ) {
     final out = StreamController<ToolInvocationEvent>();
     Future<void> run() async {
+      // The stored session locks are loaded before the first decision.
+      await policy.ready;
       final turns = ConfirmationTurns(ctx.cancel);
       final running = <Future<void>>[];
       for (final call in calls) {
@@ -193,7 +212,7 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
       );
     }
 
-    final policyDecision = policy.decide(tool, ctx.sessionId, access: access);
+    final policyDecision = _decide(tool, ctx);
     var decision = AuditDecision.allowed;
     switch (policyDecision.action) {
       case PolicyAction.deny:
@@ -224,7 +243,7 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
         }
         // The policy may have changed while the card was open (e.g.
         // lockExternal after a failed receipt check).
-        final recheck = policy.decide(tool, ctx.sessionId, access: access);
+        final recheck = _decide(tool, ctx);
         if (recheck.action == PolicyAction.deny) {
           return (
             ToolOutcome.error(recheck.reason ?? RiskPolicy.deniedReason),
@@ -259,6 +278,7 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
       privacyFloor: ctx.privacyFloor,
       memoryOwner: ctx.memoryOwner,
       access: access,
+      foreignContentSeen: ctx.foreignContentSeen,
     );
 
     final result = Completer<(ToolOutcome, AuditStatus)>();

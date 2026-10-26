@@ -1,5 +1,5 @@
 {
-  "media__now_playing": false,
+  "media__now_playing": true,
   "media__play": true,
   "media__pause": true,
   "media__next": true,

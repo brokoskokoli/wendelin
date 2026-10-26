@@ -142,7 +142,8 @@ const _placeProperty = {
 };
 
 /// `weather__forecast` (read).
-final class WeatherForecastTool extends IntegrationTool {
+final class WeatherForecastTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const WeatherForecastTool(this.integration);
 
@@ -212,7 +213,8 @@ final class WeatherForecastTool extends IntegrationTool {
 }
 
 /// `weather__marine` (read).
-final class WeatherMarineTool extends IntegrationTool {
+final class WeatherMarineTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const WeatherMarineTool(this.integration);
 

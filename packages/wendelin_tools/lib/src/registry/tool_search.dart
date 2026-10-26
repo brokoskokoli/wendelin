@@ -8,7 +8,7 @@ typedef CatalogEntry = ({Integration integration, Tool tool});
 /// Meta tool `tools__search`, offered instead of all tools once many are
 /// active. Finds tools by words and/or category (integration id), returns
 /// their specs and unlocks them for the session via [unlock].
-final class ToolSearchTool implements Tool {
+final class ToolSearchTool implements Tool, NoNetworkTarget, ResultTrustAware {
   /// Creates the meta tool over [candidates] (the active tools the current
   /// provider may see, sorted by name).
   ToolSearchTool({
@@ -42,6 +42,37 @@ final class ToolSearchTool implements Tool {
       for (final e in entries) e.integration.id: e.integration.displayName,
     };
     return {for (final id in byId.keys.toList()..sort()) id: byId[id]!};
+  }
+
+  /// Built-in network tools without a marker; their descriptions are ours.
+  static const _builtInNetworkTools = {'web__search', 'web__fetch'};
+
+  @override
+  bool isResultTrusted(List<ContentBlock> content) {
+    // The result only repeats descriptions. Foreign only if a hit comes from
+    // an MCP server or HTTP tool ticked „may contain untrusted content“
+    // (third parties write those descriptions). Fail-closed: unreadable
+    // result, unknown name or unknown origin count as foreign.
+    try {
+      final text = content.whereType<TextBlock>().map((b) => b.text).join();
+      final decoded = jsonDecode(text);
+      if (decoded is! Map || decoded['tools'] is! List) return false;
+      final byName = {for (final e in _candidates) e.tool.name: e.tool};
+      for (final hit in decoded['tools'] as List) {
+        final tool = hit is Map ? byName[hit['name']] : null;
+        if (tool == null) return false;
+        final safe = switch (tool) {
+          ContentTrustAware(:final mayContainUntrustedContent) =>
+            !mayContainUntrustedContent,
+          TrustedContentSource() || NoNetworkTarget() => true,
+          _ => _builtInNetworkTools.contains(tool.name),
+        };
+        if (!safe) return false;
+      }
+      return true;
+    } on FormatException {
+      return false;
+    }
   }
 
   @override

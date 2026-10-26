@@ -26,7 +26,8 @@ final class GoogleTasksAddTool extends IntegrationTool
     implements
         TrustedContentSource,
         AuditArgumentsRedactor,
-        FixedConfirmationTool {
+        FixedConfirmationTool,
+        NoNetworkTarget {
   /// Creates the tool.
   const GoogleTasksAddTool(this.session);
 
@@ -144,7 +145,8 @@ final class GoogleTasksAddTool extends IntegrationTool
 }
 
 /// `gtasks__list` (read).
-final class GoogleTasksListTool extends IntegrationTool {
+final class GoogleTasksListTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const GoogleTasksListTool(this.session);
 
@@ -240,7 +242,11 @@ final class GoogleTasksListTool extends IntegrationTool {
 
 /// `gtasks__complete` (write; undo sets the task open again).
 final class GoogleTasksCompleteTool extends IntegrationTool
-    implements AuditArgumentsRedactor, FixedConfirmationTool {
+    implements
+        AuditArgumentsRedactor,
+        FixedConfirmationTool,
+        NoNetworkTarget,
+        TrustedContentSource {
   /// Creates the tool.
   const GoogleTasksCompleteTool(this.session);
 

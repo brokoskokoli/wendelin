@@ -197,6 +197,19 @@ class _Page extends ConsumerWidget {
         ),
       ),
       SettingsRow(
+        title: context.l10n.mcpDetailUntrusted,
+        detail: context.l10n.mcpDetailUntrustedHint,
+        trailing: WSwitch(
+          value: config.mayContainUntrustedContent,
+          semanticLabel: context.l10n.mcpDetailUntrusted,
+          onChanged: (on) => _update(
+            context,
+            ref,
+            config.copyWith(mayContainUntrustedContent: on),
+          ),
+        ),
+      ),
+      SettingsRow(
         title: context.l10n.mcpDetailSensitive,
         detail: context.l10n.mcpDetailSensitiveHint,
         trailing: WSwitch(

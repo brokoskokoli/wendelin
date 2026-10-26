@@ -1,8 +1,8 @@
 {
-  "lists__list_lists": false,
-  "lists__get_items": false,
-  "lists__complete_item": false,
-  "lists__remove_item": false,
-  "lists__clear_completed": false,
-  "lists__add_items": true
+  "lists__list_lists": true,
+  "lists__get_items": true,
+  "lists__add_items": true,
+  "lists__complete_item": true,
+  "lists__remove_item": true,
+  "lists__clear_completed": true
 }

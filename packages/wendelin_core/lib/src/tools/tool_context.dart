@@ -16,6 +16,7 @@ final class ToolContext {
     this.privacyFloor,
     this.memoryOwner = '',
     this.access = AccessContext.unlocked,
+    this.foreignContentSeen = false,
   }) : cancel = cancel ?? CancelToken();
 
   /// Current conversation session.
@@ -54,4 +55,9 @@ final class ToolContext {
   /// a tool that decides per device (`LevelPerDeviceTool`) refuses what the
   /// table does not allow in this context.
   final AccessContext access;
+
+  /// Whether the run has seen foreign content (a result that is not trusted,
+  /// WP157). The executor then asks before a tool with a network target
+  /// (everything without `NoNetworkTarget`), whatever its level.
+  final bool foreignContentSeen;
 }

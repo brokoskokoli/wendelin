@@ -3004,6 +3004,18 @@ abstract class AppLocalizations {
   /// **'Zeitlimit in Sekunden'**
   String get httpRunTimeout;
 
+  /// No description provided for @httpRunUntrusted.
+  ///
+  /// In de, this message translates to:
+  /// **'Kann unsichere Inhalte enthalten'**
+  String get httpRunUntrusted;
+
+  /// No description provided for @httpRunUntrustedDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Antworten können Texte Dritter enthalten. Danach fragt Wendelin vor Aufrufen mit Netzziel nach. Nur für eigene Dienste mit bekannten Daten ausschalten.'**
+  String get httpRunUntrustedDetail;
+
   /// No description provided for @httpSrcAddHeader.
   ///
   /// In de, this message translates to:
@@ -4425,6 +4437,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'nicht erreichbar'**
   String get mcpDetailUnreachableLabel;
+
+  /// No description provided for @mcpDetailUntrusted.
+  ///
+  /// In de, this message translates to:
+  /// **'Kann unsichere Inhalte enthalten'**
+  String get mcpDetailUntrusted;
+
+  /// No description provided for @mcpDetailUntrustedHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Antworten können Texte Dritter enthalten. Danach fragt Wendelin vor Aufrufen mit Netzziel nach. Nur für eigene Dienste mit bekannten Daten ausschalten.'**
+  String get mcpDetailUntrustedHint;
 
   /// No description provided for @mcpDetailValueFor.
   ///

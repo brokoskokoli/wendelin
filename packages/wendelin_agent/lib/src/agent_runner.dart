@@ -202,7 +202,6 @@ final class _Run implements RunControl {
   AgentConfig get config => runner._config;
 
   // ------------------------------------------------------------ Lauf-Zustand
-  // Abort, time limit, event segment and conversation of this run.
 
   /// Why the run was aborted; the first abort wins.
   AgentErrorKind? _abortKind;
@@ -221,10 +220,13 @@ final class _Run implements RunControl {
   final RunState _state;
 
   // ------------------------------------------------------------------ units
-
   late final RunBudget _budget = RunBudget(config);
   late final PrivacyScope _privacy = PrivacyScope(runner, _state);
-  late final AttestationGate _attest = AttestationGate(this, runner.sessionId);
+  late final AttestationGate _attest = AttestationGate(
+    this,
+    runner.sessionId,
+    runner.invoker,
+  );
   late final ToolRound _tools = ToolRound(
     runner,
     _state,

@@ -8,7 +8,7 @@ import '../location/maps_intents.dart';
 
 /// `maps__navigate` (write): navigation in Google Maps.
 final class MapsNavigateTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, NoNetworkTarget {
   /// Creates the tool.
   const MapsNavigateTool(this.launcher);
 
@@ -60,7 +60,7 @@ final class MapsNavigateTool extends IntegrationTool
 /// `maps__search_place` (read): opens a search in Google Maps. The result
 /// is only visible on screen, the model gets no place data back.
 final class MapsSearchPlaceTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, NoNetworkTarget {
   /// Creates the tool.
   const MapsSearchPlaceTool(this.launcher);
 

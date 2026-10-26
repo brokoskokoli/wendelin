@@ -1,5 +1,5 @@
 {
   "gtasks__add": true,
-  "gtasks__list": false,
-  "gtasks__complete": false
+  "gtasks__list": true,
+  "gtasks__complete": true
 }

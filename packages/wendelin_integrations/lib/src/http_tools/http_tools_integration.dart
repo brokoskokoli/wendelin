@@ -101,7 +101,7 @@ final class HttpToolsIntegration implements Integration {
 }
 
 /// One [HttpToolDefinition] as tool `http__<name>`. No undo.
-final class HttpTool extends IntegrationTool {
+final class HttpTool extends IntegrationTool implements ContentTrustAware {
   /// Creates the tool.
   const HttpTool(this.definition, this.runner);
 
@@ -122,6 +122,9 @@ final class HttpTool extends IntegrationTool {
 
   @override
   RiskLevel get risk => definition.effectiveRisk;
+
+  @override
+  bool get mayContainUntrustedContent => definition.mayContainUntrustedContent;
 
   @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {

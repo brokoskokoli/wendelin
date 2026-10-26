@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../messages/content_block.dart';
 import '../messages/tool_spec.dart';
 import 'tool_context.dart';
 import 'tool_outcome.dart';
@@ -16,14 +17,43 @@ enum RiskLevel {
   external,
 }
 
-/// Marker for tools whose successful result only contains data the user or
-/// the app produced itself (a confirmation of what was just set or saved).
-/// Fail-closed (WP41): every other result – tools without this marker,
-/// unknown tools and every error text – counts as untrusted, i.e. possibly
-/// written by third parties. Once the conversation contains such a result,
-/// invisible channels like the `<spoken>` block are switched off, because
-/// the user cannot check what would be spoken.
+/// Marker for tools whose successful result does not count as foreign
+/// content (ADR 0023): data the user or the app produced itself, or from a
+/// source the maintainer classified as safe (notes, lists, calendar,
+/// contacts, home automation, weather, location, alarms, memory, media).
+/// Fail-closed (WP41, WP157): every other result – tools without this
+/// marker, unknown tools and every error text – counts as foreign, i.e.
+/// possibly written by third parties. Once the conversation contains such a
+/// result, invisible channels like the `<spoken>` block are switched off and
+/// tools with a network target ([NoNetworkTarget]) ask first.
 abstract interface class TrustedContentSource {}
+
+/// Tools whose trust depends on a setting of the user (HTTP tool, MCP
+/// server: the tick „Kann unsichere Inhalte enthalten“, default on).
+/// [mayContainUntrustedContent] `false` makes a successful result count like
+/// one of a [TrustedContentSource]; errors never do.
+abstract interface class ContentTrustAware {
+  /// Whether the results may contain third-party text (default: yes).
+  bool get mayContainUntrustedContent;
+}
+
+/// Tools whose trust depends on the content of one result (meta tool
+/// `tools__search`: its result only repeats descriptions of other tools).
+/// Takes precedence over the other markers; errors never count as trusted.
+abstract interface class ResultTrustAware {
+  /// Whether the successful result [content] is free of third-party text.
+  /// Fail-closed: anything unreadable or unknown answers `false`.
+  bool isResultTrusted(List<ContentBlock> content);
+}
+
+/// Marker for tools that **never** carry call arguments to a free network
+/// target: they act on the device, on a fixed service of the app or on the
+/// user's own accounts. Fail-closed (WP157, ADR 0023): a tool without this
+/// marker counts as having a network target (HTTP tools, MCP, web search
+/// and fetch, and anything new), so after foreign content the call is
+/// confirmed first. Every built-in tool has to carry it or sit on the
+/// explicit network list (checked over the whole catalog).
+abstract interface class NoNetworkTarget {}
 
 /// Mobile platform an integration supports.
 enum AppPlatform {

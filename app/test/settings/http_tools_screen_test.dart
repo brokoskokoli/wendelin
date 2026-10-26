@@ -261,6 +261,34 @@ void main() {
     );
   });
 
+  testWidgets('Schalter „Kann unsichere Inhalte enthalten“: Standard an, '
+      'Umschalten landet im gespeicherten Tool', (tester) async {
+    final server = FakeHttpServer();
+    final env = TestEnv(extraOverrides: [server.override]);
+    final c = await pumpHttpTools(tester, env);
+    await fillLicht(tester);
+    final sw = find.byWidgetPredicate(
+      (w) =>
+          w is WSwitch && w.semanticLabel == 'Kann unsichere Inhalte enthalten',
+    );
+    await tester.ensureVisible(sw);
+    expect(tester.widget<WSwitch>(sw).value, isTrue);
+    await tester.tap(sw);
+    await tester.pump();
+    expect(tester.widget<WSwitch>(sw).value, isFalse);
+
+    await tester.tap(find.text('Speichern'));
+    await settle(tester);
+    await syncSettle(tester);
+    final tool = c
+        .read(toolRegistryProvider)
+        .info(HttpToolsIntegration.plainId)
+        .integration
+        .tools
+        .single;
+    expect((tool as ContentTrustAware).mayContainUntrustedContent, isFalse);
+  });
+
   testWidgets('autoRun-Schalter nur bei write', (tester) async {
     final env = TestEnv();
     await pumpHttpTools(tester, env);

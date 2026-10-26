@@ -98,6 +98,8 @@ final Provider<AttestationHub> attestationHubProvider =
         nameOf: (id) =>
             ref.read(providerConfigProvider).asData?.value?.nameOf(id) ?? id,
         texts: () => uiTexts(ref),
+        onRecheckedGreen: (id) =>
+            ref.read(riskPolicyProvider).unlockProfile(id),
       );
       onDisposeTracked(ref, hub.dispose);
       return hub;

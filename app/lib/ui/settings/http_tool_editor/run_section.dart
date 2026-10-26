@@ -69,6 +69,15 @@ class RunSection extends StatelessWidget {
           ),
         ),
         SettingsRow(
+          title: context.l10n.httpRunUntrusted,
+          detail: context.l10n.httpRunUntrustedDetail,
+          trailing: WSwitch(
+            value: d.mayContainUntrustedContent,
+            semanticLabel: context.l10n.httpRunUntrusted,
+            onChanged: (on) => onEdit(() => d.mayContainUntrustedContent = on),
+          ),
+        ),
+        SettingsRow(
           title: context.l10n.mcpAddSensitive,
           detail: context.l10n.httpRunSensitiveDetail,
           trailing: WSwitch(

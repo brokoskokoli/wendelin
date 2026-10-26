@@ -11,7 +11,11 @@ import 'run_state.dart';
 /// The check of one model call: its step id, pending report and the sink its
 /// status events go to (a buffer for a call that overlaps the previous check).
 final class AttestationStep {
-  AttestationStep._(this.id, this.report, this.sink) : emitted = report == null;
+  AttestationStep._(this.id, this.report, this.sink, this.profileId)
+    : emitted = report == null;
+
+  /// Provider profile that gave the answer (for the session lock).
+  final String? profileId;
 
   /// Id of the step (`<session>:<n>`).
   final String id;
@@ -38,12 +42,19 @@ final class AttestationStep {
 ///   step id, report or events.
 /// - `external` tool calls of a verified-answer provider run only after a
 ///   green verification (fail-closed: red or missing result refuses them).
+/// - A red result locks the `external` tools of the session for good
+///   (WP157, ADR 0023) through the invoker ([SessionLockable]), the one
+///   place that does so: the next run, a rebuilt engine and an app restart
+///   find the conversation locked. A provider that merely cannot be checked
+///   (unconfirmed, yellow) does not lock.
 final class AttestationGate {
-  /// Creates the gate of a run; [sessionId] prefixes the step ids.
-  AttestationGate(this._control, this._sessionId);
+  /// Creates the gate of a run; [sessionId] prefixes the step ids and is the
+  /// conversation [invoker] locks on a red result.
+  AttestationGate(this._control, this._sessionId, [this._invoker]);
 
   final RunControl _control;
   final String _sessionId;
+  final ToolInvoker? _invoker;
 
   int _steps = 0;
 
@@ -54,6 +65,7 @@ final class AttestationGate {
     ChatRequest request, {
     bool failed = false,
     RunControl? sink,
+    String? profileId,
   }) {
     final report = provider is AttestationAware
         ? (provider as AttestationAware).reportFor(request)
@@ -64,6 +76,7 @@ final class AttestationGate {
       '$_sessionId:${++_steps}',
       report,
       sink ?? _control,
+      profileId,
     );
     if (report != null && !failed) {
       // Pending (yellow) until the receipt check is final: the UI shows
@@ -100,6 +113,15 @@ final class AttestationGate {
       _control.token.whenCancelled.then<AttestationReport?>((_) => null),
     ]);
     _control.throwIfAborted();
+    if (report?.status == AttestationStatus.red) {
+      final invoker = _invoker;
+      if (invoker is SessionLockable) {
+        (invoker as SessionLockable).lockExternal(
+          _sessionId,
+          profileId: target.profileId,
+        );
+      }
+    }
     if (report?.status != AttestationStatus.green) onNotGreen?.call();
     if (!target.emitted && report != null) {
       target.emitted = true;

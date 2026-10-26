@@ -91,7 +91,8 @@ final class TasksAddTool extends IntegrationTool
     implements
         TrustedContentSource,
         AuditArgumentsRedactor,
-        FixedConfirmationTool {
+        FixedConfirmationTool,
+        NoNetworkTarget {
   /// Creates the tool.
   const TasksAddTool(this.env);
 
@@ -212,7 +213,8 @@ final class TasksAddTool extends IntegrationTool
 }
 
 /// `tasks__list` (read).
-final class TasksListTool extends IntegrationTool {
+final class TasksListTool extends IntegrationTool
+    implements NoNetworkTarget, TrustedContentSource {
   /// Creates the tool.
   const TasksListTool(this.env);
 
@@ -324,7 +326,11 @@ final class TasksListTool extends IntegrationTool {
 
 /// `tasks__complete` (write; undo restores the original line).
 final class TasksCompleteTool extends IntegrationTool
-    implements AuditArgumentsRedactor, FixedConfirmationTool {
+    implements
+        AuditArgumentsRedactor,
+        FixedConfirmationTool,
+        NoNetworkTarget,
+        TrustedContentSource {
   /// Creates the tool.
   const TasksCompleteTool(this.env);
 

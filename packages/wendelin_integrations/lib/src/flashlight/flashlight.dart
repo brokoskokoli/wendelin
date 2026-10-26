@@ -80,7 +80,11 @@ enum TorchMode {
 /// `flashlight__on`, `flashlight__off`, `flashlight__toggle` (write, undo
 /// restores the previous state). The result holds only the own state.
 final class FlashlightTool extends IntegrationTool
-    implements TrustedContentSource, FixedConfirmationTool, DefaultLevelTool {
+    implements
+        TrustedContentSource,
+        FixedConfirmationTool,
+        DefaultLevelTool,
+        NoNetworkTarget {
   /// Creates a tool of the given [mode].
   const FlashlightTool(this.port, {required this.name, required this.mode});
 

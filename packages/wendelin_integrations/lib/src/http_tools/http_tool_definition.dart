@@ -148,6 +148,7 @@ final class HttpToolDefinition {
     this.timeout = httpToolDefaultTimeout,
     this.responsePath,
     this.autoRun = false,
+    this.mayContainUntrustedContent = true,
   }) : inputSchema = Map.unmodifiable(inputSchema),
        headers = Map.unmodifiable(headers),
        risk = risk ?? method.suggestedRisk;
@@ -229,6 +230,8 @@ final class HttpToolDefinition {
       timeout: Duration(seconds: timeoutSeconds),
       responsePath: optional<String>('responsePath'),
       autoRun: optional<bool>('autoRun') ?? false,
+      mayContainUntrustedContent:
+          optional<bool>('mayContainUntrustedContent') ?? true,
     )..validate();
     return definition;
   }
@@ -293,6 +296,9 @@ final class HttpToolDefinition {
   /// are `write` (see [effectiveRisk]).
   final bool autoRun;
 
+  /// „Kann unsichere Inhalte enthalten“ (ADR 0023). Default on (fail-closed).
+  final bool mayContainUntrustedContent;
+
   /// Name of the tool in the registry.
   String get toolName => 'http__$name';
 
@@ -352,7 +358,7 @@ final class HttpToolDefinition {
       );
     }
     final placeholders = <String>{...parsed.placeholders};
-    final secretHeaders = _secretHeaderNames(ctx);
+    final secretHeaders = _secretHeaderNames(auth, ctx);
     for (final e in headers.entries) {
       final lower = e.key.toLowerCase();
       if (!_headerName.hasMatch(e.key)) {
@@ -433,27 +439,6 @@ final class HttpToolDefinition {
     return props.keys.cast<String>().toSet();
   }
 
-  /// Lower-case names of the headers [auth] sends.
-  Set<String> _secretHeaderNames(String ctx) => switch (auth) {
-    NoAuth() => const {},
-    ApiKeyAuth(:final headerName) => {
-      if (headerName != null && !_headerName.hasMatch(headerName))
-        throw FormatException('$ctx: ungültiger Header-Name „$headerName“'),
-      (headerName ?? 'authorization').toLowerCase(),
-    },
-    CustomHeadersAuth(:final secretRefsByHeader) => {
-      for (final h in secretRefsByHeader.keys)
-        if (!_headerName.hasMatch(h) ||
-            _reservedHeaders.contains(h.toLowerCase()))
-          throw FormatException('$ctx: ungültiger Header-Name „$h“')
-        else
-          h.toLowerCase(),
-    },
-    OAuthPkceAuth() => throw FormatException(
-      '$ctx: OAuth wird für HTTP-Tools nicht unterstützt',
-    ),
-  };
-
   /// Encodes the definition (with [httpToolSchemaVersion]); contains no
   /// secrets, only secret references.
   Map<String, Object?> toJson() => {
@@ -475,6 +460,7 @@ final class HttpToolDefinition {
     'timeoutSeconds': timeout.inSeconds,
     if (responsePath != null) 'responsePath': responsePath,
     if (autoRun) 'autoRun': true,
+    if (!mayContainUntrustedContent) 'mayContainUntrustedContent': false,
   };
 
   /// A copy with the given fields replaced.
@@ -492,6 +478,7 @@ final class HttpToolDefinition {
     bool? enabled,
     Duration? timeout,
     bool? autoRun,
+    bool? mayContainUntrustedContent,
   }) => HttpToolDefinition(
     id: id,
     name: name ?? this.name,
@@ -510,6 +497,8 @@ final class HttpToolDefinition {
     timeout: timeout ?? this.timeout,
     responsePath: responsePath,
     autoRun: autoRun ?? this.autoRun,
+    mayContainUntrustedContent:
+        mayContainUntrustedContent ?? this.mayContainUntrustedContent,
   );
 
   @override
@@ -523,6 +512,27 @@ final class HttpToolDefinition {
   @override
   String toString() => 'HttpToolDefinition($toolName, ${method.verb})';
 }
+
+/// Lower-case names of the headers [auth] sends.
+Set<String> _secretHeaderNames(AuthMethod auth, String ctx) => switch (auth) {
+  NoAuth() => const {},
+  ApiKeyAuth(:final headerName) => {
+    if (headerName != null && !_headerName.hasMatch(headerName))
+      throw FormatException('$ctx: ungültiger Header-Name „$headerName“'),
+    (headerName ?? 'authorization').toLowerCase(),
+  },
+  CustomHeadersAuth(:final secretRefsByHeader) => {
+    for (final h in secretRefsByHeader.keys)
+      if (!_headerName.hasMatch(h) ||
+          _reservedHeaders.contains(h.toLowerCase()))
+        throw FormatException('$ctx: ungültiger Header-Name „$h“')
+      else
+        h.toLowerCase(),
+  },
+  OAuthPkceAuth() => throw FormatException(
+    '$ctx: OAuth wird für HTTP-Tools nicht unterstützt',
+  ),
+};
 
 bool _hasControlChars(String s) =>
     s.codeUnits.any((c) => (c < 0x20 && c != 0x09) || c == 0x7f);

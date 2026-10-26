@@ -1708,6 +1708,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get httpRunTimeout => 'Zeitlimit in Sekunden';
 
   @override
+  String get httpRunUntrusted => 'Kann unsichere Inhalte enthalten';
+
+  @override
+  String get httpRunUntrustedDetail =>
+      'Antworten können Texte Dritter enthalten. Danach fragt Wendelin vor Aufrufen mit Netzziel nach. Nur für eigene Dienste mit bekannten Daten ausschalten.';
+
+  @override
   String get httpSrcAddHeader => '+ Header';
 
   @override
@@ -2571,6 +2578,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get mcpDetailUnreachableLabel => 'nicht erreichbar';
+
+  @override
+  String get mcpDetailUntrusted => 'Kann unsichere Inhalte enthalten';
+
+  @override
+  String get mcpDetailUntrustedHint =>
+      'Antworten können Texte Dritter enthalten. Danach fragt Wendelin vor Aufrufen mit Netzziel nach. Nur für eigene Dienste mit bekannten Daten ausschalten.';
 
   @override
   String mcpDetailValueFor(String header) {
