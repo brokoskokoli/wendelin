@@ -69,7 +69,11 @@ final class DeveloperModePref extends Notifier<bool> {
         .settings
         .set(AppSettings.developerMode, enabled);
     // The wake service has no database: Kotlin keeps the flag for it.
-    unawaited(ref.read(wakePlatformProvider).setDevMode(enabled: enabled));
+    unawaited(
+      ref
+          .read(wakePlatformProvider)
+          .setDevMode(enabled: enabled, deleteArchive: deleteArchive),
+    );
     // After the switch, so nothing is written anew (the queue is awaited).
     if (!enabled) {
       await deleteDevAudio();

@@ -162,6 +162,32 @@ void main() {
       expect(lines().single['text'], 'ok');
     });
 
+    test(
+      'Schwärzung: erkannter Text mit PIN oder Karte wird geschwärzt',
+      () async {
+        await save(
+          entry(
+            'accepted',
+            meta: {'text': 'meine pin ist 1234 danke', 'lp': -0.2},
+          ),
+        );
+        await save(
+          entry(
+            'rejected',
+            second: 1,
+            meta: {'text': 'karte 4111 1111 1111 1111 bitte'},
+          ),
+        );
+        final raw = File('${archive.path}/$devArchiveIndexName')
+            .readAsStringSync();
+        expect(raw, isNot(contains('1234')));
+        expect(raw, isNot(contains('4111')));
+        expect(lines().first['text'], contains('***'));
+        // The rest stays readable.
+        expect(lines().first['lp'], -0.2);
+      },
+    );
+
     test('Neustart: cleanDevAudio löscht das Archiv nicht, auch nicht nach '
         'Wochen; kurzlebige Aufnahmen schon', () async {
       await save(entry('accepted'));
@@ -189,6 +215,14 @@ void main() {
       expect(archive.existsSync(), isFalse);
     });
 
+    test('Statistik liest den Index nicht (nur den Ordner)', () async {
+      await save(entry('accepted'));
+      // A foreign or broken index changes nothing about the count.
+      File('${archive.path}/$devArchiveIndexName')
+          .writeAsStringSync('kein json\n' * 1000);
+      expect((await devArchiveStats()).cases, 1);
+    });
+
     test('Version der App entspricht der pubspec', () {
       final pubspec = File('pubspec.yaml').readAsStringSync();
       final v = RegExp(
@@ -212,6 +246,20 @@ void main() {
       devLogEnabled = false; // Wake-Dienst bekommt das Flag per Kotlin
       await devArchiveIdle;
       expect(archive.existsSync(), isFalse);
+    });
+
+    test('ausgeschaltet nach dem Audio, vor der Zeile: keine Zeile, die WAV '
+        'wird entfernt', () async {
+      final put = devArchivePut;
+      addTearDown(() => devArchivePut = put);
+      devArchivePut = (f, bytes) async {
+        final n = await put(f, bytes);
+        devLogEnabled = false; // the wake service learns it just now
+        return n;
+      };
+      await save(entry('accepted')); // one file: the flag falls after it
+      expect(lines(), isEmpty);
+      expect(wavs(), isEmpty);
     });
 
     test(
@@ -358,6 +406,49 @@ void main() {
       },
     );
 
+    test('periodisches Beschneiden fegt keine Waisen (liest den Index nicht); '
+        'der Start (cleanDevAudio) schon', () async {
+      archive.createSync(recursive: true);
+      File('${archive.path}/$devArchiveIndexName')
+          .writeAsStringSync('${jsonEncode({'file': 'other.wav'})}\n');
+      final orphan = File('${archive.path}/20260101-000000.000_idle-x.wav')
+        ..writeAsBytesSync([1, 2]);
+      orphan.setLastModifiedSync(DateTime(2026, 1, 1));
+      // Every 25th write scans and prunes: 25 writes hit it, wherever the
+      // counter stood.
+      for (var i = 0; i < 25; i++) {
+        await save(entry('accepted', second: i));
+      }
+      expect(orphan.existsSync(), isTrue);
+      await cleanDevAudio();
+      expect(orphan.existsSync(), isFalse);
+      expect(wavs(), hasLength(25));
+    });
+
+    test('Waisen-Sweep mit langem Index (mehrere Takte): lebende bleiben, '
+        'Waisen gehen', () async {
+      archive.createSync(recursive: true);
+      final live = File('${archive.path}/20260101-000001.000_idle-live.wav')
+        ..writeAsBytesSync([1]);
+      final orphan = File('${archive.path}/20260101-000002.000_idle-orph.wav')
+        ..writeAsBytesSync([1]);
+      for (final f in [live, orphan]) {
+        f.setLastModifiedSync(DateTime(2026, 1, 1));
+      }
+      final sb = StringBuffer();
+      for (var i = 0; i < 1300; i++) {
+        sb.writeln(jsonEncode({'file': 'gone-$i.wav'}));
+      }
+      sb
+        ..writeln('{torn')
+        ..writeln(jsonEncode({'file': '20260101-000001.000_idle-live.wav'}));
+      File('${archive.path}/$devArchiveIndexName')
+          .writeAsStringSync(sb.toString());
+      await pruneDevArchive(archive);
+      expect(live.existsSync(), isTrue);
+      expect(orphan.existsSync(), isFalse);
+    });
+
     test('ohne Index gilt nichts als verwaist', () async {
       archive.createSync(recursive: true);
       final f = File('${archive.path}/20260101-000000.000_idle-x.wav')
@@ -393,6 +484,37 @@ void main() {
       };
       expect(wavs().toSet(), named);
       expect(wavs(), hasLength(12));
+    });
+
+    test('Beschneiden trifft einen frischen Fall nicht (Deckel 0)', () async {
+      await save(entry('accepted', verify: clip()));
+      await save(entry('rejected', second: 1));
+      final near = entry('rejected', second: 2);
+      await save(
+        DevArchiveEntry(
+          at: near.at,
+          source: 'idle',
+          outcome: 'near-miss',
+          meta: const {},
+          cand: clip(),
+        ),
+      );
+      final before = wavs();
+      expect(before, hasLength(4));
+      // Just written (younger than a minute): not even a cap of 0 cuts it.
+      final n = await pruneDevArchive(
+        archive,
+        maxBytes: 0,
+        nearMissMaxBytes: 0,
+      );
+      expect(n, 0);
+      expect(wavs(), before);
+      // The same cases once they are old: gone.
+      age();
+      expect(
+        await pruneDevArchive(archive, maxBytes: 0, nearMissMaxBytes: 0),
+        3,
+      );
     });
 
     test('zweiter Schreiber im selben Ordner (anderes Isolat): gleicher '

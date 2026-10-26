@@ -114,6 +114,7 @@ final class WakeWordListener {
     this.verifyTail = WakeClassifierRules.verifyTail,
     this.verifyTimeout = const Duration(seconds: 8),
     this.devClips,
+    this.nearMissAbove,
   });
 
   /// Microphone.
@@ -149,6 +150,11 @@ final class WakeWordListener {
   /// side) and of every check (`wake-verify`); `null` or off: nothing is kept.
   final DevClips? devClips;
 
+  /// Lowest score of the active detection band (the engine's verify limit):
+  /// a window at or above it is a candidate, not a near miss (WP155). The
+  /// host passes the band of the engine it runs; default: the phone band.
+  final double? nearMissAbove;
+
   final _detections = StreamController<WakeWordDetection>.broadcast(sync: true);
   final _stateChanges = StreamController<WakeListenerState>.broadcast(
     sync: true,
@@ -164,7 +170,7 @@ final class WakeWordListener {
   late final _dev = DevAroundSet(devClips);
   // WP155: one near miss per utterance from the window scores.
   late final _near = NearMissTracker(
-    above: WakeClassifierRules.phone.verifyFrom,
+    above: nearMissAbove ?? WakeClassifierRules.phone.verifyFrom,
   );
   Completer<void>? _tailWait;
   int _tailTarget = 0;

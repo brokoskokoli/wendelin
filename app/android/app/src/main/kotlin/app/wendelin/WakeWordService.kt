@@ -405,9 +405,11 @@ class WakeWordService : Service() {
         }
 
         /** WP148: the developer mode changed; the running wake engine follows without a restart. */
-        fun onDevMode(on: Boolean) {
+        fun onDevMode(on: Boolean, clear: Boolean = false, archive: Boolean = false) {
             val s = instance ?: return
-            s.main.post { s.engine?.send("devMode", mapOf("on" to on)) }
+            // WP155: switching off asks the engine to delete what it wrote (see WakeHost).
+            val args = if (clear) mapOf("on" to on, "clear" to true, "archive" to archive) else mapOf("on" to on)
+            s.main.post { s.engine?.send("devMode", args) }
         }
 
         /** The assistant overlay was closed: the service listens again. */

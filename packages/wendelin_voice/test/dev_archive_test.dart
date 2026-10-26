@@ -14,6 +14,7 @@ final class _Archive {
   _Archive({this.on = true});
   bool on;
   bool throwOnWrite = false;
+  bool throwOnStt = false;
   final entries = <DevArchiveEntry>[];
   final clips = <DevClip>[];
   late final hook = DevClips(
@@ -25,7 +26,10 @@ final class _Archive {
         entries.add(e);
       },
       context: (source) => {'app': 'test', 'src': source},
-      takeStt: () => {'text': 'wendelin', 'lp': -0.1},
+      takeStt: () {
+        if (throwOnStt) throw StateError('stt note');
+        return {'text': 'wendelin', 'lp': -0.1};
+      },
     ),
   );
 }
@@ -125,6 +129,7 @@ void main() {
       bool on = true,
       FakeWakeWordEngine? engine,
       bool verify = true,
+      double? nearMissAbove,
     }) async {
       arch = _Archive(on: on);
       detections.clear();
@@ -136,6 +141,7 @@ void main() {
         verifier: verify ? verifier : null,
         verifyTail: Duration.zero,
         devClips: arch.hook,
+        nearMissAbove: nearMissAbove,
       );
       listener.detections.listen(detections.add);
       await listener.start();
@@ -253,6 +259,49 @@ void main() {
       expect(detections, hasLength(1));
     });
 
+    test('Hook takeStt wirft: Ergebnis unverändert, Listener lebt', () async {
+      await setUpListener();
+      arch.throwOnStt = true;
+      await feed(175);
+      expect(detections, hasLength(1));
+      expect(listener.state, WakeListenerState.listening);
+      // The case itself is still archived (without the transcript).
+      final e = arch.entries.single;
+      expect(e.outcome, 'accepted');
+      expect(e.meta.containsKey('text'), isFalse);
+    });
+
+    test(
+      'Hook takeStt wirft bei Ablehnung: weiter abgelehnt, kein Fehler',
+      () async {
+        await setUpListener();
+        arch.throwOnStt = true;
+        verifier.answer = (_) => false;
+        await feed(175);
+        expect(detections, isEmpty);
+        expect(listener.state, WakeListenerState.listening);
+        expect(arch.entries.single.outcome, 'rejected');
+        expect(arch.entries.single.meta['verdict'], 'no');
+      },
+    );
+
+    test('Band der Erkennung: Wert darunter ist near-miss, darüber '
+        'Kandidatenlauf', () async {
+      final scores = {80: 0.55, 81: 0.9, 82: 0.7};
+      // Default (phone band 0.98): 0.9 is a near miss.
+      await setUpListener(engine: FakeWakeWordEngine(scoreAtFrame: scores));
+      await feed(240);
+      expect(arch.entries.map((e) => e.outcome), ['near-miss']);
+      await listener.dispose();
+      // A band that starts at 0.85: the same run holds a candidate score.
+      await setUpListener(
+        engine: FakeWakeWordEngine(scoreAtFrame: scores),
+        nearMissAbove: 0.85,
+      );
+      await feed(240);
+      expect(arch.entries, isEmpty);
+    });
+
     test('Schreibfehler ändern das Ergebnis nicht', () async {
       await setUpListener();
       arch.throwOnWrite = true;
@@ -286,6 +335,7 @@ void main() {
       bool on = true,
       Duration cooldown = const Duration(seconds: 100),
       bool verify = true,
+      Duration settle = Duration.zero,
     }) async {
       arch = _Archive(on: on);
       verifier = _Verifier();
@@ -294,7 +344,7 @@ void main() {
         audio: audio,
         engine: FakeWakeWordEngine(),
         verifier: verify ? verifier : null,
-        settle: Duration.zero,
+        settle: settle,
         cooldown: cooldown,
         devClips: arch.hook,
       );
@@ -397,6 +447,37 @@ void main() {
       await pumpEventQueue();
       expect(arch.entries.map((e) => e.outcome), ['dropped']);
       expect(arch.entries.single.meta['reason'], 'stopped');
+    });
+
+    test('Stopp vor dem Prüfbeginn (settle läuft): der wartende Kandidat '
+        'endet als dropped (stopped)', () async {
+      await setUpDetector(settle: const Duration(seconds: 30));
+      await loud(30);
+      await cand();
+      await loud(1);
+      expect(arch.entries, isEmpty); // waits: the check has not begun
+      await d.stop();
+      await pumpEventQueue();
+      expect(arch.entries.map((e) => e.outcome), ['dropped']);
+      expect(arch.entries.single.meta['reason'], 'stopped');
+    });
+
+    test('Hook takeStt wirft: Unterbrechen bleibt unverändert', () async {
+      await setUpDetector();
+      arch.throwOnStt = true;
+      verifier.verdict = const BargeVerdict(
+        'wake',
+        BargeInKeyword.wake,
+        null,
+        'b',
+        0.9,
+      );
+      await loud(30);
+      await cand();
+      await loud(25);
+      final e = arch.entries.single;
+      expect(e.outcome, 'accepted');
+      expect(e.meta.containsKey('text'), isFalse);
     });
 
     test('ohne Prüfer: accepted (unchecked)', () async {

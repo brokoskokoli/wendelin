@@ -11,6 +11,7 @@ import 'package:wendelin/platform/wake/device_wake_parts.dart';
 import 'package:wendelin/platform/wake/service_audio_input.dart';
 import 'package:wendelin/platform/wake/wake_detector.dart';
 import 'package:wendelin/platform/wake/wake_host.dart';
+import 'package:wendelin/voice/dev_archive.dart';
 import 'package:wendelin/voice/dev_audio.dart';
 import 'package:wendelin/voice/dev_log.dart';
 import 'package:wendelin/voice/voice_log.dart';
@@ -303,6 +304,73 @@ void main() {
         await fromKotlin('devMode', {'on': true});
         await fromKotlin('run', {'verify': true});
         expect(devLogEnabled, isFalse);
+      },
+    );
+
+    // WP155: the app deletes first; a write of this isolate that was still
+    // under way may have brought the folder back. The service therefore
+    // deletes itself once its writes are over.
+    Future<void> seedAfterAppDeleted() async {
+      devLogEnabled = true;
+      File('${out.path}/20261026-000000.000_wake-cand.wav')
+          .writeAsBytesSync([1, 2, 3]);
+      saveDevArchiveEntry(
+        DevArchiveEntry(
+          at: DateTime(2026, 10, 26, 12),
+          source: 'idle',
+          outcome: 'near-miss',
+          meta: const {},
+          cand: DevClip(
+            event: 'x',
+            pcm: Int16List(100),
+            at: DateTime(2026, 10, 26),
+            marksMs: const {},
+          ),
+        ),
+      );
+      await devArchiveIdle;
+      expect(Directory('${out.path}/$devArchiveFolder').existsSync(), isTrue);
+    }
+
+    test('ausgeschaltet mit clear: der Dienst löscht Aufnahmen selbst, das '
+        'Archiv bleibt', () async {
+      await start();
+      await seedAfterAppDeleted();
+      await fromKotlin('devMode', {'on': false, 'clear': true});
+      await until(
+        () =>
+            !File('${out.path}/20261026-000000.000_wake-cand.wav').existsSync(),
+      );
+      expect(Directory('${out.path}/$devArchiveFolder').existsSync(), isTrue);
+    });
+
+    test(
+      'ausgeschaltet mit clear und archive: auch das Archiv ist weg',
+      () async {
+        await start();
+        await seedAfterAppDeleted();
+        await fromKotlin('devMode', {
+          'on': false,
+          'clear': true,
+          'archive': true,
+        });
+        await until(
+          () => !Directory('${out.path}/$devArchiveFolder').existsSync(),
+        );
+        expect(names(), isEmpty);
+      },
+    );
+
+    test(
+      'ausgeschaltet ohne clear (alter Aufruf): nichts wird gelöscht',
+      () async {
+        await start();
+        await seedAfterAppDeleted();
+        await fromKotlin('devMode', {'on': false});
+        await devArchiveIdle;
+        await devAudioIdle;
+        expect(names(), isNotEmpty);
+        expect(Directory('${out.path}/$devArchiveFolder').existsSync(), isTrue);
       },
     );
   });

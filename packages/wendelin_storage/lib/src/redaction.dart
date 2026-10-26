@@ -77,7 +77,11 @@ bool looksLikeSecretKey(String key) => switch (_classify(key)) {
 String redactSecretValues(String value) => value
     .replaceAllMapped(_bearer, (m) => '${m.group(1)} $redactedValue')
     .replaceAll(_skKey, redactedValue)
-    .replaceAllMapped(_queryParam, (m) => '${m.group(1)}=$redactedValue');
+    .replaceAllMapped(_queryParam, (m) => '${m.group(1)}=$redactedValue')
+    .replaceAllMapped(
+      _encodedQueryParam,
+      (m) => '${m.group(1)}%3D$redactedValue',
+    );
 
 enum _KeyClass { none, token, credential, state, code }
 
@@ -96,15 +100,46 @@ const _credentialFragments = [
 
 // WP155: one-time codes and PINs (`pin`, `otp`, `code`, `user_pin`, `otpCode`)
 // are credentials, whatever their type (`{"pin": 1234}`).
+// `tan` (transaction number) is one as well.
 const _exactCredentialKeys = {'auth', 'key', 'pin', 'otp'};
-const _credentialWords = {'pin', 'otp'};
+const _credentialWords = {'pin', 'otp', 'tan'};
+
+// What makes a `…code` a one-time code (`verification_code`, `smsCode`,
+// `auth-code`); `status_code`, `country_code`, `error_code`, `zip_code`
+// stay readable.
+const _codeQualifiers = [
+  'verification',
+  'verify',
+  'auth',
+  'authorization',
+  'sms',
+  'security',
+  'confirm',
+  'confirmation',
+  'login',
+  'access',
+  'reset',
+  'pairing',
+  'activation',
+  'recovery',
+  'backup',
+  'mfa',
+  '2fa',
+  'otp',
+  'onetime',
+  'twofactor',
+  'pass',
+];
+
+bool _isOneTimeCode(String joined) =>
+    _codeQualifiers.any((q) => joined.endsWith('${q}code'));
 
 final _separators = RegExp(r'[_\-.\s]');
 final _wordBoundary = RegExp(r'[_\-.\s]+|(?<=[a-z0-9])(?=[A-Z])');
 
 _KeyClass _classify(String key) {
   final joined = key.toLowerCase().replaceAll(_separators, '');
-  if (joined == 'code') return _KeyClass.code;
+  if (joined == 'code' || _isOneTimeCode(joined)) return _KeyClass.code;
   if (_exactCredentialKeys.contains(joined) ||
       _credentialFragments.any(joined.contains)) {
     return _KeyClass.credential;
@@ -135,8 +170,24 @@ String? _pairName(Map<Object?, Object?> map) {
 
 final _bearer = RegExp(r'\b(Bearer|Basic)\s+[^\s"]+', caseSensitive: false);
 final _skKey = RegExp(r'\bsk-[A-Za-z0-9_-]{16,}');
+// Names of a secret in a query or fragment; the `…code` forms as in
+// [_codeQualifiers] (`verification_code=…`).
+const _queryKeys =
+    r'api[_-]?key|key|access[_-]?token|token|auth|password|secret|'
+    r'client[_-]?secret|sig|signature|pin|otp|tan|code|state|'
+    r'(?:verification|verify|auth|authorization|sms|security|confirm|'
+    r'confirmation|login|access|reset|pairing|activation|recovery|backup|'
+    r'mfa|2fa|otp|one[_-]?time|two[_-]?factor|pass)[_-]?code';
+
+// After `?`, `&` or `#` (fragment of an OAuth redirect).
 final _queryParam = RegExp(
-  r'(?<=[?&])((?:api[_-]?key|key|access[_-]?token|token|auth|password|'
-  r'secret|client[_-]?secret|sig|signature|pin|otp|code|state))=[^&\s#"]+',
+  '(?<=[?&#])($_queryKeys)=[^&\\s#"]+',
+  caseSensitive: false,
+);
+
+// The same inside a URL-encoded value (`redirect_uri=https%3A%2F%2F…%3Fcode%3D…`):
+// `%3F`, `%26` or `%23` in front, `%3D` as the equals sign.
+final _encodedQueryParam = RegExp(
+  '(?<=%3F|%26|%23)($_queryKeys)%3D(?:(?!%26|%23)[^&\\s"])+',
   caseSensitive: false,
 );

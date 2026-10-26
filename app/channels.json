@@ -280,7 +280,7 @@
       ],
       "toKotlin": {
         "configure": {"args": ["enabled", "mode", "verify", "detector"], "returns": "none"},
-        "devMode": {"args": ["on"], "returns": "none"},
+        "devMode": {"args": ["on", "clear", "archive"], "returns": "none"},
         "status": {"args": [], "returns": "map"},
         "chatVisible": {"args": ["visible"], "returns": "none"},
         "chatDone": {"args": [], "returns": "none"},
@@ -308,7 +308,7 @@
       },
       "toDart": {
         "run": {"args": ["verify", "detector", "station", "dev"], "returns": "none"},
-        "devMode": {"args": ["on"], "returns": "none"},
+        "devMode": {"args": ["on", "clear", "archive"], "returns": "none"},
         "audio": {"args": ["pcm"], "returns": "none"},
         "audioError": {"args": ["message"], "returns": "none"},
         "conflict": {"args": ["reason"], "returns": "none"},

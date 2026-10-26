@@ -14,6 +14,15 @@ void main() {
       ('user_pin', '9999'),
       ('otpCode', '123456'),
       ('state', 'xyzXYZ1234567890'),
+      ('tan', '123456'),
+      ('TAN', 123456),
+      ('verification_code', '123456'),
+      ('auth_code', 'AB12CD'),
+      ('sms_code', 482913),
+      ('smsCode', '4829'),
+      ('security-code', '1234'),
+      ('authcode', 'x'),
+      ('login_code', 'x1'),
     ]) {
       test('$key=$value wird ersetzt', () {
         final out = redactSecrets({key: value, 'note': 'ok'})! as Map;
@@ -41,6 +50,23 @@ void main() {
               })!
               as Map;
       expect('$out', isNot(contains('1234')));
+    });
+
+    test('HTTP-Status und Länder-/Fehlercodes bleiben lesbar', () {
+      final json = {
+        'status_code': 401,
+        'http_status_code': 'Unauthorized',
+        'responseCode': 'OK',
+        'http_code': 404,
+        'error_code': 'E_TIMEOUT',
+        'country_code': 'DE',
+        'zip_code': 12345,
+        'language_code': 'de',
+        'color_code': '#fff',
+        'tangent': 1,
+        'distance': 4,
+      };
+      expect(redactSecrets(json), json);
     });
 
     test('Gerätezustand und verwandte Felder bleiben lesbar', () {
@@ -89,6 +115,50 @@ void main() {
     test('pin und otp, auch hinter &', () {
       final out = redactSecretValues('https://x.test/a?id=7&pin=1234&otp=55');
       expect(out, 'https://x.test/a?id=7&pin=***&otp=***');
+    });
+
+    test('tan, verification_code, auth_code, sms_code', () {
+      expect(
+        redactSecretValues(
+          'https://x.test/a?tan=123456&verification_code=99&ok=1'
+          '&auth_code=A&sms_code=B&Security-Code=C',
+        ),
+        'https://x.test/a?tan=***&verification_code=***&ok=1'
+        '&auth_code=***&sms_code=***&Security-Code=***',
+      );
+    });
+
+    test('Fragment (#code=, #access_token=)', () {
+      expect(
+        redactSecretValues('https://x.test/cb#access_token=ya29.AbC&ok=1'),
+        'https://x.test/cb#access_token=***&ok=1',
+      );
+      expect(
+        redactSecretValues('https://x.test/cb#code=AbC123&state=Zq9'),
+        'https://x.test/cb#code=***&state=***',
+      );
+    });
+
+    test('URL-kodierte Query im Wert eines anderen Parameters', () {
+      expect(
+        redactSecretValues(
+          'https://x.test/login?redirect_uri='
+          'https%3A%2F%2Fapp.test%2Fcb%3Fcode%3DAbC123%26ok%3D1%26'
+          'verification_code%3D777%26state%3DZq9',
+        ),
+        'https://x.test/login?redirect_uri='
+        'https%3A%2F%2Fapp.test%2Fcb%3Fcode%3D***%26ok%3D1%26'
+        'verification_code%3D***%26state%3D***',
+      );
+    });
+
+    test('Status und ähnliche Namen in der Query bleiben', () {
+      const url =
+          'https://x.test/a?status_code=401&http_code=404&error_code=E1'
+          '#country_code=DE';
+      expect(redactSecretValues(url), url);
+      const enc = 'https%3A%2F%2Fx.test%2Fa%3Fstatus_code%3D401%26ok%3D1';
+      expect(redactSecretValues(enc), enc);
     });
 
     test('ähnliche Namen bleiben', () {

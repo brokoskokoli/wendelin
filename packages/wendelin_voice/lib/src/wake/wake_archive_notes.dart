@@ -10,6 +10,16 @@ import 'wake_word_engine.dart';
 // WP155: notes the wake listener and the barge-in detector make in the
 // developer archive. Pure bookkeeping, never part of the voice decision.
 
+/// The transcript note of the hook; a throwing hook counts as none (the
+/// archive never changes the voice decision).
+Map<String, Object?> _takeStt(DevClips? clips) {
+  try {
+    return clips?.archive?.takeStt() ?? const {};
+  } on Object {
+    return const {};
+  }
+}
+
 /// Opens the case of a wake candidate and notes what the engine said.
 DevArchiveCase? noteWakeCandidate(DevClips? clips, WakeWordHit hit) {
   final arch = clips?.archiveCase('idle');
@@ -53,7 +63,7 @@ void noteVerifyClip(
       marksMs: {markName: samplesToDuration(markSamples).inMilliseconds},
     ),
   );
-  clips?.archive?.takeStt(); // forget an older transcript
+  _takeStt(clips); // forget an older transcript
 }
 
 /// Notes the wake verifier's answer.
@@ -68,7 +78,7 @@ void noteWakeVerdict(
     ..['verifier'] = v.kind
     ..['verdict'] = verdict
     ..addAll(v is VerdictDetail ? (v as VerdictDetail).lastDetail : {})
-    ..addAll(clips?.archive?.takeStt() ?? {});
+    ..addAll(_takeStt(clips));
 }
 
 /// Closes the case of a wake candidate after the check.
@@ -97,7 +107,7 @@ void noteBargeVerdict(
     ..['reason'] = verdict.reason
     ..['verifier'] = verdict.verifier
     ..['score'] = verdict.score?.toStringAsFixed(4)
-    ..addAll(clips?.archive?.takeStt() ?? {});
+    ..addAll(_takeStt(clips));
 }
 
 /// Closes the case of a barge-in candidate after the check.

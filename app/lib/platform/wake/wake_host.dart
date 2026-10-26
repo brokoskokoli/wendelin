@@ -97,6 +97,12 @@ final class WakeHost {
         // WP148: the app (via Kotlin) switched the developer mode; only an
         // explicit `true` turns it on.
         devLogEnabled = args['on'] == true;
+        // WP155: switched off and asked to clean up: once the writes under
+        // way here are over (they stop at the flag), delete what the app's
+        // own deletion may have missed.
+        if (args['on'] == false && args['clear'] == true) {
+          unawaited(_sweepAfterOff(deleteArchive: args['archive'] == true));
+        }
       case 'run':
         // The flag as Kotlin has stored it; anything else is off.
         devLogEnabled = args['dev'] == true;
@@ -200,6 +206,8 @@ final class WakeHost {
       preRoll: wakePreRoll,
       // Developer mode (WP148): audio of candidates and checks.
       devClips: devAudioClips,
+      // The band of this run: at or above its verify limit is a candidate.
+      nearMissAbove: band.verifyFrom,
     );
     _listener = listener;
     _subs
@@ -338,6 +346,16 @@ final class WakeHost {
     } on Object {
       // A failure shows as a state change.
     }
+  }
+
+  /// After the developer mode went off: waits for the writes of this
+  /// isolate, then deletes (unless the mode came back on meanwhile).
+  Future<void> _sweepAfterOff({required bool deleteArchive}) async {
+    await devArchiveIdle;
+    await devAudioIdle;
+    if (devLogEnabled) return;
+    await deleteDevAudio();
+    if (deleteArchive) await clearDevArchive();
   }
 
   Future<void> _fail(String reason) async {

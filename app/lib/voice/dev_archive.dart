@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:wendelin_core/wendelin_core.dart' show redactSensitiveContent;
 import 'package:wendelin_storage/wendelin_storage.dart' show redactSecrets;
 import 'package:wendelin_voice/wendelin_voice.dart';
 
@@ -135,14 +137,17 @@ Future<void> _write(DevArchiveEntry e) async {
     final cand = e.cand;
     if (cand != null) {
       name = '$base.wav';
-      size += await _put(File('${dir.path}/$name'), Wav(cand.pcm).encode());
+      size += await devArchivePut(
+        File('${dir.path}/$name'),
+        Wav(cand.pcm).encode(),
+      );
     }
     final verify = e.verify;
     if (verify != null) {
       verifyName = '$base-verify.wav';
       final f = File('${dir.path}/$verifyName');
       if (!written.any((w) => w.path == f.path)) written.add(f);
-      size += await _put(f, Wav(verify.pcm).encode());
+      size += await devArchivePut(f, Wav(verify.pcm).encode());
     }
     // The line comes last and only with the mode still on: an audio file
     // without a line is swept as an orphan, a line never lacks its audio.
@@ -173,7 +178,10 @@ Future<void> _write(DevArchiveEntry e) async {
       ++_sinceScan >= _scanEvery ||
       _bytes! > devArchiveMaxBytes) {
     _sinceScan = 0;
-    await pruneDevArchive(dir);
+    // No orphan sweep here: it needs the whole index (tens of MB after
+    // weeks), too much for the wake service's isolate while it listens. The
+    // sweep runs at the start (`cleanDevAudio`).
+    await pruneDevArchive(dir, sweepOrphans: false);
   }
 }
 
@@ -182,7 +190,11 @@ final class _SwitchedOff implements Exception {
   const _SwitchedOff();
 }
 
-/// Writes [bytes]; refuses (nothing written) once the mode is off.
+/// Writes [bytes]; refuses (nothing written) once the mode is off. A
+/// variable only so a test can act between two steps of a write.
+@visibleForTesting
+Future<int> Function(File f, List<int> bytes) devArchivePut = _put;
+
 Future<int> _put(File f, List<int> bytes) async {
   if (!devLogEnabled) throw const _SwitchedOff();
   await f.writeAsBytes(bytes, flush: true);
@@ -233,20 +245,13 @@ Map<String, Object?> _record(DevArchiveEntry e, String? file, String? verify) {
     // For the later review page.
     'label': '',
   }..removeWhere((k, v) => v == null);
-  // Text of a check goes through the same masking as the developer log.
-  return redactSecrets(out)! as Map<String, Object?>;
-}
-
-Future<int> _scanBytes(Directory dir) async {
-  var total = 0;
-  try {
-    await for (final f in dir.list(followLinks: false)) {
-      if (f is File) total += (await f.stat()).size;
-    }
-  } on Object {
-    // Counted as far as it goes.
+  // Keys and values like the developer log; the text of a check also like
+  // its content masking (a spoken "PIN 1234", a card number).
+  final safe = redactSecrets(out)! as Map<String, Object?>;
+  if (safe['text'] case final String text) {
+    safe['text'] = redactSensitiveContent(text, mask: '***');
   }
-  return total;
+  return safe;
 }
 
 /// Case name of a file (`…_idle-accepted` for `…_idle-accepted-verify.wav`).
@@ -272,7 +277,8 @@ const devArchiveMinAge = Duration(minutes: 1);
 ///    first), only then the oldest accepted/rejected/dropped ones, which are
 ///    kept as long as possible;
 /// 3. audio that no line of the index names (a crash between the two steps)
-///    is deleted as an orphan.
+///    is deleted as an orphan, if [sweepOrphans] (reads the whole index,
+///    streamed; the periodic prune of the wake service leaves it out).
 ///
 /// The index is **never rewritten** (the wake service appends to it from
 /// another isolate; a rewrite would lose its line, see the architecture
@@ -285,13 +291,14 @@ Future<int> pruneDevArchive(
   int maxBytes = devArchiveMaxBytes,
   int? nearMissMaxBytes,
   Duration minAge = devArchiveMinAge,
+  bool sweepOrphans = true,
 }) async {
   final nearMax = nearMissMaxBytes ?? maxBytes ~/ 2;
   var deleted = 0;
   try {
     if (!await dir.exists()) return 0;
     final settledBefore = DateTime.now().subtract(minAge);
-    final named = await _namedByIndex(dir);
+    final named = sweepOrphans ? await _namedByIndex(dir) : null;
     final cases = <String, List<({File file, int size})>>{};
     final young = <String>{};
     var total = 0;
@@ -345,51 +352,59 @@ Future<int> pruneDevArchive(
 }
 
 /// File names the index mentions; `null` if there is no (readable) index,
-/// then nothing counts as an orphan.
+/// then nothing counts as an orphan. Reads the file as a stream, line by
+/// line (never the whole file as one string), and gives the event loop a
+/// turn every [_yieldEvery] lines: 100000 lines (29 MB, a few weeks of near
+/// misses) took 250 ms at a stretch on a desktop, several times that on a
+/// phone.
 Future<Set<String>?> _namedByIndex(Directory dir) async {
   final index = File('${dir.path}/$devArchiveIndexName');
   if (!await index.exists()) return null;
   final out = <String>{};
-  for (final line in await index.readAsLines()) {
-    try {
-      final m = jsonDecode(line) as Map<String, dynamic>;
-      for (final k in ['file', 'verify_file']) {
-        final v = m[k];
-        if (v is String) out.add(v);
+  var n = 0;
+  try {
+    final lines = index
+        .openRead()
+        .transform(utf8.decoder)
+        .transform(const LineSplitter());
+    await for (final line in lines) {
+      try {
+        final m = jsonDecode(line) as Map<String, dynamic>;
+        for (final k in ['file', 'verify_file']) {
+          final v = m[k];
+          if (v is String) out.add(v);
+        }
+      } on Object {
+        // A torn or foreign line names nothing.
       }
-    } on Object {
-      // A torn or foreign line names nothing.
+      if (++n % _yieldEvery == 0) await Future<void>.delayed(Duration.zero);
     }
+  } on Object {
+    return null; // unreadable: nothing counts as an orphan
   }
   return out;
 }
 
-/// Number of cases and bytes of the archive (settings screen).
+const _yieldEvery = 500;
+
+/// Number of cases with audio and bytes of the archive (settings screen).
+/// From the folder listing alone, the index is not read (it only grows,
+/// and lines of pruned audio stay in it); a case without any audio (only a
+/// line) is not counted.
 Future<({int cases, int bytes})> devArchiveStats() async {
   try {
     final dir = await devArchiveDirectory();
     if (dir == null || !await dir.exists()) return (cases: 0, bytes: 0);
-    var cases = 0;
-    final index = File('${dir.path}/$devArchiveIndexName');
-    if (await index.exists()) {
-      for (final line in await index.readAsLines()) {
-        if (await _isLive(dir, line)) cases++;
-      }
+    final cases = <String>{};
+    var bytes = 0;
+    await for (final f in dir.list(followLinks: false)) {
+      if (f is! File) continue;
+      bytes += (await f.stat()).size;
+      if (f.path.endsWith('.wav')) cases.add(_caseOf(f.path));
     }
-    return (cases: cases, bytes: await _scanBytes(dir));
+    return (cases: cases.length, bytes: bytes);
   } on Object {
     return (cases: 0, bytes: 0);
-  }
-}
-
-/// Whether an index line still has its audio (pruned lines stay in the index).
-Future<bool> _isLive(Directory dir, String line) async {
-  try {
-    final m = jsonDecode(line) as Map<String, dynamic>;
-    final file = (m['file'] ?? m['verify_file']) as String?;
-    return file == null || await File('${dir.path}/$file').exists();
-  } on Object {
-    return false;
   }
 }
 
