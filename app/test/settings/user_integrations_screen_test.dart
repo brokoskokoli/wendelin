@@ -18,32 +18,25 @@ import 'integrations_screen_test.dart';
 import 'other_screens_test.dart' show pumpPage;
 
 void main() {
-  testWidgets('Übersicht: Routing öffnet den Editor, MCP-Server die '
-      'Serverliste (WP27), HTTP-Tools die Liste', (tester) async {
+  testWidgets('Übersicht: Routing öffnet den Editor, MCP-Server und '
+      'HTTP-Tools stehen nicht im Hauptmenü (WP152)', (tester) async {
     await pumpPage(tester, TestEnv(), const SettingsScreen());
     final titles = [
       for (final (t, _, _) in SettingsScreen.areas(AppLocalizationsDe())) t,
     ];
-    expect(titles.take(5), [
+    expect(titles.take(4), [
       'Provider',
       'Routing',
       'Integrationen',
-      'MCP-Server',
-      'HTTP-Tools',
+      'Datenschutz und Logs',
     ]);
+    expect(titles, isNot(contains('MCP-Server')));
+    expect(titles, isNot(contains('HTTP-Tools')));
+    expect(find.text('MCP-Server'), findsNothing);
+    expect(find.text('HTTP-Tools'), findsNothing);
     await tester.tap(find.text('Routing'));
     await settle(tester);
     expect(find.byType(RoutingScreen), findsOneWidget);
-    await tester.tap(find.byTooltip('Zurück'));
-    await settle(tester);
-    await tester.tap(find.text('MCP-Server'));
-    await settle(tester);
-    expect(find.byType(McpServersScreen), findsOneWidget);
-    await tester.tap(find.byTooltip('Zurück'));
-    await settle(tester);
-    await tester.tap(find.text('HTTP-Tools'));
-    await settle(tester);
-    expect(find.byType(HttpToolsScreen), findsOneWidget);
   });
 
   testWidgets('„+ MCP-Server“ und „+ HTTP-Tool“ öffnen ihre Bereiche', (
@@ -56,6 +49,10 @@ void main() {
     await tester.tap(find.byTooltip('Zurück'));
     await settle(tester);
     await tester.scrollUntilVisible(find.text('+ HTTP-Tool'), 200);
+    await tester.tap(find.text('+ HTTP-Tool'));
+    await settle(tester);
+    expect(find.byType(HttpToolsScreen), findsOneWidget);
+    expect(find.byType(HttpToolEditorScreen), findsNothing);
     await tester.tap(find.text('+ HTTP-Tool'));
     await settle(tester);
     expect(find.byType(HttpToolEditorScreen), findsOneWidget);

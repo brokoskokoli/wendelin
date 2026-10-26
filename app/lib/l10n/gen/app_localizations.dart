@@ -5374,12 +5374,6 @@ abstract class AppLocalizations {
   /// **'HTTP-Tools'**
   String get areaHttpTools;
 
-  /// No description provided for @areaHttpToolsDetail.
-  ///
-  /// In de, this message translates to:
-  /// **'Eigene Tools definieren und testen'**
-  String get areaHttpToolsDetail;
-
   /// No description provided for @areaIntegrations.
   ///
   /// In de, this message translates to:
@@ -5397,12 +5391,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'MCP-Server'**
   String get areaMcp;
-
-  /// No description provided for @areaMcpDetail.
-  ///
-  /// In de, this message translates to:
-  /// **'Server, Anmeldung, Status, Tools'**
-  String get areaMcpDetail;
 
   /// No description provided for @areaPrivacy.
   ///

@@ -86,7 +86,7 @@ class IntegrationsScreen extends ConsumerWidget {
           children: [
             for (final (label, route) in [
               (context.l10n.integrationsAddMcp, AppRoutes.mcpServers),
-              (context.l10n.integrationsAddHttp, AppRoutes.httpToolNew),
+              (context.l10n.integrationsAddHttp, AppRoutes.httpTools),
             ])
               Expanded(
                 child: WideButton(

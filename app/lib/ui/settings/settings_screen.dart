@@ -10,8 +10,8 @@ import '../design/design.dart';
 import '../routes.dart';
 import 'settings_page.dart';
 
-/// Settings overview: one row per area (concept: „Einstellungen“). Routing,
-/// MCP servers and HTTP tools open placeholder pages until WP26–WP28.
+/// Settings overview: one row per area (concept: „Einstellungen“). MCP servers
+/// and HTTP tools are reached via „Integrationen“ only (routes stay).
 class SettingsScreen extends ConsumerWidget {
   /// Creates the overview.
   const SettingsScreen({super.key});
@@ -21,8 +21,6 @@ class SettingsScreen extends ConsumerWidget {
     (l.areaProvider, l.areaProviderDetail, AppRoutes.providers),
     (l.areaRouting, l.areaRoutingDetail, AppRoutes.routing),
     (l.areaIntegrations, l.areaIntegrationsDetail, AppRoutes.integrations),
-    (l.areaMcp, l.areaMcpDetail, AppRoutes.mcpServers),
-    (l.areaHttpTools, l.areaHttpToolsDetail, AppRoutes.httpTools),
     (l.areaPrivacy, l.areaPrivacyDetail, AppRoutes.privacy),
     (l.areaCosts, l.areaCostsDetail, AppRoutes.costs),
     (l.areaAssistant, l.areaAssistantDetail, AppRoutes.assistant),
