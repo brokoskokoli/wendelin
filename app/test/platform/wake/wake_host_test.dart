@@ -307,9 +307,15 @@ void main() {
       },
     );
 
-    // WP155: the app deletes first; a write of this isolate that was still
-    // under way may have brought the folder back. The service therefore
-    // deletes itself once its writes are over.
+    // WP155: the app deletes first; a write still under way may bring the
+    // folder back, so the service deletes itself once its writes are over.
+    DevClip clip(String event) => DevClip(
+      event: event,
+      pcm: Int16List(100),
+      at: DateTime(2026, 10, 26),
+      marksMs: const {},
+    );
+
     Future<void> seedAfterAppDeleted() async {
       devLogEnabled = true;
       File('${out.path}/20261026-000000.000_wake-cand.wav')
@@ -320,12 +326,7 @@ void main() {
           source: 'idle',
           outcome: 'near-miss',
           meta: const {},
-          cand: DevClip(
-            event: 'x',
-            pcm: Int16List(100),
-            at: DateTime(2026, 10, 26),
-            marksMs: const {},
-          ),
+          cand: clip('x'),
         ),
       );
       await devArchiveIdle;
@@ -361,14 +362,73 @@ void main() {
       },
     );
 
+    // Holds the first access to the folder; meanwhile `then` arrives.
+    // [pendingWrite]: the held access is a write of this isolate (the sweep
+    // waits for it); else it is the sweep's own deletion of the recordings.
+    Future<void> sweepRace(
+      List<bool> then, {
+      required bool pendingWrite,
+    }) async {
+      await start();
+      await seedAfterAppDeleted();
+      final held = Completer<void>();
+      final release = Completer<void>();
+      devAudioDirectory = () async {
+        if (!held.isCompleted) {
+          held.complete();
+          await release.future;
+        }
+        return out;
+      };
+      if (pendingWrite) {
+        saveDevClip(clip('late'));
+        await held.future;
+      }
+      const off = {'on': false, 'clear': true, 'archive': true};
+      await fromKotlin('devMode', off);
+      await held.future;
+      for (final on in then) {
+        await fromKotlin('devMode', {'on': on});
+      }
+      release.complete();
+      await host.sweepIdle;
+      expect(Directory('${out.path}/$devArchiveFolder').existsSync(), isTrue);
+    }
+
+    for (final (name, then, write) in [
+      ('aus (clear) und wieder an, während geschrieben wird', [true], true),
+      (
+        'aus (clear), an, wieder aus, während geschrieben wird',
+        [true, false],
+        true,
+      ),
+      (
+        'an während des Löschens der Aufnahmen: das Archiv bleibt',
+        [true],
+        false,
+      ),
+    ]) {
+      test(name, () async {
+        await sweepRace(then, pendingWrite: write);
+        // The recordings go in the third case only (the deletion was under way).
+        expect(names().contains('20261026-000000.000_wake-cand.wav'), write);
+      });
+    }
+
     test(
       'ausgeschaltet ohne clear (alter Aufruf): nichts wird gelöscht',
       () async {
         await start();
         await seedAfterAppDeleted();
+        // A sweep would reach the folder after microtasks only.
+        var touched = false;
+        devAudioDirectory = () async {
+          touched = true;
+          return out;
+        };
         await fromKotlin('devMode', {'on': false});
-        await devArchiveIdle;
-        await devAudioIdle;
+        await pumpEventQueue();
+        expect(touched, isFalse);
         expect(names(), isNotEmpty);
         expect(Directory('${out.path}/$devArchiveFolder').existsSync(), isTrue);
       },

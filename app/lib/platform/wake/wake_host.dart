@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
@@ -97,15 +98,18 @@ final class WakeHost {
         // WP148: the app (via Kotlin) switched the developer mode; only an
         // explicit `true` turns it on.
         devLogEnabled = args['on'] == true;
+        _devGen++;
         // WP155: switched off and asked to clean up: once the writes under
         // way here are over (they stop at the flag), delete what the app's
         // own deletion may have missed.
         if (args['on'] == false && args['clear'] == true) {
-          unawaited(_sweepAfterOff(deleteArchive: args['archive'] == true));
+          _sweep = _sweepAfterOff(deleteArchive: args['archive'] == true);
+          unawaited(_sweep);
         }
       case 'run':
         // The flag as Kotlin has stored it; anything else is off.
         devLogEnabled = args['dev'] == true;
+        _devGen++;
         unawaited(cleanDevAudio());
         await _serial(
           () => _run(
@@ -351,12 +355,23 @@ final class WakeHost {
   /// After the developer mode went off: waits for the writes of this
   /// isolate, then deletes (unless the mode came back on meanwhile).
   Future<void> _sweepAfterOff({required bool deleteArchive}) async {
+    // The mode may come back on (and write) at any step: every step checks
+    // the flag and the generation (off, on, off again is a new mode too).
+    final gen = _devGen;
+    bool stale() => devLogEnabled || gen != _devGen;
     await devArchiveIdle;
     await devAudioIdle;
-    if (devLogEnabled) return;
+    if (stale()) return;
     await deleteDevAudio();
-    if (deleteArchive) await clearDevArchive();
+    if (deleteArchive && !stale()) await clearDevArchive();
   }
+
+  int _devGen = 0;
+  Future<void>? _sweep;
+
+  /// Completes when the last cleaning after "off" is over (tests).
+  @visibleForTesting
+  Future<void> get sweepIdle => _sweep ?? Future<void>.value();
 
   Future<void> _fail(String reason) async {
     if (_ending) return;

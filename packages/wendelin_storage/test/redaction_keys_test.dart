@@ -13,6 +13,9 @@ void main() {
       ('code', 1234),
       ('user_pin', '9999'),
       ('otpCode', '123456'),
+      ('otp_code', 123),
+      ('otpCode', 123),
+      ('authorization_code', 123),
       ('state', 'xyzXYZ1234567890'),
       ('tan', '123456'),
       ('TAN', 123456),
@@ -37,6 +40,23 @@ void main() {
       expect(redactSecrets({'code': -12345}), {'code': redactedValue});
       expect(redactSecrets({'code': '404'}), {'code': redactedValue});
       expect(redactSecrets({'code': true}), {'code': true});
+    });
+
+    test('JSON als String in einem Feld wird geschwärzt', () {
+      final out =
+          redactSecrets({
+                'args': '{"pin":"1234","note":"ok"}',
+                'list': '[{"otp_code":123}]',
+                'twice': '{"body":"{\\"pin\\":\\"5678\\"}"}',
+                'plain': '{kein json',
+                'fine': '{"a":1}',
+              })!
+              as Map;
+      expect(out['args'], '{"pin":"***","note":"ok"}');
+      expect(out['list'], '[{"otp_code":"***"}]');
+      expect(out['twice'], isNot(contains('5678')));
+      expect(out['plain'], '{kein json');
+      expect(out['fine'], '{"a":1}');
     });
 
     test('verschachtelt und in Listen', () {

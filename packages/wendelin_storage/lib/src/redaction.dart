@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// Replacement for redacted values.
 const redactedValue = '***';
 
@@ -24,6 +26,8 @@ const redactedValue = '***';
 /// query parameters (`?api_key=…`, `&key=…`, `token=…`, and `pin`/`otp`/`code`/`state`,
 /// as in an OAuth callback `?code=…&state=…`) are masked.
 ///
+/// A string holding JSON is parsed and redacted by key as well.
+///
 /// `null` stays `null`. Maps and lists are processed recursively.
 Object? redactSecrets(Object? value) {
   if (value is Map<Object?, Object?>) {
@@ -41,8 +45,25 @@ Object? redactSecrets(Object? value) {
     };
   }
   if (value is List<Object?>) return value.map(redactSecrets).toList();
-  if (value is String) return redactSecretValues(value);
+  if (value is String) return _redactString(value);
   return value;
+}
+
+/// A string that holds JSON (`"args": "{\"pin\":\"1234\"}"`) is decoded, redacted
+/// by key and encoded again (only when something changed); anything else, or
+/// text that is no JSON, goes through [redactSecretValues].
+String _redactString(String value) {
+  final t = value.trimLeft();
+  if (t.startsWith('{') || t.startsWith('[')) {
+    try {
+      final decoded = jsonDecode(value);
+      final encoded = jsonEncode(redactSecrets(decoded));
+      if (encoded != jsonEncode(decoded)) return encoded;
+    } on FormatException {
+      // No JSON after all: plain text below.
+    }
+  }
+  return redactSecretValues(value);
 }
 
 /// Whether the field [key] with [value] must be redacted (see
@@ -139,7 +160,6 @@ final _wordBoundary = RegExp(r'[_\-.\s]+|(?<=[a-z0-9])(?=[A-Z])');
 
 _KeyClass _classify(String key) {
   final joined = key.toLowerCase().replaceAll(_separators, '');
-  if (joined == 'code' || _isOneTimeCode(joined)) return _KeyClass.code;
   if (_exactCredentialKeys.contains(joined) ||
       _credentialFragments.any(joined.contains)) {
     return _KeyClass.credential;
@@ -152,6 +172,8 @@ _KeyClass _classify(String key) {
   // `basicAuth`, `proxy_auth`, `x-auth`: "auth" as the last word.
   if (words.isNotEmpty && words.last == 'auth') return _KeyClass.credential;
   if (words.any(_credentialWords.contains)) return _KeyClass.credential;
+  // After the credential words: `otp_code`, `authorization_code` stay credentials.
+  if (joined == 'code' || _isOneTimeCode(joined)) return _KeyClass.code;
   if (words.isNotEmpty && words.last == 'state') {
     return _KeyClass.state;
   }
