@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP149; Test-APK v0.1.0-rc6; als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP149, WP154; Test-APK v0.1.0-rc6; als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -100,7 +100,7 @@ Stand: 2026-10-25 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP149; Tes
 | WP151 | Unterbrechen mit Weckwort bei Gesprächston | geplant | Gerätelog rc5: barge-cand 0,54/0,56 erkannt, barge-verify (Parakeet, lp −2,2/−1,9) lehnt ab, Kandidat 0,73 bei busy verloren; startet nach WP148 (Tonaufnahmen) |
 | WP152 | Hauptmenü: MCP-Server und HTTP-Tools nur unter Integrationen | gemergt (24c76bde) | „+ HTTP-Tool“ öffnet jetzt die Liste (Beschriftung ggf. „HTTP-Tools“); `AppRoutes.httpToolNew` ohne Aufrufer (Soll) |
 | WP153 | Gesperrtes Gerät: nach dem Entsperren sauber weitermachen | geplant | Gerätebefund rc5: nach Entsperren keine Anzeige, Fenster zu; Analyse zuerst, nach WP148 |
-| WP154 | Home Assistant: Sicherheitsstufe je Gerät (A–D) | geplant | Wunsch Maintainer 2026-10-26, ersetzt „ohne Rückfrage“; nach WP150 |
+| WP154 | Home Assistant: Sicherheitsstufe je Gerät (A–D) | in Arbeit | Wunsch Maintainer 2026-10-26, ersetzt „ohne Rückfrage“; nach WP150 |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
