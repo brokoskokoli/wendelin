@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/home_assistant.dart';
+import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/fakes.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/fakes.dart';
@@ -89,6 +90,30 @@ void main() {
     await secrets.write('ha.entities', '{"a":1}');
     expect(await SecretStoreHa(secrets).load(), isEmpty);
   });
+
+  test(
+    'Stufe je Geräteart: ha.kind_levels, kaputt = alles D (WP160)',
+    () async {
+      expect((await store.kindLevels()).raw, isEmpty);
+      await store.saveKindLevels(
+        const HaKindLevels().withLevel(HaKind.light, SecurityLevel.a),
+      );
+      expect(await secrets.read('ha.kind_levels'), '{"light":"a"}');
+      expect((await store.kindLevels()).levelOf(HaKind.light), SecurityLevel.a);
+      await store.saveKindLevels(const HaKindLevels());
+      expect(await secrets.read('ha.kind_levels'), isNull);
+      await secrets.write('ha.kind_levels', 'kein json');
+      final fresh = SecretStoreHa(secrets);
+      expect((await fresh.kindLevels()).levelOf(HaKind.media), SecurityLevel.d);
+      await secrets.write('ha.kind_levels', '{"light":7}');
+      expect(
+        (await SecretStoreHa(secrets).kindLevels()).levelOf(HaKind.light),
+        SecurityLevel.d,
+      );
+      await store.clear();
+      expect(await secrets.read('ha.kind_levels'), isNull);
+    },
+  );
 
   group('Speicher-Cache der Geräteliste', () {
     const a = HaEntity(entityId: 'light.a', name: 'A');

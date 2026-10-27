@@ -35,5 +35,35 @@
         "type": "String"
       }
     }
-  }
+  },
+  "levelKindTitle": "Level per device kind",
+  "levelKindIntro": "Applies to all devices of a kind that have no level of their own. Locks, alarms, garage, gate and door can only be set per device (Home Assistant setup). A device's own level always wins. Scenes with unknown members run at level C at most, scenes with a critical member never lower than that member.",
+  "levelKindLight": "Lights",
+  "levelKindMedia": "Media",
+  "levelKindScene": "Scenes",
+  "levelKindSwitch": "Switches",
+  "levelKindClimate": "Climate",
+  "levelKindCover": "Blinds",
+  "levelKindSummaryCover": "Default: D (blinds with the old \"no confirmation\": C)",
+  "levelSummaryKind": "Level {level} · from device kind",
+  "@levelSummaryKind": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "levelWarnKindCover": "All blinds of this kind can then move without confirmation, at level A even on a locked device. Garage, gate and door are excluded. The responsibility is yours.",
+  "levelWarnKindSwitch": "Switches can control sockets and so devices such as heating or stove. At level A this works even on a locked device. The responsibility is yours.",
+  "levelRefCall": "Set the level per device kind (below) or per device in the Home Assistant setup.",
+  "levelRefSecure": "Lock, alarm, garage, gate and door: level per device in the Home Assistant setup. Blinds: see \"Level per device kind\".",
+  "levelSummaryKindScene": "At most level {level} · from device kind, depends on the members",
+  "@levelSummaryKindScene": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "levelKindLoading": "Loading …"
 }

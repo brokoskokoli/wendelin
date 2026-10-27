@@ -7,6 +7,7 @@ import 'package:meta/meta.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as so;
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../voice/voice_log.dart';
 import 'isolate_exit.dart';
 import 'pcm.dart';
 import 'sherpa_runtime.dart';
@@ -84,7 +85,14 @@ final class SherpaSpeakerEmbedder implements SpeakerEmbedder {
           'Das Sprechermodell ist nicht (vollständig) geladen.',
         );
       }
-      return await _factory(f.path);
+      final watch = Stopwatch()..start();
+      final session = await _factory(f.path);
+      voiceLog('model-load', {
+        'model': model.id,
+        'kind': 'speaker',
+        'ms': watch.elapsed,
+      });
+      return session;
     } on Object {
       _session = null; // the next call tries again
       rethrow;

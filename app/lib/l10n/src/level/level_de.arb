@@ -35,5 +35,35 @@
         "type": "String"
       }
     }
-  }
+  },
+  "levelKindTitle": "Stufe je Geräteart",
+  "levelKindIntro": "Gilt für alle Geräte einer Art, die keine eigene Stufe haben. Schloss, Alarm, Garage, Tor und Tür gibt es nur je Gerät (Home-Assistant-Einrichtung). Eine eigene Gerätestufe gewinnt immer. Szenen mit unbekannten Mitgliedern laufen höchstens auf Stufe C, Szenen mit kritischem Mitglied nie niedriger als dieses.",
+  "levelKindLight": "Licht",
+  "levelKindMedia": "Medien",
+  "levelKindScene": "Szenen",
+  "levelKindSwitch": "Schalter",
+  "levelKindClimate": "Klima",
+  "levelKindCover": "Rollos",
+  "levelKindSummaryCover": "Standard: D (Rollos mit altem „ohne Rückfrage“: C)",
+  "levelSummaryKind": "Stufe {level} · von Geräteart",
+  "@levelSummaryKind": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "levelWarnKindCover": "Alle Rollos dieser Art lassen sich dann ohne Bestätigung bewegen, bei Stufe A sogar bei gesperrtem Gerät. Garage, Tor und Tür sind davon ausgenommen. Die Verantwortung liegt bei dir.",
+  "levelWarnKindSwitch": "Schalter können Steckdosen und damit Geräte wie Heizung oder Herd schalten. Bei Stufe A geht das sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.",
+  "levelRefCall": "Die Stufe legst du je Geräteart fest (unten) oder je Gerät in der Home-Assistant-Einrichtung.",
+  "levelRefSecure": "Schloss, Alarm, Garage, Tor und Tür: Stufe je Gerät in der Home-Assistant-Einrichtung. Rollos: siehe „Stufe je Geräteart“.",
+  "levelSummaryKindScene": "Höchstens Stufe {level} · von Geräteart, je nach Mitgliedern",
+  "@levelSummaryKindScene": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "levelKindLoading": "Lädt …"
 }

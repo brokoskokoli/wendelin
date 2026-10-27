@@ -272,7 +272,7 @@ final class McpIntegration implements Integration {
 ///
 /// No undo (`ToolOutcome.undo` stays `null`): the effect happens on the
 /// server and cannot be reverted by the app.
-final class McpTool implements Tool, ContentTrustAware {
+final class McpTool implements Tool, ContentTrustAware, LevelFixedTool {
   /// Creates the tool.
   McpTool({
     required this.integration,
@@ -294,6 +294,10 @@ final class McpTool implements Tool, ContentTrustAware {
 
   @override
   final RiskLevel risk;
+
+  /// "Confirm all tools" of the server beats every stored tool level.
+  @override
+  bool get levelFixed => integration.config.confirmAll;
 
   @override
   bool get mayContainUntrustedContent =>

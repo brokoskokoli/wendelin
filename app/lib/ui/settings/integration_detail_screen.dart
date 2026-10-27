@@ -12,9 +12,11 @@ import '../../di/sensitivity.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import '../routes.dart';
+import 'ha_kind_section.dart';
 import 'security_level_picker.dart';
 import 'settings_page.dart';
 import 'settings_routes.dart';
+import 'tool_level_field.dart';
 
 /// Tools of one integration: each on/off, and `read`/`write` tools can be
 /// set to „Immer nachfragen“. Levels can only be made stricter (K8 b):
@@ -65,6 +67,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
           update: update,
         ),
         InfoBox(context.l10n.integrationDetailTapTool),
+        if (id == 'ha') const HaKindLevelSection(),
         _sensitiveCard(context, integration, prefs, update),
         if (integration.sensitive) const SensitiveLevelSection(),
       ],
@@ -124,13 +127,33 @@ class IntegrationDetailScreen extends ConsumerWidget {
                 update(prefs.withEnabled(tool.name, enabled: on)),
           ),
         ),
-        // The Home Assistant call tools take the level of the device.
+        // The Home Assistant call tools take the level of the device or of
+        // its kind (WP160): a note points there.
         if (!toolLevelPerDevice(tool.name))
           _picker(context, integration, tool, prefs, update)
-        else if (prefs.alwaysConfirm.contains(tool.name))
-          _legacyConfirm(context, tool, prefs, update),
+        else ...[
+          _deviceLevelNote(context, tool),
+          if (prefs.alwaysConfirm.contains(tool.name))
+            _legacyConfirm(context, tool, prefs, update),
+        ],
       ],
     ],
+  );
+
+  /// Points from a Home Assistant call tool to the level of device and kind.
+  Widget _deviceLevelNote(BuildContext context, Tool tool) => Padding(
+    padding: const EdgeInsets.only(
+      left: WSpace.xl + WSpace.l,
+      right: WSpace.l,
+      bottom: WSpace.s,
+    ),
+    child: Text(
+      tool.name == 'ha__call_secure'
+          ? context.l10n.levelRefSecure
+          : context.l10n.levelRefCall,
+      key: ValueKey('levelRef_${tool.name}'),
+      style: WText.caption,
+    ),
   );
 
   /// The level that counts for [tool] (chosen, legacy "always confirm" =
@@ -285,10 +308,5 @@ class SensitiveLevelSection extends ConsumerWidget {
 /// with outside effect warns at A, B and C; a tool of a [Integration.sensitive]
 /// integration (personal content) at A and B. Others (flashlight, harmless
 /// devices) never warn.
-Set<SecurityLevel> warnLevelsOf(Tool tool, Integration integration) {
-  if (tool.risk == RiskLevel.external) {
-    return const {SecurityLevel.a, SecurityLevel.b, SecurityLevel.c};
-  }
-  if (integration.sensitive) return const {SecurityLevel.a, SecurityLevel.b};
-  return const {};
-}
+Set<SecurityLevel> warnLevelsOf(Tool tool, Integration integration) =>
+    warnLevelsFor(tool.risk, sensitive: integration.sensitive);

@@ -520,4 +520,8 @@ final class _BrokenStore implements HaEntityStore {
 
   @override
   Future<void> saveLastSync(DateTime time) async {}
+  @override
+  Future<HaKindLevels> kindLevels() async => const HaKindLevels();
+  @override
+  Future<void> saveKindLevels(HaKindLevels levels) async {}
 }

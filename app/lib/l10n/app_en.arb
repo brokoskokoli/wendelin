@@ -563,7 +563,7 @@
   "httpRunHomeTarget": "Home network target",
   "httpRunHomeTargetDetail": "May point to private addresses, then http too",
   "httpRunHomeTargetSem": "Home network target",
-  "httpRunLevel": "Level (suggestion for {verb}: {name})",
+  "httpRunLevel": "Risk (suggestion for {verb}: {name})",
   "httpRunNoAsk": "Run without asking (no undo)",
   "httpRunNoAskSem": "Run without asking",
   "httpRunOnlyWrite": "Only for POST/PUT/PATCH with level write",
@@ -697,7 +697,19 @@
   "levelHelpB": "With a recognized voice (also when locked) or when unlocked.",
   "levelHelpC": "Only when the device is unlocked.",
   "levelHelpD": "Unlocked and with a confirmation on the display.",
+  "levelKindClimate": "Climate",
+  "levelKindCover": "Blinds",
+  "levelKindIntro": "Applies to all devices of a kind that have no level of their own. Locks, alarms, garage, gate and door can only be set per device (Home Assistant setup). A device's own level always wins. Scenes with unknown members run at level C at most, scenes with a critical member never lower than that member.",
+  "levelKindLight": "Lights",
+  "levelKindLoading": "Loading …",
+  "levelKindMedia": "Media",
+  "levelKindScene": "Scenes",
+  "levelKindSummaryCover": "Default: D (blinds with the old \"no confirmation\": C)",
+  "levelKindSwitch": "Switches",
+  "levelKindTitle": "Level per device kind",
   "levelLegacyRemove": "Remove the old “Always confirm” (the device sets the level)",
+  "levelRefCall": "Set the level per device kind (below) or per device in the Home Assistant setup.",
+  "levelRefSecure": "Lock, alarm, garage, gate and door: level per device in the Home Assistant setup. Blinds: see \"Level per device kind\".",
   "levelRestore": "Restore default",
   "levelSemantics": "{name}: level {level}",
   "@levelSemantics": {
@@ -723,9 +735,27 @@
       }
     }
   },
+  "levelSummaryKind": "Level {level} · from device kind",
+  "@levelSummaryKind": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "levelSummaryKindScene": "At most level {level} · from device kind, depends on the members",
+  "@levelSummaryKindScene": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
   "levelSummaryScene": "default: depends on the members",
   "levelWarnConfirm": "Change anyway",
   "levelWarnDeviceMessage": "A lock, alarm, gate or door can then be operated without a confirmation, at level A even while the device is locked. The responsibility is yours.",
+  "levelWarnKindCover": "All blinds of this kind can then move without confirmation, at level A even on a locked device. Garage, gate and door are excluded. The responsibility is yours.",
+  "levelWarnKindSwitch": "Switches can control sockets and so devices such as heating or stove. At level A this works even on a locked device. The responsibility is yours.",
   "levelWarnPersonalMessage": "This tool reads or changes personal content. At level A it runs even while the device is locked, with any voice; at level B with a recognized voice (a recording can fool it). The responsibility is yours.",
   "levelWarnTitle": "Less protection?",
   "levelWarnToolMessage": "This tool acts on the outside world and can then run without a confirmation, at level A even while the device is locked. The responsibility is yours.",

@@ -563,7 +563,7 @@
   "httpRunHomeTarget": "Cible du réseau local",
   "httpRunHomeTargetDetail": "Peut pointer vers des adresses privées, alors aussi en http",
   "httpRunHomeTargetSem": "Cible du réseau local",
-  "httpRunLevel": "Niveau (suggestion pour {verb} : {name})",
+  "httpRunLevel": "Risque (suggestion pour {verb} : {name})",
   "httpRunNoAsk": "Exécuter sans demander (pas d’annulation)",
   "httpRunNoAskSem": "Exécuter sans demander",
   "httpRunOnlyWrite": "Uniquement pour POST/PUT/PATCH avec le niveau write",
@@ -697,7 +697,19 @@
   "levelHelpB": "Avec une voix reconnue (même verrouillé) ou appareil déverrouillé.",
   "levelHelpC": "Seulement appareil déverrouillé.",
   "levelHelpD": "Déverrouillé et avec confirmation à l’écran.",
+  "levelKindClimate": "Climat",
+  "levelKindCover": "Volets",
+  "levelKindIntro": "S'applique à tous les appareils d'un type sans niveau propre. Serrure, alarme, garage, portail et porte se règlent seulement par appareil (configuration Home Assistant). Le niveau propre d'un appareil l'emporte toujours. Les scènes à membres inconnus s'exécutent au plus au niveau C, celles avec un membre critique jamais plus bas que lui.",
+  "levelKindLight": "Lumières",
+  "levelKindLoading": "Chargement …",
+  "levelKindMedia": "Médias",
+  "levelKindScene": "Scènes",
+  "levelKindSummaryCover": "Par défaut : D (volets avec l'ancien « sans confirmation » : C)",
+  "levelKindSwitch": "Interrupteurs",
+  "levelKindTitle": "Niveau par type d'appareil",
   "levelLegacyRemove": "Retirer l’ancien « Toujours confirmer » (l’appareil fixe le niveau)",
+  "levelRefCall": "Réglez le niveau par type d'appareil (ci-dessous) ou par appareil dans la configuration Home Assistant.",
+  "levelRefSecure": "Serrure, alarme, garage, portail, porte : niveau par appareil dans la configuration Home Assistant. Volets : voir « Niveau par type d'appareil ».",
   "levelRestore": "Rétablir le réglage par défaut",
   "levelSemantics": "{name} : niveau {level}",
   "@levelSemantics": {
@@ -723,9 +735,27 @@
       }
     }
   },
+  "levelSummaryKind": "Niveau {level} · du type d'appareil",
+  "@levelSummaryKind": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "levelSummaryKindScene": "Au plus niveau {level} · du type d'appareil, selon les membres",
+  "@levelSummaryKindScene": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
   "levelSummaryScene": "par défaut : selon les membres",
   "levelWarnConfirm": "Modifier quand même",
   "levelWarnDeviceMessage": "Une serrure, une alarme, un portail ou une porte pourra alors être commandé sans confirmation, au niveau A même appareil verrouillé. La responsabilité vous incombe.",
+  "levelWarnKindCover": "Tous les volets de ce type pourront bouger sans confirmation, au niveau A même appareil verrouillé. Garage, portail et porte sont exclus. La responsabilité est la vôtre.",
+  "levelWarnKindSwitch": "Les interrupteurs peuvent commander des prises, donc chauffage ou cuisinière. Au niveau A, même appareil verrouillé. La responsabilité est la vôtre.",
   "levelWarnPersonalMessage": "Cet outil lit ou modifie des contenus personnels. Au niveau A, il s’exécute même appareil verrouillé, avec n’importe quelle voix ; au niveau B avec une voix reconnue (un enregistrement peut tromper). La responsabilité vous incombe.",
   "levelWarnTitle": "Moins de protection ?",
   "levelWarnToolMessage": "Cet outil agit vers l’extérieur et pourra alors s’exécuter sans confirmation, au niveau A même appareil verrouillé. La responsabilité vous incombe.",

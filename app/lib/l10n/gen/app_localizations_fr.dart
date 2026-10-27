@@ -1745,7 +1745,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String httpRunLevel(String verb, String name) {
-    return 'Niveau (suggestion pour $verb : $name)';
+    return 'Risque (suggestion pour $verb : $name)';
   }
 
   @override
@@ -2115,8 +2115,48 @@ class AppLocalizationsFr extends AppLocalizations {
   String get levelHelpD => 'Déverrouillé et avec confirmation à l’écran.';
 
   @override
+  String get levelKindClimate => 'Climat';
+
+  @override
+  String get levelKindCover => 'Volets';
+
+  @override
+  String get levelKindIntro =>
+      'S\'applique à tous les appareils d\'un type sans niveau propre. Serrure, alarme, garage, portail et porte se règlent seulement par appareil (configuration Home Assistant). Le niveau propre d\'un appareil l\'emporte toujours. Les scènes à membres inconnus s\'exécutent au plus au niveau C, celles avec un membre critique jamais plus bas que lui.';
+
+  @override
+  String get levelKindLight => 'Lumières';
+
+  @override
+  String get levelKindLoading => 'Chargement …';
+
+  @override
+  String get levelKindMedia => 'Médias';
+
+  @override
+  String get levelKindScene => 'Scènes';
+
+  @override
+  String get levelKindSummaryCover =>
+      'Par défaut : D (volets avec l\'ancien « sans confirmation » : C)';
+
+  @override
+  String get levelKindSwitch => 'Interrupteurs';
+
+  @override
+  String get levelKindTitle => 'Niveau par type d\'appareil';
+
+  @override
   String get levelLegacyRemove =>
       'Retirer l’ancien « Toujours confirmer » (l’appareil fixe le niveau)';
+
+  @override
+  String get levelRefCall =>
+      'Réglez le niveau par type d\'appareil (ci-dessous) ou par appareil dans la configuration Home Assistant.';
+
+  @override
+  String get levelRefSecure =>
+      'Serrure, alarme, garage, portail, porte : niveau par appareil dans la configuration Home Assistant. Volets : voir « Niveau par type d\'appareil ».';
 
   @override
   String get levelRestore => 'Rétablir le réglage par défaut';
@@ -2138,6 +2178,16 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String levelSummaryKind(String level) {
+    return 'Niveau $level · du type d\'appareil';
+  }
+
+  @override
+  String levelSummaryKindScene(String level) {
+    return 'Au plus niveau $level · du type d\'appareil, selon les membres';
+  }
+
+  @override
   String get levelSummaryScene => 'par défaut : selon les membres';
 
   @override
@@ -2146,6 +2196,14 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get levelWarnDeviceMessage =>
       'Une serrure, une alarme, un portail ou une porte pourra alors être commandé sans confirmation, au niveau A même appareil verrouillé. La responsabilité vous incombe.';
+
+  @override
+  String get levelWarnKindCover =>
+      'Tous les volets de ce type pourront bouger sans confirmation, au niveau A même appareil verrouillé. Garage, portail et porte sont exclus. La responsabilité est la vôtre.';
+
+  @override
+  String get levelWarnKindSwitch =>
+      'Les interrupteurs peuvent commander des prises, donc chauffage ou cuisinière. Au niveau A, même appareil verrouillé. La responsabilité est la vôtre.';
 
   @override
   String get levelWarnPersonalMessage =>

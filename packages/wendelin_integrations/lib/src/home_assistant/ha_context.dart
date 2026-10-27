@@ -97,13 +97,26 @@ final class HaContext {
     }
   }
 
+  /// The levels per device kind (WP160). Fail-closed: an unreadable store
+  /// means every kind D.
+  Future<HaKindLevels> kindLevels() async {
+    try {
+      return await store.kindLevels();
+    } on Object {
+      return const HaKindLevels.broken();
+    }
+  }
+
   /// Ids of the approved entities on level D (confirmation; WP154, from the
   /// chosen level or the legacy "always confirm"). A scene with such a
   /// member is critical (K57).
-  Future<Set<String>> confirmIds() async => {
-    for (final e in await store.load())
-      if (haEffectiveLevel(e) == SecurityLevel.d) e.entityId,
-  };
+  Future<Set<String>> confirmIds() async {
+    final kinds = await kindLevels();
+    return {
+      for (final e in await store.load())
+        if (haEffectiveLevel(e, kinds: kinds) == SecurityLevel.d) e.entityId,
+    };
+  }
 
   /// The entity that [query] (name, "room name" or entity id) names among
   /// the approved ones. Throws `notFound` for none and `rejected` for

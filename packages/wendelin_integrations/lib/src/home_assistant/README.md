@@ -25,6 +25,8 @@ Eigene Home-Assistant-Integration (WP91, K53) zusätzlich zum MCP-Weg: Wendelin 
 
 **Undo** (`ha_undo.dart`, geplant aus dem Zustand vor dem Aufruf): Licht (an mit Helligkeit/Farbe oder aus), Schalter, Medien (Ein/Aus, Play/Pause, Lautstärke, Stumm; nächster/vorheriger Titel ohne Undo), Klima (Temperatur, Modus, Preset), Szene (Snapshot per `scene.create` mit `snapshot_entities`, Undo aktiviert den Snapshot und löscht ihn). Nicht erreichbare Geräte (`unavailable`) werden nicht angefasst. Scheitert der Snapshot, läuft die Szene ohne Undo.
 
+**Stufe je Geräteart (WP160)**: `HaKindLevels` (Speicher `ha.kind_levels`, JSON `{"light":"a",...}`, Schlüssel `light`, `media`, `scene`, `switch`, `climate`, `cover`) gibt allen Geräten der Art eine Stufe. Reihenfolge in `haEffectiveLevel`: eigene Gerätestufe > altes „immer bestätigen“ (D) > Art-Stufe > Standard. Nie über die Art: Schloss, Alarm, Rollo-Domäne mit Live-Klasse außerhalb `haQuietCoverClasses` (Garage, Tor, Tür, ohne Klasse), Szene mit kritischem Mitglied; eine Szene ohne bekannte Mitglieder höchstens C. Kaputter Wert = D, fehlender = Standard, unlesbarer Speicher = alle Arten D.
+
 **Gesperrt (WP154 L2, ADR 0022)**: `haDecide(..., access)` und `HaIntegration.allowedWhileLocked`/`anyAllowedWhileLocked(access)` fragen `levelAccess` mit Sperre und Stimme (Stimme aus der Sprechererkennung, WP154 L3: erkannt nur mit `speakerId`): gesperrt läuft nur ein Gerät auf Stufe A, und nur über `ha__call`; alles andere gibt „Entsperren nötig“, ohne einen Aufruf an Home Assistant. `ha__call_secure` läuft gesperrt nie. Im gesperrten Modelllauf enthält der Promptabschnitt nur Geräte auf A (keine `list_entities`). `IntegrationSpec.allowedWhileLocked` bleibt `false`.
 
 ## Zugang

@@ -234,6 +234,17 @@ final class HttpToolDraft {
   bool get autoRunAvailable =>
       method.suggestedRisk == RiskLevel.write && risk == RiskLevel.write;
 
+  /// The risk the saved tool will run with (as
+  /// [HttpToolDefinition.effectiveRisk]); the default level follows it.
+  RiskLevel get effectiveRisk {
+    final raised = risk.index >= method.suggestedRisk.index
+        ? risk
+        : method.suggestedRisk;
+    return raised == RiskLevel.write && !(autoRun && autoRunAvailable)
+        ? RiskLevel.external
+        : raised;
+  }
+
   /// The JSON schema of the arguments; throws [FormatException].
   Map<String, Object?> schema() {
     if (rawSchema) {

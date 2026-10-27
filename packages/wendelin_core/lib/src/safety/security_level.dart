@@ -140,3 +140,12 @@ abstract interface class DefaultLevelTool {
 /// must refuse ("Entsperren nötig") whatever it does not allow. Without a
 /// level a locked call of any other tool is refused.
 abstract interface class LevelPerDeviceTool {}
+
+/// Optional capability of a `Tool`: while [levelFixed] is true the policy
+/// ignores a level the user stored for this tool and uses its standard level
+/// (MCP server with "confirm all tools": a stored level must not loosen it,
+/// whenever it was chosen).
+abstract interface class LevelFixedTool {
+  /// Whether a stored tool level is ignored.
+  bool get levelFixed;
+}

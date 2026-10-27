@@ -108,6 +108,114 @@ void main() {
       });
     });
 
+    group('Diagnosezeile speaker (WP160)', () {
+      List<String> lines(Harness h) =>
+          h.diagnostics.where((l) => l.startsWith('speaker result=')).toList();
+
+      test('aus: result=off, ohne Zahlen', () {
+        runFake((async) {
+          final h = Harness(turns: [ScriptedTurn.text('Ok.')]);
+          h.pipeline.start();
+          settle(async);
+          expect(lines(h), hasLength(1));
+          expect(lines(h).single, startsWith('speaker result=off audioMs='));
+          expect(lines(h).single, isNot(contains('best=')));
+        });
+      });
+
+      test('known: Zahlen, aber weder Name noch Id', () {
+        runFake((async) {
+          const m = SpeakerMatch.known(
+            personId: 'geheim-id',
+            name: 'Geheimname',
+            score: 0.8123,
+            threshold: 0.5,
+            second: 0.31,
+            profileCount: 2,
+          );
+          final h = Harness(
+            turns: [ScriptedTurn.text('Ok.')],
+            speaker: FakeSpeakerRecognizer(m),
+          );
+          h.pipeline.start();
+          settle(async);
+          expect(
+            lines(h).single,
+            matches(
+              r'^speaker result=known best=0\.81 thr=0\.50 second=0\.31 '
+              r'audioMs=\d+ ms=\d+ profiles=2$',
+            ),
+          );
+          expect(h.diagnostics.join(), isNot(contains('Geheim')));
+          expect(h.diagnostics.join(), isNot(contains('geheim')));
+        });
+      });
+
+      test('unknown: Grund belowThreshold mit Schwelle', () {
+        runFake((async) {
+          final h = Harness(
+            turns: [ScriptedTurn.text('Ok.')],
+            speaker: FakeSpeakerRecognizer(
+              const SpeakerMatch.unknown(
+                SpeakerUnknownReason.belowThreshold,
+                score: 0.2,
+                threshold: 0.45,
+                profileCount: 1,
+              ),
+            ),
+          );
+          h.pipeline.start();
+          settle(async);
+          expect(
+            lines(h).single,
+            contains(
+              'result=unknown reason=belowThreshold best=0.20 thr=0.45 '
+              'second=-',
+            ),
+          );
+        });
+      });
+
+      test('Ausnahme: reason=failed', () {
+        runFake((async) {
+          final rec = FakeSpeakerRecognizer(anna)..throwing = true;
+          final h = Harness(turns: [ScriptedTurn.text('Ok.')], speaker: rec);
+          h.pipeline.start();
+          settle(async);
+          expect(lines(h).single, contains('result=unknown reason=failed'));
+        });
+      });
+
+      test('Zeitlimit: reason=timeout', () {
+        runFake((async) {
+          final h = Harness(
+            turns: [ScriptedTurn.text('Ok.')],
+            speaker: _Hanging(),
+          );
+          h.pipeline.start();
+          async.elapse(VoicePipeline.speakerTimeout * 2);
+          async.flushMicrotasks();
+          settle(async);
+          expect(lines(h).single, contains('result=unknown reason=timeout'));
+        });
+      });
+
+      test('ms und audioMs: Dauer der Erkennung, Länge der Äußerung', () {
+        runFake((async) {
+          late final Harness h;
+          final rec = _Slow(
+            anna,
+            () => h.clock.advance(const Duration(milliseconds: 250)),
+          );
+          h = Harness(turns: [ScriptedTurn.text('Ok.')], speaker: rec);
+          h.pipeline.start();
+          settle(async);
+          final audioMs = rec.lengths.single * 1000 ~/ 16000;
+          expect(lines(h).single, contains(' audioMs=$audioMs ms=250 '));
+        });
+      });
+    });
+
     test('Weckwort: Sprecher am Transcript, Anfrage ohne Weckwort', () {
       runFake((async) {
         final h = Harness(
@@ -144,4 +252,18 @@ final class _Hanging implements SpeakerRecognizer {
   @override
   Future<SpeakerMatch> identify(Int16List pcm) =>
       Completer<SpeakerMatch>().future;
+}
+
+class _Slow implements SpeakerRecognizer {
+  _Slow(this.answer, this.onIdentify);
+  final SpeakerMatch answer;
+  final void Function() onIdentify;
+  final lengths = <int>[];
+
+  @override
+  Future<SpeakerMatch> identify(Int16List pcm) async {
+    lengths.add(pcm.length);
+    onIdentify();
+    return answer;
+  }
 }

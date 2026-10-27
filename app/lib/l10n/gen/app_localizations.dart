@@ -3049,7 +3049,7 @@ abstract class AppLocalizations {
   /// No description provided for @httpRunLevel.
   ///
   /// In de, this message translates to:
-  /// **'Stufe (Vorschlag für {verb}: {name})'**
+  /// **'Risiko (Vorschlag für {verb}: {name})'**
   String httpRunLevel(String verb, String name);
 
   /// No description provided for @httpRunNoAsk.
@@ -3640,11 +3640,83 @@ abstract class AppLocalizations {
   /// **'Entsperrt und mit Bestätigung auf dem Display.'**
   String get levelHelpD;
 
+  /// No description provided for @levelKindClimate.
+  ///
+  /// In de, this message translates to:
+  /// **'Klima'**
+  String get levelKindClimate;
+
+  /// No description provided for @levelKindCover.
+  ///
+  /// In de, this message translates to:
+  /// **'Rollos'**
+  String get levelKindCover;
+
+  /// No description provided for @levelKindIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Gilt für alle Geräte einer Art, die keine eigene Stufe haben. Schloss, Alarm, Garage, Tor und Tür gibt es nur je Gerät (Home-Assistant-Einrichtung). Eine eigene Gerätestufe gewinnt immer. Szenen mit unbekannten Mitgliedern laufen höchstens auf Stufe C, Szenen mit kritischem Mitglied nie niedriger als dieses.'**
+  String get levelKindIntro;
+
+  /// No description provided for @levelKindLight.
+  ///
+  /// In de, this message translates to:
+  /// **'Licht'**
+  String get levelKindLight;
+
+  /// No description provided for @levelKindLoading.
+  ///
+  /// In de, this message translates to:
+  /// **'Lädt …'**
+  String get levelKindLoading;
+
+  /// No description provided for @levelKindMedia.
+  ///
+  /// In de, this message translates to:
+  /// **'Medien'**
+  String get levelKindMedia;
+
+  /// No description provided for @levelKindScene.
+  ///
+  /// In de, this message translates to:
+  /// **'Szenen'**
+  String get levelKindScene;
+
+  /// No description provided for @levelKindSummaryCover.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard: D (Rollos mit altem „ohne Rückfrage“: C)'**
+  String get levelKindSummaryCover;
+
+  /// No description provided for @levelKindSwitch.
+  ///
+  /// In de, this message translates to:
+  /// **'Schalter'**
+  String get levelKindSwitch;
+
+  /// No description provided for @levelKindTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Stufe je Geräteart'**
+  String get levelKindTitle;
+
   /// No description provided for @levelLegacyRemove.
   ///
   /// In de, this message translates to:
   /// **'Altes „Immer bestätigen“ entfernen (das Gerät bestimmt die Stufe)'**
   String get levelLegacyRemove;
+
+  /// No description provided for @levelRefCall.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Stufe legst du je Geräteart fest (unten) oder je Gerät in der Home-Assistant-Einrichtung.'**
+  String get levelRefCall;
+
+  /// No description provided for @levelRefSecure.
+  ///
+  /// In de, this message translates to:
+  /// **'Schloss, Alarm, Garage, Tor und Tür: Stufe je Gerät in der Home-Assistant-Einrichtung. Rollos: siehe „Stufe je Geräteart“.'**
+  String get levelRefSecure;
 
   /// No description provided for @levelRestore.
   ///
@@ -3676,6 +3748,18 @@ abstract class AppLocalizations {
   /// **'Stufe {level} · {state}'**
   String levelSummary(String level, String state);
 
+  /// No description provided for @levelSummaryKind.
+  ///
+  /// In de, this message translates to:
+  /// **'Stufe {level} · von Geräteart'**
+  String levelSummaryKind(String level);
+
+  /// No description provided for @levelSummaryKindScene.
+  ///
+  /// In de, this message translates to:
+  /// **'Höchstens Stufe {level} · von Geräteart, je nach Mitgliedern'**
+  String levelSummaryKindScene(String level);
+
   /// No description provided for @levelSummaryScene.
   ///
   /// In de, this message translates to:
@@ -3693,6 +3777,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Schloss, Alarm, Tor oder Tür lassen sich dann ohne Bestätigung bedienen, bei Stufe A sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.'**
   String get levelWarnDeviceMessage;
+
+  /// No description provided for @levelWarnKindCover.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Rollos dieser Art lassen sich dann ohne Bestätigung bewegen, bei Stufe A sogar bei gesperrtem Gerät. Garage, Tor und Tür sind davon ausgenommen. Die Verantwortung liegt bei dir.'**
+  String get levelWarnKindCover;
+
+  /// No description provided for @levelWarnKindSwitch.
+  ///
+  /// In de, this message translates to:
+  /// **'Schalter können Steckdosen und damit Geräte wie Heizung oder Herd schalten. Bei Stufe A geht das sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.'**
+  String get levelWarnKindSwitch;
 
   /// No description provided for @levelWarnPersonalMessage.
   ///

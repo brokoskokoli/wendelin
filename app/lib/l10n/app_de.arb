@@ -873,7 +873,7 @@
   "httpRunHomeTarget": "Heimnetz-Ziel",
   "httpRunHomeTargetDetail": "Darf auf private Adressen zeigen, dann auch http",
   "httpRunHomeTargetSem": "Heimnetz-Ziel",
-  "httpRunLevel": "Stufe (Vorschlag für {verb}: {name})",
+  "httpRunLevel": "Risiko (Vorschlag für {verb}: {name})",
   "@httpRunLevel": {
     "placeholders": {
       "verb": {
@@ -1124,7 +1124,19 @@
   "levelHelpB": "Bei erkannter Stimme (auch gesperrt) oder entsperrtem Gerät.",
   "levelHelpC": "Nur bei entsperrtem Gerät.",
   "levelHelpD": "Entsperrt und mit Bestätigung auf dem Display.",
+  "levelKindClimate": "Klima",
+  "levelKindCover": "Rollos",
+  "levelKindIntro": "Gilt für alle Geräte einer Art, die keine eigene Stufe haben. Schloss, Alarm, Garage, Tor und Tür gibt es nur je Gerät (Home-Assistant-Einrichtung). Eine eigene Gerätestufe gewinnt immer. Szenen mit unbekannten Mitgliedern laufen höchstens auf Stufe C, Szenen mit kritischem Mitglied nie niedriger als dieses.",
+  "levelKindLight": "Licht",
+  "levelKindLoading": "Lädt …",
+  "levelKindMedia": "Medien",
+  "levelKindScene": "Szenen",
+  "levelKindSummaryCover": "Standard: D (Rollos mit altem „ohne Rückfrage“: C)",
+  "levelKindSwitch": "Schalter",
+  "levelKindTitle": "Stufe je Geräteart",
   "levelLegacyRemove": "Altes „Immer bestätigen“ entfernen (das Gerät bestimmt die Stufe)",
+  "levelRefCall": "Die Stufe legst du je Geräteart fest (unten) oder je Gerät in der Home-Assistant-Einrichtung.",
+  "levelRefSecure": "Schloss, Alarm, Garage, Tor und Tür: Stufe je Gerät in der Home-Assistant-Einrichtung. Rollos: siehe „Stufe je Geräteart“.",
   "levelRestore": "Standard wiederherstellen",
   "levelSemantics": "{name}: Stufe {level}",
   "@levelSemantics": {
@@ -1150,9 +1162,27 @@
       }
     }
   },
+  "levelSummaryKind": "Stufe {level} · von Geräteart",
+  "@levelSummaryKind": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "levelSummaryKindScene": "Höchstens Stufe {level} · von Geräteart, je nach Mitgliedern",
+  "@levelSummaryKindScene": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
   "levelSummaryScene": "Standard: je nach Mitgliedern",
   "levelWarnConfirm": "Trotzdem ändern",
   "levelWarnDeviceMessage": "Schloss, Alarm, Tor oder Tür lassen sich dann ohne Bestätigung bedienen, bei Stufe A sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.",
+  "levelWarnKindCover": "Alle Rollos dieser Art lassen sich dann ohne Bestätigung bewegen, bei Stufe A sogar bei gesperrtem Gerät. Garage, Tor und Tür sind davon ausgenommen. Die Verantwortung liegt bei dir.",
+  "levelWarnKindSwitch": "Schalter können Steckdosen und damit Geräte wie Heizung oder Herd schalten. Bei Stufe A geht das sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.",
   "levelWarnPersonalMessage": "Dieses Tool liest oder verändert persönliche Inhalte. Bei Stufe A läuft es sogar bei gesperrtem Gerät mit jeder Stimme, bei Stufe B mit einer erkannten Stimme (eine Aufnahme kann täuschen). Die Verantwortung liegt bei dir.",
   "levelWarnTitle": "Weniger Schutz?",
   "levelWarnToolMessage": "Dieses Tool wirkt nach außen und kann dann ohne Bestätigung laufen, bei Stufe A sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.",

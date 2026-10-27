@@ -219,6 +219,7 @@ abstract base class HaCallTool extends IntegrationTool
     // WP154: one policy decides (level, live class, scene members).
     final access = haDecide(
       e,
+      kinds: await ctx.kindLevels(),
       state: prior,
       criticalIds: e.domain == 'scene' ? await ctx.confirmIds() : const {},
       locked: c.access.locked,
@@ -435,10 +436,15 @@ final class HaCallSecureTool extends HaCallTool
     implements
         ConfirmationPreparer,
         FixedConfirmationTool,
+        LevelFixedTool,
         NoNetworkTarget,
         TrustedContentSource {
   /// Creates the tool.
   const HaCallSecureTool(super.ctx);
+
+  /// Always D: a stored tool level never loosens it.
+  @override
+  bool get levelFixed => true;
 
   @override
   String get name => 'ha__call_secure';

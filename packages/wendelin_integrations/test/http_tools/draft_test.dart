@@ -16,6 +16,24 @@ void main() {
         HttpArgDraft(name: 'raum', required: true, description: 'Raum'),
       ];
 
+    test('effectiveRisk des Entwurfs gleich dem der Definition', () {
+      for (final m in HttpMethod.values) {
+        for (final r in RiskLevel.values) {
+          for (final auto in [false, true]) {
+            final d = draft()
+              ..setMethod(m)
+              ..risk = r
+              ..autoRun = auto;
+            expect(
+              d.effectiveRisk,
+              d.toDefinition().effectiveRisk,
+              reason: '${m.verb} ${r.name} autoRun=$auto',
+            );
+          }
+        }
+      }
+    });
+
     test('Liste ergibt JSON-Schema, Rundreise über die Definition', () {
       final d = draft()
         ..setMethod(HttpMethod.post)

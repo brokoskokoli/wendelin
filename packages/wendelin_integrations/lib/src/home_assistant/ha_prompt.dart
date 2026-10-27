@@ -32,12 +32,15 @@ Future<String?> haPromptSection(
   String request, {
   AccessContext access = AccessContext.unlocked,
 }) async {
+  final kinds = await ctx.kindLevels();
   unawaited(ctx.syncIfDue());
   final critical = access.locked ? await ctx.confirmIds() : const <String>{};
   final eligible = [
     for (final e in await ctx.approved())
       if (haRiskForDomain(e.domain) != null &&
-          (access.locked ? _lockedListed(e, access, critical) : _listed(e)))
+          (access.locked
+              ? _lockedListed(e, access, critical, kinds)
+              : _listed(e, kinds)))
         e,
   ];
   if (eligible.isEmpty) return null;
@@ -70,7 +73,7 @@ Future<String?> haPromptSection(
   if (!access.locked && (narrowed || shown.length < eligible.length)) {
     b.write('\nWeitere Geräte: ha__list_entities.');
   }
-  b.write(_examples(shown));
+  b.write(_examples(shown, kinds));
   return b.toString().trimRight();
 }
 
@@ -96,16 +99,22 @@ String _clean(String s) =>
 /// Whether the model hears of [e]: not on level D (it uses
 /// `ha__list_entities` and `ha__call_secure`), except covers, which are
 /// always listed (as before the levels).
-bool _listed(HaEntity e) =>
-    e.domain == 'cover' || haEffectiveLevel(e) != SecurityLevel.d;
+bool _listed(HaEntity e, HaKindLevels kinds) =>
+    e.domain == 'cover' || haEffectiveLevel(e, kinds: kinds) != SecurityLevel.d;
 
 /// Whether a locked request may hear of [e]: the table allows a call in
 /// [access]. Without the live state a scene counts by its members
 /// ([critical]) as unknown and a cover has no class, so both stay out unless
 /// the user chose a level (fail-closed); the call re-checks the live state.
-bool _lockedListed(HaEntity e, AccessContext access, Set<String> critical) =>
+bool _lockedListed(
+  HaEntity e,
+  AccessContext access,
+  Set<String> critical,
+  HaKindLevels kinds,
+) =>
     haDecide(
       e,
+      kinds: kinds,
       criticalIds: critical,
       locked: access.locked,
       speakerRecognized: access.speakerRecognized,
@@ -114,15 +123,15 @@ bool _lockedListed(HaEntity e, AccessContext access, Set<String> critical) =>
 
 /// Whether the stored data say the cover runs without a confirmation (the
 /// call re-checks the live class, [haDecide]).
-bool _quiet(HaEntity e) =>
-    levelAccess(haEffectiveLevel(e, liveClass: e.deviceClass)) ==
+bool _quiet(HaEntity e, HaKindLevels kinds) =>
+    levelAccess(haEffectiveLevel(e, liveClass: e.deviceClass, kinds: kinds)) ==
     LevelAccess.allowed;
 
 /// One or two short sample calls with ids from the list (WP135 A): the model
 /// calls `ha__call` at once instead of listing first. The cover example
 /// names `ha__call_secure` (covers need the confirmation, except quiet
 /// blinds: `ha__call`) and the position.
-String _examples(List<HaEntity> shown) {
+String _examples(List<HaEntity> shown, HaKindLevels kinds) {
   HaEntity? first(Set<String> domains) {
     for (final e in shown) {
       if (domains.contains(e.domain)) return e;
@@ -136,7 +145,7 @@ String _examples(List<HaEntity> shown) {
     if (onOff != null)
       '\nBeispiel: ha__call {"entity":"${onOff.entityId}","service":"turn_off"}',
     if (cover != null)
-      '\nBeispiel: ${_quiet(cover) ? 'ha__call' : 'ha__call_secure'} '
+      '\nBeispiel: ${_quiet(cover, kinds) ? 'ha__call' : 'ha__call_secure'} '
           '{"entity":"${cover.entityId}",'
           '"service":"set_cover_position","position_pct":50}',
   ].join();

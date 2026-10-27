@@ -227,7 +227,8 @@ void main() {
     HaIntegration ha(List<HaEntity> devices) => HaIntegration(
       api,
       FakeHaSecrets(const HaEndpoint(url: 'http://10.0.0.2:8123', token: 't')),
-      FakeHaEntityStore(devices),
+      // Just synced: no background comparison races with the test.
+      FakeHaEntityStore(devices)..synced = DateTime.now(),
     );
     Future<ToolOutcome> run(
       HaIntegration h,

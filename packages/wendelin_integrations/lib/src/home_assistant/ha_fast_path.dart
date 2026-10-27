@@ -53,12 +53,14 @@ final class HaFastPath implements FastPath {
     final code = (language ?? '').toLowerCase().split(RegExp('[-_]')).first;
     final words = haWordsByLanguage[code];
     if (words == null) return null;
+    final kinds = await ctx.kindLevels();
     final eligible = [
       for (final e in await ctx.approved())
         if (_fastDomains.contains(e.domain) &&
             // Level D asks; the call itself decides again from the live
             // state (WP154).
-            haEffectiveLevel(e, liveClass: e.deviceClass) != SecurityLevel.d &&
+            haEffectiveLevel(e, liveClass: e.deviceClass, kinds: kinds) !=
+                SecurityLevel.d &&
             !haHasBlocker('${e.name} ${e.entityId}'))
           e,
     ];

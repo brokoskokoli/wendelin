@@ -8,6 +8,7 @@ import '../platform/voice/sherpa_speaker.dart';
 import '../voice/speaker/person_scope.dart';
 import '../voice/speaker/person_storage.dart';
 import '../voice/speaker/speaker_storage.dart';
+import '../voice/voice_log.dart';
 import 'core_providers.dart';
 import 'dispose_tracker.dart';
 import 'voice_providers.dart';
@@ -45,6 +46,7 @@ final speakerIdentifierProvider = Provider<SpeakerIdentifier>(
   (ref) => SpeakerIdentifier(
     embedder: ref.watch(speakerEmbedderProvider),
     store: ref.watch(speakerProfileStoreProvider),
+    diagnostics: voiceLog,
   ),
 );
 

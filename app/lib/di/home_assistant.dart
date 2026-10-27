@@ -104,12 +104,49 @@ final class SecretStoreHa implements HaSecrets, HaEntityStore {
   Future<void> saveLastSync(DateTime time) =>
       store.write(syncedKey, time.toUtc().toIso8601String());
 
+  /// Key of the levels per device kind (`ha.kind_levels` on the device,
+  /// WP160): JSON map `{"light":"a",...}`.
+  static const kindLevelsKey = 'kind_levels';
+
+  HaKindLevels? _kinds;
+
+  @override
+  Future<HaKindLevels> kindLevels() async {
+    final cached = _kinds;
+    if (cached != null) return cached;
+    final raw = await store.read(kindLevelsKey);
+    HaKindLevels levels;
+    if (raw == null) {
+      levels = const HaKindLevels();
+    } else {
+      try {
+        levels = HaKindLevels.fromJson(jsonDecode(raw));
+      } on FormatException {
+        levels = const HaKindLevels.broken();
+      }
+    }
+    return _kinds = levels;
+  }
+
+  @override
+  Future<void> saveKindLevels(HaKindLevels levels) async {
+    _kinds = null;
+    if (levels.raw.isEmpty && !levels.isBroken) {
+      await store.delete(kindLevelsKey);
+    } else {
+      await store.write(kindLevelsKey, jsonEncode(levels.toJson()));
+    }
+    _kinds = null;
+  }
+
   /// Deletes address, token and approved entities.
   Future<void> clear() async {
     _cache = null;
     await store.delete(urlKey);
     await store.delete(tokenKey);
     await store.delete(entitiesKey);
+    await store.delete(kindLevelsKey);
+    _kinds = null;
     _cache = null;
     await store.delete(syncedKey);
   }
@@ -121,6 +158,12 @@ final class SecretStoreHa implements HaSecrets, HaEntityStore {
 /// Address, token and approved entities of Home Assistant.
 final haStoreProvider = Provider<SecretStoreHa>(
   (ref) => SecretStoreHa(ref.watch(secretStoreProvider)),
+);
+
+/// The levels per device kind (WP160). The settings change them with
+/// [HaEntityStore.saveKindLevels] and then invalidate this provider.
+final haKindLevelsProvider = FutureProvider<HaKindLevels>(
+  (ref) => ref.watch(haStoreProvider).kindLevels(),
 );
 
 /// Client of the Home Assistant API; tests override it with `FakeHaApi`.
