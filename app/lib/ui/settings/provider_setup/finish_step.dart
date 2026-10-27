@@ -42,6 +42,33 @@ GpuCheckMode gpuModeToSave({
     ? chosen
     : GpuCheckMode.off;
 
+/// GPU part of the finish step: info cards about the evidence (none offered
+/// or the local check failed) and the choice, if it is offered.
+List<Widget> _gpuParts(
+  AppLocalizations l, {
+  required (bool, bool?, bool, GpuCheckMode) gpu,
+  required GpuCheckMode mode,
+  required void Function(GpuCheckMode) onMode,
+}) {
+  final (attested, evidence, checkFailed, saved) = gpu;
+  final visible = gpuChoiceVisible(
+    attested: attested,
+    gpuEvidence: evidence,
+    savedMode: saved,
+  );
+  return [
+    if (attested && evidence == false) _noEvidenceCard(l, visible),
+    if (attested && evidence == null && checkFailed && !visible)
+      StatusCard(
+        key: const ValueKey('gpuEvidenceUnverified'),
+        status: CheckStatus.info,
+        title: l.gpuNoEvidenceFinishTitle,
+        detail: l.gpuEvidenceUnverified,
+      ),
+    if (visible) GpuCheckSection(mode: mode, onChanged: onMode),
+  ];
+}
+
 StatusCard _noEvidenceCard(AppLocalizations l, bool choiceVisible) =>
     StatusCard(
       key: const ValueKey('noGpuEvidence'),
@@ -72,11 +99,6 @@ List<Widget> finishStep({
   required GpuCheckMode savedGpuMode,
   required VoidCallback onSave,
 }) {
-  final showGpu = gpuChoiceVisible(
-    attested: attested,
-    gpuEvidence: gpuEvidence,
-    savedMode: savedGpuMode,
-  );
   return [
     StatusCard(
       status: CheckStatus.ok,
@@ -87,15 +109,12 @@ List<Widget> finishStep({
       AttestationStagesCard(result.stages),
     if (result != null && attested)
       ..._restrictionNote(l, stageViews(result.stages)),
-    if (attested && gpuEvidence == false) _noEvidenceCard(l, showGpu),
-    if (attested && gpuEvidence == null && gpuCheckFailed && !showGpu)
-      StatusCard(
-        key: const ValueKey('gpuEvidenceUnverified'),
-        status: CheckStatus.info,
-        title: l.gpuNoEvidenceFinishTitle,
-        detail: l.gpuEvidenceUnverified,
-      ),
-    if (showGpu) GpuCheckSection(mode: gpuMode, onChanged: onGpuMode),
+    ..._gpuParts(
+      l,
+      gpu: (attested, gpuEvidence, gpuCheckFailed, savedGpuMode),
+      mode: gpuMode,
+      onMode: onGpuMode,
+    ),
     if (detected != null)
       Text(
         [
