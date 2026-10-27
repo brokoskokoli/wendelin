@@ -7,6 +7,10 @@ extension VoiceAnswerText on VoiceController {
   /// when speech is not available or busy; the caller then sends it as
   /// typed text.
   Future<bool> answerText(String text) async {
+    // A follow-up listening ends as a restart (not as a user abort).
+    if (_pipeline?.state == VoiceState.listening) {
+      await cancel(VoiceCancelReason.retrigger);
+    }
     if (_pipeline != null && _pipeline!.state != VoiceState.idle) return false;
     final cancels = _cancels;
     final VoiceComponents? components;

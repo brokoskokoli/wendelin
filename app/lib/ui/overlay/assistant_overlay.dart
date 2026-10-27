@@ -20,6 +20,7 @@ import '../../l10n/l10n.dart';
 import '../../platform/assistant_platform.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
+import '../../voice/voice_log.dart';
 import '../../voice/wake/wake_pre_roll.dart';
 import '../design/design.dart';
 import '../screens/confirmation_sheet.dart';
@@ -108,6 +109,11 @@ class AssistantOverlayScreen extends ConsumerStatefulWidget {
       _AssistantOverlayState();
 }
 
+// Recognition, follow-up listening or an answer is under way.
+bool _requestRunning(WidgetRef ref) =>
+    ref.read(voiceControllerProvider).active ||
+    ref.read(agentControllerProvider).running;
+
 class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   late final AssistantTriggerSource _triggers;
   late final StreamSubscription<TriggerEvent> _sub;
@@ -179,7 +185,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   // Platform close request, tap outside the sheet or back: not while the
   // unlock settles.
   Future<void> _closeUnlessUnlocking() async {
-    if (!_unlockWatch.window.active) await _close();
+    if (!_unlockWatch.window.active) await _close('platform');
   }
 
   void _onLifecycle(AppLifecycleState state) {
@@ -253,7 +259,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       _discardedNotice = false;
     });
     final voice = ref.read(voiceControllerProvider);
-    if (voice.active) await _voice.cancel();
+    if (voice.active) await _voice.cancel(VoiceCancelReason.retrigger);
     if (_closing) return;
     if (ref.read(agentControllerProvider).running) {
       // Nobody takes the hit over: release the service microphone (WP68).
@@ -302,7 +308,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     setState(() => _hideBefore = entries.length);
     _closeTimer?.cancel();
     _closeTimer = Timer(AssistantOverlayScreen.stopCloseDelay, () {
-      if (mounted) unawaited(_close());
+      if (mounted) unawaited(_close('stop'));
     });
   }
 
@@ -319,7 +325,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     final ok = await _unlockWatch.run(
       _platform.requestUnlock,
       alive: () => mounted && !_closing,
-      close: () => unawaited(_close()),
+      close: () => unawaited(_close('unlock-timeout')),
     );
     if (!mounted) return;
     final pending = ref.read(lockedPendingProvider);
@@ -336,25 +342,25 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     ref.read(lockedModeProvider.notifier).set(false);
     // Gone meanwhile (home, screen off): nothing listens or sends.
     if (!await _unlockWatch.visibleAfterUnlock(() => mounted)) {
-      if (mounted) await _close();
+      if (mounted) await _close('hidden');
       return;
     }
     _voice.prewarm();
     // The request from before goes on now, answered here and read aloud
     // (K85); without one, the overlay listens again.
     if (text != null) {
-      if (_closing) return;
-      if (!await _voice.answerText(text) && mounted && !_closing) {
+      if (!_closing && !await _voice.answerText(text) && mounted && !_closing) {
         unawaited(_agent.send(text));
       }
-    } else if (!_closing) {
+    } else if (!_closing && !_requestRunning(ref)) {
       _triggers.fire();
     }
   }
 
-  Future<void> _close() async {
+  Future<void> _close(String by) async {
     if (_closing) return;
     _closing = true;
+    voiceLog('overlay-close', {'by': by});
     final container = ProviderScope.containerOf(context, listen: false);
     final platform = _platform;
     ref.read(lockedPendingProvider.notifier).clear();
@@ -443,7 +449,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     onAnswer: (yes) => _agent.answer(approved: yes),
     hint: voice.answersByVoice ? ConfirmationHint.voice : ConfirmationHint.tap,
     onMic: () => _onMic(voice, conversation),
-    onClose: () => unawaited(_close()),
+    onClose: () => unawaited(_close('tap')),
     onKeyboard: _toggleKeyboard,
     onUndo: (id) => unawaited(_voice.undo(id)),
     typing: _typing ? _typingField() : null,
