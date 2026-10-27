@@ -144,6 +144,36 @@ void main() {
     expect(platform.finished, 0);
   });
 
+  testWidgets('Entsperren bei laufender getippter Anfrage (ohne gemerkte): '
+      'kein neuer Trigger, der Lauf geht weiter', (tester) async {
+    platform.unlockSucceeds = true;
+    llm = FakeLlmProvider([ScriptedTurn.hang()]);
+    env = TestEnv(providerConfig: scripted(llm), enabled: const {'memory'});
+    final stt = FakeSpeechToText(const []);
+    final c = await open(tester, stt);
+    await c
+        .read(voiceControllerProvider.notifier)
+        .cancel(VoiceCancelReason.retrigger);
+    await _pump(tester, 4);
+    expect(c.read(voiceControllerProvider).active, isFalse);
+    unawaited(c.read(agentControllerProvider.notifier).send('Tippen'));
+    await _pump(tester, 4);
+    expect(c.read(agentControllerProvider).running, isTrue);
+    logs.clear();
+    final calls = stt.calls.length;
+    final cancels = c.read(voiceControllerProvider).stopCount;
+
+    await tester.tap(find.text(AppLocalizationsDe().overlayUnlock));
+    await _pump(tester, 20);
+
+    expect(c.read(voiceControllerProvider).active, isFalse, reason: 'Trigger');
+    expect(stt.calls.length, calls);
+    expect(c.read(agentControllerProvider).running, isTrue, reason: 'Lauf');
+    expect(c.read(voiceControllerProvider).stopCount, cancels);
+    expect(platform.finished, 0);
+    expect(logs.where((l) => l.contains('voice-cancelled')), isEmpty);
+  });
+
   testWidgets('zweiter Trigger bei laufender Aufnahme: Neustart, kein '
       '„Abgebrochen“, Fenster bleibt', (tester) async {
     platform.locked = false;

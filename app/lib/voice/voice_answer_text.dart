@@ -7,9 +7,14 @@ extension VoiceAnswerText on VoiceController {
   /// when speech is not available or busy; the caller then sends it as
   /// typed text.
   Future<bool> answerText(String text) async {
-    // A follow-up listening ends as a restart (not as a user abort).
-    if (_pipeline?.state == VoiceState.listening) {
+    // A follow-up listening ends as a restart (not as a user abort). So does
+    // the „please unlock“ hint when it is still spoken (quick unlock): it is
+    // cut off, so the answer follows aloud instead of going out as typed
+    // text. A request that is working (recognition, agent) is left alone.
+    final state = _pipeline?.state;
+    if (state == VoiceState.listening || state == VoiceState.speaking) {
       await cancel(VoiceCancelReason.retrigger);
+      await _pipeline?.whenIdle;
     }
     if (_pipeline != null && _pipeline!.state != VoiceState.idle) return false;
     final cancels = _cancels;
