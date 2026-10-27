@@ -310,6 +310,9 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     } on Object catch (err) {
       // The service must not keep recording after a failed start (WP158).
       voiceLog('start-failed', {'reason': 'trigger', 'error': errorCode(err)});
+      // A take that already succeeded (`keepOpen`) leaves the service
+      // recording: end that handoff at once instead of waiting for the guard.
+      if (taken) await _platform.finishWakeHandoff();
       taken = false;
     }
     // Not started (busy, refused): the service must not keep recording.

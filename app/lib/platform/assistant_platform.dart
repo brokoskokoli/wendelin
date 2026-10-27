@@ -73,8 +73,18 @@ class AssistantPlatform {
   Future<bool> openAssistantSettings() async =>
       await _invoke<bool>('openAssistantSettings') ?? false;
 
-  /// Whether the device shows the lock screen right now.
-  Future<bool> isLocked() async => await _invoke<bool>('isLocked') ?? false;
+  /// Whether the device shows the lock screen right now. Fail-closed: if the
+  /// state cannot be read (channel error, missing plugin, no answer) the
+  /// device counts as locked (WP158).
+  Future<bool> isLocked() async {
+    try {
+      return await _channel.invokeMethod<bool>('isLocked') ?? true;
+    } on MissingPluginException {
+      return true;
+    } on PlatformException {
+      return true;
+    }
+  }
 
   /// Asks the user to unlock (keyguard); `true` once unlocked, `false` if
   /// cancelled or impossible.

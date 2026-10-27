@@ -60,6 +60,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 60));
       expect(tester.takeException(), isNull);
       expect(platform.wakeTakes, 2, reason: 'zweiter Versuch gibt frei');
+      expect(platform.wakeFinishes, 1, reason: 'Übergabe sofort beendet');
       expect(platform.wakeHandoff, isNull);
     },
   );
