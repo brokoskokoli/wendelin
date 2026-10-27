@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete, solange der Maintainer am Rechner ist (
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP163; WP164 und WP165 warten auf WP163; Test-APK v0.1.0-rc10; als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP164, WP165; Test-APK v0.1.0-rc10; als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -109,16 +109,16 @@ Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP163; WP1
 | WP160 | Home Assistant: Stufe für ha__call/ha__call_secure einstellbar, Licht gesperrt steuerbar | gemergt 4a3a38e6 | Ursache: Sprechererkennung lehnte den Maintainer ab (kalibrierte Schwelle 0,60, Scores 0,42–0,69); Obergrenze 0,50, NaN fail-closed; Stufe je Geräteart, MCP/HTTP A–D; ADR-0022-Nachtrag, K130 offen. Gerätetest wp160.2: 5/5 gesperrt erkannt. Folgepunkte: Falschannahme-Rate mit fremden Personen (`docs/testing/m5/wp160.md` (d)); Lücke im Handy-Log 18:58–19:01 ungeklärt |
 | WP161 | Spotify: „spielt“, aber nirgends Musik (Zielgerät, Prüfung nach play, ehrliche Suche) | gemergt (6d8f39a0) | K129 offen; Ursache: Befehl ohne device_id ging an totes, noch „aktives“ Connect-Gerät, 204 ungeprüft. Folgepunkte: Gerätetest `docs/testing/m5/wp161.md` (eingefroren, Fremdgerät aktiv, benanntes Gerät, Playlist); Zweifel: Playlist-Ursache nur per Fixture, Handy-Gerätename ungeprüft; Soll: MediaSessionPick zählt BUFFERING/CONNECTING als spielend, toter Doku-Verweis spotify_session.dart:177; Hinweis: Spotify in Akku-Ausnahme (MIUI friert ein) |
 | WP162 | Lizenzen der Sprachmodelle als Unterseite (Mini) | gemergt (9f556fa2) | Unterseite /settings/voice/licenses; Soll offen: Abschnittsüberschrift wiederholt den Seitentitel (voice_licenses_screen.dart:21) |
-| WP163 | Gesperrt: Anfrage und Antwort im Overlay, Entsperren-Knopf oben, kein pauschaler Sperrtext; Teil B: Aktionen wie Navigation nach dem Entsperren ausführen | in Arbeit | Wunsch Maintainer 2026-10-27; 3. Sitzung mit Freigabe |
-| WP164 | Kontakte: Felder gezielt abfragen, Navigation zu Kontakt in einem Schritt, Waze-Integration | geplant | Wunsch Maintainer 2026-10-27; Start nach Merge von WP163 (Merkmal „wirkt nur entsperrt“) |
-| WP165 | Kommunikationsmodus raus: Schalter „Antwort als Gesprächston“ und zugehöriger Code entfernen, früherer Modus | geplant | Meldung Maintainer 2026-10-27 (Antwort wird leiser); Entscheidung Maintainer: Schalter und Code ausbauen; Start nach Merge von WP163 |
+| WP163 | Gesperrt: Anfrage und Antwort im Overlay, Entsperren-Knopf oben, kein pauschaler Sperrtext; Teil B: Aktionen wie Navigation nach dem Entsperren ausführen | gemergt 8375fb0e | K131 offen. Werkzeuge „wirkt nur entsperrt“: maps__navigate, maps__search_place, location__navigate_to, media__open_audible, obsidian__open_note, phone__call, station__start. Folgepunkte: Gerätetest `docs/testing/m5/wp163.md` (echte Route nach Entsperren, Abbruch/60 s, Telefon-App, Satz hör-/sichtbar); Spotify gesperrt ohne aktives Gerät prüfen; Backlog: Einträge gesperrter Läufe erscheinen nach dem Entsperren im Transkript (seit WP154), Tool-Call-Ids gesperrter Läufe können mit offener Unterhaltung kollidieren (eindeutige Ids); Tastaturknopf gesperrt optisch nicht als deaktiviert erkennbar; E2E endet im Testgerüst rot („SemanticsHandle active“) |
+| WP164 | Kontakte: Felder gezielt abfragen, Navigation zu Kontakt in einem Schritt, Waze-Integration | in Arbeit | Wunsch Maintainer 2026-10-27; Start nach Merge von WP163 (Merkmal „wirkt nur entsperrt“) |
+| WP165 | Kommunikationsmodus raus: Schalter „Antwort als Gesprächston“ und zugehöriger Code entfernen, früherer Modus | in Arbeit | Meldung Maintainer 2026-10-27 (Antwort wird leiser); Entscheidung Maintainer: Schalter und Code ausbauen; Start nach Merge von WP163 |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
 ## Nächste Schritte
 
 Stand 2026-10-27 (Orchestrator):
-0. Laufend: WP163; danach WP164 und WP165. Gemergt: WP160 (4a3a38e6, K130 offen), WP161, WP162, WP159 (f0f9cafe, K127/K128 offen). Danach rc11 mit WP158–WP165. Gemergt: WP158 (b5ef90e3), WP153 (9778f8a8), WP155 (8e1e18b1, K126 bestätigt), WP156 (abb1ead7), WP157 (7ad79f58, K122/K125 bestätigt), WP154 (ffed7c83, K123 bestätigt), WP151 (0b94041d, K124 bestätigt). Test-APK rc10 (Tag v0.1.0-rc10, 3e17f4b1); WP158 ist erst im nächsten RC.
+0. Laufend: WP164, WP165. Gemergt: WP163 (8375fb0e, K131 offen), WP160 (4a3a38e6, K130 offen), WP161, WP162, WP159 (f0f9cafe, K127/K128 offen). Danach rc11 mit WP158–WP165. Gemergt: WP158 (b5ef90e3), WP153 (9778f8a8), WP155 (8e1e18b1, K126 bestätigt), WP156 (abb1ead7), WP157 (7ad79f58, K122/K125 bestätigt), WP154 (ffed7c83, K123 bestätigt), WP151 (0b94041d, K124 bestätigt). Test-APK rc10 (Tag v0.1.0-rc10, 3e17f4b1); WP158 ist erst im nächsten RC.
 1. Danach: Prüfseite Weckwort-Archiv auf Auftrag des Maintainers; sonst M6 nur mit Go.
 2. Gerätetest beim Maintainer: rc10 (T30-WP153), rc9 (T29-WP155, T29-WP156, T29-WP157), rc8 (T28-WP151, T28-WP154), rc7 (T27-WP149, T27-WP150, T26-WP148).
 3. Erledigt mit WP159: (a) Anbieter-Setup zeigt „GPU-Prüfung über NVIDIA“ auch, wenn der Anbieter keinen GPU-Nachweis liefert (`provider_setup/finish_step.dart`, `gpu_check_section.dart`, Fähigkeit je Modell prüfen) → ausblenden; (b) SMS- und Benachrichtigungszugriff lassen sich bei APK-Installation nicht aktivieren („aus Sicherheitsgründen nicht zugelassen“, Android 13+ „Eingeschränkte Einstellungen“) → Sperre erkennen, Schritt-für-Schritt-Hinweis mit Knopf zu den App-Infos (bisher nur ein Satz im Medien-Hinweis). Technisch offen: Python-Tests in `tool/train_wake_word/` laufen in keinem CI-Job; Gerätetest Stationsmodus nach WP158.
