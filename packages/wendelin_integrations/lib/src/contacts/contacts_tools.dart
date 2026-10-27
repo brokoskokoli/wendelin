@@ -226,6 +226,7 @@ final class PhoneCallTool extends IntegrationTool
         AuditArgumentsRedactor,
         FixedConfirmationTool,
         NoNetworkTarget,
+        WorksOnlyUnlocked,
         TrustedContentSource {
   /// Creates the tool.
   const PhoneCallTool(this.finder, this.phone);

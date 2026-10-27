@@ -149,3 +149,13 @@ abstract interface class LevelFixedTool {
   /// Whether a stored tool level is ignored.
   bool get levelFixed;
 }
+
+/// Optional capability of a `Tool`: the action only works with an unlocked
+/// device (WP163 Teil B). It brings a foreign app to the front (navigation,
+/// dialer, map search, opening a note or an audio app); on a locked device
+/// that app ends up behind the lock screen and drops the request. While
+/// locked the executor therefore does not run such a call even if its level
+/// allows it: it hands the call back as "waits for the unlock"
+/// (`ToolExecutor.deferredSummary`) and the app runs it once after the real
+/// unlock. Nothing else changes: the level still decides first.
+abstract interface class WorksOnlyUnlocked {}

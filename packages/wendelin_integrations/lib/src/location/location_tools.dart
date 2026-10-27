@@ -140,7 +140,7 @@ final class LocationCurrentTool extends IntegrationTool
 /// `location__navigate_to` (write): starts navigation in Google Maps if it
 /// is installed, else in any map app through a `geo:` intent.
 final class LocationNavigateToTool extends IntegrationTool
-    implements NoNetworkTarget, TrustedContentSource {
+    implements NoNetworkTarget, TrustedContentSource, WorksOnlyUnlocked {
   /// Creates the tool.
   const LocationNavigateToTool(this.launcher, this.apps);
 

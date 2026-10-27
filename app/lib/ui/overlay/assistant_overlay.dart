@@ -345,7 +345,8 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     );
     if (!mounted) return;
     final pending = ref.read(lockedPendingProvider);
-    final text = ref.read(lockedPendingProvider.notifier).take();
+    final request = ref.read(lockedPendingProvider.notifier).take();
+    final text = request?.text;
     if (!ok) {
       // Cancelled: the request is gone, say so (fixed text).
       if (pending != null) setState(() => _discardedNotice = true);
@@ -366,9 +367,15 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     // The request from before goes on now, answered here and read aloud
     // (K85); without one, the overlay listens again.
     if (text != null) {
-      if (!_closing && !await _voice.answerText(text) && mounted && !_closing) {
-        unawaited(_agent.send(text));
-      }
+      // WP163 B: a remembered tool call runs once, armed for exactly this
+      // request; the gate runs it instead of a model (it takes the arming
+      // when the run starts). Speech not available: disarmed, and the
+      // request goes on as a normal typed one.
+      final armed = ref.read(lockedArmedCallProvider.notifier);
+      if (request!.call != null) armed.arm(request);
+      final spoken = !_closing && await _voice.answerText(text);
+      if (!spoken) armed.clear();
+      if (!spoken && mounted && !_closing) unawaited(_agent.send(text));
     } else if (!_closing && !_requestRunning(ref)) {
       _triggers.fire();
     }
@@ -381,6 +388,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     final container = ProviderScope.containerOf(context, listen: false);
     final platform = _platform;
     ref.read(lockedPendingProvider.notifier).clear();
+    ref.read(lockedArmedCallProvider.notifier).clear();
     ref.read(lockedExchangeProvider.notifier).clear();
     // An open GPU block is dropped with the overlay (WP82).
     unawaited(_agent.resolveGpuBlock(sendWithout: false));

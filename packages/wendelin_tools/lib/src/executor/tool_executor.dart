@@ -227,6 +227,14 @@ final class ToolExecutor
           AuditStatus.denied,
           AuditDecision.denied,
         );
+      case PolicyAction.allow when access.locked && tool is WorksOnlyUnlocked:
+        // Allowed by the level, but the action needs the unlocked device
+        // (WP163 B): not run, the caller remembers the call for the unlock.
+        return (
+          ToolOutcome.error(deferredText, summary: deferredSummary),
+          AuditStatus.denied,
+          AuditDecision.denied,
+        );
       case PolicyAction.confirm:
         final risk = RiskPolicy.effectiveRisk(tool.risk, policyDecision.action);
         final approved = await turns.ask(
@@ -345,6 +353,15 @@ final class ToolExecutor
 
   /// Result summary of a call that waits for the unlock (WP154 L2).
   static const unlockSummary = 'Entsperren nötig';
+
+  /// Result summary of a call that is allowed locked but works only
+  /// unlocked (WP163 B): not executed, remembered for the unlock.
+  static const deferredSummary = 'Nur entsperrt';
+
+  /// Text of that outcome for the model (the run ends there anyway).
+  static const deferredText =
+      'Nicht ausgeführt: die Aktion wirkt nur bei entsperrtem Gerät. Sie wird '
+      'nach dem Entsperren ausgeführt; nicht wiederholen.';
 
   static ToolOutcome _deniedOutcome(PolicyDecision d) => ToolOutcome.error(
     d.reason ?? RiskPolicy.deniedReason,

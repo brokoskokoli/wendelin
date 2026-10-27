@@ -8,6 +8,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../agent/agent_controller.dart';
 import '../di/locked_scope.dart';
 import '../di/preferences.dart';
+import '../di/provider_config.dart' show ProviderConfig;
 import '../di/providers.dart';
 import 'controller_agent_run.dart';
 import 'voice_log.dart';
@@ -46,19 +47,35 @@ final class LockedRefusals extends Notifier<int> {
 /// (WP114, K85): the overlay runs it after a successful unlock and drops it
 /// when the unlock is cancelled, the overlay closes or [lockedPendingMaxAge]
 /// has passed. Never logged, never in the audit log, never stored.
+///
+/// WP163 B: the entry holds the wording ([call] is `null`) **or** the one
+/// tool call of that request that works only unlocked ([call] set; [text]
+/// then only names the request for the display after the unlock). Same
+/// mechanism, same limits; the call runs once, without a model run.
 final class LockedPendingRequest {
   /// Creates the pending request.
-  const LockedPendingRequest(this.text, this.at);
+  const LockedPendingRequest(this.text, this.at, {this.call});
 
   /// What was said (kept in memory only).
   final String text;
 
   /// When it was refused.
   final DateTime at;
+
+  /// The tool call that waits for the unlock (tool and arguments, memory
+  /// only), or `null` if the wording waits.
+  final ToolCallBlock? call;
+
+  /// How long this entry waits.
+  Duration get maxAge =>
+      call == null ? lockedPendingMaxAge : lockedPendingCallMaxAge;
 }
 
 /// How long a refused request waits for the unlock.
 const lockedPendingMaxAge = Duration(seconds: 30);
+
+/// How long a remembered tool call waits for the unlock (WP163 B).
+const lockedPendingCallMaxAge = Duration(seconds: 60);
 
 /// The request waiting for the unlock, if any ([LockedPendingRequest]).
 final lockedPendingProvider =
@@ -73,16 +90,53 @@ final class LockedPending extends Notifier<LockedPendingRequest?> {
   void keep(String text) =>
       state = LockedPendingRequest(text, ref.read(clockProvider).now());
 
+  /// Remembers the tool [call] of the request [text] instead of the
+  /// wording (replaces an older entry; WP163 B).
+  void keepCall(String text, ToolCallBlock call) => state =
+      LockedPendingRequest(text, ref.read(clockProvider).now(), call: call);
+
   /// Drops the request.
   void clear() => state = null;
 
-  /// The request, once; `null` if none or too old (fail closed).
-  String? take() {
+  /// The entry, once; `null` if none or too old (fail closed).
+  LockedPendingRequest? take() {
     final p = state;
     state = null;
     if (p == null) return null;
     final age = ref.read(clockProvider).now().difference(p.at);
-    return age > lockedPendingMaxAge ? null : p.text;
+    return age > p.maxAge ? null : p;
+  }
+}
+
+/// A remembered tool call, armed after the real unlock (WP163 B): the next
+/// run of [LockGateAgentRun] for the same request text runs exactly this call
+/// through the executor instead of the model, and the arming is used up. Set
+/// by the overlay, memory only.
+final lockedArmedCallProvider =
+    NotifierProvider<LockedArmedCall, LockedPendingRequest?>(
+      LockedArmedCall.new,
+    );
+
+/// State of [lockedArmedCallProvider].
+final class LockedArmedCall extends Notifier<LockedPendingRequest?> {
+  @override
+  LockedPendingRequest? build() => null;
+
+  /// Arms [request] (it must hold a call).
+  // ignore: use_setters_to_change_properties
+  void arm(LockedPendingRequest request) => state = request;
+
+  /// Disarms.
+  void clear() => state = null;
+
+  /// The call armed for [text], once (`null` otherwise; a mismatch keeps
+  /// the arming).
+  ToolCallBlock? takeFor(String text) {
+    final r = state;
+    if (r == null || r.text != text) return null;
+    state = null;
+    final age = ref.read(clockProvider).now().difference(r.at);
+    return age > r.maxAge ? null : r.call;
   }
 }
 
@@ -241,6 +295,59 @@ final lockedCommandRunnerProvider = Provider<LockedCommandRunner>((ref) {
   };
 });
 
+/// Runs a call that waited for the unlock ([LockedPendingRequest.call]).
+typedef DeferredCallRunner = Future<ToolOutcome> Function(ToolCallBlock call);
+
+/// Runs the remembered call of WP163 B once, after the real unlock, through
+/// the normal executor (policy of the **unlocked** device, audit as any call,
+/// timeout) and without a model. A confirmation is never asked here (the
+/// call was allowed without one while locked): fail-closed, declined.
+final deferredCallRunnerProvider = Provider<DeferredCallRunner>((ref) {
+  return (call) async {
+    final ProviderConfig? providers;
+    try {
+      providers = await ref.read(providerConfigProvider.future);
+      await ref.read(toolRegistryReadyProvider.future);
+    } on Object {
+      return ToolOutcome.error('Nicht verfügbar.');
+    }
+    if (providers == null) return ToolOutcome.error('Nicht verfügbar.');
+    final registry = ref.read(toolRegistryProvider);
+    final device = ref.read(deviceInfoProvider);
+    final executor = ToolExecutor(
+      catalog: registry.catalogFor(
+        providers.lowestPrivacy,
+        sessionId: lockedSessionId,
+      ),
+      policy: ref.read(riskPolicyProvider),
+      audit: ref.read(auditRecorderProvider),
+    );
+    var outcome = ToolOutcome.error('Nicht ausgeführt.');
+    try {
+      await for (final event in executor.invokeAll(
+        [call],
+        ToolContext(
+          sessionId: lockedSessionId,
+          clock: ref.read(clockProvider),
+          locale: device.locale,
+          timeZone: device.timeZone,
+        ),
+      )) {
+        switch (event) {
+          case ConfirmationNeeded():
+            event.respond(false);
+          case ToolFinished():
+            outcome = event.outcome;
+          case ToolStarted():
+        }
+      }
+    } on Object {
+      outcome = ToolOutcome.error('Nicht ausgeführt.');
+    }
+    return outcome;
+  };
+});
+
 /// The single tool of a locked command as a catalog.
 final class _OneTool implements ToolCatalog {
   const _OneTool(this.tool);
@@ -253,6 +360,11 @@ final class _OneTool implements ToolCatalog {
   @override
   Tool? lookup(String name) => name == tool.name ? tool : null;
 }
+
+/// The tools of the executor mark `WorksOnlyUnlocked` that start a
+/// navigation: the held-back sentence then says „Zum Navigieren“, otherwise
+/// the generic one (WP163 B).
+const lockedNavigationTools = {'maps__navigate', 'location__navigate_to'};
 
 /// Fixed sentences of the lock screen (no content, three languages).
 abstract final class LockedTexts {
@@ -269,6 +381,24 @@ abstract final class LockedTexts {
         'fr' => on ? 'Lampe allumée.' : 'Lampe éteinte.',
         'en' => on ? 'Flashlight on.' : 'Flashlight off.',
         _ => on ? 'Taschenlampe an.' : 'Taschenlampe aus.',
+      };
+
+  /// Said when a call that works only unlocked (WP163 B) waits for the
+  /// unlock: [navigation] names the navigation, else generic.
+  static String deferred(String? language, {required bool navigation}) =>
+      switch (_lang(language)) {
+        'fr' =>
+          navigation
+              ? 'Veuillez déverrouiller pour naviguer.'
+              : 'Veuillez déverrouiller pour cela.',
+        'en' =>
+          navigation
+              ? 'Please unlock to navigate.'
+              : 'Please unlock for that.',
+        _ =>
+          navigation
+              ? 'Zum Navigieren bitte entsperren.'
+              : 'Dafür bitte entsperren.',
       };
 
   /// The command did not work (no LED, camera busy).
@@ -303,6 +433,9 @@ final class LockGateAgentRun implements AgentRun {
     required this.trigger,
     this.modelRun,
     this.onPartlyDone,
+    this.onDeferred,
+    this.takeArmed,
+    this.runDeferred,
     this.onRequest,
     this.onAnswer,
     this.log,
@@ -332,6 +465,19 @@ final class LockGateAgentRun implements AgentRun {
   /// (no double run, [trigger] for the audit log).
   final void Function(String trigger)? onPartlyDone;
 
+  /// A tool call that works only unlocked (WP163 B) was held back by the
+  /// executor: the overlay remembers it for the unlock ([call] only in
+  /// memory; [trigger] for the audit log).
+  final void Function(String trigger, UserInput input, ToolCallBlock call)?
+  onDeferred;
+
+  /// After the unlock: the remembered call armed for this request text, once
+  /// (see [lockedArmedCallProvider]); it runs instead of the model.
+  final ToolCallBlock? Function(String text)? takeArmed;
+
+  /// Runs such a call through the executor of the unlocked device.
+  final DeferredCallRunner? runDeferred;
+
   /// A request arrives while locked (WP163): the overlay shows it. Not
   /// called when unlocked.
   final void Function(UserInput input)? onRequest;
@@ -351,8 +497,28 @@ final class LockGateAgentRun implements AgentRun {
 
   @override
   Stream<AgentEvent> run(UserInput input) {
-    if (!locked()) return inner.run(input);
+    if (!locked()) {
+      final call = takeArmed?.call(input.text);
+      if (call != null && runDeferred != null) return _afterUnlock(call, input);
+      return inner.run(input);
+    }
     return _locked(input);
+  }
+
+  // The call that waited for the unlock: once, no model, result spoken.
+  Stream<AgentEvent> _afterUnlock(ToolCallBlock call, UserInput input) async* {
+    ToolOutcome outcome;
+    try {
+      outcome = await runDeferred!(call);
+    } on Object {
+      outcome = ToolOutcome.error('failed');
+    }
+    yield* _say(
+      outcome.isError
+          ? LockedTexts.failed(input.language)
+          : outcome.summary ?? outcome.text,
+      answer: false,
+    );
   }
 
   Stream<AgentEvent> _locked(UserInput input) async* {
@@ -394,6 +560,7 @@ final class LockGateAgentRun implements AgentRun {
     _lockedRun = model;
     var refused = false;
     var anyDone = false;
+    ToolCallBlock? deferred;
     // The `<spoken>` text of the current segment, as the pipeline speaks it
     // (reset like there: new segment after a tool call, text reset).
     String? spoken;
@@ -406,13 +573,18 @@ final class LockGateAgentRun implements AgentRun {
         default:
       }
       if (event is ToolCallFinished) {
-        if (event.outcome.summary == ToolExecutor.unlockSummary) {
+        if (event.outcome.summary == ToolExecutor.deferredSummary) {
+          // Works only unlocked: the run ends here (see below).
+          deferred ??= event.call;
+          model.cancel(); // before the yield: the run must not start another call
+        } else if (event.outcome.summary == ToolExecutor.unlockSummary) {
           refused = true;
         } else if (!event.outcome.isError) {
           anyDone = true;
         }
       }
       yield event;
+      if (deferred != null) break;
       // After the yield: a cancelled stream ends there and records nothing.
       // Shown is what is spoken: the `<spoken>` text if the run has one, else
       // the final text; a failed run shows the wording the pipeline speaks.
@@ -424,6 +596,18 @@ final class LockGateAgentRun implements AgentRun {
           onAnswer?.call(VoiceTexts.of(input.language).failure(error, message));
         default:
       }
+    }
+    if (deferred != null) {
+      // Only this call waits (also if another tool of the run already ran:
+      // no double run, ADR 0022 a); the model says nothing more.
+      onDeferred?.call(trigger(), input, deferred);
+      yield* _say(
+        LockedTexts.deferred(
+          input.language,
+          navigation: lockedNavigationTools.contains(deferred.name),
+        ),
+      );
+      return;
     }
     // A call the policy turned down: the unlock is offered. The request only
     // waits for it if nothing ran yet; otherwise the repeat after the unlock
@@ -437,10 +621,10 @@ final class LockGateAgentRun implements AgentRun {
     }
   }
 
-  Stream<AgentEvent> _say(String say) async* {
+  Stream<AgentEvent> _say(String say, {bool answer = true}) async* {
     yield AgentTextDelta(say);
     yield AgentDone(finalText: say, stopReason: StopReason.endTurn);
-    onAnswer?.call(say);
+    if (answer) onAnswer?.call(say);
   }
 
   @override
@@ -476,6 +660,13 @@ LockGateAgentRun lockGateFor(
     ref.read(lockedPendingProvider.notifier).keep(input.text);
     ref.read(lockedRefusalsProvider.notifier).bump();
   },
+  onDeferred: (t, input, call) {
+    ref.read(auditRecorderProvider).lockedRefused(trigger: t);
+    ref.read(lockedPendingProvider.notifier).keepCall(input.text, call);
+    ref.read(lockedRefusalsProvider.notifier).bump();
+  },
+  takeArmed: (text) => ref.read(lockedArmedCallProvider.notifier).takeFor(text),
+  runDeferred: (call) => ref.read(deferredCallRunnerProvider)(call),
   onPartlyDone: (t) {
     ref.read(auditRecorderProvider).lockedRefused(trigger: t);
     ref.read(lockedRefusalsProvider.notifier).bump();
