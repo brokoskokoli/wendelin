@@ -418,19 +418,22 @@ final class ToolRound {
   }
 }
 
-/// The stop for a repeated [error], else for a run ended by a call (WP163 B:
-/// cancelled, the caller of the run answers).
+/// The stop for a repeated [error], else for a run ended by a call (WP163 B):
+/// an ordinary end without text, not a failure or a cancellation (the caller
+/// of the run answers; the transcript shows no error).
 RunStop _stopOf(
   ({String tool, String error, int count})? error,
   AgentConfig config,
 ) => RunStop(
-  failedEvent(
-    error == null ? AgentErrorKind.cancelled : AgentErrorKind.repeatedToolError,
-    config,
-    tool: error?.tool,
-    detail: error?.error,
-    repeats: error?.count,
-  ),
+  error == null
+      ? const AgentDone(finalText: '', stopReason: StopReason.endTurn)
+      : failedEvent(
+          AgentErrorKind.repeatedToolError,
+          config,
+          tool: error.tool,
+          detail: error.error,
+          repeats: error.count,
+        ),
 );
 
 /// Whether a call of [round] has an outcome that ends the run.

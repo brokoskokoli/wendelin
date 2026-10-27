@@ -2,8 +2,8 @@
 # Neue Warnung oder Wachstum ist rot; sinkt ein Wert oder entfällt der Eintrag, ist es
 # ebenfalls rot, bis die Datei gesenkt ist: `dart run tool/check_sizes.dart --update-baseline`
 # (senkt/entfernt, erhöht nie). Die Liste schrumpft nur; neue Einträge von Hand sind unzulässig.
-app/lib/agent/agent_controller.dart: 628
-app/lib/agent/agent_controller.dart#AgentController: 591
+app/lib/agent/agent_controller.dart: 623
+app/lib/agent/agent_controller.dart#AgentController: 585
 app/lib/agent/agent_controller.dart#AgentController._start: 85
 app/lib/agent/conversation_reducer.dart#ConversationReducer.apply: 122
 app/lib/ui/attestation/attestation_texts.dart#attestationMessage: 100

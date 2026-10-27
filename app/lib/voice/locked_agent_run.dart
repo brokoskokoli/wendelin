@@ -449,7 +449,13 @@ LockGateAgentRun lockGateFor(
     ref.read(lockedRefusalsProvider.notifier).bump();
   },
   takeArmed: (text) => ref.read(lockedArmedCallProvider.notifier).takeFor(text),
-  runDeferred: (call) => ref.read(deferredCallRunnerProvider)(call),
+  runDeferred: (call) async {
+    final outcome = await ref.read(deferredCallRunnerProvider)(call);
+    ref
+        .read(agentControllerProvider.notifier)
+        .finishHeldBackTool(call, outcome);
+    return outcome;
+  },
   onPartlyDone: (t) {
     ref.read(auditRecorderProvider).lockedRefused(trigger: t);
     ref.read(lockedRefusalsProvider.notifier).bump();

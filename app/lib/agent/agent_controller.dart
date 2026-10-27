@@ -25,6 +25,7 @@ import 'conversation_state.dart';
 import 'history_entries.dart';
 import 'new_topic_command.dart';
 import 'question_answer.dart';
+import 'report_agent_error.dart';
 
 /// The conversation on the main screen.
 final agentControllerProvider =
@@ -201,7 +202,7 @@ final class AgentController extends Notifier<ConversationState> {
           .conversations
           .messages(sessionId);
     } on Object catch (e, stack) {
-      _report(e, stack);
+      reportAgentError(e, stack);
       return;
     }
     final since = privateSinceOf(messages);
@@ -294,7 +295,7 @@ final class AgentController extends Notifier<ConversationState> {
       await ref.read(toolRegistryReadyProvider.future);
       (sessionId, scope) = await _sessionFor(input.speakerId, locked != null);
     } on Object catch (e, stack) {
-      _report(e, stack);
+      reportAgentError(e, stack);
       _finishWithNotice(NoticeKind.error, uiTexts(ref).agentNoticeStartFailed);
       return;
     }
@@ -407,7 +408,7 @@ final class AgentController extends Notifier<ConversationState> {
   /// The agent stream broke its contract (no terminal event, an error):
   /// end the run like a failure so the screen is usable again.
   void _failed(String sessionId, Object error, StackTrace stack) {
-    _report(error, stack);
+    reportAgentError(error, stack);
     _onEvent(
       sessionId,
       const AgentFailed(
@@ -417,16 +418,6 @@ final class AgentController extends Notifier<ConversationState> {
     );
     _finished();
   }
-
-  static void _report(Object error, StackTrace stack) =>
-      FlutterError.reportError(
-        FlutterErrorDetails(
-          exception: error,
-          stack: stack,
-          library: 'wendelin',
-          context: ErrorDescription('in der Agent-Anfrage'),
-        ),
-      );
 
   /// Cancels the running request (also while it is still starting).
   void cancel() {
@@ -472,6 +463,10 @@ final class AgentController extends Notifier<ConversationState> {
       return false;
     }
   }
+
+  /// The real result of a call held back while locked (WP163 B) on its card.
+  void finishHeldBackTool(ToolCallBlock call, ToolOutcome outcome) => state =
+      _reducer.apply(state, ToolCallFinished(call: call, outcome: outcome));
 
   /// Adds a small hint line to the conversation („Abgebrochen.“,
   /// „Zurückgenommen.“).

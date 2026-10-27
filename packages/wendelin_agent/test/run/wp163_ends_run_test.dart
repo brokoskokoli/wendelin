@@ -8,7 +8,7 @@ import '../support.dart';
 
 void main() {
   test(
-    'Ergebnis mit endsRun: genau ein Modellaufruf, Lauf endet abgebrochen',
+    'Ergebnis mit endsRun: genau ein Modellaufruf, Lauf endet ohne Fehler',
     () async {
       final tool = FakeTool(
         name: 'maps__navigate',
@@ -26,8 +26,9 @@ void main() {
       final events = await h.run('navigiere');
       expect(provider.requests.length, 1);
       expect(tool.callCount, 1);
-      final end = terminal(events) as AgentFailed;
-      expect(end.error, AgentErrorKind.cancelled);
+      final end = terminal(events);
+      expect(end, isA<AgentDone>(), reason: 'kein Abbruch, kein Fehler');
+      expect((end as AgentDone).finalText, isEmpty);
     },
   );
 

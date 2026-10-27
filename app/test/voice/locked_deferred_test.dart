@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
+import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/di/preference_models.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/ui/overlay/unlock_window.dart';
@@ -141,6 +142,29 @@ void main() {
       c.read(lockedArmedCallProvider.notifier).takeFor('Navigiere zum Bahnhof'),
       isNull,
     );
+  });
+
+  testWidgets('nach dem Entsperren: Transkript zeigt nur das Ergebnis, keine '
+      'Fehlerkarte und kein „Abgebrochen“ des gesperrten Laufs', (
+    tester,
+  ) async {
+    final env = _env(llm);
+    final c = await run(tester, env, unlockSucceeds: true);
+    final entries = c.read(agentControllerProvider).entries;
+    expect(env.mapsLauncher.launched, hasLength(1));
+    expect(
+      entries.whereType<NoticeEntry>(),
+      isEmpty,
+      reason: 'entries: $entries',
+    );
+    expect(
+      entries.whereType<ToolEntry>().where((e) => e.phase == ToolPhase.failed),
+      isEmpty,
+      reason: 'entries: $entries',
+    );
+    final card = entries.whereType<ToolEntry>().last;
+    expect(card.toolName, 'maps__navigate');
+    expect(card.phase, ToolPhase.done, reason: 'das tatsächliche Ergebnis');
   });
 
   testWidgets('Ablauf (60 s) vor dem Entsperren: nie ausgeführt', (
