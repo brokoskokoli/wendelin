@@ -1,10 +1,12 @@
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/platform/assistant_platform.dart';
 import 'package:wendelin/platform/channel_station_port.dart';
 import 'package:wendelin/platform/screen_protection.dart';
 import 'package:wendelin/station/station_display.dart';
 import 'package:wendelin/station/station_host.dart';
+import 'package:wendelin/station/station_providers.dart';
 import 'package:wendelin_integrations/testing.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
@@ -112,5 +114,29 @@ void main() {
     );
     expect(seen, [true]);
     await sub.cancel();
+  });
+
+  test('Host.dispose beendet den Umgebungslicht-Strom', () async {
+    final host = DeviceStationHost(
+      AssistantPlatform(),
+      const ScreenProtection(),
+    );
+    var done = false;
+    host.ambientDark.listen((_) {}, onDone: () => done = true);
+    host.dispose();
+    await Future<void>.delayed(Duration.zero);
+    expect(done, isTrue);
+  });
+
+  test('Provider: Container-dispose räumt den Stationshost auf', () async {
+    final container = ProviderContainer();
+    var done = false;
+    container
+        .read(stationHostProvider)
+        .ambientDark
+        .listen((_) {}, onDone: () => done = true);
+    container.dispose();
+    await Future<void>.delayed(Duration.zero);
+    expect(done, isTrue);
   });
 }

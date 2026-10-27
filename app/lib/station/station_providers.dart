@@ -14,12 +14,14 @@ import 'station_host.dart';
 import 'station_prefs.dart';
 
 /// Device side of the station (overridden in tests).
-final stationHostProvider = Provider<StationHost>(
-  (ref) => DeviceStationHost(
+final stationHostProvider = Provider<StationHost>((ref) {
+  final host = DeviceStationHost(
     ref.watch(assistantPlatformProvider),
     const ScreenProtection(),
-  ),
-);
+  );
+  ref.onDispose(host.dispose);
+  return host;
+});
 
 /// How the station looks: [StationLook.quiet] in quiet hours (nearly black),
 /// [StationLook.dim] in a dark room, else [StationLook.normal].

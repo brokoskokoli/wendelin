@@ -54,7 +54,16 @@ final class FakeAssistantPlatform extends AssistantPlatform
   Stream<void> get triggers => _triggers.stream;
 
   @override
-  Future<bool> isLocked() => lockAnswer?.future ?? Future.value(locked);
+  Future<bool> isLocked() async {
+    lockChecks++;
+    if (lockError != null) throw lockError!;
+    return lockAnswer?.future ?? Future.value(locked);
+  }
+
+  int lockChecks = 0;
+
+  /// [isLocked] throws this, if set (WP158).
+  Object? lockError;
 
   @override
   set onCloseRequested(Future<void> Function()? handler) =>

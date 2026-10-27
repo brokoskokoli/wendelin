@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../voice/voice_log.dart';
 import 'channels.dart';
 import 'voice/pcm.dart';
 
@@ -73,8 +74,31 @@ class AssistantPlatform {
   Future<bool> openAssistantSettings() async =>
       await _invoke<bool>('openAssistantSettings') ?? false;
 
-  /// Whether the device shows the lock screen right now.
-  Future<bool> isLocked() async => await _invoke<bool>('isLocked') ?? false;
+  /// Whether the device shows the lock screen right now. Fail-closed: if the
+  /// state cannot be read (channel error, missing plugin, no answer) the
+  /// device counts as locked (WP158).
+  Future<bool> isLocked() async {
+    try {
+      final locked = await _channel.invokeMethod<bool>('isLocked');
+      if (locked == null) {
+        voiceLog('lock-check-failed', {'reason': 'no-answer'});
+        return true;
+      }
+      return locked;
+    } on MissingPluginException catch (e) {
+      voiceLog('lock-check-failed', {
+        'reason': 'missing-plugin',
+        'error': errorCode(e),
+      });
+      return true;
+    } on PlatformException catch (e) {
+      voiceLog('lock-check-failed', {
+        'reason': 'platform-error',
+        'error': errorCode(e),
+      });
+      return true;
+    }
+  }
 
   /// Asks the user to unlock (keyguard); `true` once unlocked, `false` if
   /// cancelled or impossible.

@@ -13,6 +13,9 @@ final class FakePcmRecorder implements PcmRecorder {
   });
 
   bool granted;
+
+  /// [hasPermission] throws this, if set.
+  Object? permissionError;
   final Duration period;
   final int chunk;
   Object? startError;
@@ -40,6 +43,7 @@ final class FakePcmRecorder implements PcmRecorder {
   @override
   Future<bool> hasPermission({bool request = true}) async {
     requests.add(request);
+    if (permissionError != null) throw permissionError!;
     return granted;
   }
 

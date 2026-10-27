@@ -235,7 +235,7 @@
     "app.wendelin/station": {
       "dart": [
         "app/lib/platform/channel_station_port.dart",
-        "app/lib/station/station_host.dart"
+        "app/lib/platform/channel_station_ambient.dart"
       ],
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/StationChannel.kt"],
       "toKotlin": {

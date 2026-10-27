@@ -1,9 +1,5 @@
-import 'dart:async';
-
-import 'package:flutter/services.dart';
-
 import '../platform/assistant_platform.dart';
-import '../platform/channels.dart';
+import '../platform/channel_station_ambient.dart';
 import '../platform/screen_protection.dart';
 import 'station_display.dart';
 
@@ -27,27 +23,21 @@ abstract interface class StationHost {
 /// [StationHost] over the window and assistant channels.
 final class DeviceStationHost implements StationHost {
   /// Creates the host.
-  DeviceStationHost(this._assistant, this._window);
+  DeviceStationHost(
+    this._assistant,
+    this._window, {
+    StationAmbientChannel? ambient,
+  }) : _ambient = ambient ?? StationAmbientChannel();
 
   final AssistantPlatform _assistant;
   final ScreenProtection _window;
-  final _dark = StreamController<bool>.broadcast(sync: true);
-  bool _listening = false;
+  final StationAmbientChannel _ambient;
 
   @override
-  Stream<bool> get ambientDark {
-    if (!_listening) {
-      _listening = true;
-      const MethodChannel(stationChannelName)
-          .setMethodCallHandler((call) async {
-            if (call.method == 'ambient') {
-              _dark.add((call.arguments as Map?)?['dark'] == true);
-            }
-            return null;
-          });
-    }
-    return _dark.stream;
-  }
+  Stream<bool> get ambientDark => _ambient.dark;
+
+  /// Stops listening to the channel and closes [ambientDark].
+  void dispose() => _ambient.dispose();
 
   @override
   Future<void> applyDisplay(StationDisplay display) async {

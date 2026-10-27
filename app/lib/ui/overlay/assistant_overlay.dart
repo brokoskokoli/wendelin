@@ -114,6 +114,25 @@ bool _requestRunning(WidgetRef ref) =>
     ref.read(voiceControllerProvider).active ||
     ref.read(agentControllerProvider).running;
 
+/// Takes the audio of the wake word hit and plays the tone (WP68).
+Future<WakePreRoll?> _takeWake(WidgetRef ref, {required bool tone}) =>
+    takeWakePreRoll(
+      platform: ref.read(assistantPlatformProvider),
+      tone: tone,
+      playTone: ref.read(wakeConfirmToneProvider),
+    );
+
+// No permission dialog on the lock screen.
+Future<bool> _microphoneGranted(WidgetRef ref) async =>
+    ref.read(demoModeProvider) ||
+    await ref.read(microphoneProvider).hasPermission(request: false);
+
+/// Microphone permission with explanation (WP17); not in the demo.
+Future<bool> _microphoneAccess(BuildContext context, WidgetRef ref) async {
+  if (ref.read(demoModeProvider)) return true;
+  return ensureMicrophoneAccess(context, ref.read(microphoneProvider));
+}
+
 class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   late final AssistantTriggerSource _triggers;
   late final StreamSubscription<TriggerEvent> _sub;
@@ -175,13 +194,6 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     if (mounted && !_closing) _triggers.fire(wake: wake);
   }
 
-  /// Takes the audio of the wake word hit and plays the tone (WP68).
-  Future<WakePreRoll?> _takeWake({required bool tone}) => takeWakePreRoll(
-    platform: _platform,
-    tone: tone,
-    playTone: ref.read(wakeConfirmToneProvider),
-  );
-
   // Platform close request, tap outside the sheet or back: not while the
   // unlock settles.
   Future<void> _closeUnlessUnlocking() async {
@@ -214,7 +226,11 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   AgentController get _agent => ref.read(agentControllerProvider.notifier);
 
   Future<bool> _checkLock() async {
-    final locked = await _platform.isLocked();
+    // Unreadable state counts as locked (fail-closed, WP158).
+    final locked = await _platform.isLocked().catchError((Object e) {
+      voiceLog('lock-check-failed', {'error': errorCode(e)});
+      return true;
+    });
     if (mounted && !_closing) {
       setState(() {
         _locked = locked;
@@ -278,29 +294,29 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     if (!mounted || _closing) return;
     var taken = false;
     final wake = e.source == TriggerKind.wakeWord;
-    await _voice.start(
-      e.source,
-      takePreRoll: wake
-          ? () {
-              taken = true;
-              return _takeWake(tone: tone);
-            }
-          : null,
-      // No permission dialog on the lock screen.
-      prepare: locked ? _microphoneGranted : _microphoneAccess,
-    );
+    try {
+      await _voice.start(
+        e.source,
+        takePreRoll: wake
+            ? () {
+                taken = true;
+                return _takeWake(ref, tone: tone);
+              }
+            : null,
+        prepare: locked
+            ? () => _microphoneGranted(ref)
+            : () => _microphoneAccess(context, ref),
+      );
+    } on Object catch (err) {
+      // The service must not keep recording after a failed start (WP158).
+      voiceLog('start-failed', {'reason': 'trigger', 'error': errorCode(err)});
+      // A take that already succeeded (`keepOpen`) leaves the service
+      // recording: end that handoff at once instead of waiting for the guard.
+      if (taken) await _platform.finishWakeHandoff();
+      taken = false;
+    }
     // Not started (busy, refused): the service must not keep recording.
     if (wake && !taken && !_closing) await _platform.takeWakeHandoff();
-  }
-
-  Future<bool> _microphoneGranted() async =>
-      ref.read(demoModeProvider) ||
-      await ref.read(microphoneProvider).hasPermission(request: false);
-
-  /// Microphone permission with explanation (WP17); not in the demo.
-  Future<bool> _microphoneAccess() async {
-    if (ref.read(demoModeProvider)) return true;
-    return ensureMicrophoneAccess(context, ref.read(microphoneProvider));
   }
 
   void _onStop() {
@@ -462,7 +478,10 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       _agent.cancel();
     } else {
       unawaited(
-        _voice.start(TriggerKind.assistant, prepare: _microphoneAccess),
+        _voice.start(
+          TriggerKind.assistant,
+          prepare: () => _microphoneAccess(context, ref),
+        ),
       );
     }
   }
