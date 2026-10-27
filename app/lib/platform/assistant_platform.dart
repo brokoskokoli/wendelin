@@ -8,6 +8,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import 'channels.dart';
+import '../voice/voice_log.dart';
 import 'voice/pcm.dart';
 
 export 'channels.dart' show assistantChannelName;
@@ -78,10 +79,23 @@ class AssistantPlatform {
   /// device counts as locked (WP158).
   Future<bool> isLocked() async {
     try {
-      return await _channel.invokeMethod<bool>('isLocked') ?? true;
-    } on MissingPluginException {
+      final locked = await _channel.invokeMethod<bool>('isLocked');
+      if (locked == null) {
+        voiceLog('lock-check-failed', {'reason': 'no-answer'});
+        return true;
+      }
+      return locked;
+    } on MissingPluginException catch (e) {
+      voiceLog('lock-check-failed', {
+        'reason': 'missing-plugin',
+        'error': errorCode(e),
+      });
       return true;
-    } on PlatformException {
+    } on PlatformException catch (e) {
+      voiceLog('lock-check-failed', {
+        'reason': 'platform-error',
+        'error': errorCode(e),
+      });
       return true;
     }
   }
