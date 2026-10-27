@@ -108,6 +108,7 @@ void main() {
               'thr': 0.5299999999999999,
               'conf': '0.9',
               'lp': -0.31,
+              'cand': 'none',
               'rule': 'none',
             },
           ),
@@ -120,6 +121,8 @@ void main() {
         expect(l['sim'], 0.6627);
         expect(l['thr'], 0.53);
         expect(l['rule'], 'none');
+        expect(l.containsKey('cand'), isTrue);
+        expect(l['cand'], isNull);
         expect(
           File('${archive.path}/$devArchiveIndexName').readAsStringSync(),
           contains('"thr":0.53,'),

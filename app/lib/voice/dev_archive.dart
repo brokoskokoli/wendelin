@@ -13,8 +13,8 @@ import 'dev_log.dart';
 
 /// Wake word archive of the developer mode (WP155): every candidate of the
 /// idle wake word and of the barge-in (accepted, rejected, dropped) and the
-/// near misses, each as a WAV (about 2 s before the hit, see the docs; 4 s for rejected ones) with a line in
-/// `index.jsonl`, for the later listening and labelling. Lives in
+/// near misses, each as a WAV (accepted: about 2 s before the hit; the
+/// others 4 s) with a line in `index.jsonl`, for the later listening and labelling. Lives in
 /// `dev-audio/wake-archive/` (reached by `adb pull`, nothing is uploaded),
 /// is **not** cleaned after a day, only by the size cap [devArchiveMaxBytes]
 /// (oldest first), by the button in the developer settings or when the
@@ -249,8 +249,8 @@ Map<String, Object?> _record(DevArchiveEntry e, String? file, String? verify) {
   // its content masking (a spoken "PIN 1234", a card number).
   final safe = redactSecrets(out)! as Map<String, Object?>;
   for (final k in _numberKeys) {
-    final n = _asNumber(safe[k]);
-    if (n != null) safe[k] = n;
+    // Not a number (e.g. a verifier's "none"): null, so the type stays one.
+    if (safe.containsKey(k)) safe[k] = _asNumber(safe[k]);
   }
   if (safe['text'] case final String text) {
     safe['text'] = redactSensitiveContent(text, mask: '***');
