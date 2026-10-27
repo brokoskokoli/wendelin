@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete, solange der Maintainer am Rechner ist (
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP159, WP160; Test-APK v0.1.0-rc10; als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP160; Test-APK v0.1.0-rc10; als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -105,7 +105,7 @@ Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP159, WP1
 | WP156 | „Hey Wendelin“ konsequent in Texten und Doku | gemergt abb1ead7 | Texte, Hinweise und Doku nennen „Hey Wendelin“; Dienst-Benachrichtigung ganz lokalisiert (12 Texte über Kanal, Deutsch als Rückfall), „Wake Word“ → „Aktivierungswort“; Erkennung unverändert (beide Wörter). Folgepunkte: E2E-Screenshot Benachrichtigung en/fr (`docs/testing/m5/wp156.md`); „Wake Word“ noch in wake_de.arb:101-102; Modellname wake_classifier_catalog.dart:61; ältere Testanleitungen nicht umgestellt; Systemsprachwechsel greift erst beim nächsten App-Start |
 | WP157 | Sicherheit: Sperre nach roter Quittung je Unterhaltung, Netz-Lesewerkzeuge nach fremden Inhalten | gemergt 7ad79f58 | Sperre nach Rot je Unterhaltung persistent (SessionLockStore), Rückfrage für Netz-Tools nach fremden Inhalten (Verlauf, 10 Turns), Haken „Kann unsichere Inhalte enthalten“, Sitzungsende nach ≥1 min unsichtbarem Fenster, ADR 0023; K122, K125 bestätigt 2026-10-27. Folgepunkte: Gerätetest `docs/testing/m5/wp157.md` (rote Quittung → Neustart, Websuche → HTTP-Karte, Schalter-UI, echter Kill >1 min); Store-_merge nicht atomar; Sperrtexte ohne l10n; Abwesenheitstest uncommittet in james-wt/e2e-keep/wp157 |
 | WP158 | Robustheit: Fehler beim Mikrofonstart, Stationskanal | gemergt (b5ef90e3) | Projekt-Review 2026-10-26 (Befunde 6, 7). isLocked() liefert bei Kanalfehler true (fail-closed, Log lock-check-failed; wake_chat öffnet dann Overlay); nach geworfenem Start Übergabe sofort beendet; Stationskanal als StationAmbientChannel, neuerer Host gewinnt. Folgepunkte: Gerätetest Stationsmodus (Helligkeit/Umgebungslicht) mit nächstem RC; lokales gate --changed fand directives_ordering nicht (erst CI), prüfen |
-| WP159 | Einrichtung: GPU-Prüfung nur mit Nachweis, Hinweis auf „Eingeschränkte Einstellungen“ (SMS/Benachrichtigungen) | in Arbeit | Meldung 2026-10-23 (Nächste Schritte 3a/3b) |
+| WP159 | Einrichtung: GPU-Prüfung nur mit Nachweis, Hinweis auf „Eingeschränkte Einstellungen“ (SMS/Benachrichtigungen) | gemergt (c5a61d1f) | K127, K128 offen; Ursache: Android 13+ Eingeschränkte Einstellungen bei Installation aus Datei (adb install nicht betroffen), AppOp für Apps nicht lesbar → bedingter Hinweis nach Installationsquelle. Folgepunkte: Gerätetest `docs/testing/m5/wp159.md` (A1–A3, B1–B4); Kontakte-Integration zeigt „Aktiv“ auch ohne SMS (setupState prüft nur READ_CONTACTS); Commit-Hooks führen kein Gate aus (Briefing-Annahme prüfen); E2E nur AOSP, je Szenario 1 Lauf |
 | WP160 | Home Assistant: Stufe für ha__call/ha__call_secure einstellbar, Licht gesperrt steuerbar | in Arbeit | Meldung Maintainer 2026-10-27 nach WP154 |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
@@ -113,10 +113,10 @@ Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 ## Nächste Schritte
 
 Stand 2026-10-27 (Orchestrator):
-0. Laufend: WP159 (Setup-Fehler 3a/3b), WP160 (HA-Stufe, Licht gesperrt); danach rc11 mit WP158–WP160. Gemergt: WP158 (b5ef90e3), WP153 (9778f8a8), WP155 (8e1e18b1, K126 bestätigt), WP156 (abb1ead7), WP157 (7ad79f58, K122/K125 bestätigt), WP154 (ffed7c83, K123 bestätigt), WP151 (0b94041d, K124 bestätigt). Test-APK rc10 (Tag v0.1.0-rc10, 3e17f4b1); WP158 ist erst im nächsten RC.
+0. Laufend: WP160 (HA-Stufe, Licht gesperrt; Test-APK v0.1.0-wp160.1 beim Maintainer, Vorabversion danach löschen). Gemergt: WP159 (c5a61d1f, K127/K128 offen). Danach rc11 mit WP158–WP160. Gemergt: WP158 (b5ef90e3), WP153 (9778f8a8), WP155 (8e1e18b1, K126 bestätigt), WP156 (abb1ead7), WP157 (7ad79f58, K122/K125 bestätigt), WP154 (ffed7c83, K123 bestätigt), WP151 (0b94041d, K124 bestätigt). Test-APK rc10 (Tag v0.1.0-rc10, 3e17f4b1); WP158 ist erst im nächsten RC.
 1. Danach: Prüfseite Weckwort-Archiv auf Auftrag des Maintainers; sonst M6 nur mit Go.
 2. Gerätetest beim Maintainer: rc10 (T30-WP153), rc9 (T29-WP155, T29-WP156, T29-WP157), rc8 (T28-WP151, T28-WP154), rc7 (T27-WP149, T27-WP150, T26-WP148).
-3. Gemeldete Fehler ohne Paket (Maintainer 2026-10-23): (a) Anbieter-Setup zeigt „GPU-Prüfung über NVIDIA“ auch, wenn der Anbieter keinen GPU-Nachweis liefert (`provider_setup/finish_step.dart`, `gpu_check_section.dart`, Fähigkeit je Modell prüfen) → ausblenden; (b) SMS- und Benachrichtigungszugriff lassen sich bei APK-Installation nicht aktivieren („aus Sicherheitsgründen nicht zugelassen“, Android 13+ „Eingeschränkte Einstellungen“) → Sperre erkennen, Schritt-für-Schritt-Hinweis mit Knopf zu den App-Infos (bisher nur ein Satz im Medien-Hinweis). Technisch offen: Python-Tests in `tool/train_wake_word/` laufen in keinem CI-Job; Gerätetest Stationsmodus nach WP158.
+3. Erledigt mit WP159: (a) Anbieter-Setup zeigt „GPU-Prüfung über NVIDIA“ auch, wenn der Anbieter keinen GPU-Nachweis liefert (`provider_setup/finish_step.dart`, `gpu_check_section.dart`, Fähigkeit je Modell prüfen) → ausblenden; (b) SMS- und Benachrichtigungszugriff lassen sich bei APK-Installation nicht aktivieren („aus Sicherheitsgründen nicht zugelassen“, Android 13+ „Eingeschränkte Einstellungen“) → Sperre erkennen, Schritt-für-Schritt-Hinweis mit Knopf zu den App-Infos (bisher nur ein Satz im Medien-Hinweis). Technisch offen: Python-Tests in `tool/train_wake_word/` laufen in keinem CI-Job; Gerätetest Stationsmodus nach WP158.
 4. Später: Prüfseite für das Weckwort-Archiv (Anhören, Markieren), danach Hey-Pflicht in der Erkennung (K115) und Training mit eigenem HW-Kopf; wake_continuous_e2e (WP68-Altlast); offen aus M5/M6 nur mit Go: WP100/WP101, STT-Messung (K99), WP132, WP138.
 
 Ältere Reihenfolge M5 (bestätigt 2026-10-19, erledigt bzw. überholt):
