@@ -439,7 +439,7 @@
   },
   "confYesCall": "Call",
   "confYesSend": "Send",
-  "integrationsContactsRationale": "Wendelin needs access to your contacts to find numbers by name, plus the SMS and phone permissions. Android asks you next. Wendelin never sends an SMS or places a call unless you confirmed the preview with name and number first (by tap or by saying “yes”). Neither works while the device is locked. Without the phone permission Wendelin only opens the dialer.",
+  "integrationsContactsRationale": "Wendelin needs access to your contacts to find numbers by name, plus the SMS and phone permissions. Android asks you next. Wendelin never sends an SMS or places a call unless you confirmed the preview with name and number first (by tap or by saying “yes”). Neither works while the device is locked. Without the phone permission Wendelin only opens the dialer. If Android blocks the SMS permission, Wendelin then explains how to allow it.",
   "developerModeActiveHint": "Developer mode on – extended logging",
   "developerModeOff": "Developer mode off",
   "developerModeOn": "Developer mode on",
@@ -965,7 +965,7 @@
   "toolResultUndone": "Undone",
   "toolTlsEncrypted": "Tools end-to-end encrypted",
   "toolTlsHint": "Tool calls are protected by the verified connection up to the enclave, but not additionally encrypted.",
-  "integrationsMediaRationale": "To tell you what is playing and to skip within an audiobook or podcast, Wendelin needs “Notification access”. Android opens that page next: pick Wendelin in the list and turn it on (on newer Android versions, first choose “Allow restricted settings” in the app info). Wendelin does not read notifications, only media playback. Pause, resume and back work without it.",
+  "integrationsMediaRationale": "To tell you what is playing and to skip within an audiobook or podcast, Wendelin needs “Notification access”. Android opens that page next: pick Wendelin in the list and turn it on (if Android blocks it, Wendelin then explains how to allow it). Wendelin does not read notifications, only media playback. Pause, resume and back work without it.",
   "obsIndexBuilding": "Building index …",
   "obsIndexBuildingProgress": "Building index: {indexed} notes, {pending} to go",
   "obsIndexCurrent": "{notes} in the index · up to date",
@@ -1164,6 +1164,19 @@
   },
   "quickSwitchSemanticsAction": "Switch agent",
   "quickSwitchTitle": "Switch agent",
+  "restrictedSettingsBody": "Android blocks {what} because Wendelin was installed from a file (“Restricted settings”). To allow it:",
+  "@restrictedSettingsBody": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "restrictedSettingsOpenAppInfo": "Open app info",
+  "restrictedSettingsSteps": "1. Tap “Open app info”.\n2. Tap ⋮ at the top right and choose “Allow restricted settings”. The entry only appears after the first failed attempt.\n3. Go back to Wendelin and switch the integration on again.",
+  "restrictedSettingsTitle": "Android blocks this permission",
+  "restrictedSettingsWhatAccess": "notification access",
+  "restrictedSettingsWhatSms": "the SMS permission",
   "condBuilderAddCondition": "+ Condition",
   "condBuilderAddConditionInGroup": "+ Condition in group",
   "condBuilderAddGroup": "+ Group",

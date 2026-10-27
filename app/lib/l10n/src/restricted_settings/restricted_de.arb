@@ -1,0 +1,15 @@
+{
+  "restrictedSettingsTitle": "Android sperrt diese Freigabe",
+  "restrictedSettingsBody": "Android blockiert {what}, weil Wendelin aus einer Datei installiert wurde („Eingeschränkte Einstellungen“). So gibst du es frei:",
+  "@restrictedSettingsBody": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "restrictedSettingsWhatSms": "die SMS-Berechtigung",
+  "restrictedSettingsWhatAccess": "den Benachrichtigungszugriff",
+  "restrictedSettingsSteps": "1. „App-Infos öffnen“ tippen.\n2. Oben rechts auf ⋮ tippen und „Eingeschränkte Einstellungen zulassen“ wählen. Der Eintrag erscheint erst nach dem ersten gescheiterten Versuch.\n3. Zurück zu Wendelin gehen und die Integration erneut einschalten.",
+  "restrictedSettingsOpenAppInfo": "App-Infos öffnen"
+}

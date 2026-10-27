@@ -1404,7 +1404,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get integrationsContactsRationale =>
-      'Wendelin needs access to your contacts to find numbers by name, plus the SMS and phone permissions. Android asks you next. Wendelin never sends an SMS or places a call unless you confirmed the preview with name and number first (by tap or by saying “yes”). Neither works while the device is locked. Without the phone permission Wendelin only opens the dialer.';
+      'Wendelin needs access to your contacts to find numbers by name, plus the SMS and phone permissions. Android asks you next. Wendelin never sends an SMS or places a call unless you confirmed the preview with name and number first (by tap or by saying “yes”). Neither works while the device is locked. Without the phone permission Wendelin only opens the dialer. If Android blocks the SMS permission, Wendelin then explains how to allow it.';
 
   @override
   String get developerModeActiveHint => 'Developer mode on – extended logging';
@@ -2855,7 +2855,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get integrationsMediaRationale =>
-      'To tell you what is playing and to skip within an audiobook or podcast, Wendelin needs “Notification access”. Android opens that page next: pick Wendelin in the list and turn it on (on newer Android versions, first choose “Allow restricted settings” in the app info). Wendelin does not read notifications, only media playback. Pause, resume and back work without it.';
+      'To tell you what is playing and to skip within an audiobook or podcast, Wendelin needs “Notification access”. Android opens that page next: pick Wendelin in the list and turn it on (if Android blocks it, Wendelin then explains how to allow it). Wendelin does not read notifications, only media playback. Pause, resume and back work without it.';
 
   @override
   String get obsIndexBuilding => 'Building index …';
@@ -3487,6 +3487,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get quickSwitchTitle => 'Switch agent';
+
+  @override
+  String restrictedSettingsBody(String what) {
+    return 'Android blocks $what because Wendelin was installed from a file (“Restricted settings”). To allow it:';
+  }
+
+  @override
+  String get restrictedSettingsOpenAppInfo => 'Open app info';
+
+  @override
+  String get restrictedSettingsSteps =>
+      '1. Tap “Open app info”.\n2. Tap ⋮ at the top right and choose “Allow restricted settings”. The entry only appears after the first failed attempt.\n3. Go back to Wendelin and switch the integration on again.';
+
+  @override
+  String get restrictedSettingsTitle => 'Android blocks this permission';
+
+  @override
+  String get restrictedSettingsWhatAccess => 'notification access';
+
+  @override
+  String get restrictedSettingsWhatSms => 'the SMS permission';
 
   @override
   String get condBuilderAddCondition => '+ Condition';

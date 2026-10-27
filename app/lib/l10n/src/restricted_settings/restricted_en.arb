@@ -1,0 +1,15 @@
+{
+  "restrictedSettingsTitle": "Android blocks this permission",
+  "restrictedSettingsBody": "Android blocks {what} because Wendelin was installed from a file (“Restricted settings”). To allow it:",
+  "@restrictedSettingsBody": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "restrictedSettingsWhatSms": "the SMS permission",
+  "restrictedSettingsWhatAccess": "notification access",
+  "restrictedSettingsSteps": "1. Tap “Open app info”.\n2. Tap ⋮ at the top right and choose “Allow restricted settings”. The entry only appears after the first failed attempt.\n3. Go back to Wendelin and switch the integration on again.",
+  "restrictedSettingsOpenAppInfo": "Open app info"
+}

@@ -1429,7 +1429,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get integrationsContactsRationale =>
-      'Wendelin a besoin d’accéder à tes contacts pour trouver les numéros par nom, ainsi qu’aux droits SMS et téléphone. Android te le demandera ensuite. Wendelin n’envoie jamais de SMS et n’appelle jamais sans que tu aies confirmé l’aperçu avec le nom et le numéro (en touchant l’écran ou en disant « oui »). Rien de tout cela ne marche appareil verrouillé. Sans le droit téléphone, Wendelin ouvre seulement le clavier d’appel.';
+      'Wendelin a besoin d’accéder à tes contacts pour trouver les numéros par nom, ainsi qu’aux droits SMS et téléphone. Android te le demandera ensuite. Wendelin n’envoie jamais de SMS et n’appelle jamais sans que tu aies confirmé l’aperçu avec le nom et le numéro (en touchant l’écran ou en disant « oui »). Rien de tout cela ne marche appareil verrouillé. Sans le droit téléphone, Wendelin ouvre seulement le clavier d’appel. Si Android bloque le droit SMS, Wendelin explique ensuite comment l’autoriser.';
 
   @override
   String get developerModeActiveHint =>
@@ -2894,7 +2894,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get integrationsMediaRationale =>
-      'Pour vous dire ce qui est en cours de lecture et avancer ou reculer dans un livre audio ou un podcast, Wendelin a besoin de « l’accès aux notifications ». Android ouvre ensuite cette page : choisissez Wendelin dans la liste et activez-le (sur les versions récentes d’Android, choisissez d’abord « Autoriser les paramètres restreints » dans les infos de l’appli). Wendelin ne lit pas les notifications, seulement la lecture multimédia. Pause, reprise et retour fonctionnent aussi sans.';
+      'Pour vous dire ce qui est en cours de lecture et avancer ou reculer dans un livre audio ou un podcast, Wendelin a besoin de « l’accès aux notifications ». Android ouvre ensuite cette page : choisissez Wendelin dans la liste et activez-le (si Android le bloque, Wendelin explique ensuite comment l’autoriser). Wendelin ne lit pas les notifications, seulement la lecture multimédia. Pause, reprise et retour fonctionnent aussi sans.';
 
   @override
   String get obsIndexBuilding => 'Création de l’index …';
@@ -3534,6 +3534,27 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get quickSwitchTitle => 'Changer d\'agent';
+
+  @override
+  String restrictedSettingsBody(String what) {
+    return 'Android bloque $what, car Wendelin a été installée à partir d’un fichier (« Paramètres restreints »). Pour l’autoriser :';
+  }
+
+  @override
+  String get restrictedSettingsOpenAppInfo => 'Ouvrir les infos de l’appli';
+
+  @override
+  String get restrictedSettingsSteps =>
+      '1. Touchez « Ouvrir les infos de l’appli ».\n2. Touchez ⋮ en haut à droite et choisissez « Autoriser les paramètres restreints ». L’entrée n’apparaît qu’après la première tentative échouée.\n3. Revenez dans Wendelin et réactivez l’intégration.';
+
+  @override
+  String get restrictedSettingsTitle => 'Android bloque cette autorisation';
+
+  @override
+  String get restrictedSettingsWhatAccess => 'l’accès aux notifications';
+
+  @override
+  String get restrictedSettingsWhatSms => 'l’autorisation SMS';
 
   @override
   String get condBuilderAddCondition => '+ Condition';

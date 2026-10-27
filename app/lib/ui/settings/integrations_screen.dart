@@ -17,6 +17,7 @@ import '../screens/labels.dart';
 import 'integration_detail_screen.dart';
 import 'mcp/mcp_server_detail_screen.dart';
 import 'reconnect_text.dart';
+import 'restricted_settings_hint.dart';
 import 'settings_page.dart';
 import 'settings_routes.dart';
 
@@ -171,7 +172,20 @@ class IntegrationRow extends ConsumerWidget {
           ? null
           : () => unawaited(openStore(context, ref, storeUrl)),
     );
-    if (!openDetail) return tile;
+    final feature = info.enabled ? _restrictedFeature(info.id) : null;
+    final row = !openDetail ? tile : _tappable(context, tile);
+    if (feature == null) return row;
+    return Column(children: [row, RestrictedSettingsHint(feature)]);
+  }
+
+  /// Which restricted setting an integration needs (WP159).
+  RestrictedFeature? _restrictedFeature(String id) => switch (id) {
+    'contacts' => RestrictedFeature.sms,
+    'media' => RestrictedFeature.notificationAccess,
+    _ => null,
+  };
+
+  Widget _tappable(BuildContext context, Widget tile) {
     return InkWell(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute<void>(
