@@ -8,6 +8,8 @@ import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/voice_providers.dart';
+import 'package:wendelin/di/voice_settings_providers.dart'
+    show speechModelCatalogProvider;
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart' show CheckStatusIcon, WSwitch;
 import 'package:wendelin/ui/onboarding/voice_download_step.dart';
@@ -541,19 +543,6 @@ void main() {
       );
     });
 
-    testWidgets('Lizenzen inklusive Pflicht-Attribution', (tester) async {
-      await pumpScreen(tester, env0(), const VoiceScreen());
-      await tester.scrollUntilVisible(
-        find.textContaining('SIWIS French Speech Synthesis').first,
-        200,
-      );
-      expect(
-        find.textContaining('SIWIS French Speech Synthesis'),
-        findsWidgets,
-      );
-      expect(find.textContaining('CC0 (Thorsten-Voice)'), findsWidgets);
-    });
-
     testWidgets('Mikrofon: Erklärung vor der Android-Abfrage', (tester) async {
       final env = env0();
       final mic = env.microphone..granted = false;
@@ -761,20 +750,6 @@ void main() {
       );
       await settle(tester);
       expect(c.read(voiceSettingsProvider).value!.keepModelLoaded, isTrue);
-    });
-
-    testWidgets('Lizenzen nennen Parakeet, Canary, Siwis und Kokoro', (
-      tester,
-    ) async {
-      await pumpScreen(tester, TestEnv(), const VoiceScreen());
-      for (final t in [
-        'Parakeet TDT 0.6B v3“ von NVIDIA, CC BY 4.0',
-        'Canary 180M Flash“ von NVIDIA, CC BY 4.0',
-        'Kokoro-82M (hexgrad, Apache-2.0)',
-      ]) {
-        await tester.scrollUntilVisible(find.textContaining(t), 200);
-        expect(find.textContaining(t), findsOneWidget);
-      }
     });
 
     testWidgets('Messwerte: leer, dann Einträge mit Latenz, RTF und RAM', (

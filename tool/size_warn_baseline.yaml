@@ -22,7 +22,7 @@ app/lib/voice/voice_confirmation.dart#_VoiceConfirmation._confirmByVoice: 142
 app/lib/voice/voice_controller.dart: 675
 app/lib/voice/voice_controller.dart#VoiceController: 590
 app/lib/voice/voice_controller.dart#VoiceController.start: 94
-app/test/settings/voice_settings_test.dart: 1132
+app/test/settings/voice_settings_test.dart: 1107
 app/tool/mcp_test_server.dart#main: 100
 app/tool/stt_wer.dart#main: 111
 evals/lib/src/cli.dart#runCli: 130
