@@ -43,6 +43,7 @@ export 'wake/wake_pre_roll.dart' show WakePreRoll, WakeTail, wakeGapMs;
 part 'voice_answer_text.dart';
 part 'voice_confirmation.dart';
 part 'voice_event_handler.dart';
+part 'voice_prepare.dart';
 
 /// Voice requests of the app: push-to-talk on the main screen and the
 /// assistant overlay (`TriggerKind.assistant`).
@@ -238,10 +239,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
     }
     _wake.begin(preRoll, primed.head); // before the microphone opens
     primed.prime();
-    final allowed = await prepare?.call() ?? true;
-    if (!allowed || !ref.mounted) {
-      return _failStart(primed, allowed ? null : microphoneDeniedHint);
-    }
+    final denied = await _askPrepare(prepare, ref);
+    if (denied != null || !ref.mounted) return _failStart(primed, denied);
     if (primed.failed) {
       // Permission granted just now: open the microphone again.
       await primed.stop();
@@ -321,10 +320,10 @@ final class VoiceController extends Notifier<VoiceUiState> {
       state = state.copyWith(error: voiceUnavailableError, clearHint: true);
       return false;
     }
-    final allowed = await prepare?.call() ?? true;
+    final denied = await _askPrepare(prepare, ref);
     if (!ref.mounted) return false;
-    if (!allowed) {
-      state = state.copyWith(error: microphoneDeniedHint, clearHint: true);
+    if (denied != null) {
+      state = state.copyWith(error: denied, clearHint: true);
       return false;
     }
     if (state.active || ref.read(agentControllerProvider).running) {

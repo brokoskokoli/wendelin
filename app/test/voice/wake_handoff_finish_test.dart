@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:fake_async/fake_async.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
@@ -211,6 +212,53 @@ void main() {
       expect(finishes, 1);
       await voice().whenIdle;
       expect(stt.heard.single.where((s) => s == 7), hasLength(800));
+    },
+  );
+
+  // WP158 (finding 7): a throwing `prepare` (permission query fails) must not
+  // leave the service microphone or the state open.
+  PlatformException broken() => PlatformException(code: 'boom');
+
+  test(
+    'prepare wirft (Mikrofon offen): Dienst-Mikrofon und Zustand zu',
+    () async {
+      container(load: () async => components(RecordingStt('x')));
+      final ok = await voice().start(
+        TriggerKind.pushToTalk,
+        takePreRoll: () async => hit(),
+        prepare: () async => throw broken(),
+      );
+      expect(ok, isFalse);
+      expect(finishes, 1, reason: 'Wake-Übergabe geschlossen');
+      expect(audio.isRunning, isFalse, reason: 'App-Mikrofon zu');
+      final v = c.read(voiceControllerProvider);
+      expect(v.preparing, isFalse);
+      expect(v.active, isFalse);
+      expect(v.error, isNotNull);
+      expect(
+        lines.where((l) => l.contains('start-failed') && l.contains('prepare')),
+        hasLength(1),
+      );
+    },
+  );
+
+  test(
+    'prepare wirft (Modelle noch nicht bereit): Fehler statt Absturz',
+    () async {
+      container(ready: false, load: () async => components(RecordingStt('x')));
+      final ok = await voice().start(
+        TriggerKind.pushToTalk,
+        prepare: () async => throw broken(),
+      );
+      expect(ok, isFalse);
+      final v = c.read(voiceControllerProvider);
+      expect(v.preparing, isFalse);
+      expect(v.active, isFalse);
+      expect(v.error, isNotNull);
+      expect(
+        lines.where((l) => l.contains('start-failed') && l.contains('prepare')),
+        hasLength(1),
+      );
     },
   );
 }

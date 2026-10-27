@@ -14,6 +14,8 @@ extension VoiceAnswerText on VoiceController {
     final state = _pipeline?.state;
     if (state == VoiceState.listening || state == VoiceState.speaking) {
       await cancel(VoiceCancelReason.retrigger);
+      // Defensive: after `cancel` the pipeline is idle already; this only
+      // lets an old session run out (no test can make it late).
       await _pipeline?.whenIdle;
     }
     if (_pipeline != null && _pipeline!.state != VoiceState.idle) return false;
