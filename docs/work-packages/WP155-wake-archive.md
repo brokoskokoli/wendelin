@@ -7,7 +7,7 @@
 
 ## Inhalt
 - **Eigenes Verzeichnis** `dev-audio/wake-archive/` (per `adb pull` abrufbar, kein Upload). Nur bei eingeschaltetem Entwicklermodus; ohne Modus wird nichts gesammelt.
-- **Was gespeichert wird** (je Fall ein WAV mit ±2 s um den Treffer plus eine JSON-Zeile mit Metadaten):
+- **Was gespeichert wird** (je Fall ein WAV um den Treffer (angenommene: etwa 2 s Vorlauf, kaum Nachlauf, Entscheidung Maintainer; verworfene und near-miss: 4 s) plus eine JSON-Zeile mit Metadaten):
   - jeder Weckwort-Kandidat im Ruhezustand, angenommen **und** verworfen (direkt ≥ 0,999, Band mit Prüfung, Prüfung abgelehnt),
   - jeder Barge-in-Kandidat (angenommen, abgelehnt, wegen `busy` verworfen),
   - **knapp verfehlte** Fälle: Stufe-1-Score über einer Sammelschwelle unter der Kandidatenschwelle (Vorschlag 0,5; im Paket an Zahlen begründen, Rate pro Stunde im Bericht), damit auch nicht erkannte Weckwörter dabei sind,

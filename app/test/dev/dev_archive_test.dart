@@ -96,6 +96,37 @@ void main() {
   }
 
   group('Schreiber', () {
+    test(
+      'Zahlenfelder stehen als JSON-Zahl, Schwellen auf 4 Stellen',
+      () async {
+        await save(
+          entry(
+            'rejected',
+            meta: {
+              'score': '0.8219',
+              'sim': '0.6627',
+              'thr': 0.5299999999999999,
+              'conf': '0.9',
+              'lp': -0.31,
+              'rule': 'none',
+            },
+          ),
+        );
+        final l = lines().single;
+        for (final k in ['score', 'sim', 'thr', 'conf', 'lp']) {
+          expect(l[k], isA<num>(), reason: k);
+        }
+        expect(l['score'], 0.8219);
+        expect(l['sim'], 0.6627);
+        expect(l['thr'], 0.53);
+        expect(l['rule'], 'none');
+        expect(
+          File('${archive.path}/$devArchiveIndexName').readAsStringSync(),
+          contains('"thr":0.53,'),
+        );
+      },
+    );
+
     test('je Eintrag eine WAV und eine Indexzeile mit allen Feldern', () async {
       devArchiveSetInfo('idle', {'thr': 0.85, 'mode': 'model'});
       // The package joins the facts of the engine to the case (DevArchive).

@@ -13,7 +13,7 @@ import 'dev_log.dart';
 
 /// Wake word archive of the developer mode (WP155): every candidate of the
 /// idle wake word and of the barge-in (accepted, rejected, dropped) and the
-/// near misses, each as a WAV (2 s each side of the hit) with a line in
+/// near misses, each as a WAV (about 2 s before the hit, see the docs; 4 s for rejected ones) with a line in
 /// `index.jsonl`, for the later listening and labelling. Lives in
 /// `dev-audio/wake-archive/` (reached by `adb pull`, nothing is uploaded),
 /// is **not** cleaned after a day, only by the size cap [devArchiveMaxBytes]
@@ -248,10 +248,27 @@ Map<String, Object?> _record(DevArchiveEntry e, String? file, String? verify) {
   // Keys and values like the developer log; the text of a check also like
   // its content masking (a spoken "PIN 1234", a card number).
   final safe = redactSecrets(out)! as Map<String, Object?>;
+  for (final k in _numberKeys) {
+    final n = _asNumber(safe[k]);
+    if (n != null) safe[k] = n;
+  }
   if (safe['text'] case final String text) {
     safe['text'] = redactSensitiveContent(text, mask: '***');
   }
   return safe;
+}
+
+/// Fields that are numbers in the index (the engines note some of them as
+/// text with fixed decimals).
+const _numberKeys = ['score', 'sim', 'thr', 'conf', 'lp', 'cand'];
+
+/// [v] as a JSON number rounded to 4 decimals (`0.5299999999999999` becomes
+/// `0.53`); text that is a number becomes one, anything else is `null`.
+num? _asNumber(Object? v) {
+  final n = v is String ? num.tryParse(v) : v;
+  if (n is! num || !n.isFinite) return null;
+  if (n is int) return n;
+  return num.parse(n.toStringAsFixed(4));
 }
 
 /// Case name of a file (`…_idle-accepted` for `…_idle-accepted-verify.wav`).
