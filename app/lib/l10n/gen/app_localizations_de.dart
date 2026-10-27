@@ -3514,7 +3514,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String restrictedSettingsBody(String what) {
-    return 'Android blockiert $what, weil Wendelin aus einer Datei installiert wurde („Eingeschränkte Einstellungen“). So gibst du es frei:';
+    return '$what fehlt. Hat Android gemeldet, dass diese Einstellung eingeschränkt ist bzw. aus Sicherheitsgründen nicht zugelassen wurde (Wendelin wurde aus einer Datei installiert), dann gib sie so frei:';
   }
 
   @override
@@ -3525,13 +3525,14 @@ class AppLocalizationsDe extends AppLocalizations {
       '1. „App-Infos öffnen“ tippen.\n2. Oben rechts auf ⋮ tippen und „Eingeschränkte Einstellungen zulassen“ wählen. Der Eintrag erscheint erst nach dem ersten gescheiterten Versuch.\n3. Zurück zu Wendelin gehen und die Integration erneut einschalten.';
 
   @override
-  String get restrictedSettingsTitle => 'Android sperrt diese Freigabe';
+  String get restrictedSettingsTitle =>
+      'Freigabe fehlt, evtl. von Android gesperrt';
 
   @override
-  String get restrictedSettingsWhatAccess => 'den Benachrichtigungszugriff';
+  String get restrictedSettingsWhatAccess => 'Der Benachrichtigungszugriff';
 
   @override
-  String get restrictedSettingsWhatSms => 'die SMS-Berechtigung';
+  String get restrictedSettingsWhatSms => 'Die SMS-Berechtigung';
 
   @override
   String get condBuilderAddCondition => '+ Bedingung';

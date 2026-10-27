@@ -13,17 +13,12 @@ import '../support/fake_restricted_settings.dart';
 import '../support/test_env.dart';
 import 'integrations_screen_test.dart' show pumpIntegrations, settle;
 
-const _blocked = RestrictedSettings(
-  opMode: RestrictedOpMode.ignored,
-  installSource: InstallSource.file,
-);
-const _refused = RestrictedSettings(
-  opMode: RestrictedOpMode.defaultMode,
-  installSource: InstallSource.session,
-);
+const _blocked = RestrictedSettings(installSource: InstallSource.file);
+const _refused = RestrictedSettings(installSource: InstallSource.session);
+const _unknownSource = RestrictedSettings();
 
 Finder get _hint => find.byType(RestrictedSettingsHint);
-Finder get _title => find.text('Android sperrt diese Freigabe');
+Finder get _title => find.text('Freigabe fehlt, evtl. von Android gesperrt');
 Finder get _button => find.text('App-Infos öffnen');
 
 Future<FakeRestrictedSettingsPlatform> _pump(
@@ -94,22 +89,49 @@ void main() {
     ) async {
       final fake = await _pump(tester, 'contacts', _blocked, setUp: noSms);
       expect(_title, findsOneWidget);
-      expect(find.textContaining('die SMS-Berechtigung'), findsOneWidget);
+      expect(find.textContaining('Die SMS-Berechtigung'), findsOneWidget);
       await tester.tap(_button);
       expect(fake.appInfoOpened, 1);
     });
 
-    testWidgets('normale Ablehnung: kein Hinweis', (tester) async {
+    testWidgets('Installation per Sitzung/adb, SMS fehlt: kein Hinweis', (
+      tester,
+    ) async {
       await _pump(tester, 'contacts', _refused, setUp: noSms);
       expect(_title, findsNothing);
     });
 
-    testWidgets('erteilt (auch bei Op ignored): kein Hinweis', (tester) async {
+    testWidgets('unbekannte Quelle, SMS fehlt: kein Hinweis', (tester) async {
+      await _pump(tester, 'contacts', _unknownSource, setUp: noSms);
+      expect(_title, findsNothing);
+    });
+
+    testWidgets('Datei-Installation, SMS erteilt: kein Hinweis', (
+      tester,
+    ) async {
       await _pump(tester, 'contacts', _blocked, setUp: (_) {});
       expect(_title, findsNothing);
     });
 
-    testWidgets('Op ändert sich ohne Registry-Ereignis: Hinweis erst beim '
+    testWidgets('Hinweis verschwindet, sobald SMS erteilt ist', (tester) async {
+      late TestEnv env;
+      await _pump(
+        tester,
+        'contacts',
+        _blocked,
+        setUp: (e) {
+          env = e;
+          noSms(e);
+        },
+      );
+      expect(_title, findsOneWidget);
+      env.phone.smsAllowed = true;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await settle(tester);
+      expect(_title, findsNothing);
+    });
+
+    testWidgets('Quelle ändert sich ohne Registry-Ereignis: Hinweis erst beim '
         'Zurückkehren in die App (nur Resume löst aus)', (tester) async {
       final fake = await _pumpAlone(tester, RestrictedFeature.sms);
       expect(_title, findsNothing);
@@ -140,39 +162,74 @@ void main() {
       final fake = await _pump(tester, 'media', _blocked, setUp: noAccess);
       expect(_title, findsOneWidget);
       expect(
-        find.textContaining('den Benachrichtigungszugriff'),
+        find.textContaining('Der Benachrichtigungszugriff'),
         findsOneWidget,
       );
       await tester.tap(_button);
       expect(fake.appInfoOpened, 1);
     });
 
-    testWidgets('normale Ablehnung: kein Hinweis', (tester) async {
+    testWidgets('Installation per Sitzung/adb, Zugriff fehlt: kein Hinweis', (
+      tester,
+    ) async {
       await _pump(tester, 'media', _refused, setUp: noAccess);
       expect(_title, findsNothing);
     });
 
-    testWidgets('aktiv (auch bei Op ignored): kein Hinweis', (tester) async {
+    testWidgets('unbekannte Quelle, Zugriff fehlt: kein Hinweis', (
+      tester,
+    ) async {
+      await _pump(tester, 'media', _unknownSource, setUp: noAccess);
+      expect(_title, findsNothing);
+    });
+
+    testWidgets('Datei-Installation, Zugriff erteilt: kein Hinweis', (
+      tester,
+    ) async {
       await _pump(tester, 'media', _blocked, setUp: (_) {});
       expect(_title, findsNothing);
     });
 
-    testWidgets('Medien eingeschaltet, Op wechselt erst danach (Tipp in den '
-        'Android-Einstellungen): nur Resume zeigt den Hinweis', (tester) async {
-      final fake = await _pumpAlone(
+    testWidgets('Hinweis verschwindet, sobald der Zugriff erteilt ist'
+        '', (tester) async {
+      late TestEnv env;
+      await _pump(
         tester,
-        RestrictedFeature.notificationAccess,
+        'media',
+        _blocked,
+        setUp: (e) {
+          env = e;
+          noAccess(e);
+        },
       );
-      _registry(tester).sensitiveMinimum = PrivacyLevel.tee;
-      await settle(tester);
-      expect(_title, findsNothing);
-      fake.current = _blocked;
-      await settle(tester);
-      expect(_title, findsNothing);
+      expect(_title, findsOneWidget);
+      env.media.access = true;
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await settle(tester);
-      expect(_title, findsOneWidget);
+      expect(_title, findsNothing);
     });
+
+    testWidgets(
+      'Medien eingeschaltet, Quelle wird erst danach bekannt (Tipp in den '
+      'Android-Einstellungen): nur Resume zeigt den Hinweis',
+      (tester) async {
+        final fake = await _pumpAlone(
+          tester,
+          RestrictedFeature.notificationAccess,
+        );
+        _registry(tester).sensitiveMinimum = PrivacyLevel.tee;
+        await settle(tester);
+        expect(_title, findsNothing);
+        fake.current = _blocked;
+        await settle(tester);
+        expect(_title, findsNothing);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await settle(tester);
+        expect(_title, findsOneWidget);
+      },
+    );
 
     testWidgets('ausgeschaltete Integration: kein Hinweis', (tester) async {
       final fake = FakeRestrictedSettingsPlatform()..current = _blocked;

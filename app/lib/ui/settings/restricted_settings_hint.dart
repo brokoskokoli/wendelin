@@ -18,15 +18,17 @@ enum RestrictedFeature {
   notificationAccess,
 }
 
-/// Hint with steps and a button to the app info, shown under an integration
-/// whose SMS permission / notification access is missing AND Android blocks
-/// it as "restricted setting" (APK installed from a file, WP159).
+/// Conditional hint with steps and a button to the app info, shown under an
+/// integration that is switched on while its SMS permission / notification
+/// access is still missing AND the APK was installed from a file (WP159).
 ///
-/// The state is asked again when the widget appears or changes, when the
-/// tool registry changes (after the permission request) and when the app
-/// returns from the system settings. Android only marks the app as
-/// restricted at the first blocked attempt, so the first check alone is not
-/// enough. A normal refusal (op not `ignored`) shows nothing.
+/// Android's restriction cannot be read by the app (the AppOp throws a
+/// `SecurityException`), so the text is worded conditionally ("if Android
+/// said ..."). It disappears as soon as the permission is granted. The state
+/// is asked again when the widget appears or changes, when the tool registry
+/// changes (after the permission request) and when the app returns from the
+/// system settings. An install via store, installer API or `adb` shows
+/// nothing.
 class RestrictedSettingsHint extends ConsumerStatefulWidget {
   /// Creates the hint for [feature].
   const RestrictedSettingsHint(this.feature, {super.key});
@@ -80,12 +82,14 @@ class _RestrictedSettingsHintState extends ConsumerState<RestrictedSettingsHint>
     };
   }
 
-  /// Hint only if not granted AND restricted. The latest check wins.
+  /// Hint only if not granted AND installed from a file. The latest check wins.
   Future<void> _recheck() async {
     final platform = ref.read(restrictedSettingsPlatformProvider);
     final id = ++_check;
     final granted = await _granted();
-    final restricted = granted ? false : (await platform.state()).restricted;
+    final restricted = granted
+        ? false
+        : (await platform.state()).mayBeRestricted;
     if (!mounted || id != _check) return;
     if (restricted != _blocked) setState(() => _blocked = restricted);
   }

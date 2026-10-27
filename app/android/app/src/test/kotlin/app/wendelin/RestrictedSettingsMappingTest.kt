@@ -4,18 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class RestrictedSettingsMappingTest {
-    @Test fun opModes() {
-        assertEquals("allowed", RestrictedSettingsMapping.opMode(0))
-        assertEquals("ignored", RestrictedSettingsMapping.opMode(1))
-        assertEquals("default", RestrictedSettingsMapping.opMode(3))
-    }
-
-    @Test fun otherOrMissingModeIsUnknown() {
-        assertEquals("unknown", RestrictedSettingsMapping.opMode(2)) // errored
-        assertEquals("unknown", RestrictedSettingsMapping.opMode(99))
-        assertEquals("unknown", RestrictedSettingsMapping.opMode(null))
-    }
-
     @Test fun fileSources() {
         assertEquals("file", RestrictedSettingsMapping.installSource(35, 3))
         assertEquals("file", RestrictedSettingsMapping.installSource(35, 4))

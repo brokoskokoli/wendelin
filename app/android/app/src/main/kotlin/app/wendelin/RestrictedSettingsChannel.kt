@@ -1,13 +1,11 @@
 package app.wendelin
 
-import android.app.AppOpsManager
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.os.Process
 import android.provider.Settings
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
@@ -16,8 +14,13 @@ import io.flutter.plugin.common.MethodChannel
 /**
  * Platform side of `RestrictedSettingsPlatform` (app/lib/platform/restricted_settings_platform.dart,
  * WP159): Android 13+ blocks SMS permission and notification access for apps installed from a file
- * ("restricted settings", Android 15: Enhanced Confirmation Mode). Reads only the AppOp and the
- * install source; no extra permission.
+ * ("restricted settings", Android 15: Enhanced Confirmation Mode). Reads only the install source;
+ * no extra permission.
+ *
+ * The AppOp `android:access_restricted_settings` is deliberately NOT read: measured on Android 15,
+ * every `AppOpsManager.checkOp*` variant throws a SecurityException for a normal app
+ * (`verifyIncomingOp`: needs MANAGE_APPOPS or GET_APP_OPS_STATS), so the restriction cannot be
+ * detected. The Dart side therefore shows a conditional hint based on the install source.
  */
 class RestrictedSettingsChannel(private val context: Context, messenger: BinaryMessenger) :
     MethodChannel.MethodCallHandler {
@@ -42,23 +45,11 @@ class RestrictedSettingsChannel(private val context: Context, messenger: BinaryM
 
     private fun state(): Map<String, Any?> = mapOf(
         "sdk" to Build.VERSION.SDK_INT,
-        "opMode" to RestrictedSettingsMapping.opMode(readOp()),
         "installSource" to RestrictedSettingsMapping.installSource(
             Build.VERSION.SDK_INT,
             readPackageSource(),
         ),
     )
-
-    /** Raw op mode, `null` if the app may not read it (unknown op, SecurityException, API < 33). */
-    private fun readOp(): Int? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
-        return try {
-            val ops = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager
-            ops?.unsafeCheckOpNoThrow(OP, Process.myUid(), context.packageName)
-        } catch (_: RuntimeException) {
-            null
-        }
-    }
 
     /** `InstallSourceInfo.getPackageSource()` (API 33+), `null` if unreadable. */
     private fun readPackageSource(): Int? {
@@ -87,27 +78,11 @@ class RestrictedSettingsChannel(private val context: Context, messenger: BinaryM
 
     companion object {
         const val CHANNEL = "app.wendelin/restricted_settings"
-
-        /** `AppOpsManager.OPSTR_ACCESS_RESTRICTED_SETTINGS` (hidden API, so the string). */
-        const val OP = "android:access_restricted_settings"
     }
 }
 
 /** Pure mapping of the raw Android values (unit-tested). */
 object RestrictedSettingsMapping {
-    /**
-     * `allowed`, `ignored`, `default` or `unknown` (also for `errored` and unreadable).
-     *
-     * Unmeasured assumption (Android 13/14): if a file install reports the op as `MODE_ERRORED`,
-     * it reads as `unknown` and only the install-source fallback (`file`) triggers the hint.
-     */
-    fun opMode(mode: Int?): String = when (mode) {
-        AppOpsManager.MODE_ALLOWED -> "allowed"
-        AppOpsManager.MODE_IGNORED -> "ignored"
-        AppOpsManager.MODE_DEFAULT -> "default"
-        else -> "unknown"
-    }
-
     /**
      * `file` for an APK installed from a (downloaded) file, `session` for a store or the
      * installer API, `unknown` below API 33 or if unreadable. `adb install` reports UNSPECIFIED

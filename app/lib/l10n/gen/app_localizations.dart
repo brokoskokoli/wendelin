@@ -5976,7 +5976,7 @@ abstract class AppLocalizations {
   /// No description provided for @restrictedSettingsBody.
   ///
   /// In de, this message translates to:
-  /// **'Android blockiert {what}, weil Wendelin aus einer Datei installiert wurde („Eingeschränkte Einstellungen“). So gibst du es frei:'**
+  /// **'{what} fehlt. Hat Android gemeldet, dass diese Einstellung eingeschränkt ist bzw. aus Sicherheitsgründen nicht zugelassen wurde (Wendelin wurde aus einer Datei installiert), dann gib sie so frei:'**
   String restrictedSettingsBody(String what);
 
   /// No description provided for @restrictedSettingsOpenAppInfo.
@@ -5994,19 +5994,19 @@ abstract class AppLocalizations {
   /// No description provided for @restrictedSettingsTitle.
   ///
   /// In de, this message translates to:
-  /// **'Android sperrt diese Freigabe'**
+  /// **'Freigabe fehlt, evtl. von Android gesperrt'**
   String get restrictedSettingsTitle;
 
   /// No description provided for @restrictedSettingsWhatAccess.
   ///
   /// In de, this message translates to:
-  /// **'den Benachrichtigungszugriff'**
+  /// **'Der Benachrichtigungszugriff'**
   String get restrictedSettingsWhatAccess;
 
   /// No description provided for @restrictedSettingsWhatSms.
   ///
   /// In de, this message translates to:
-  /// **'die SMS-Berechtigung'**
+  /// **'Die SMS-Berechtigung'**
   String get restrictedSettingsWhatSms;
 
   /// No description provided for @condBuilderAddCondition.

@@ -1165,7 +1165,7 @@
   },
   "quickSwitchSemanticsAction": "Changer d'agent",
   "quickSwitchTitle": "Changer d'agent",
-  "restrictedSettingsBody": "Android bloque {what}, car Wendelin a été installée à partir d’un fichier (« Paramètres restreints »). Pour l’autoriser :",
+  "restrictedSettingsBody": "{what} manque. Si Android a indiqué que ce paramètre est restreint ou n’a pas été autorisé pour des raisons de sécurité (Wendelin a été installée à partir d’un fichier), autorisez-le ainsi :",
   "@restrictedSettingsBody": {
     "placeholders": {
       "what": {
@@ -1175,9 +1175,9 @@
   },
   "restrictedSettingsOpenAppInfo": "Ouvrir les infos de l’appli",
   "restrictedSettingsSteps": "1. Touchez « Ouvrir les infos de l’appli ».\n2. Touchez ⋮ en haut à droite et choisissez « Autoriser les paramètres restreints ». L’entrée n’apparaît qu’après la première tentative échouée.\n3. Revenez dans Wendelin et réactivez l’intégration.",
-  "restrictedSettingsTitle": "Android bloque cette autorisation",
-  "restrictedSettingsWhatAccess": "l’accès aux notifications",
-  "restrictedSettingsWhatSms": "l’autorisation SMS",
+  "restrictedSettingsTitle": "Autorisation manquante, peut-être bloquée par Android",
+  "restrictedSettingsWhatAccess": "L’accès aux notifications",
+  "restrictedSettingsWhatSms": "L’autorisation SMS",
   "condBuilderAddCondition": "+ Condition",
   "condBuilderAddConditionInGroup": "+ Condition dans le groupe",
   "condBuilderAddGroup": "+ Groupe",
