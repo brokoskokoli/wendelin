@@ -1,7 +1,6 @@
-// Gerätetest WP160 (E2E-Agent, uncommittet): Stufe je Geräteart mit Fake-HA.
-// Läuft mit `tool/e2e_android.sh integration_test/wp160_ha_kind_e2e_test.dart`
-// (Skript startet den Fake-HA für `ha_*`; deshalb hier der Name ha_ -> siehe
-// Dateiname-Hinweis im Bericht). Geräte: light.kitchen (Licht),
+// Gerätetest WP160: Stufe je Geräteart mit Fake-HA.
+// Läuft mit `tool/e2e_android.sh integration_test/ha_kind_e2e_test.dart`
+// (das Skript startet den Fake-HA für Dateien `ha_*`). Geräte: light.kitchen (Licht),
 // lock.front (Schloss), cover.garage (device_class garage).
 
 import 'package:flutter/material.dart';
