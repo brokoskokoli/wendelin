@@ -118,11 +118,11 @@ class VoiceScreen extends ConsumerWidget {
         SettingsSection(
           title: context.l10n.voiceScreenModelLicenses,
           children: [
-            for (final m in catalog.models)
-              SettingsRow(
-                title: m.displayName,
-                detail: [m.license, ?m.attribution].join('\n'),
-              ),
+            SettingsRow(
+              title: context.l10n.voiceScreenModelLicenses,
+              onTap: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.voiceLicenses),
+            ),
           ],
         ),
       ],

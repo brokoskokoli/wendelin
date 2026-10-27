@@ -541,19 +541,6 @@ void main() {
       );
     });
 
-    testWidgets('Lizenzen inklusive Pflicht-Attribution', (tester) async {
-      await pumpScreen(tester, env0(), const VoiceScreen());
-      await tester.scrollUntilVisible(
-        find.textContaining('SIWIS French Speech Synthesis').first,
-        200,
-      );
-      expect(
-        find.textContaining('SIWIS French Speech Synthesis'),
-        findsWidgets,
-      );
-      expect(find.textContaining('CC0 (Thorsten-Voice)'), findsWidgets);
-    });
-
     testWidgets('Mikrofon: Erklärung vor der Android-Abfrage', (tester) async {
       final env = env0();
       final mic = env.microphone..granted = false;
@@ -761,20 +748,6 @@ void main() {
       );
       await settle(tester);
       expect(c.read(voiceSettingsProvider).value!.keepModelLoaded, isTrue);
-    });
-
-    testWidgets('Lizenzen nennen Parakeet, Canary, Siwis und Kokoro', (
-      tester,
-    ) async {
-      await pumpScreen(tester, TestEnv(), const VoiceScreen());
-      for (final t in [
-        'Parakeet TDT 0.6B v3“ von NVIDIA, CC BY 4.0',
-        'Canary 180M Flash“ von NVIDIA, CC BY 4.0',
-        'Kokoro-82M (hexgrad, Apache-2.0)',
-      ]) {
-        await tester.scrollUntilVisible(find.textContaining(t), 200);
-        expect(find.textContaining(t), findsOneWidget);
-      }
     });
 
     testWidgets('Messwerte: leer, dann Einträge mit Latenz, RTF und RAM', (
