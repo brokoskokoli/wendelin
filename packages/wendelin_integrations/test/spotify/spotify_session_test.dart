@@ -647,15 +647,42 @@ void main() {
         expect(count('playback'), 0);
       });
 
-      test('Handy mit Sitzungszugriff: Web-API spielt, aber keine '
-          'Spotify-Sitzung läuft: nicht bestätigt', () async {
+      test('Fehler von hasSessionAccess: zurück auf die Web-API, kein '
+          'Abbruch', () async {
+        api.knownDevices.add(phone);
+        media
+          ..snapshot = snap(package: 'com.google.android.youtube')
+          ..failNext('hasSessionAccess');
+        withMedia();
+        final r = await start();
+        expect(r.confirmed, isTrue);
+        expect(diag.last.$2['via'], 'api');
+        expect(media.methodCalls, isNot(contains('nowPlaying')));
+      });
+
+      test('andere App spielt: Web-API entscheidet, kein Wecken', () async {
         api.knownDevices.add(phone);
         media.snapshot = snap(package: 'com.google.android.youtube');
         withMedia();
-        await expectLater(start(), throwsA(isA<PortException>()));
-        expect(diag.last.$2['via'], 'session');
-        expect(count('playback'), 0);
-        expect(launcher.wakes, 1);
+        final r = await start();
+        expect(r.confirmed, isTrue);
+        expect(diag.last.$2['via'], 'api');
+        expect(launcher.wakes, 0);
+        expect(count('play'), 1);
+      });
+
+      test('andere App spielt, Web-API bestätigt nicht: nicht geprüft, '
+          'kein Wecken, kein Neustart', () async {
+        api
+          ..knownDevices.add(phone)
+          ..stuckDeviceIds.add('dev1');
+        media.snapshot = snap(package: 'com.google.android.youtube');
+        withMedia();
+        final r = await start();
+        expect(r.confirmed, isFalse);
+        expect(launcher.wakes, 0);
+        expect(count('play'), 1);
+        expect(diag.last.$2['result'], isNot('playing'));
       });
 
       test('Spotify-Sitzung pausiert: nicht bestätigt', () async {
@@ -737,11 +764,47 @@ void main() {
         'bleibt es abgelehnt: genau ein Wecken, der Fehler geht hoch',
         () async {
           api.rejectingDeviceIds.add('dev1');
-          await expectLater(start(), _port(PortErrorKind.notFound));
+          await expectLater(
+            start(),
+            throwsA(
+              isA<PortException>()
+                  .having((e) => e.kind, 'kind', PortErrorKind.notFound)
+                  .having(
+                    (e) => e.message,
+                    'message',
+                    allOf(contains('reagiert nicht'), isNot(contains('404'))),
+                  ),
+            ),
+          );
           expect(launcher.wakes, 1);
           expect(count('play'), 2);
+          // No verification polling for a phone that rejects commands.
+          expect(count('playback'), 0);
         },
       );
+
+      test('offline beim ersten Befehl: genau einmal wecken, dann der '
+          'ehrliche Fehler', () async {
+        api
+          ..rejectingDeviceIds.add('dev1')
+          ..rejectStatus = const PortException(
+            PortErrorKind.unavailable,
+            'Keine Verbindung',
+          );
+        await expectLater(
+          start(),
+          throwsA(
+            isA<PortException>().having(
+              (e) => e.message,
+              'message',
+              'Keine Verbindung',
+            ),
+          ),
+        );
+        expect(launcher.wakes, 1);
+        expect(count('play'), 2);
+        expect(count('playback'), 0);
+      });
 
       test('ohne Launcher: der ursprüngliche Fehler', () async {
         api.rejectingDeviceIds.add('dev1');

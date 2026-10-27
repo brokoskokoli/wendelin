@@ -10,6 +10,10 @@ import 'package:wendelin/platform/platform_ports.dart';
 
 import '../test_env.dart';
 
+/// One shared function: a fresh closure per call would differ in the
+/// integration deps (record equality) and rebuild the registry.
+Future<void> _noDelay(Duration _) async {}
+
 /// Overrides of the integrations: device and demo ports (fakes), Bring!
 /// account and sharing.
 List<Override> withIntegrations(TestEnv env) => [
@@ -55,7 +59,7 @@ List<Override> withIntegrations(TestEnv env) => [
   spotifyLauncherProvider.overrideWithValue(env.spotifyLauncher),
   spotifyHostDeviceProvider.overrideWithValue(env.spotifyHostDevice),
   // Checks of „spotify__play“ do not wait in real time.
-  spotifyDelayProvider.overrideWithValue((_) async {}),
+  spotifyDelayProvider.overrideWithValue(_noDelay),
   appShareProvider.overrideWithValue(
     (package, text) async => env.shared.add((package, text)),
   ),
