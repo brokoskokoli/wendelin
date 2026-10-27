@@ -182,6 +182,7 @@ Future<ProviderContainer> pumpOverlay(
   FakeAssistantPlatform platform, {
   bool autoStart = true,
   VoiceComponents? voice,
+  bool Function()? voiceGone,
   List<Override> extra = const [],
 }) async {
   setView(tester, screenSize);
@@ -197,7 +198,8 @@ Future<ProviderContainer> pumpOverlay(
             assistantPlatformProvider.overrideWithValue(platform),
             voiceReadyProvider.overrideWithValue(true),
             activeVoiceProvider.overrideWith(
-              (ref) async => voice ?? fakeVoice(),
+              (ref) async =>
+                  voiceGone?.call() ?? false ? null : (voice ?? fakeVoice()),
             ),
           ],
           retry: (_, _) => null,

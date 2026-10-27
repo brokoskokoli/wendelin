@@ -9,10 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/di/preference_models.dart';
-import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/ui/overlay/unlock_window.dart';
-import 'package:wendelin/voice/locked_agent_run.dart';
+import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -213,6 +212,45 @@ void main() {
       reason: 'Taschenlampe nur gesperrt, nicht nach dem Entsperren',
     );
     expect(env.mapsLauncher.launched, hasLength(1));
-    expect(llm.requests, hasLength(1), reason: 'kein Modelllauf nach dem Entsperren');
+    expect(
+      llm.requests,
+      hasLength(1),
+      reason: 'kein Modelllauf nach dem Entsperren',
+    );
+  });
+
+  testWidgets('Sprache nach dem Entsperren nicht verfügbar: der gemerkte '
+      'Aufruf läuft nicht, Arming leer, Anfrage geht als Text', (tester) async {
+    llm = FakeLlmProvider([
+      ScriptedTurn.toolCalls([_navigate]),
+      ScriptedTurn.text('Per Text.'),
+    ]);
+    final env = _env(llm);
+    final voice = fakeVoice(
+      script: [Transcript(text: 'Navigiere zum Bahnhof', language: 'de')],
+      tts: tts,
+    );
+    var voiceGone = false;
+    platform = FakeAssistantPlatform()
+      ..locked = true
+      ..unlockGate = Completer<bool>();
+    final c = await pumpOverlay(
+      tester,
+      env,
+      platform,
+      voice: voice,
+      voiceGone: () => voiceGone,
+    );
+    c.read(agentControllerProvider.notifier).seed(overlaySample());
+    await _settle(tester, c);
+    expect(c.read(lockedPendingProvider)?.call?.name, 'maps__navigate');
+    voiceGone = true;
+    c.invalidate(activeVoiceProvider);
+    platform.unlockGate!.complete(true);
+    await _settle(tester, c);
+    expect(env.mapsLauncher.launched, isEmpty, reason: 'Aufruf nicht gelaufen');
+    expect(c.read(lockedArmedCallProvider), isNull);
+    expect(c.read(lockedPendingProvider), isNull);
+    expect(llm.requests, hasLength(2), reason: 'Rückfall: Modelllauf als Text');
   });
 }

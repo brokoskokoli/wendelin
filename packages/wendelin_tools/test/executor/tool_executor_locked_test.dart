@@ -47,12 +47,12 @@ ToolOutcome _outcome(List<ToolInvocationEvent> events) =>
 
 /// A tool marked [WorksOnlyUnlocked]; counts its executions.
 final class _UnlockedOnly implements Tool, WorksOnlyUnlocked {
-  _UnlockedOnly({required this.name, this.risk = RiskLevel.write});
+  _UnlockedOnly({required this.name});
 
   @override
   final String name;
   @override
-  final RiskLevel risk;
+  RiskLevel get risk => RiskLevel.write;
   @override
   String get description => 'x';
   @override

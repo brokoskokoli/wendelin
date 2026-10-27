@@ -57,7 +57,11 @@ final class StationIntegration implements Integration {
 
 /// `station__start` (write): opens the station mode on an unlocked device.
 final class StationStartTool extends IntegrationTool
-    implements TrustedContentSource, FixedConfirmationTool, NoNetworkTarget {
+    implements
+        TrustedContentSource,
+        FixedConfirmationTool,
+        NoNetworkTarget,
+        WorksOnlyUnlocked {
   /// Creates the tool.
   const StationStartTool(this.port);
 

@@ -10,12 +10,18 @@ import '../support/test_env.dart';
 
 void main() {
   test('genau die markierten Werkzeuge tragen WorksOnlyUnlocked', () {
-    final env = TestEnv(demo: true, realDemoPorts: true);
-    final c = env.container();
-    addTearDown(c.dispose);
-    final tools = <Tool>[
-      for (final i in c.read(integrationsProvider).values) ...i.tools,
-    ];
+    // The station port exists only with the fake ports of the environment.
+    final tools = <Tool>[];
+    for (final env in [
+      TestEnv(demo: true, realDemoPorts: true),
+      TestEnv(demo: true),
+    ]) {
+      final c = env.container();
+      addTearDown(c.dispose);
+      tools.addAll([
+        for (final i in c.read(integrationsProvider).values) ...i.tools,
+      ]);
+    }
     final names = {for (final t in tools) t.name};
     // Not vacuous: the integrations that hold the marked tools are built.
     expect(
@@ -27,6 +33,7 @@ void main() {
         'media__open_audible',
         'obsidian__open_note',
         'phone__call',
+        'station__start',
         'flashlight__on',
       ]),
     );
@@ -42,6 +49,7 @@ void main() {
         'media__open_audible',
         'obsidian__open_note',
         'phone__call',
+        'station__start',
       },
     );
   });

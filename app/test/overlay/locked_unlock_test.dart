@@ -92,7 +92,7 @@ void main() {
     expect(c.read(lockedExchangeProvider), isNull, reason: 'WP163: Entsperren');
   });
 
-  testWidgets('Vor dem Entsperren: kein Modellaufruf, nichts sichtbar', (
+  testWidgets('Vor dem Entsperren: kein Modellaufruf, keine Antwort sichtbar', (
     tester,
   ) async {
     platform.unlockGate = Completer<bool>();
@@ -100,7 +100,8 @@ void main() {
     expect(platform.unlockRequests, 1);
     expect(llm.requests, isEmpty);
     expect(find.textContaining('Uhr'), findsNothing);
-    expect(find.textContaining('spät'), findsNothing);
+    // WP163: die Anfrage ist gesperrt sichtbar, der Antwortinhalt nicht.
+    expect(find.textContaining('spät'), findsOneWidget);
     expect(c.read(lockedPendingProvider)?.text, 'Wie spät ist es');
     // WP163: gesperrt halten Anfrage und gesprochener Satz im Speicher.
     final ex = c.read(lockedExchangeProvider);
