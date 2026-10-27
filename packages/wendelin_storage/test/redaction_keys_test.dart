@@ -42,6 +42,17 @@ void main() {
       expect(redactSecrets({'code': true}), {'code': true});
     });
 
+    test('Schlüssel mit Query-Geheimnis im JSON-String bleibt geschwärzt', () {
+      final out = redactSecrets({'a': '{"x":"y","u?token=SECRET":1}'});
+      expect('$out', isNot(contains('SECRET')));
+    });
+
+    test('10 000 verschachtelte [ im String: Rückfall auf die Regex', () {
+      final deep = '${'[' * 10000}"u?token=SECRET"${']' * 10000}';
+      final out = redactSecrets({'a': deep}) as Map;
+      expect(out['a'], isNot(contains('SECRET')));
+    });
+
     test('JSON als String in einem Feld wird geschwärzt', () {
       final out =
           redactSecrets({

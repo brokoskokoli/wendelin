@@ -58,9 +58,11 @@ String _redactString(String value) {
     try {
       final decoded = jsonDecode(value);
       final encoded = jsonEncode(redactSecrets(decoded));
-      if (encoded != jsonEncode(decoded)) return encoded;
-    } on FormatException {
-      // No JSON after all: plain text below.
+      // Keys of the decoded JSON are not checked by key; the text pass
+      // catches e.g. `u?token=SECRET` used as a key.
+      if (encoded != jsonEncode(decoded)) return redactSecretValues(encoded);
+    } on Object {
+      // No JSON after all, or too deep (StackOverflowError): plain text below.
     }
   }
   return redactSecretValues(value);
