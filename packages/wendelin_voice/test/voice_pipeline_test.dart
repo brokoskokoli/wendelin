@@ -112,7 +112,6 @@ final class Harness {
        ),
        stt = FakeSpeechToText(transcripts),
        fakeAudio = FakeAudioInput(frames: utterance(), frameInterval: frame) {
-    clock = FixedClock(DateTime.utc(2026, 10, 13, 9));
     final catalog = FakeToolCatalog(tools);
     final runner = AgentRunner(
       resolver: DefaultProviderResolver(
@@ -160,9 +159,7 @@ final class Harness {
   final vad = FakeVoiceActivityDetector();
   late final RecordingAgent recording;
   late final FakeTriggerSource triggers;
-
-  /// The pipeline's clock (frozen; tests move it).
-  late final FixedClock clock;
+  final clock = FixedClock(DateTime.utc(2026, 10, 13, 9));
   late final VoicePipeline pipeline;
   final states = <VoiceState>[];
   final events = <VoiceEvent>[];

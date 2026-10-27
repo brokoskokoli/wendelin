@@ -205,7 +205,7 @@ void main() {
           late final Harness h;
           final rec = _Slow(
             anna,
-            () => h.clock.advance(Duration(milliseconds: 250)),
+            () => h.clock.advance(const Duration(milliseconds: 250)),
           );
           h = Harness(turns: [ScriptedTurn.text('Ok.')], speaker: rec);
           h.pipeline.start();

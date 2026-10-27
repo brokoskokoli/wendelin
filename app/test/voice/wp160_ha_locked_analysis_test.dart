@@ -5,8 +5,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
-import 'package:wendelin/di/agent_providers.dart';
-import 'package:wendelin/di/integration_providers.dart';
 import 'package:wendelin/di/locked_scope.dart';
 import 'package:wendelin/di/preference_models.dart';
 import 'package:wendelin/di/providers.dart';
@@ -23,7 +21,8 @@ import '../overlay/assistant_overlay_test.dart'
 import '../support/test_env.dart';
 import 'voice_controller_test.dart' show fakeVoice;
 
-const _lightDefault = '[{"id":"light.b","name":"Stehlampe"},{"id":"lock.d","name":"Haustür"}]';
+const _lightDefault =
+    '[{"id":"light.b","name":"Stehlampe"},{"id":"lock.d","name":"Haustür"}]';
 const _lightA = '[{"id":"light.a","name":"Flurlicht","level":"a"}]';
 const _lock = '[{"id":"lock.d","name":"Haustür"}]';
 

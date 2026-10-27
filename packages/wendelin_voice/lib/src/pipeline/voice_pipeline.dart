@@ -11,7 +11,6 @@ import '../io/speech_to_text.dart';
 import '../io/text_to_speech.dart';
 import '../io/trigger.dart';
 import '../io/voice_activity_detector.dart';
-import '../speaker/speaker_embedder.dart' show speakerSampleRate;
 import '../speaker/speaker_match.dart';
 import '../text/spoken_answer.dart';
 import '../text/voice_texts.dart';
@@ -21,6 +20,7 @@ import 'barge_detector_sync.dart';
 import 'conversation.dart';
 import 'endpointer.dart';
 import 'open_question.dart';
+import 'speaker_identification.dart';
 import 'speech_hold.dart';
 import 'stt_confidence_gate.dart';
 import 'voice_events.dart';
@@ -371,7 +371,11 @@ final class VoicePipeline with VoiceContentLog {
   Future<Transcript?> _transcribe(int gen, Int16List pcm) async {
     _setState(VoiceState.transcribing);
     try {
-      final who = _identify(pcm);
+      final who = SpeakerIdentification(
+        recognizer: speaker,
+        clock: clock,
+        diagnostics: diagnostics,
+      ).identify(pcm);
       final text = await stt.transcribe(pcm, language: config.language);
       final match = await who;
       if (gen != _gen) return null;
@@ -384,44 +388,8 @@ final class VoicePipeline with VoiceContentLog {
     }
   }
 
-  /// How long a request waits for the recognition at most; a hanging
-  /// recognizer must never hang the request („unbekannt“ instead).
-  static const speakerTimeout = Duration(seconds: 3);
-
-  /// Recognition of who spoke [pcm], started before the transcription so
-  /// both run in parallel. `null` = recognition off; never throws.
-  Future<SpeakerMatch?> _identify(Int16List pcm) async {
-    final recognizer = speaker;
-    final started = clock.now();
-    final audioMs = pcm.length * 1000 ~/ speakerSampleRate;
-    String line(String result, [String? reason, SpeakerMatch? m]) =>
-        speakerLogLine(
-          result: result,
-          reason: reason,
-          match: m,
-          audioMs: audioMs,
-          ms: clock.now().difference(started).inMilliseconds,
-        );
-    if (recognizer == null) {
-      diagnostics?.call(line('off'));
-      return null;
-    }
-    try {
-      final m = await recognizer.identify(pcm).timeout(speakerTimeout);
-      diagnostics?.call(
-        line(m.isKnown ? 'known' : 'unknown', m.reason?.name, m),
-      );
-      return m;
-    } on TimeoutException {
-      diagnostics?.call('speaker-timeout');
-      diagnostics?.call(line('unknown', 'timeout'));
-      return const SpeakerMatch.unknown(SpeakerUnknownReason.failed);
-    } on Object {
-      diagnostics?.call('speaker-failed');
-      diagnostics?.call(line('unknown', 'failed'));
-      return const SpeakerMatch.unknown(SpeakerUnknownReason.failed);
-    }
-  }
+  /// How long a request waits for the recognition at most.
+  static const speakerTimeout = SpeakerIdentification.timeout;
 
   Future<void> _nothingUnderstood(
     int gen,
