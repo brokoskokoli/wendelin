@@ -42,6 +42,7 @@ export 'src/speaker/speaker_match.dart';
 export 'src/speaker/speaker_profile.dart';
 export 'src/speaker/speaker_profile_store.dart';
 export 'src/text/locked_command.dart';
+export 'src/text/locked_texts.dart';
 export 'src/text/spoken_answer.dart';
 export 'src/text/vocabulary.dart';
 export 'src/text/voice_texts.dart';

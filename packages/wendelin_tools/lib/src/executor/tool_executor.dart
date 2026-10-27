@@ -222,23 +222,9 @@ final class ToolExecutor
     var decision = AuditDecision.allowed;
     switch (policyDecision.action) {
       case PolicyAction.deny:
-        return (
-          _deniedOutcome(policyDecision),
-          AuditStatus.denied,
-          AuditDecision.denied,
-        );
+        return _refused(_deniedOutcome(policyDecision));
       case PolicyAction.allow when access.locked && tool is WorksOnlyUnlocked:
-        // Allowed by the level, but the action needs the unlocked device
-        // (WP163 B): not run, the caller remembers the call for the unlock.
-        return (
-          ToolOutcome.error(
-            deferredText,
-            summary: deferredSummary,
-            endsRun: true,
-          ),
-          AuditStatus.denied,
-          AuditDecision.denied,
-        );
+        return _deferred();
       case PolicyAction.confirm:
         final risk = RiskPolicy.effectiveRisk(tool.risk, policyDecision.action);
         final approved = await turns.ask(
@@ -277,6 +263,15 @@ final class ToolExecutor
     final (outcome, status) = await _execute(tool, args, ctx);
     return (outcome, status, decision);
   }
+
+  static _Result _refused(ToolOutcome outcome) =>
+      (outcome, AuditStatus.denied, AuditDecision.denied);
+
+  /// Allowed by the level, but the action needs the unlocked device (WP163
+  /// B): not run, the caller remembers the call for the unlock.
+  static _Result _deferred() => _refused(
+    ToolOutcome.error(deferredText, summary: deferredSummary, endsRun: true),
+  );
 
   Future<(ToolOutcome, AuditStatus)> _execute(
     Tool tool,

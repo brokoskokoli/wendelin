@@ -76,7 +76,7 @@ packages/wendelin_providers/lib/src/tee/tinfoil/tinfoil_verifier.dart: 799
 packages/wendelin_providers/lib/src/tee/tinfoil/tinfoil_verifier.dart#TinfoilVerifier: 705
 packages/wendelin_providers/lib/src/tee/tinfoil/tinfoil_verifier.dart#TinfoilVerifier._release: 116
 packages/wendelin_providers/lib/src/tee/tinfoil/tinfoil_verifier.dart#TinfoilVerifier.attest: 143
-packages/wendelin_tools/lib/src/executor/tool_executor.dart#ToolExecutor._process: 83
+packages/wendelin_tools/lib/src/executor/tool_executor.dart#ToolExecutor._process: 81
 packages/wendelin_tools/test/executor/tool_executor_test.dart: 1154
 packages/wendelin_voice/lib/src/models/model_downloader.dart#ModelDownloader._downloadFile: 122
 packages/wendelin_voice/lib/src/models/speech_model_catalog.dart#SpeechModelCatalog: 482

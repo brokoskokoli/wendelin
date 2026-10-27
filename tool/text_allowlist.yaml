@@ -32,7 +32,6 @@ app/lib/di/voice_settings_providers.dart: 1  # debugPrint
 app/lib/di/wake_providers.dart: 1  # VoiceException-Rückfalltext
 app/lib/di/weather_config.dart: 1  # FormatException, Log
 app/lib/voice/confirm_prompts.dart: 6  # gesprochen
-app/lib/voice/locked_agent_run.dart: 2  # gesprochen (Sperrbildschirm)
 app/lib/voice/primed_audio_input.dart: 1  # VoiceException-Rückfalltext
 app/lib/voice/voice_components.dart: 1  # Beispielsatz für Vokabular/STT
 app/lib/voice/wake/wake_calibrator.dart: 1  # StateError, Log
