@@ -98,6 +98,9 @@ abstract final class AppRoutes {
   /// Voice → Messwerte: latency, RTF and memory per utterance (WP103).
   static const voiceMetrics = '/settings/voice/metrics';
 
+  /// Voice → Lizenzen der Sprachmodelle (WP162).
+  static const voiceLicenses = '/settings/voice/licenses';
+
   /// Wake word: learn the voice, calibrate, try (WP60).
   static const wakeWord = '/settings/voice/wake';
 
