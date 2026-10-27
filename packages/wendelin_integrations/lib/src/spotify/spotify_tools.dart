@@ -230,12 +230,11 @@ final class SpotifyPlayTool extends IntegrationTool
 
   @override
   String get description =>
-      'Play something on Spotify: a track, album, artist (top tracks) or '
-      'playlist, by query or by URI. Without query and uri, continues the '
-      'paused music. Plays on this phone (starts the Spotify app if needed); '
-      'set device only if the user names another device. Success is only '
-      'reported when playback was seen. If nothing is found, tell the user '
-      'and only offer an alternative; never play a different item silently.';
+      'Play on Spotify: track, album, artist (top tracks) or playlist, by '
+      'query or URI; with neither, resumes paused music. Plays on this phone '
+      '(starts Spotify if needed); set device only if the user names another. '
+      'If nothing is found, say so and only offer an alternative; never play '
+      'a different item silently.';
 
   @override
   Map<String, Object?> get inputSchema => const {

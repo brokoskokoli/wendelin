@@ -97,8 +97,8 @@ final class ChannelSpotifyHostDevice implements SpotifyHostDevice {
   @override
   Future<Set<String>> names() async {
     try {
-      final raw = await _channel.invokeListMethod<String>('deviceNames');
-      return {...?raw};
+      final raw = await _channel.invokeMethod<List<Object?>>('deviceNames');
+      return {...?raw?.whereType<String>()};
     } on PlatformException {
       return const {};
     } on MissingPluginException {

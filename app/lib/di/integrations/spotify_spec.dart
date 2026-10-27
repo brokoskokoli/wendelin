@@ -3,8 +3,8 @@ import 'package:wendelin_integrations/common.dart'
 import 'package:wendelin_integrations/spotify.dart';
 
 import '../app_requirements.dart';
-import '../core_providers.dart';
 import '../../voice/dev_log.dart';
+import '../core_providers.dart';
 import '../spotify.dart';
 import 'integration_spec.dart';
 
