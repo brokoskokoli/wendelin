@@ -36,7 +36,7 @@ packages/wendelin_integrations/lib/src/google_tasks/http_google_tasks_api.dart#H
 packages/wendelin_integrations/lib/src/http_tools/http_target.dart#checkHttpTarget: 92
 packages/wendelin_integrations/lib/src/http_tools/http_tool_definition.dart#HttpToolDefinition.validate: 94
 packages/wendelin_integrations/lib/src/http_tools/http_tool_runner.dart: 634
-packages/wendelin_integrations/lib/src/spotify/http_spotify_api.dart#HttpSpotifyApi: 422
+packages/wendelin_integrations/lib/src/spotify/http_spotify_api.dart#HttpSpotifyApi: 418
 packages/wendelin_integrations/lib/src/todoist/http_todoist_api.dart#HttpTodoistApi._send: 85
 packages/wendelin_integrations/lib/testing/alarm_port_contract.dart#alarmPortContractChecks: 104
 packages/wendelin_integrations/lib/testing/bring_api_contract.dart#bringApiContract: 141

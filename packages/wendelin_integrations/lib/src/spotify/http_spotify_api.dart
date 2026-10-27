@@ -216,13 +216,7 @@ final class HttpSpotifyApi implements SpotifyApi {
       for (final e in raw)
         if (_obj(e)
             case {'id': final String id, 'name': final String name} && final d)
-          SpotifyDevice(
-            id: id,
-            name: name,
-            isActive: d['is_active'] == true,
-            isRestricted: d['is_restricted'] == true,
-            type: _optString(d, 'type'),
-          ),
+          _device(id, name, d),
     ];
   }
 
@@ -442,4 +436,15 @@ final class HttpSpotifyApi implements SpotifyApi {
     final names = [for (final a in artists) ?_optString(_obj(a), 'name')];
     return names.isEmpty ? null : names.join(', ');
   }
+}
+
+SpotifyDevice _device(String id, String name, Map<String, Object?> d) {
+  final type = d['type'];
+  return SpotifyDevice(
+    id: id,
+    name: name,
+    isActive: d['is_active'] == true,
+    isRestricted: d['is_restricted'] == true,
+    type: type is String ? type : null,
+  );
 }

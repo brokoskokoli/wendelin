@@ -162,50 +162,25 @@ final class SpotifySession {
     Future<void> Function(SpotifyAuth auth, String deviceId) op, {
     String? deviceName,
   }) async {
-    var usable = await _usable();
-    var woke = false;
-    SpotifyDevice target;
-    var phone = await _phone(usable);
-    if (deviceName != null) {
-      final found = _byName(usable, deviceName);
-      if (found == null) {
-        final names = usable.map((d) => d.name).join(', ');
-        throw PortException(
-          PortErrorKind.notFound,
-          'Spotify kennt kein Gerät „$deviceName“. '
-          'Verfügbar: ${names.isEmpty ? 'keins' : names}.',
-        );
-      }
-      target = found;
-      _diagnose('spotify-device', 'named', 'name', woke, usable.length);
-    } else {
-      if (phone == null) {
-        if (!await _wake()) throw spotifyNoDevice;
-        woke = true;
-        phone = await _waitForPhone();
-        if (phone == null) throw spotifyNoDevice;
-        usable = await _usable();
-      }
-      target = phone.device;
-      _diagnose('spotify-device', 'phone', phone.via, woke, usable.length);
-    }
-    final isPhone = deviceName == null || target.id == phone?.device.id;
+    final chosen = await _choose(deviceName);
+    var target = chosen.target;
+    var woke = chosen.woke;
+    final isPhone = chosen.isPhone;
+    SpotifyStart done(bool confirmed) => (
+      deviceId: target.id,
+      deviceName: target.name,
+      isPhone: isPhone,
+      confirmed: confirmed,
+    );
 
     await run((a) => op(a, target.id));
     var result = await _verify(target.id);
-    if (result == _Verify.unchecked) {
-      return (
-        deviceId: target.id,
-        deviceName: target.name,
-        isPhone: isPhone,
-        confirmed: false,
-      );
-    }
+    if (result == _Verify.unchecked) return done(false);
     if (result != _Verify.playing && isPhone && !woke && await _wake()) {
       woke = true;
       final again = await _waitForPhone();
       if (again != null) {
-        _diagnose('spotify-device', 'phone', again.via, woke, usable.length);
+        _diagnose('spotify-device', 'phone', again.via, woke, chosen.count);
         target = again.device;
         try {
           await run((a) => op(a, target.id));
@@ -213,14 +188,7 @@ final class SpotifySession {
           if (e.kind != PortErrorKind.notFound) rethrow;
         }
         result = await _verify(target.id);
-        if (result == _Verify.unchecked) {
-          return (
-            deviceId: target.id,
-            deviceName: target.name,
-            isPhone: true,
-            confirmed: false,
-          );
-        }
+        if (result == _Verify.unchecked) return done(false);
       }
     }
     if (result != _Verify.playing) {
@@ -234,11 +202,48 @@ final class SpotifySession {
                   '„${target.name}“ läuft nichts.',
       );
     }
+    return done(true);
+  }
+
+  /// The target of [startPlayback]: the named device, else the phone (the
+  /// app is woken once if the phone is not listed).
+  Future<({SpotifyDevice target, bool isPhone, bool woke, int count})> _choose(
+    String? deviceName,
+  ) async {
+    var usable = await _usable();
+    var phone = await _phone(usable);
+    if (deviceName != null) {
+      final found = _byName(usable, deviceName);
+      if (found == null) {
+        final names = usable.map((d) => d.name).join(', ');
+        throw PortException(
+          PortErrorKind.notFound,
+          'Spotify kennt kein Gerät „$deviceName“. '
+          'Verfügbar: ${names.isEmpty ? 'keins' : names}.',
+        );
+      }
+      _diagnose('spotify-device', 'named', 'name', false, usable.length);
+      return (
+        target: found,
+        isPhone: found.id == phone?.device.id,
+        woke: false,
+        count: usable.length,
+      );
+    }
+    var woke = false;
+    if (phone == null) {
+      if (!await _wake()) throw spotifyNoDevice;
+      woke = true;
+      phone = await _waitForPhone();
+      if (phone == null) throw spotifyNoDevice;
+      usable = await _usable();
+    }
+    _diagnose('spotify-device', 'phone', phone.via, woke, usable.length);
     return (
-      deviceId: target.id,
-      deviceName: target.name,
-      isPhone: isPhone,
-      confirmed: true,
+      target: phone.device,
+      isPhone: true,
+      woke: woke,
+      count: usable.length,
     );
   }
 
