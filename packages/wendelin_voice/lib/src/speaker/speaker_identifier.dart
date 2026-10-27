@@ -95,8 +95,10 @@ final class SpeakerIdentifier implements SpeakerRecognizer {
   /// equal-error point; stricter, so a stranger's voice stays „unknown“.
   static const thresholdFloor = 0.45;
 
-  /// Highest threshold (natural speech varies more than the enrollment).
-  static const thresholdCeiling = 0.60;
+  /// Highest threshold, also applied to profiles stored with a higher one
+  /// (natural speech varies more than the enrollment). Lowered from 0.60
+  /// after device scores of 0.42 to 0.69 for the owner (WP160).
+  static const thresholdCeiling = 0.50;
 
   /// How far the best person must lead the second one.
   static const ambiguityMargin = 0.06;
@@ -120,10 +122,10 @@ final class SpeakerIdentifier implements SpeakerRecognizer {
     DateTime? now,
   }) async {
     if (samples.length < minEnrollSamples) {
-      throw const SpeakerEnrollException(SpeakerEnrollProblem.tooFewSamples);
+      throw _enrollFailed(SpeakerEnrollProblem.tooFewSamples);
     }
     if (samples.any((s) => s.length < minEnrollAudioSamples)) {
-      throw const SpeakerEnrollException(SpeakerEnrollProblem.tooShort);
+      throw _enrollFailed(SpeakerEnrollProblem.tooShort);
     }
     final embeddings = <Float32List>[];
     try {
@@ -131,17 +133,17 @@ final class SpeakerIdentifier implements SpeakerRecognizer {
         embeddings.add(normalized(await embedder.embed(s)));
       }
     } on Object {
-      throw const SpeakerEnrollException(SpeakerEnrollProblem.failed);
+      throw _enrollFailed(SpeakerEnrollProblem.failed);
     }
     final dim = embeddings.first.length;
     if (dim == 0 || embeddings.any((e) => e.length != dim)) {
-      throw const SpeakerEnrollException(SpeakerEnrollProblem.failed);
+      throw _enrollFailed(SpeakerEnrollProblem.failed);
     }
     final scores = looScores(embeddings);
     final mean = scores.reduce((a, b) => a + b) / scores.length;
     final low = scores.reduce(math.min);
     if (low < thresholdFloor) {
-      throw const SpeakerEnrollException(SpeakerEnrollProblem.inconsistent);
+      throw _enrollFailed(SpeakerEnrollProblem.inconsistent);
     }
     final raw = calibrateThreshold(scores);
     final threshold = raw.clamp(thresholdFloor, thresholdCeiling);
@@ -167,6 +169,20 @@ final class SpeakerIdentifier implements SpeakerRecognizer {
       thresholdClamped: raw != threshold,
     );
   }
+
+  /// Logs `speaker-enroll-failed reason=…` (never a name) and returns the
+  /// exception to throw.
+  SpeakerEnrollException _enrollFailed(SpeakerEnrollProblem problem) {
+    diagnostics?.call('speaker-enroll-failed reason=${problem.name}');
+    return SpeakerEnrollException(problem);
+  }
+
+  /// The threshold that counts for a stored [threshold]: within
+  /// [thresholdFloor] and [thresholdCeiling]; a non-finite value is
+  /// fail-closed (the ceiling, never looser).
+  static double effectiveThreshold(double threshold) => threshold.isFinite
+      ? threshold.clamp(thresholdFloor, thresholdCeiling)
+      : thresholdCeiling;
 
   /// Mean minus [spreadFactor] standard deviations of the enrollment
   /// [scores]; the caller clamps it.
@@ -244,7 +260,7 @@ final class SpeakerIdentifier implements SpeakerRecognizer {
         failure: 'dimension',
       );
     }
-    final threshold = math.max(best.threshold, thresholdFloor);
+    final threshold = effectiveThreshold(best.threshold);
     final secondScore = second > -2.0 ? second : null;
     if (bestScore < threshold) {
       return SpeakerMatch.unknown(
