@@ -92,6 +92,14 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
   /// no way back to the model step.
   GpuCheckMode _savedGpuMode = GpuCheckMode.off;
 
+  /// Mode to save (hidden choice: „off“, see [gpuModeToSave]).
+  GpuCheckMode get _savedMode => gpuModeToSave(
+    attested: _attested,
+    gpuEvidence: _result?.gpuEvidence,
+    savedMode: _savedGpuMode,
+    chosen: _gpuMode,
+  );
+
   /// Models the probe found without GPU evidence.
   final Set<String> _noGpu = {};
 
@@ -232,14 +240,14 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
       setState(() => _budgetError = e.message);
       return;
     }
-    if (_attested && _gpuMode == GpuCheckMode.after) {
+    if (_attested && _savedMode == GpuCheckMode.after) {
       // The warning of „Nachher“ is a system notification.
       final notifier = ref.read(attestationNotifierProvider);
       if (!await notifier.hasPermission()) await notifier.requestPermission();
       if (!mounted) return;
     }
     final profile = session.draft(
-      gpuMode: _attested ? _gpuMode : null,
+      gpuMode: _attested ? _savedMode : null,
       name: _name.text,
       baseUrl: _baseUrl.text,
       model: _model.text,
@@ -345,6 +353,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     gpuMode: _gpuMode,
     onGpuMode: (m) => setState(() => _gpuMode = m),
     gpuEvidence: _result?.gpuEvidence,
+    gpuCheckFailed: _result?.gpuCheckFailed ?? false,
     savedGpuMode: _savedGpuMode,
     onSave: () => unawaited(_save()),
   );

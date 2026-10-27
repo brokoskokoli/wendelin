@@ -1545,6 +1545,10 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get gpuEvidenceUnverified =>
+      'La preuve GPU n’a pas pu être vérifiée. La vérification du GPU n’est pas sélectionnable ici et reste « Désactivée » ; les autres vérifications restent actives. Le choix apparaît si la vérification réussit lors de la modification du profil.';
+
+  @override
   String gpuNoEvidenceFinishHidden(String hint) {
     return '$hint. Le modèle reste utilisable. La vérification du GPU n’est pas sélectionnable ici et reste « Désactivée » ; les autres vérifications restent actives.';
   }

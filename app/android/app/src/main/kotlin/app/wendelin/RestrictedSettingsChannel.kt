@@ -95,7 +95,12 @@ class RestrictedSettingsChannel(private val context: Context, messenger: BinaryM
 
 /** Pure mapping of the raw Android values (unit-tested). */
 object RestrictedSettingsMapping {
-    /** `allowed`, `ignored`, `default` or `unknown` (also for `errored` and unreadable). */
+    /**
+     * `allowed`, `ignored`, `default` or `unknown` (also for `errored` and unreadable).
+     *
+     * Unmeasured assumption (Android 13/14): if a file install reports the op as `MODE_ERRORED`,
+     * it reads as `unknown` and only the install-source fallback (`file`) triggers the hint.
+     */
     fun opMode(mode: Int?): String = when (mode) {
         AppOpsManager.MODE_ALLOWED -> "allowed"
         AppOpsManager.MODE_IGNORED -> "ignored"

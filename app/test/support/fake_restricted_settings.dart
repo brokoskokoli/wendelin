@@ -8,8 +8,14 @@ class FakeRestrictedSettingsPlatform extends RestrictedSettingsPlatform {
   /// Number of [openAppInfo] calls.
   int appInfoOpened = 0;
 
+  /// Number of [state] calls.
+  int stateCalls = 0;
+
   @override
-  Future<RestrictedSettings> state() async => current;
+  Future<RestrictedSettings> state() async {
+    stateCalls++;
+    return current;
+  }
 
   @override
   Future<bool> openAppInfo() async {

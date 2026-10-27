@@ -1537,6 +1537,10 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get gpuEvidenceUnverified =>
+      'GPU-Nachweis konnte nicht geprüft werden. Die GPU-Prüfung ist hier nicht wählbar und bleibt „Aus“; die übrigen Prüfungen bleiben aktiv. Die Auswahl erscheint, wenn die Prüfung beim Bearbeiten des Profils gelingt.';
+
+  @override
   String gpuNoEvidenceFinishHidden(String hint) {
     return '$hint. Das Modell bleibt nutzbar. Die GPU-Prüfung ist hier nicht wählbar und bleibt „Aus“; die übrigen Prüfungen bleiben aktiv.';
   }

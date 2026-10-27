@@ -13,16 +13,34 @@ import 'attestation_stages_card.dart';
 
 /// Whether the GPU choice is offered (WP159).
 ///
-/// Only with GPU evidence (`true`). Without it (`false`) and while it is
-/// unknown (`null`) the choice is hidden and „off“ is saved: „Before“ would
-/// block every request for lack of evidence, „After“ would only raise false
-/// warnings. A profile that already stores a mode other than „off“ keeps the
+/// Only with GPU evidence (`true`). Without it (`false`) the choice is hidden
+/// and „off“ is saved: „Before“ would block every request for lack of
+/// evidence, „After“ would only raise false warnings. `null` means not
+/// judgeable: the provider has no verifier (nothing to offer) or the check
+/// failed (network, unreadable evidence); the choice is hidden as well, and
+/// for the failed check [finishStep] says so. A profile that already stores a mode other than „off“ keeps the
 /// choice visible, so nothing is loosened silently.
 bool gpuChoiceVisible({
   required bool attested,
   required bool? gpuEvidence,
   required GpuCheckMode savedMode,
 }) => attested && (gpuEvidence == true || savedMode != GpuCheckMode.off);
+
+/// Mode to save: a hidden choice always saves „off“ (WP159), whatever the
+/// state of the choice says (robust against a later way back in the setup).
+GpuCheckMode gpuModeToSave({
+  required bool attested,
+  required bool? gpuEvidence,
+  required GpuCheckMode savedMode,
+  required GpuCheckMode chosen,
+}) =>
+    gpuChoiceVisible(
+      attested: attested,
+      gpuEvidence: gpuEvidence,
+      savedMode: savedMode,
+    )
+    ? chosen
+    : GpuCheckMode.off;
 
 StatusCard _noEvidenceCard(AppLocalizations l, bool choiceVisible) =>
     StatusCard(
@@ -50,6 +68,7 @@ List<Widget> finishStep({
   required GpuCheckMode gpuMode,
   required void Function(GpuCheckMode mode) onGpuMode,
   required bool? gpuEvidence,
+  required bool gpuCheckFailed,
   required GpuCheckMode savedGpuMode,
   required VoidCallback onSave,
 }) {
@@ -69,6 +88,13 @@ List<Widget> finishStep({
     if (result != null && attested)
       ..._restrictionNote(l, stageViews(result.stages)),
     if (attested && gpuEvidence == false) _noEvidenceCard(l, showGpu),
+    if (attested && gpuEvidence == null && gpuCheckFailed && !showGpu)
+      StatusCard(
+        key: const ValueKey('gpuEvidenceUnverified'),
+        status: CheckStatus.info,
+        title: l.gpuNoEvidenceFinishTitle,
+        detail: l.gpuEvidenceUnverified,
+      ),
     if (showGpu) GpuCheckSection(mode: gpuMode, onChanged: onGpuMode),
     if (detected != null)
       Text(

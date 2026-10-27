@@ -17,6 +17,7 @@ final class SetupTestResult {
     bool? verified,
     List<StageResult> stages = const [],
     this.gpuEvidence,
+    this.gpuCheckFailed = false,
   }) : models = List.unmodifiable(models),
        stages = List.unmodifiable(stages),
        verified = verified ?? ok;
@@ -44,6 +45,11 @@ final class SetupTestResult {
   /// (`false`: no GPU check possible, WP82); `null` = not a TEE profile or
   /// unknown.
   final bool? gpuEvidence;
+
+  /// The local GPU check ran but failed without a verdict on the evidence
+  /// (network, unreadable); then [gpuEvidence] is `null` although the
+  /// provider has a verifier. `false` without verifier.
+  final bool gpuCheckFailed;
 }
 
 /// One run of the provider setup dialog (concept: „Einrichtung (Dialog pro
@@ -279,6 +285,7 @@ final class ProviderSetupSession {
           ),
       ],
       gpuEvidence: evidence,
+      gpuCheckFailed: gpu != null && evidence == null && !gpu.ok,
     );
   }
 

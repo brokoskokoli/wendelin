@@ -506,6 +506,7 @@
       }
     }
   },
+  "gpuEvidenceUnverified": "The GPU evidence could not be checked. The GPU check cannot be chosen here and stays “Off”; the other checks stay active. The choice appears if the check works when you edit the profile.",
   "gpuNoEvidenceFinishHidden": "{hint}. The model stays usable. The GPU check cannot be chosen here and stays “Off”; the other checks stay active.",
   "haAddressLabel": "Address",
   "haApproved": "{n, plural, one{1 device approved} other{{n} devices approved}}",

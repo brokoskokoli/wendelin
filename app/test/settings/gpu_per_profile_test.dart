@@ -5,7 +5,7 @@ import 'package:wendelin/di/gpu_check_migration.dart';
 import 'package:wendelin/di/provider_setup.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/settings/provider_setup/finish_step.dart'
-    show gpuChoiceVisible;
+    show gpuChoiceVisible, gpuModeToSave;
 import 'package:wendelin/ui/settings/provider_setup/model_step.dart';
 import 'package:wendelin/ui/settings/provider_setup_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -277,6 +277,31 @@ void main() {
       );
     });
 
+    testWidgets('Nachweis nicht prüfbar (Prüffehler/Netz): Auswahl versteckt, '
+        'Info-Hinweis, „aus“ gespeichert', (tester) async {
+      final gpu = FakeGpuAttestationVerifier()..localResult = unknown;
+      final env = await _openPhala(tester, gpu: gpu);
+      expect(find.text(choice), findsNothing);
+      expect(
+        find.byKey(const ValueKey('gpuEvidenceUnverified')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('nicht geprüft werden'), findsOneWidget);
+      await _save(tester);
+      expect(
+        gpuModeOf((await env.storage.providerProfiles.list()).single),
+        GpuCheckMode.off,
+      );
+    });
+
+    testWidgets('Nachweis nicht prüfbar, Profil mit „Vorher“: Auswahl '
+        'sichtbar, kein Info-Hinweis', (tester) async {
+      final gpu = FakeGpuAttestationVerifier()..localResult = unknown;
+      await openEditing(tester, saved: GpuCheckMode.before, gpu: gpu);
+      expect(find.text(choice), findsOneWidget);
+      expect(find.byKey(const ValueKey('gpuEvidenceUnverified')), findsNothing);
+    });
+
     testWidgets('bestehendes Profil mit „Vorher“ und Nachweis false: Auswahl '
         'bleibt, Modus bleibt gespeichert', (tester) async {
       final gpu = FakeGpuAttestationVerifier(_none)..localResult = _none;
@@ -316,6 +341,26 @@ void main() {
       final gpu = FakeGpuAttestationVerifier(_none)..localResult = _none;
       await openEditing(tester, saved: GpuCheckMode.off, gpu: gpu);
       expect(find.text(choice), findsNothing);
+    });
+
+    test('versteckte Auswahl speichert „aus“', () {
+      GpuCheckMode m(bool? e, GpuCheckMode saved, GpuCheckMode chosen) =>
+          gpuModeToSave(
+            attested: true,
+            gpuEvidence: e,
+            savedMode: saved,
+            chosen: chosen,
+          );
+      expect(m(false, GpuCheckMode.off, GpuCheckMode.before), GpuCheckMode.off);
+      expect(m(null, GpuCheckMode.off, GpuCheckMode.after), GpuCheckMode.off);
+      expect(
+        m(true, GpuCheckMode.off, GpuCheckMode.before),
+        GpuCheckMode.before,
+      );
+      expect(
+        m(false, GpuCheckMode.after, GpuCheckMode.before),
+        GpuCheckMode.before,
+      );
     });
 
     test('Sichtbarkeitsregel', () {

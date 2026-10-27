@@ -2704,6 +2704,12 @@ abstract class AppLocalizations {
   /// **'{service} ist nicht erreichbar · pausiert'**
   String integrationsErrUnavailable(String service);
 
+  /// No description provided for @gpuEvidenceUnverified.
+  ///
+  /// In de, this message translates to:
+  /// **'GPU-Nachweis konnte nicht geprüft werden. Die GPU-Prüfung ist hier nicht wählbar und bleibt „Aus“; die übrigen Prüfungen bleiben aktiv. Die Auswahl erscheint, wenn die Prüfung beim Bearbeiten des Profils gelingt.'**
+  String get gpuEvidenceUnverified;
+
   /// No description provided for @gpuNoEvidenceFinishHidden.
   ///
   /// In de, this message translates to:

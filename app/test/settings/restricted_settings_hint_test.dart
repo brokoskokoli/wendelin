@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/l10n/l10n.dart';
 import 'package:wendelin/platform/restricted_settings_platform.dart';
 import 'package:wendelin/ui/settings/restricted_settings_hint.dart';
+
+import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../support/fake_restricted_settings.dart';
 import '../support/test_env.dart';
@@ -41,6 +45,46 @@ Future<FakeRestrictedSettingsPlatform> _pump(
   return fake;
 }
 
+Future<FakeRestrictedSettingsPlatform> _pumpAlone(
+  WidgetTester tester,
+  RestrictedFeature feature,
+) async {
+  final fake = FakeRestrictedSettingsPlatform()..current = _refused;
+  final env = TestEnv(
+    enabled: const {},
+    extraOverrides: [
+      restrictedSettingsPlatformProvider.overrideWithValue(fake),
+    ],
+  )..phone.smsAllowed = false;
+  env.media.access = false;
+  // Not WendelinApp: its start gate adds its own resume refresh of the
+  // registry, which would hide the hint's own resume handler.
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: env.overrides,
+      child: MaterialApp(
+        locale: const Locale('de'),
+        localizationsDelegates: wendelinLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(body: RestrictedSettingsHint(feature)),
+      ),
+    ),
+  );
+  await settle(tester);
+  // Wait until the start-up events of the app are through: afterwards only
+  // the test triggers a new query.
+  var seen = -1;
+  while (fake.stateCalls != seen) {
+    seen = fake.stateCalls;
+    await settle(tester);
+  }
+  return fake;
+}
+
+ToolRegistry _registry(WidgetTester tester) => ProviderScope.containerOf(
+  tester.element(find.byType(RestrictedSettingsHint)),
+).read(toolRegistryProvider);
+
 void main() {
   group('WP159: SMS (Kontakte)', () {
     void noSms(TestEnv e) => e.phone.smsAllowed = false;
@@ -65,28 +109,23 @@ void main() {
       expect(_title, findsNothing);
     });
 
-    testWidgets('Op wird erst nach dem ersten Versuch gesetzt: Hinweis beim '
-        'Zurückkehren in die App', (tester) async {
-      final fake = FakeRestrictedSettingsPlatform()..current = _refused;
-      final env = TestEnv(
-        enabled: const {},
-        extraOverrides: [
-          restrictedSettingsPlatformProvider.overrideWithValue(fake),
-        ],
-      )..phone.smsAllowed = false;
-      // Allein, ohne Registry-Änderungen: nur der Wechsel in den Vordergrund
-      // löst die neue Abfrage aus.
-      await tester.pumpWidget(
-        env.app(
-          home: const Scaffold(
-            body: RestrictedSettingsHint(RestrictedFeature.sms),
-          ),
-        ),
-      );
-      await settle(tester);
+    testWidgets('Op ändert sich ohne Registry-Ereignis: Hinweis erst beim '
+        'Zurückkehren in die App (nur Resume löst aus)', (tester) async {
+      final fake = await _pumpAlone(tester, RestrictedFeature.sms);
       expect(_title, findsNothing);
       fake.current = _blocked;
+      await settle(tester);
+      expect(_title, findsNothing, reason: 'ohne Ereignis keine Abfrage');
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await settle(tester);
+      expect(_title, findsOneWidget);
+    });
+
+    testWidgets('Registry-Ereignis nach der Anfrage: Hinweis ohne Resume '
+        '(Android setzt den Op schon beim gesperrten Versuch)', (tester) async {
+      final fake = await _pumpAlone(tester, RestrictedFeature.sms);
+      fake.current = _blocked;
+      _registry(tester).sensitiveMinimum = PrivacyLevel.tee;
       await settle(tester);
       expect(_title, findsOneWidget);
     });
@@ -116,6 +155,23 @@ void main() {
     testWidgets('aktiv (auch bei Op ignored): kein Hinweis', (tester) async {
       await _pump(tester, 'media', _blocked, setUp: (_) {});
       expect(_title, findsNothing);
+    });
+
+    testWidgets('Medien eingeschaltet, Op wechselt erst danach (Tipp in den '
+        'Android-Einstellungen): nur Resume zeigt den Hinweis', (tester) async {
+      final fake = await _pumpAlone(
+        tester,
+        RestrictedFeature.notificationAccess,
+      );
+      _registry(tester).sensitiveMinimum = PrivacyLevel.tee;
+      await settle(tester);
+      expect(_title, findsNothing);
+      fake.current = _blocked;
+      await settle(tester);
+      expect(_title, findsNothing);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await settle(tester);
+      expect(_title, findsOneWidget);
     });
 
     testWidgets('ausgeschaltete Integration: kein Hinweis', (tester) async {

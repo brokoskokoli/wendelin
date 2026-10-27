@@ -25,6 +25,7 @@ Future<void> _pump(WidgetTester tester, {required bool attested}) =>
               gpuMode: GpuCheckMode.off,
               onGpuMode: (_) {},
               gpuEvidence: true,
+              gpuCheckFailed: false,
               savedGpuMode: GpuCheckMode.off,
               onSave: () {},
             ),

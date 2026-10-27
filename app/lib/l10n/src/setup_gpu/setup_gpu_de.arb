@@ -6,5 +6,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "gpuEvidenceUnverified": "GPU-Nachweis konnte nicht geprüft werden. Die GPU-Prüfung ist hier nicht wählbar und bleibt „Aus“; die übrigen Prüfungen bleiben aktiv. Die Auswahl erscheint, wenn die Prüfung beim Bearbeiten des Profils gelingt."
 }

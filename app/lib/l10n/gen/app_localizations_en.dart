@@ -1518,6 +1518,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get gpuEvidenceUnverified =>
+      'The GPU evidence could not be checked. The GPU check cannot be chosen here and stays “Off”; the other checks stay active. The choice appears if the check works when you edit the profile.';
+
+  @override
   String gpuNoEvidenceFinishHidden(String hint) {
     return '$hint. The model stays usable. The GPU check cannot be chosen here and stays “Off”; the other checks stay active.';
   }
