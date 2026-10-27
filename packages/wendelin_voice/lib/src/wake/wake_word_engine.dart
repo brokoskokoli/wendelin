@@ -76,3 +76,12 @@ abstract interface class WarmableWakeEngine implements WakeWordEngine {
   /// or decision state changes. Call after [reset], before the live frames.
   Future<void> warmUp(Int16List frame);
 }
+
+/// WP155: an engine that reports the classifier score of every window (the
+/// developer mode collects near misses from it). Reporting changes no
+/// decision.
+abstract interface class ScoringWakeEngine implements WakeWordEngine {
+  /// Called with the window end (stream position) and its raw classifier
+  /// score; `null` switches reporting off. Must not throw into the engine.
+  set scoreSink(void Function(int endSample, double score)? sink);
+}

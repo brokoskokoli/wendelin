@@ -358,7 +358,8 @@ final class VerifierBScorer {
 
 /// Stage 2 with verifier B (WP143): with enrolled sequences B decides, else
 /// (or on any error of B) the [fallback] (hw2) does. Never both for one clip.
-final class VerifierBWakeVerifier implements WakeEndAwareVerifier {
+final class VerifierBWakeVerifier
+    implements WakeEndAwareVerifier, VerdictDetail {
   /// Creates the verifier.
   VerifierBWakeVerifier({
     required Future<List<WakeTemplates>> Function() templates,
@@ -391,9 +392,13 @@ final class VerifierBWakeVerifier implements WakeEndAwareVerifier {
   final VerifierBScorer scorer;
 
   String _kind = 'b';
+  Map<String, Object?> _detail = const {};
 
   @override
   String get kind => _kind;
+
+  @override
+  Map<String, Object?> get lastDetail => _detail;
 
   @override
   Future<bool> confirm(Int16List pcm) {
@@ -410,9 +415,11 @@ final class VerifierBWakeVerifier implements WakeEndAwareVerifier {
 
   @override
   Future<bool> confirmAt(Int16List pcm, int endSample) async {
+    _detail = const {};
     final s = await scorer.score(pcm, endSample);
     if (s == null) return _viaFallback(pcm);
     _kind = 'b';
+    _detail = {'score': s, 'thr': threshold};
     onDecision?.call('b', s, threshold);
     return s >= threshold;
   }

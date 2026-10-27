@@ -11,6 +11,7 @@ import '../platform/voice/onnx_wake_models.dart';
 import '../platform/voice/pcm.dart';
 import '../platform/voice/wake_feature_chain.dart';
 import '../platform/wake/wake_detector.dart';
+import '../voice/dev_archive.dart';
 import '../voice/dev_audio.dart';
 import '../voice/voice_log.dart';
 import '../voice/wake/lazy_barge_verifier.dart';
@@ -362,8 +363,13 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
     // WP123: the capture before the answer primes the feature chain.
     warm: ref.read(micTailProvider).take,
     // Developer setting (WP72): other margin than +0.05.
-    marginOverride: () async =>
-        double.tryParse(await settings.get(AppSettings.bargeMargin) ?? ''),
+    marginOverride: () async {
+      // WP155: the microphone source goes into the wake archive.
+      devArchiveSetInfo('barge', {
+        'mic': await settings.get(AppSettings.bargeSource) ?? 'communication',
+      });
+      return double.tryParse(await settings.get(AppSettings.bargeMargin) ?? '');
+    },
     // WP113 (K84): the big recognizer checks every candidate, unless stage 2
     // is switched off in the wake word settings.
     // WP151: with enrolled „Hey Wendelin“ sequences verifier B decides (the

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../dev_archive.dart';
 import '../voice_log.dart';
 import 'barge_meter.dart';
 
@@ -170,6 +171,13 @@ final class LazyWakeBargeInDetector
       threshold: strict.map((t) => t.threshold).reduce((a, b) => a < b ? a : b),
     );
     voiceLog('barge-config', {
+      'margin': margin,
+      'verify': staged,
+      'thr': meter.threshold,
+    });
+    // WP155: the wake archive stores the settings of the engine.
+    devArchiveSetInfo('barge', {
+      'mode': 'conversation',
       'margin': margin,
       'verify': staged,
       'thr': meter.threshold,

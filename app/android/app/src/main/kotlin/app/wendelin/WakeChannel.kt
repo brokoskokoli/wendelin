@@ -61,7 +61,11 @@ class WakeChannel(private val context: Context, messenger: BinaryMessenger) :
             "devMode" -> {
                 val on = call.argument<Boolean>("on") == true
                 WakeSettingsStore.setDevMode(context, on)
-                WakeWordService.onDevMode(on)
+                WakeWordService.onDevMode(
+                    on,
+                    clear = call.argument<Boolean>("clear") == true,
+                    archive = call.argument<Boolean>("archive") == true,
+                )
                 result.success(null)
             }
             "status" -> {

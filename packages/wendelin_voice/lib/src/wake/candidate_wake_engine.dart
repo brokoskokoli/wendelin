@@ -10,7 +10,8 @@ import 'wake_word_engine.dart';
 /// Stage 1 of the two-stage detection (WP44 Nachtrag 2): a candidate arises
 /// when the classifier is above a **low** threshold or a window is similar
 /// to a personal template. Stage 2 (transcription) confirms.
-final class CandidateWakeEngine implements WarmableWakeEngine {
+final class CandidateWakeEngine
+    implements WarmableWakeEngine, ScoringWakeEngine {
   /// Creates the engine. [templates] may be `null` (classifier only);
   /// templates of another [WakeFeatureExtractor.featureVersion] are ignored.
   /// [modelThreshold] `null` disables the classifier rule. [refractory]
@@ -81,6 +82,9 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
   /// the main templates (`-1` without templates) and the classifier score.
   final void Function(double main, double? model)? onWindow;
 
+  @override
+  void Function(int endSample, double score)? scoreSink;
+
   bool _open = false;
   int _lastHit = -1 << 40;
 
@@ -112,6 +116,14 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
       }
       // The speaker whose similarity is closest above the own threshold
       // decides (no speaker: only the classifier rule).
+      final raw = w.modelScore;
+      if (raw != null) {
+        try {
+          scoreSink?.call(w.endSample, raw);
+        } on Object {
+          // Reporting never touches the decision.
+        }
+      }
       final ev = _eventScore(w.modelScore, w.endSample);
       final score = ev.score;
       final main = _closest(w.embedding, usable);

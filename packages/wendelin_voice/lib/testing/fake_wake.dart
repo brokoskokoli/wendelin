@@ -11,7 +11,7 @@ import '../src/wake/wake_word_engine.dart';
 /// [WakeWordEngine] with a script: a hit is reported when a frame starts
 /// with the marker sample value [marker] (a frame filled by [markerFrame]),
 /// or when [hitAtFrame] says so. Passes `wakeWordEngineContract`.
-final class FakeWakeWordEngine implements WakeWordEngine {
+final class FakeWakeWordEngine implements WakeWordEngine, ScoringWakeEngine {
   /// Creates the fake. [hitAtFrame]: zero-based frame indexes that produce a
   /// hit (counted since the last [reset]).
   FakeWakeWordEngine({
@@ -20,7 +20,14 @@ final class FakeWakeWordEngine implements WakeWordEngine {
     this.acceptDelay = Duration.zero,
     this.direct = false,
     this.holdMs,
+    this.scoreAtFrame = const {},
   });
+
+  /// WP155: classifier score reported per frame index (to `scoreSink`).
+  final Map<int, double> scoreAtFrame;
+
+  @override
+  void Function(int endSample, double score)? scoreSink;
 
   /// `WakeWordHit.holdMs` of every hit (WP141).
   final int? holdMs;
@@ -72,6 +79,10 @@ final class FakeWakeWordEngine implements WakeWordEngine {
     if (e != null) throw e;
     final index = _frames++;
     _samples += frame.length;
+    // With a script every frame is a window (unscripted ones score 0).
+    if (scoreAtFrame.isNotEmpty) {
+      scoreSink?.call(_samples, scoreAtFrame[index] ?? 0);
+    }
     final hit =
         hitAtFrame.contains(index) ||
         (frame.isNotEmpty && frame.first == marker);

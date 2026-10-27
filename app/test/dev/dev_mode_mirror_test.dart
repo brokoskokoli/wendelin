@@ -12,9 +12,16 @@ final class _Recording extends WakePlatform {
   Future<void> setTexts(Map<String, String> texts) async {}
 
   final modes = <bool>[];
+  final archive = <bool>[];
 
   @override
-  Future<void> setDevMode({required bool enabled}) async => modes.add(enabled);
+  Future<void> setDevMode({
+    required bool enabled,
+    bool deleteArchive = false,
+  }) async {
+    modes.add(enabled);
+    archive.add(deleteArchive);
+  }
 }
 
 void main() {
@@ -40,10 +47,23 @@ void main() {
       );
       await WakePlatform().setDevMode(enabled: true);
       await WakePlatform().setDevMode(enabled: false);
-      expect([for (final c in calls) c.method], ['devMode', 'devMode']);
+      await WakePlatform().setDevMode(enabled: false, deleteArchive: true);
+      expect(
+        [for (final c in calls) c.method],
+        ['devMode', 'devMode', 'devMode'],
+      );
       expect(
         [for (final c in calls) (c.arguments as Map)['on']],
-        [true, false],
+        [true, false, false],
+      );
+      // WP155: switching off asks the service to clean up as well.
+      expect(
+        [for (final c in calls) (c.arguments as Map)['clear']],
+        [null, true, true],
+      );
+      expect(
+        [for (final c in calls) (c.arguments as Map)['archive']],
+        [null, null, true],
       );
     },
   );
@@ -60,6 +80,10 @@ void main() {
     addTearDown(c.dispose);
     await c.read(developerModeProvider.notifier).set(enabled: true);
     await c.read(developerModeProvider.notifier).set(enabled: false);
-    expect(platform.modes, [true, false]);
+    await c
+        .read(developerModeProvider.notifier)
+        .set(enabled: false, deleteArchive: true);
+    expect(platform.modes, [true, false, false]);
+    expect(platform.archive, [false, false, true]);
   });
 }

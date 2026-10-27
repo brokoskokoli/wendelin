@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:meta/meta.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../voice/dev_archive.dart';
 import '../../voice/dev_log.dart';
 import '../../voice/voice_log.dart';
 import 'pcm.dart';
@@ -334,6 +335,8 @@ final class WhisperSpeechToText implements SpeechToText {
       'text': text,
       if (cleanedAway(raw.text, text)) 'raw': raw.text,
     });
+    // WP155: the wake archive stores the text and lp of a check.
+    noteDevStt(text: text, lp: raw.meanLogProb, model: modelId);
     if (text.isEmpty) return Transcript(text: '', language: lang);
     return Transcript(text: text, language: lang, confidence: confidence);
   }
