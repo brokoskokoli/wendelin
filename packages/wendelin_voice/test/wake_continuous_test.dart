@@ -338,6 +338,27 @@ void main() {
       expect(stripWakeWord('Wendelmann. Wetter?'), 'Wetter?');
     });
 
+    test('jede Schreibweise von „Hey“ wird mit entfernt (WP156)', () {
+      for (final g in [...heyWords, 'Hallo', 'OK', 'Okay', 'Hej', 'Hay']) {
+        expect(
+          stripWakeWord('$g Wendelin, schalte an'),
+          'schalte an',
+          reason: g,
+        );
+      }
+      expect(stripWakeWord('Ei Wendelin'), '');
+    });
+
+    test('andere Wörter vor dem Wake Word bleiben stehen (WP156)', () {
+      for (final w in ['Danke', 'Also', 'Ach', 'Na', 'Nein']) {
+        expect(
+          stripWakeWord('$w Wendelin, schalte an'),
+          '$w Wendelin, schalte an',
+          reason: w,
+        );
+      }
+    });
+
     test('Wendel in den Keller bleibt, getrenntes Wake Word wird gekürzt', () {
       expect(stripWakeWord('Wendel in den Keller'), 'Wendel in den Keller');
       expect(stripWakeWord('Wendelin, mach das Licht an'), 'mach das Licht an');

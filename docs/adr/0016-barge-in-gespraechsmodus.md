@@ -18,3 +18,6 @@ K23 c/d: Während der Ausgabe darf nur „Wendelin“ oder „Stopp“ unterbrec
 ## Folgen
 - `VoicePipelineConfig` liegt jetzt in `voice_pipeline_config.dart` (weiterhin über `voice_pipeline.dart` exportiert), die Stopp-Erkennung als Funktion `isStopCommand` in `conversation.dart`.
 - K11 d („während der Sprachausgabe wirkt nur Antippen“) gilt nur noch mit `bargeIn: off`.
+
+## Nachtrag 2026-10-27 (WP156)
+Die Texte der App und die Testanleitungen nennen das Weckwort jetzt „Hey Wendelin“, auch für das Unterbrechen mit Schlüsselwort (Entscheidung 1 und 3 bleiben unverändert). Die Erkennung nimmt vorerst beide Formen an („Wendelin“ und „Hey Wendelin“); die Pflicht zum „Hey“ folgt erst nach WP155. Wo oben „Wendelin“ als Unterbrechungswort steht, ist das gesprochene Wort „Hey Wendelin“ gemeint.

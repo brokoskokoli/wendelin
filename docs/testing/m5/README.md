@@ -20,7 +20,7 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP123 – Stopp sofort ab Antwortbeginn (Gerätetest)](wp123.md)
 - [WP128 – Empfohlene Modelle markieren (Gerätetest)](wp128.md)
 - [WP129 – Trainiertes Wake-Word-Modell (v8a) in der App (Gerätetest)](wp129.md)
-- [WP134 – Stopp-Wort ausgebaut, Unterbrechen nur mit „Wendelin“ (Gerätetest)](wp134.md)
+- [WP134 – Stopp-Wort ausgebaut, Unterbrechen nur mit „Hey Wendelin“ (Gerätetest)](wp134.md)
 - [WP135 Smart Home schneller (A, B, B2, C, D, E)](wp135.md)
 - [WP136 – Parakeet lädt nach dem Download (Gerätetest)](wp136.md)
 - [WP140 – Einlernen prüft den Inhalt, unsichere Erkennung verworfen, Ja/Nein robuster (Gerätetest)](wp140.md)
