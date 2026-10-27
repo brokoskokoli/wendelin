@@ -11,6 +11,7 @@ import '../io/speech_to_text.dart';
 import '../io/text_to_speech.dart';
 import '../io/trigger.dart';
 import '../io/voice_activity_detector.dart';
+import '../speaker/speaker_embedder.dart' show speakerSampleRate;
 import '../speaker/speaker_match.dart';
 import '../text/spoken_answer.dart';
 import '../text/voice_texts.dart';
@@ -391,14 +392,33 @@ final class VoicePipeline with VoiceContentLog {
   /// both run in parallel. `null` = recognition off; never throws.
   Future<SpeakerMatch?> _identify(Int16List pcm) async {
     final recognizer = speaker;
-    if (recognizer == null) return null;
+    final started = clock.now();
+    final audioMs = pcm.length * 1000 ~/ speakerSampleRate;
+    String line(String result, [String? reason, SpeakerMatch? m]) =>
+        speakerLogLine(
+          result: result,
+          reason: reason,
+          match: m,
+          audioMs: audioMs,
+          ms: clock.now().difference(started).inMilliseconds,
+        );
+    if (recognizer == null) {
+      diagnostics?.call(line('off'));
+      return null;
+    }
     try {
-      return await recognizer.identify(pcm).timeout(speakerTimeout);
+      final m = await recognizer.identify(pcm).timeout(speakerTimeout);
+      diagnostics?.call(
+        line(m.isKnown ? 'known' : 'unknown', m.reason?.name, m),
+      );
+      return m;
     } on TimeoutException {
       diagnostics?.call('speaker-timeout');
+      diagnostics?.call(line('unknown', 'timeout'));
       return const SpeakerMatch.unknown(SpeakerUnknownReason.failed);
     } on Object {
       diagnostics?.call('speaker-failed');
+      diagnostics?.call(line('unknown', 'failed'));
       return const SpeakerMatch.unknown(SpeakerUnknownReason.failed);
     }
   }

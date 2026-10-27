@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/platform/voice/sherpa_speaker.dart';
+import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 class _Session implements SpeakerSession {
@@ -67,4 +68,23 @@ void main() {
     expect(await embedder.embed(pcm), hasLength(2));
     expect(started, hasLength(2));
   });
+
+  test(
+    'model-load kind=speaker wird einmal beim Laden geloggt (WP160)',
+    () async {
+      final lines = <String>[];
+      final old = voiceLogSink;
+      voiceLogSink = lines.add;
+      addTearDown(() => voiceLogSink = old);
+      script = [false];
+      await embedder.embed(pcm);
+      await embedder.embed(pcm);
+      final loads = lines.where((l) => l.contains(' model-load ')).toList();
+      expect(loads, hasLength(1));
+      expect(
+        loads.single,
+        matches(r'model-load .*model=speaker-campplus kind=speaker ms=\d+$'),
+      );
+    },
+  );
 }

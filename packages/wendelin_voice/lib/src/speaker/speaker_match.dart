@@ -29,12 +29,22 @@ final class SpeakerMatch {
     required String this.personId,
     required String this.name,
     required this.score,
-  }) : reason = null;
+    this.threshold,
+    this.second,
+    this.profileCount,
+  }) : reason = null,
+       failure = null;
 
   /// Not recognized, with the best [score] if one was computed.
-  const SpeakerMatch.unknown(SpeakerUnknownReason this.reason, {this.score})
-    : personId = null,
-      name = null;
+  const SpeakerMatch.unknown(
+    SpeakerUnknownReason this.reason, {
+    this.score,
+    this.threshold,
+    this.second,
+    this.profileCount,
+    this.failure,
+  }) : personId = null,
+       name = null;
 
   /// Id of the person, `null` = unknown.
   final String? personId;
@@ -44,6 +54,20 @@ final class SpeakerMatch {
 
   /// Cosine score of the best candidate (`null` if none was computed).
   final double? score;
+
+  /// Threshold the best score was measured against (diagnostics only; `null`
+  /// if none was applied).
+  final double? threshold;
+
+  /// Score of the second-best person (diagnostics only; `null` if none).
+  final double? second;
+
+  /// Number of enrolled persons (diagnostics only; `null` = not read).
+  final int? profileCount;
+
+  /// Type of the error behind `failed`, lower case, never its message
+  /// (diagnostics only).
+  final String? failure;
 
   /// Why unknown; `null` for a recognized person.
   final SpeakerUnknownReason? reason;
@@ -73,4 +97,28 @@ final class SpeakerMatch {
 abstract interface class SpeakerRecognizer {
   /// Who spoke [pcm] (mono 16 kHz). Never throws.
   Future<SpeakerMatch> identify(Int16List pcm);
+}
+
+/// The diagnostics line of one recognition (WP160): outcome and numbers, never
+/// a name, an id or a transcript.
+String speakerLogLine({
+  required String result,
+  required int audioMs,
+  required int ms,
+  String? reason,
+  SpeakerMatch? match,
+}) {
+  String n(double? v) => v == null ? '-' : v.toStringAsFixed(2);
+  final b = StringBuffer('speaker result=$result');
+  if (reason != null) b.write(' reason=$reason');
+  if (result != 'off') {
+    b.write(
+      ' best=${n(match?.score)} thr=${n(match?.threshold)} '
+      'second=${n(match?.second)}',
+    );
+  }
+  b.write(' audioMs=$audioMs ms=$ms');
+  if (result != 'off') b.write(' profiles=${match?.profileCount ?? '-'}');
+  if (match?.failure case final f?) b.write(' error=$f');
+  return b.toString();
 }

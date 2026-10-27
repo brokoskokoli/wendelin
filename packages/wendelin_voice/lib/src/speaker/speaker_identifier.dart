@@ -64,7 +64,14 @@ final class SpeakerEnrollResult {
 /// „unknown“ whenever in doubt (lieber unbekannt als falsch erkannt).
 final class SpeakerIdentifier implements SpeakerRecognizer {
   /// Creates the identifier.
-  SpeakerIdentifier({required this.embedder, required this.store});
+  SpeakerIdentifier({
+    required this.embedder,
+    required this.store,
+    this.diagnostics,
+  });
+
+  /// Receives one line per enrollment (`speaker-enroll …`, never a name).
+  final void Function(String line)? diagnostics;
 
   /// Embedding model.
   final SpeakerEmbedder embedder;
@@ -146,6 +153,13 @@ final class SpeakerIdentifier implements SpeakerRecognizer {
       createdAt: now ?? DateTime.now(),
     );
     await store.save(profile);
+    diagnostics?.call(
+      'speaker-enroll samples=${samples.length} '
+      'thr=${threshold.toStringAsFixed(2)} '
+      'clamped=${raw != threshold} '
+      'scores=${low.toStringAsFixed(2)}/'
+      '${scores.reduce(math.max).toStringAsFixed(2)}',
+    );
     return SpeakerEnrollResult(
       profile: profile,
       meanScore: mean,
@@ -180,18 +194,30 @@ final class SpeakerIdentifier implements SpeakerRecognizer {
   /// Who spoke [pcm]; any failure is „unknown“, never an exception.
   @override
   Future<SpeakerMatch> identify(Int16List pcm) async {
+    var count = 0;
     try {
       final all = await profiles();
+      count = all.length;
       if (all.isEmpty) {
-        return const SpeakerMatch.unknown(SpeakerUnknownReason.noProfiles);
+        return const SpeakerMatch.unknown(
+          SpeakerUnknownReason.noProfiles,
+          profileCount: 0,
+        );
       }
       if (pcm.length < minIdentifySamples) {
-        return const SpeakerMatch.unknown(SpeakerUnknownReason.tooShort);
+        return SpeakerMatch.unknown(
+          SpeakerUnknownReason.tooShort,
+          profileCount: count,
+        );
       }
       final e = normalized(await embedder.embed(pcm));
       return decide(e, all);
-    } on Object {
-      return const SpeakerMatch.unknown(SpeakerUnknownReason.failed);
+    } on Object catch (error) {
+      return SpeakerMatch.unknown(
+        SpeakerUnknownReason.failed,
+        profileCount: count,
+        failure: error.runtimeType.toString().toLowerCase(),
+      );
     }
   }
 
@@ -212,24 +238,39 @@ final class SpeakerIdentifier implements SpeakerRecognizer {
       }
     }
     if (best == null) {
-      return const SpeakerMatch.unknown(SpeakerUnknownReason.failed);
+      return SpeakerMatch.unknown(
+        SpeakerUnknownReason.failed,
+        profileCount: profiles.length,
+        failure: 'dimension',
+      );
     }
-    if (bestScore < math.max(best.threshold, thresholdFloor)) {
+    final threshold = math.max(best.threshold, thresholdFloor);
+    final secondScore = second > -2.0 ? second : null;
+    if (bestScore < threshold) {
       return SpeakerMatch.unknown(
         SpeakerUnknownReason.belowThreshold,
         score: bestScore,
+        threshold: threshold,
+        second: secondScore,
+        profileCount: profiles.length,
       );
     }
     if (bestScore - second < ambiguityMargin) {
       return SpeakerMatch.unknown(
         SpeakerUnknownReason.ambiguous,
         score: bestScore,
+        threshold: threshold,
+        second: secondScore,
+        profileCount: profiles.length,
       );
     }
     return SpeakerMatch.known(
       personId: best.id,
       name: best.name,
       score: bestScore,
+      threshold: threshold,
+      second: secondScore,
+      profileCount: profiles.length,
     );
   }
 

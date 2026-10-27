@@ -154,6 +154,137 @@ void main() {
     });
   });
 
+  group('Diagnose (WP160)', () {
+    test('Einlernen: eine Zeile ohne Namen mit Schwelle und Scores', () async {
+      final lines = <String>[];
+      final logged = SpeakerIdentifier(
+        embedder: embedder,
+        store: store,
+        diagnostics: lines.add,
+      );
+      await logged.enroll(
+        id: 'a',
+        name: 'Geheimname',
+        samples: enrollAudio('thorsten'),
+      );
+      expect(
+        lines.single,
+        matches(
+          r'^speaker-enroll samples=5 thr=0\.\d\d clamped=(true|false) '
+          r'scores=\d\.\d\d/\d\.\d\d$',
+        ),
+      );
+      expect(lines.single, isNot(contains('Geheim')));
+    });
+
+    test(
+      'Einlernen, Schwelle an der Obergrenze: clamped=true, Werte',
+      () async {
+        final lines = <String>[];
+        final steady = SpeakerIdentifier(
+          embedder: FakeSpeakerEmbedder([
+            for (var i = 0; i < 3; i++) Float32List.fromList([1, 0, 0, 0]),
+          ]),
+          store: store,
+          diagnostics: lines.add,
+        );
+        await steady.enroll(
+          id: 'b',
+          name: 'B',
+          samples: [for (var i = 0; i < 3; i++) FakeSpeakerEmbedder.audio(i)],
+        );
+        expect(
+          lines.single,
+          'speaker-enroll samples=3 thr=0.60 clamped=true scores=1.00/1.00',
+        );
+      },
+    );
+
+    test('unter Schwelle: Score, Schwelle und Zweitbester stehen dabei', () {
+      SpeakerProfile p(String pid, List<double> v) => SpeakerProfile(
+        id: pid,
+        name: pid,
+        embeddings: [normalized(Float32List.fromList(v))],
+        threshold: 0.5,
+        createdAt: DateTime.utc(2026),
+      );
+      final m = SpeakerIdentifier.decide(
+        normalized(Float32List.fromList([0, 0, 1, 0.1])),
+        [
+          p('a', [1, 0, 0.5, 0]),
+          p('b', [0, 1, 0.3, 0]),
+        ],
+      );
+      expect(m.reason, SpeakerUnknownReason.belowThreshold);
+      expect(m.score, lessThan(0.5));
+      expect(m.threshold, 0.5);
+      expect(m.second, isNotNull);
+      expect(m.profileCount, 2);
+    });
+
+    test('mehrdeutig: ambiguous trägt Score, Schwelle, Zweitbesten', () {
+      SpeakerProfile p(String pid, List<double> v) => SpeakerProfile(
+        id: pid,
+        name: pid,
+        embeddings: [normalized(Float32List.fromList(v))],
+        threshold: 0.5,
+        createdAt: DateTime.utc(2026),
+      );
+      final m = SpeakerIdentifier.decide(
+        normalized(Float32List.fromList([1, 0.05, 0, 0])),
+        [
+          p('a', [1, 0.1, 0, 0]),
+          p('b', [1, 0.2, 0, 0]),
+        ],
+      );
+      expect(m.reason, SpeakerUnknownReason.ambiguous);
+      expect(m.threshold, 0.5);
+      expect(m.second, isNotNull);
+      expect(m.second, lessThanOrEqualTo(m.score!));
+      expect(m.profileCount, 2);
+    });
+
+    test('Embedder-Fehler: failed mit Fehlertyp, nicht still', () async {
+      await enrollBoth();
+      embedder.failing = true;
+      final m = await id.identify(testAudio('thorsten', 0));
+      expect(m.reason, SpeakerUnknownReason.failed);
+      expect(m.failure, 'stateerror');
+      expect(m.profileCount, 2);
+      expect(
+        speakerLogLine(
+          result: 'unknown',
+          reason: 'failed',
+          audioMs: 2000,
+          ms: 5,
+          match: m,
+        ),
+        endsWith('profiles=2 error=stateerror'),
+      );
+    });
+
+    test('Treffer trägt Score, Schwelle, Zweitbesten und Anzahl', () async {
+      await enrollBoth();
+      final m = await id.identify(testAudio('thorsten', 0));
+      expect(m.isKnown, isTrue);
+      expect(m.score, greaterThan(m.threshold!));
+      expect(
+        m.threshold,
+        greaterThanOrEqualTo(SpeakerIdentifier.thresholdFloor),
+      );
+      expect(m.second, lessThan(m.score!));
+      expect(m.profileCount, 2);
+    });
+
+    test('zu kurz / ohne Profile: Anzahl der Profile steht dabei', () async {
+      expect((await id.identify(Int16List(10))).profileCount, 0);
+      await enrollBoth();
+      final m = await id.identify(Int16List(100));
+      expect(m.reason, SpeakerUnknownReason.tooShort);
+      expect(m.profileCount, 2);
+    });
+  });
+
   group('Schwelle', () {
     SpeakerProfile profile(String pid, Float32List e, double threshold) =>
         SpeakerProfile(
