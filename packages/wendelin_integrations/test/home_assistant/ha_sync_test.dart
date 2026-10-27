@@ -322,6 +322,10 @@ final class _ThrowingStore implements HaEntityStore {
   Future<DateTime?> lastSync() async => null;
   @override
   Future<void> saveLastSync(DateTime time) async {}
+  @override
+  Future<HaKindLevels> kindLevels() async => const HaKindLevels();
+  @override
+  Future<void> saveKindLevels(HaKindLevels levels) async {}
 }
 
 /// Home Assistant that answers the entity list only after [_gate].

@@ -119,10 +119,12 @@ final class HaIntegration implements Integration {
   Future<bool> anyAllowedWhileLocked(AccessContext access) async {
     try {
       final critical = await context.confirmIds();
+      final kinds = await context.kindLevels();
       for (final e in await context.approved()) {
         if (haRiskForDomain(e.domain) == null) continue;
         if (haDecide(
               e,
+              kinds: kinds,
               criticalIds: critical,
               locked: access.locked,
               speakerRecognized: access.speakerRecognized,
@@ -161,6 +163,7 @@ final class HaIntegration implements Integration {
           : null;
       return haDecide(
             e,
+            kinds: await context.kindLevels(),
             state: state,
             criticalIds: e.domain == 'scene'
                 ? await context.confirmIds()

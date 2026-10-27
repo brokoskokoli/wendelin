@@ -1,4 +1,5 @@
 import 'ha_model.dart';
+import 'ha_policy.dart';
 
 /// Home Assistant access (REST and WebSocket API).
 ///
@@ -54,6 +55,13 @@ abstract interface class HaEntityStore {
 
   /// Remembers the time of the last successful comparison.
   Future<void> saveLastSync(DateTime time);
+
+  /// The level per device kind (WP160); no choice = empty, an unreadable
+  /// store = [HaKindLevels.broken] (every kind D).
+  Future<HaKindLevels> kindLevels();
+
+  /// Replaces the levels per device kind.
+  Future<void> saveKindLevels(HaKindLevels levels);
 }
 
 /// Finds Home Assistant instances in the local network (mDNS

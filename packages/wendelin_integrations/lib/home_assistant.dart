@@ -8,6 +8,8 @@ export 'src/home_assistant/ha_integration.dart';
 export 'src/home_assistant/ha_model.dart';
 export 'src/home_assistant/ha_policy.dart'
     show
+        HaKind,
+        HaKindLevels,
         HaSceneKind,
         haDataNotice,
         haDecide,

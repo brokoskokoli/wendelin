@@ -219,6 +219,7 @@ abstract base class HaCallTool extends IntegrationTool
     // WP154: one policy decides (level, live class, scene members).
     final access = haDecide(
       e,
+      kinds: await ctx.kindLevels(),
       state: prior,
       criticalIds: e.domain == 'scene' ? await ctx.confirmIds() : const {},
       locked: c.access.locked,

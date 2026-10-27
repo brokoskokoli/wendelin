@@ -1,4 +1,5 @@
 import '../src/home_assistant/ha_model.dart';
+import '../src/home_assistant/ha_policy.dart';
 import '../src/home_assistant/ha_ports.dart';
 
 /// In-memory [HaSecrets].
@@ -31,6 +32,9 @@ final class FakeHaEntityStore implements HaEntityStore {
   /// Number of [save] calls.
   int saves = 0;
 
+  /// The levels per device kind.
+  HaKindLevels kinds = const HaKindLevels();
+
   @override
   Future<List<HaEntity>> load() async => [...entities];
 
@@ -45,6 +49,12 @@ final class FakeHaEntityStore implements HaEntityStore {
 
   @override
   Future<void> saveLastSync(DateTime time) async => synced = time;
+
+  @override
+  Future<HaKindLevels> kindLevels() async => kinds;
+
+  @override
+  Future<void> saveKindLevels(HaKindLevels levels) async => kinds = levels;
 }
 
 /// [HaDiscovery] with a fixed answer.

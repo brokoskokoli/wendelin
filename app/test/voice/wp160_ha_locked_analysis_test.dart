@@ -31,6 +31,7 @@ TestEnv _env(
   String entities, {
   Set<String> enabled = const {'flashlight', 'ha'},
   ToolPrefs prefs = const ToolPrefs(),
+  String? kinds,
 }) {
   final env = TestEnv(
     providerConfig: scripted(llm),
@@ -40,6 +41,7 @@ TestEnv _env(
     ..write('ha.url', 'http://192.168.1.20:8123')
     ..write('ha.token', 'a' * 40)
     ..write('ha.entities', entities);
+  if (kinds != null) env.secrets.write('ha.kind_levels', kinds);
   for (final id in ['light.a', 'light.b', 'lock.d']) {
     env.ha.set(id, 'off', const {});
   }
@@ -198,6 +200,53 @@ void main() {
       final env = _env(llm, '[{"id":"lock.d","name":"Haustür","level":"a"}]');
       await _say(tester, env, 'Haustür auf');
       expect(env.ha.calls.map((x) => x.service), ['unlock']);
+    });
+  });
+
+  group('WP160 Stufe je Geräteart (ha.kind_levels)', () {
+    testWidgets('6a Art Licht A, Gerät ohne eigene Stufe, ohne Stimme: läuft, '
+        'Modelllauf kommt, Prompt nur das Licht', (tester) async {
+      final llm = _calls('light.b', 'turn_on');
+      final env = _env(llm, _lightDefault, kinds: '{"light":"a"}');
+      final r = await _say(tester, env, 'Stehlampe an');
+      expect(env.ha.calls.map((x) => x.service), ['turn_on']);
+      expect(r.platform.unlockRequests, 0);
+      expect(llm.requests, isNotEmpty);
+      final prompt = llm.requests.first.systemPrompt ?? '';
+      expect(prompt, contains('light.b'));
+      expect(prompt, isNot(contains('lock.d')));
+    });
+
+    testWidgets('6b Art Licht A, aber eigene Gerätestufe C: gesperrt '
+        'verweigert', (tester) async {
+      final llm = _calls('light.a', 'turn_on');
+      final env = _env(
+        llm,
+        '[{"id":"light.a","name":"Flurlicht","level":"c"}]',
+        kinds: '{"light":"a"}',
+      );
+      final r = await _say(tester, env, 'Flurlicht an');
+      expect(env.ha.calls, isEmpty);
+      expect(r.platform.unlockRequests, 1);
+    });
+
+    testWidgets('6c Art Licht A, Schloss ohne Stufe: Schloss bleibt D '
+        '(verweigert), auch mit Stimme', (tester) async {
+      final llm = _calls('lock.d', 'unlock');
+      final env = _env(llm, _lightDefault, kinds: '{"light":"a"}');
+      final r = await _say(tester, env, 'Haustür auf', speaker: _known);
+      expect(env.ha.calls, isEmpty);
+      expect(r.platform.unlockRequests, 1);
+    });
+
+    testWidgets('6d kaputte Art-Datei: kein Licht gesperrt (D)', (
+      tester,
+    ) async {
+      final llm = _calls('light.b', 'turn_on');
+      final env = _env(llm, _lightDefault, kinds: 'kaputt{');
+      final r = await _say(tester, env, 'Stehlampe an', speaker: _known);
+      expect(env.ha.calls, isEmpty);
+      expect(r.platform.unlockRequests, 1);
     });
   });
 

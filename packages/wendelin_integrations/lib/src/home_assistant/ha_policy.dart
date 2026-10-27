@@ -148,19 +148,144 @@ SecurityLevel haDefaultLevel(
   };
 }
 
-/// The level that counts for [e]: the user's choice, else the default.
-/// Fail-closed: a stored level that is not `a`..`d` means D. [liveClass] is
-/// the `device_class` of the live state (covers), [scene] the live kind of
-/// a scene.
+/// Device kinds that get one level for all devices of the kind (WP160,
+/// ADR 0022): the tool `ha__call` is configured per kind, not per tool.
+/// Locks, alarm panels and „other“ domains have no kind: only a device can
+/// be set up for them.
+enum HaKind {
+  /// Lights.
+  light('light', 'light'),
+
+  /// Media players.
+  media('media', 'media_player'),
+
+  /// Scenes (never above a critical member, K57).
+  scene('scene', 'scene'),
+
+  /// Switches.
+  switchKind('switch', 'switch'),
+
+  /// Thermostats.
+  climate('climate', 'climate'),
+
+  /// Blinds and shutters (domain `cover`, only the quiet classes
+  /// [haQuietCoverClasses]; garage, gate, door and unknown stay on D).
+  cover('cover', 'cover');
+
+  const HaKind(this.key, this.domain);
+
+  /// Key in the stored map.
+  final String key;
+
+  /// Home Assistant domain of the kind.
+  final String domain;
+
+  /// The kind of [domain], `null` for none (lock, alarm, read-only ...).
+  static HaKind? ofDomain(String domain) {
+    for (final k in values) {
+      if (k.domain == domain) return k;
+    }
+    return null;
+  }
+}
+
+/// The levels the user chose per [HaKind] (WP160). Missing kind = no choice
+/// (the device default counts), anything stored that is not `a`..`d` = D
+/// (fail-closed, never the default). An unreadable store as a whole is
+/// [HaKindLevels.broken]: every kind D.
+final class HaKindLevels {
+  /// Creates the levels from the stored texts by [HaKind.key].
+  const HaKindLevels([this.raw = const {}]) : isBroken = false;
+
+  /// Every kind on D: the store was unreadable.
+  const HaKindLevels.broken() : raw = const {}, isBroken = true;
+
+  /// Reads the stored JSON; anything but a map is [HaKindLevels.broken], a
+  /// value that is no text is kept as an invalid one (= D).
+  factory HaKindLevels.fromJson(Object? json) {
+    if (json is! Map<Object?, Object?>) return const HaKindLevels.broken();
+    return HaKindLevels({
+      for (final k in HaKind.values)
+        if (json.containsKey(k.key))
+          k.key: switch (json[k.key]) {
+            final String s => s,
+            _ => '?',
+          },
+    });
+  }
+
+  /// The stored texts by [HaKind.key].
+  final Map<String, String> raw;
+
+  /// Whether the whole store was unreadable.
+  final bool isBroken;
+
+  /// Chosen level of [kind]: `null` = no choice, D for an invalid value.
+  SecurityLevel? levelOf(HaKind kind) {
+    if (isBroken) return SecurityLevel.d;
+    final r = raw[kind.key];
+    return r == null ? null : (SecurityLevel.parse(r) ?? SecurityLevel.d);
+  }
+
+  /// Copy with [level] for [kind] (`null` = back to the default). Changing a
+  /// broken store keeps the other kinds on D.
+  HaKindLevels withLevel(HaKind kind, SecurityLevel? level) {
+    final next = {
+      if (isBroken)
+        for (final k in HaKind.values) k.key: SecurityLevel.d.name
+      else
+        ...raw,
+    };
+    if (level == null) {
+      next.remove(kind.key);
+    } else {
+      next[kind.key] = level.name;
+    }
+    return HaKindLevels(next);
+  }
+
+  /// JSON to store (`{"light":"a"}`).
+  Map<String, String> toJson() => Map.of(raw);
+}
+
+/// The level of the kind of [e] from [kinds] if it applies (WP160), else
+/// `null`. Never for a cover whose live class is not a quiet one, and never
+/// above a critical scene; a scene with unknown members is at most C.
+SecurityLevel? _haKindLevel(
+  HaEntity e,
+  HaKindLevels kinds,
+  Object? liveClass,
+  HaSceneKind scene,
+) {
+  final kind = HaKind.ofDomain(e.domain);
+  if (kind == null) return null;
+  if (kind == HaKind.cover && !haQuietCoverClasses.contains(liveClass)) {
+    return null;
+  }
+  if (kind == HaKind.scene && scene == HaSceneKind.critical) return null;
+  final level = kinds.levelOf(kind);
+  if (level != null && kind == HaKind.scene && scene == HaSceneKind.unknown) {
+    return level.index < SecurityLevel.c.index ? SecurityLevel.c : level;
+  }
+  return level;
+}
+
+/// The level that counts for [e]: the device's own choice, else the legacy
+/// „immer bestätigen“ (D), else the level of its kind in [kinds] (WP160),
+/// else the default. A kind never loosens a device with its own choice or
+/// the old flag. Fail-closed: a stored level that is not `a`..`d` means D.
+/// [liveClass] is the `device_class` of the live state (covers), [scene] the
+/// live kind of a scene.
 SecurityLevel haEffectiveLevel(
   HaEntity e, {
   Object? liveClass,
   HaSceneKind scene = HaSceneKind.unknown,
+  HaKindLevels kinds = const HaKindLevels(),
 }) {
-  return SecurityLevel.effective(
-    e.level,
-    haDefaultLevel(e, liveClass: liveClass, scene: scene),
-  );
+  final fallback = haDefaultLevel(e, liveClass: liveClass, scene: scene);
+  if (e.level != null) return SecurityLevel.effective(e.level, fallback);
+  if (e.alwaysConfirm) return SecurityLevel.d;
+  return _haKindLevel(e, kinds, liveClass, scene) ?? fallback;
 }
 
 /// The one decision for a call on [e]: level from [haEffectiveLevel]
@@ -175,6 +300,7 @@ LevelAccess haDecide(
   Set<String> criticalIds = const {},
   bool locked = false,
   bool speakerRecognized = false,
+  HaKindLevels kinds = const HaKindLevels(),
 }) {
   final live = state != null && state.entityId == e.entityId ? state : null;
   final level = haEffectiveLevel(
@@ -183,6 +309,7 @@ LevelAccess haDecide(
     scene: e.domain == 'scene' && live != null
         ? haSceneKindOf(live, criticalIds: criticalIds)
         : HaSceneKind.critical,
+    kinds: kinds,
   );
   return levelAccess(
     level,
