@@ -11,7 +11,7 @@
   "onboardingSetUpAnotherProvider": "Set up another provider",
   "onboardingSkip": "Skip",
   "onboardingTapOnly": "No, only after tapping",
-  "onboardingWakeIntro": "Wendelin can listen for “Wendelin” even while the phone is lying around. To do that, it first learns your voice (about 3 minutes). You can also do this later in Settings.",
+  "onboardingWakeIntro": "Wendelin can listen for “Hey Wendelin” even while the phone is lying around. To do that, it first learns your voice (about 3 minutes). You can also do this later in Settings.",
   "onboardingWakeWord": "Wake word",
   "onboardingWelcome": "Welcome",
   "onboardingWelcomeIntro": "Wendelin is your voice assistant. Setup takes six steps. Which language do you speak with it?",

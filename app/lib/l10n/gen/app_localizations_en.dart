@@ -2219,7 +2219,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mainMicCancelAnswer => 'Cancel answer';
 
   @override
-  String get mainMicHearing => 'Wendelin is listening: say “Wendelin” or tap';
+  String get mainMicHearing =>
+      'Wendelin is listening: say “Hey Wendelin” or tap';
 
   @override
   String get mainMicSpeak => 'Speak';
@@ -2990,7 +2991,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingWakeIntro =>
-      'Wendelin can listen for “Wendelin” even while the phone is lying around. To do that, it first learns your voice (about 3 minutes). You can also do this later in Settings.';
+      'Wendelin can listen for “Hey Wendelin” even while the phone is lying around. To do that, it first learns your voice (about 3 minutes). You can also do this later in Settings.';
 
   @override
   String get onboardingWakeWord => 'Wake word';
@@ -4470,7 +4471,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceConvInterruptHint =>
-      'With “Wendelin” you interrupt the speech output.';
+      'With “Hey Wendelin” you interrupt the speech output.';
 
   @override
   String get voiceConvKeepListening => 'Keep listening after the answer';
@@ -4843,7 +4844,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bargeDebugIntro =>
-      'Sets how sensitively “Wendelin” is recognized during the answer. The change applies from the next spoken answer.';
+      'Sets how sensitively “Hey Wendelin” is recognized during the answer. The change applies from the next spoken answer.';
 
   @override
   String get bargeDebugMicCommunication => 'Communication + AEC (default)';
@@ -4891,7 +4892,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get speechCommunicationHelp =>
-      'The answer plays like a call through the speaker, so “Wendelin” is recognized more reliably. Side effects: the call volume applies, the sound is thinner, and Bluetooth devices may switch playback. With headphones the output stays there. Applies from the next answer.';
+      'The answer plays like a call through the speaker, so “Hey Wendelin” is recognized more reliably. Side effects: the call volume applies, the sound is thinner, and Bluetooth devices may switch playback. With headphones the output stays there. Applies from the next answer.';
 
   @override
   String get speechCommunicationTitle =>
@@ -4913,7 +4914,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeCalibrateIntro =>
-      'Put the phone down and keep talking normally. Wendelin listens along (microphone indicator on) but remembers only numeric values, no audio and no text. Now and then it beeps: then say “Wendelin”.';
+      'Put the phone down and keep talking normally. Wendelin listens along (microphone indicator on) but remembers only numeric values, no audio and no text. Now and then it beeps: then say “Hey Wendelin”.';
 
   @override
   String get wakeCalibrateMicPreparing => 'Preparing the microphone …';
@@ -4962,7 +4963,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeDetectorModelHint =>
-      'Recognizes “Wendelin” without enrollment. Needs the download.';
+      'Recognizes the wake word without enrollment. Needs the download.';
 
   @override
   String wakeDetectorModelNeeded(String v) {
@@ -5021,7 +5022,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeEnrollNoRecognizer =>
-      'Speech recognition is missing: without it “Wendelin” cannot be checked during enrollment. Please download a recognition model under Settings → Voice.';
+      'Speech recognition is missing: without it “Hey Wendelin” cannot be checked during enrollment. Please download a recognition model under Settings → Voice.';
 
   @override
   String get wakeEnrollNoSpeech => 'Heard nothing. Once more, please.';
@@ -5136,7 +5137,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeExplainLocalBody =>
-      'Recognizing the word runs on the device. What you say after “Wendelin” is sent as text to the chosen AI provider. Audio is neither sent nor stored.';
+      'Recognizing the word runs on the device. What you say after “Hey Wendelin” is sent as text to the chosen AI provider. Audio is neither sent nor stored.';
 
   @override
   String get wakeExplainLocalTitle => 'Listening stays on the device';
@@ -5169,6 +5170,49 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get wakeNotifChannelDesc =>
+      'Shows that Wendelin is listening for “Hey Wendelin”.';
+
+  @override
+  String wakeNotifEnded(String reason) {
+    return 'The wake word has ended ($reason). Tap to turn it back on.';
+  }
+
+  @override
+  String get wakeNotifListeningText =>
+      'The microphone is on. Audio stays on the device.';
+
+  @override
+  String get wakeNotifListeningTitle => 'Wendelin listens for “Hey Wendelin”';
+
+  @override
+  String get wakeNotifNoRole =>
+      'Wendelin must be the assistant for the wake word to run after a restart.';
+
+  @override
+  String get wakeNotifOff => 'Off';
+
+  @override
+  String get wakeNotifPause => 'Pause 1 h';
+
+  @override
+  String wakeNotifPausedText(String time) {
+    return 'Until $time, the microphone is free.';
+  }
+
+  @override
+  String get wakeNotifPausedTitle => 'Wendelin is paused';
+
+  @override
+  String get wakeNotifReenableAction => 'Turn back on';
+
+  @override
+  String get wakeNotifReenableTitle => 'Wake word is off';
+
+  @override
+  String get wakeNotifResume => 'Resume';
+
+  @override
   String get wakeServiceSectionAlways => 'Always';
 
   @override
@@ -5192,7 +5236,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeServiceSectionEnableDetail =>
-      'Wendelin listens in the background for “Wendelin”.';
+      'Wendelin listens in the background for “Hey Wendelin”.';
 
   @override
   String get wakeServiceSectionEndedEngine => 'Ended: recognition failed';
@@ -5276,7 +5320,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeServiceSectionWhisperDetail =>
-      'Wendelin only listens if the verification confirms “Wendelin”. It covers the whole of stage 2: verifier B, Parakeet or Whisper, depending on what is enrolled and loaded. Turn it off if it is too strict for your voice; there will be more false triggers then.';
+      'Wendelin only listens if the verification confirms the wake word. It covers the whole of stage 2: verifier B, Parakeet or Whisper, depending on what is enrolled and loaded. Turn it off if it is too strict for your voice; there will be more false triggers then.';
 
   @override
   String wakeTestAgo(String v, int inSeconds) {
@@ -5308,7 +5352,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeTestIntro =>
-      'Say “Wendelin”. Hits appear here without the overlay opening. “Candidate” is the voice. “Confirmed” means the command recognizer (Parakeet or Whisper) heard “Wendelin”. That is not the service’s verification (stage 2); it can be stricter.';
+      'Say “Hey Wendelin”. Hits appear here without the overlay opening. “Candidate” is the voice. “Confirmed” means the command recognizer (Parakeet or Whisper) heard the wake word. That is not the service’s verification (stage 2); it can be stricter.';
 
   @override
   String get wakeTestListening => 'Listening';
@@ -5373,7 +5417,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeWordIntro =>
-      'Wendelin learns your voice: you say “Wendelin” about 15 times, after that it also recognizes it in everyday use. Only numeric values are stored, encrypted on the device. Audio is never stored.';
+      'Wendelin learns your voice: you say “Hey Wendelin” about 15 times, after that it also recognizes it in everyday use. Only numeric values are stored, encrypted on the device. Audio is never stored.';
 
   @override
   String get wakeWordLearned => 'Trained voices';

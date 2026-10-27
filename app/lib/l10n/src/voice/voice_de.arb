@@ -59,7 +59,7 @@
   "voiceConvBargeSpeech": "Beliebige Sprache (experimentell)",
   "voiceConvCustomBarge": "Eigene Einstellung für das Unterbrechen aktiv (unter „Erweitert“ zurücksetzbar).",
   "voiceConvInterrupt": "Unterbrechen während der Antwort",
-  "voiceConvInterruptHint": "Mit „Wendelin“ unterbrichst du die Sprachausgabe.",
+  "voiceConvInterruptHint": "Mit „Hey Wendelin“ unterbrichst du die Sprachausgabe.",
   "voiceConvKeepListening": "Weiter zuhören nach der Antwort",
   "voiceConvKeepListeningDetail": "Nach der gesprochenen Antwort bleibt das Mikrofon kurz offen, du kannst ohne Tippen nachfragen. „Danke“ oder „Stopp“ beendet.",
   "voiceConvKeepListeningLabel": "Weiter zuhören nach der Antwort",
