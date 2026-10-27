@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete, solange der Maintainer am Rechner ist (
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP158; Test-APK v0.1.0-rc10; als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: nichts; Test-APK v0.1.0-rc10; als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -104,14 +104,14 @@ Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP158; Tes
 | WP155 | Entwicklermodus: Weckwort-Archiv für Training | gemergt 8e1e18b1 | Archiv `dev-audio/wake-archive/` mit index.jsonl (angenommen nur ~2 s Vorlauf, verworfen/busy/near-miss/Barge-in ±2 s), Deckel 1 GB (near-miss höchstens 50 %, zuerst gelöscht), Ausschalten: Dev-Aufnahmen weg, Archiv nach Rückfrage; Schwärzung erweitert; K126 bestätigt 2026-10-27. Folgepunkte: near-miss-Rate am Handy messen; Prüfseite (eigener Auftrag); Barge-E2E hing einmal am Testende; Restfall An während deleteDevAudio; E2E-Tests uncommittet in james-wt/e2e-keep/wp155 |
 | WP156 | „Hey Wendelin“ konsequent in Texten und Doku | gemergt abb1ead7 | Texte, Hinweise und Doku nennen „Hey Wendelin“; Dienst-Benachrichtigung ganz lokalisiert (12 Texte über Kanal, Deutsch als Rückfall), „Wake Word“ → „Aktivierungswort“; Erkennung unverändert (beide Wörter). Folgepunkte: E2E-Screenshot Benachrichtigung en/fr (`docs/testing/m5/wp156.md`); „Wake Word“ noch in wake_de.arb:101-102; Modellname wake_classifier_catalog.dart:61; ältere Testanleitungen nicht umgestellt; Systemsprachwechsel greift erst beim nächsten App-Start |
 | WP157 | Sicherheit: Sperre nach roter Quittung je Unterhaltung, Netz-Lesewerkzeuge nach fremden Inhalten | gemergt 7ad79f58 | Sperre nach Rot je Unterhaltung persistent (SessionLockStore), Rückfrage für Netz-Tools nach fremden Inhalten (Verlauf, 10 Turns), Haken „Kann unsichere Inhalte enthalten“, Sitzungsende nach ≥1 min unsichtbarem Fenster, ADR 0023; K122, K125 bestätigt 2026-10-27. Folgepunkte: Gerätetest `docs/testing/m5/wp157.md` (rote Quittung → Neustart, Websuche → HTTP-Karte, Schalter-UI, echter Kill >1 min); Store-_merge nicht atomar; Sperrtexte ohne l10n; Abwesenheitstest uncommittet in james-wt/e2e-keep/wp157 |
-| WP158 | Robustheit: Fehler beim Mikrofonstart, Stationskanal | in Arbeit | Projekt-Review 2026-10-26 (Befunde 6, 7); nicht parallel zu WP153 |
+| WP158 | Robustheit: Fehler beim Mikrofonstart, Stationskanal | gemergt (b5ef90e3) | Projekt-Review 2026-10-26 (Befunde 6, 7). isLocked() liefert bei Kanalfehler true (fail-closed, Log lock-check-failed; wake_chat öffnet dann Overlay); nach geworfenem Start Übergabe sofort beendet; Stationskanal als StationAmbientChannel, neuerer Host gewinnt. Folgepunkte: Gerätetest Stationsmodus (Helligkeit/Umgebungslicht) mit nächstem RC; lokales gate --changed fand directives_ordering nicht (erst CI), prüfen |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
 ## Nächste Schritte
 
 Stand 2026-10-27 (Orchestrator):
-0. Laufend: WP158 (Mikrofonstart, Stationskanal). Gemergt: WP153 (9778f8a8), WP155 (8e1e18b1, K126 bestätigt), WP156 (abb1ead7), WP157 (7ad79f58, K122/K125 bestätigt), WP154 (ffed7c83, K123 bestätigt), WP151 (0b94041d, K124 bestätigt). Test-APK rc8 (Tag v0.1.0-rc8, 1cc047f9).
+0. Laufend: nichts. Gemergt: WP158 (b5ef90e3), WP153 (9778f8a8), WP155 (8e1e18b1, K126 bestätigt), WP156 (abb1ead7), WP157 (7ad79f58, K122/K125 bestätigt), WP154 (ffed7c83, K123 bestätigt), WP151 (0b94041d, K124 bestätigt). Test-APK rc8 (Tag v0.1.0-rc8, 1cc047f9).
 1. Danach: Prüfseite Weckwort-Archiv auf Auftrag des Maintainers; sonst M6 nur mit Go.
 2. Gerätetest beim Maintainer: rc10 (T30-WP153), rc9 (T29-WP155, T29-WP156, T29-WP157), rc8 (T28-WP151, T28-WP154), rc7 (T27-WP149, T27-WP150, T26-WP148).
 3. Später: Prüfseite für das Weckwort-Archiv (Anhören, Markieren), danach Hey-Pflicht in der Erkennung (K115) und Training mit eigenem HW-Kopf; wake_continuous_e2e (WP68-Altlast); offen aus M5/M6 nur mit Go: WP100/WP101, STT-Messung (K99), WP132, WP138.
