@@ -2704,6 +2704,12 @@ abstract class AppLocalizations {
   /// **'{service} ist nicht erreichbar · pausiert'**
   String integrationsErrUnavailable(String service);
 
+  /// No description provided for @gpuNoEvidenceFinishHidden.
+  ///
+  /// In de, this message translates to:
+  /// **'{hint}. Das Modell bleibt nutzbar. Die GPU-Prüfung ist hier nicht wählbar und bleibt „Aus“; die übrigen Prüfungen bleiben aktiv.'**
+  String gpuNoEvidenceFinishHidden(String hint);
+
   /// No description provided for @haAddressLabel.
   ///
   /// In de, this message translates to:

@@ -1,0 +1,10 @@
+{
+  "gpuNoEvidenceFinishHidden": "{hint}. Das Modell bleibt nutzbar. Die GPU-Prüfung ist hier nicht wählbar und bleibt „Aus“; die übrigen Prüfungen bleiben aktiv.",
+  "@gpuNoEvidenceFinishHidden": {
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      }
+    }
+  }
+}

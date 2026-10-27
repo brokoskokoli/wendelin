@@ -1518,6 +1518,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String gpuNoEvidenceFinishHidden(String hint) {
+    return '$hint. The model stays usable. The GPU check cannot be chosen here and stays “Off”; the other checks stay active.';
+  }
+
+  @override
   String get haAddressLabel => 'Address';
 
   @override

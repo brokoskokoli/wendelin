@@ -86,6 +86,12 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
   /// GPU check of this (TEE) profile (WP82).
   GpuCheckMode _gpuMode = GpuCheckMode.off;
 
+  /// Mode stored in the edited profile (WP159: keeps the choice visible).
+  /// A hidden choice (no GPU evidence) always saves „off“: [_gpuMode] only
+  /// differs from „off“ if the choice was visible, and the finish step has
+  /// no way back to the model step.
+  GpuCheckMode _savedGpuMode = GpuCheckMode.off;
+
   /// Models the probe found without GPU evidence.
   final Set<String> _noGpu = {};
 
@@ -106,7 +112,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     _privacy = effectivePrivacy(p);
     _budget.text = budgetText(p.budgetMonthly);
     _warn = p.warnThreshold ?? 0.8;
-    _gpuMode = gpuModeOf(p) ?? GpuCheckMode.off;
+    _gpuMode = _savedGpuMode = gpuModeOf(p) ?? GpuCheckMode.off;
   }
 
   @override
@@ -338,7 +344,8 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     attested: _attested,
     gpuMode: _gpuMode,
     onGpuMode: (m) => setState(() => _gpuMode = m),
-    noGpuEvidence: _result?.gpuEvidence == false,
+    gpuEvidence: _result?.gpuEvidence,
+    savedGpuMode: _savedGpuMode,
     onSave: () => unawaited(_save()),
   );
 

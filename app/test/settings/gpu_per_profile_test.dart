@@ -4,6 +4,8 @@ import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/gpu_check_migration.dart';
 import 'package:wendelin/di/provider_setup.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
+import 'package:wendelin/ui/settings/provider_setup/finish_step.dart'
+    show gpuChoiceVisible;
 import 'package:wendelin/ui/settings/provider_setup/model_step.dart';
 import 'package:wendelin/ui/settings/provider_setup_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -30,7 +32,8 @@ Future<TestEnv> _openPhala(
     llmFactory: (profile, _) => scriptedTee(
       verifier: ScriptedVerifier(),
       gateway: ScriptedGateway(),
-      gpu: gpu,
+      // Default: the provider delivers GPU evidence (WP159).
+      gpu: gpu ?? FakeGpuAttestationVerifier(),
     ),
   );
   setView(tester, const Size(390, 2400));
@@ -101,6 +104,7 @@ void main() {
     expect(find.text('Modell nicht nutzbar'), findsNothing);
     expect(find.byKey(const ValueKey('setupFailure')), findsNothing);
     expect(find.byKey(const ValueKey('noGpuEvidence')), findsOneWidget);
+    expect(find.text('GPU-Prüfung über NVIDIA'), findsNothing);
     expect(
       find.textContaining(AppLocalizationsDe().gpuNoEvidenceHint),
       findsWidgets,
@@ -119,7 +123,7 @@ void main() {
   });
 
   testWidgets(
-    'Golden Abschlussschritt: GPU-Abschnitt und Hinweiskarte',
+    'Golden Abschlussschritt: Hinweiskarte ohne GPU-Auswahl',
     tags: ['golden'],
     (tester) async {
       final gpu = FakeGpuAttestationVerifier(_none)..localResult = _none;
@@ -194,6 +198,136 @@ void main() {
     expect(find.text(AppLocalizationsDe().gpuNoEvidenceHint), findsOneWidget);
     await tester.tap(find.text('glm-5.2'));
     expect(picked, ['glm-5.2']);
+  });
+
+  group('WP159: Auswahl nur mit GPU-Nachweis', () {
+    const unknown = GpuAttestationResult(
+      GpuVerdict.unreachable,
+      'x',
+      GpuReason.unreachable,
+    );
+    const choice = 'GPU-Prüfung über NVIDIA';
+
+    Future<TestEnv> openEditing(
+      WidgetTester tester, {
+      required GpuCheckMode saved,
+      required FakeGpuAttestationVerifier gpu,
+    }) async {
+      final env = TestEnv(
+        storedProfiles: true,
+        llmFactory: (profile, _) => scriptedTee(
+          verifier: ScriptedVerifier(),
+          gateway: ScriptedGateway(),
+          gpu: gpu,
+        ),
+      );
+      final profile = ProviderProfile(
+        id: 'phala',
+        name: 'Phala (RedPill)',
+        type: ProviderType.openaiCompatible,
+        baseUrl: 'https://api.redpill.ai/v1',
+        defaultModel: 'm',
+        privacy: PrivacyLevel.tee,
+        authMethod: const NoAuth(),
+        options: {'attestation': 'phala', gpuCheckOption: saved.name},
+      );
+      await env.storage.providerProfiles.save(profile);
+      setView(tester, const Size(390, 2400));
+      await tester.pumpWidget(
+        env.app(home: ProviderSetupScreen(existing: profile)),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const ValueKey('apiKey')), 'k-geheim');
+      await tester.tap(find.text('Verbindung testen'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Modell prüfen'));
+      await tester.pumpAndSettle();
+      return env;
+    }
+
+    testWidgets('Nachweis vorhanden: Auswahl sichtbar', (tester) async {
+      await _openPhala(tester);
+      expect(find.text(choice), findsOneWidget);
+    });
+
+    testWidgets('kein Nachweis (false): Auswahl versteckt, „aus“ gespeichert, '
+        'Hinweis ohne Verweis auf „unten“', (tester) async {
+      final gpu = FakeGpuAttestationVerifier(_none)..localResult = _none;
+      final env = await _openPhala(tester, gpu: gpu);
+      expect(find.text(choice), findsNothing);
+      expect(find.byKey(const ValueKey('noGpuEvidence')), findsOneWidget);
+      expect(find.textContaining('nicht wählbar'), findsOneWidget);
+      await _save(tester);
+      expect(
+        gpuModeOf((await env.storage.providerProfiles.list()).single),
+        GpuCheckMode.off,
+      );
+    });
+
+    testWidgets('Nachweis unbekannt (null): wie „kein Nachweis“, Auswahl '
+        'versteckt, „aus“ gespeichert', (tester) async {
+      final gpu = FakeGpuAttestationVerifier()..localResult = unknown;
+      final env = await _openPhala(tester, gpu: gpu);
+      expect(find.text(choice), findsNothing);
+      expect(find.byKey(const ValueKey('noGpuEvidence')), findsNothing);
+      await _save(tester);
+      expect(
+        gpuModeOf((await env.storage.providerProfiles.list()).single),
+        GpuCheckMode.off,
+      );
+    });
+
+    testWidgets('bestehendes Profil mit „Vorher“ und Nachweis false: Auswahl '
+        'bleibt, Modus bleibt gespeichert', (tester) async {
+      final gpu = FakeGpuAttestationVerifier(_none)..localResult = _none;
+      final env = await openEditing(
+        tester,
+        saved: GpuCheckMode.before,
+        gpu: gpu,
+      );
+      expect(find.text(choice), findsOneWidget);
+      expect(find.byKey(const ValueKey('noGpuEvidence')), findsOneWidget);
+      expect(find.textContaining('nicht wählbar'), findsNothing);
+      await _save(tester);
+      expect(
+        gpuModeOf((await env.storage.providerProfiles.list()).single),
+        GpuCheckMode.before,
+      );
+    });
+
+    testWidgets('bestehendes Profil mit „Vorher“ und Nachweis unbekannt: '
+        'Auswahl bleibt', (tester) async {
+      final gpu = FakeGpuAttestationVerifier()..localResult = unknown;
+      final env = await openEditing(
+        tester,
+        saved: GpuCheckMode.before,
+        gpu: gpu,
+      );
+      expect(find.text(choice), findsOneWidget);
+      await _save(tester);
+      expect(
+        gpuModeOf((await env.storage.providerProfiles.list()).single),
+        GpuCheckMode.before,
+      );
+    });
+
+    testWidgets('bestehendes Profil mit „aus“ und Nachweis false: Auswahl '
+        'versteckt', (tester) async {
+      final gpu = FakeGpuAttestationVerifier(_none)..localResult = _none;
+      await openEditing(tester, saved: GpuCheckMode.off, gpu: gpu);
+      expect(find.text(choice), findsNothing);
+    });
+
+    test('Sichtbarkeitsregel', () {
+      bool v(bool? e, GpuCheckMode m, {bool attested = true}) =>
+          gpuChoiceVisible(attested: attested, gpuEvidence: e, savedMode: m);
+      expect(v(true, GpuCheckMode.off), isTrue);
+      expect(v(false, GpuCheckMode.off), isFalse);
+      expect(v(null, GpuCheckMode.off), isFalse);
+      expect(v(false, GpuCheckMode.after), isTrue);
+      expect(v(null, GpuCheckMode.before), isTrue);
+      expect(v(true, GpuCheckMode.off, attested: false), isFalse);
+    });
   });
 
   group('Migration des globalen Werts', () {

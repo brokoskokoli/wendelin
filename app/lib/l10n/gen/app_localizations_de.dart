@@ -1537,6 +1537,11 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String gpuNoEvidenceFinishHidden(String hint) {
+    return '$hint. Das Modell bleibt nutzbar. Die GPU-Prüfung ist hier nicht wählbar und bleibt „Aus“; die übrigen Prüfungen bleiben aktiv.';
+  }
+
+  @override
   String get haAddressLabel => 'Adresse';
 
   @override
