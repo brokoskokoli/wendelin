@@ -5198,7 +5198,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String wakeNotifEnded(String reason) {
-    return 'Das Wake Word wurde beendet ($reason). Tippe, um es wieder einzuschalten.';
+    return 'Das Aktivierungswort wurde beendet ($reason). Tippe, um es wieder einzuschalten.';
   }
 
   @override
@@ -5210,7 +5210,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get wakeNotifNoRole =>
-      'Wendelin muss der Assistent sein, damit das Wake Word nach einem Neustart laufen kann.';
+      'Wendelin muss der Assistent sein, damit das Aktivierungswort nach einem Neustart laufen kann.';
 
   @override
   String get wakeNotifOff => 'Aus';
@@ -5230,7 +5230,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get wakeNotifReenableAction => 'Wieder einschalten';
 
   @override
-  String get wakeNotifReenableTitle => 'Wake Word ist aus';
+  String get wakeNotifReenableTitle => 'Aktivierungswort ist aus';
 
   @override
   String get wakeNotifResume => 'Fortsetzen';

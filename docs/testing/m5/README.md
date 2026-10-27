@@ -34,6 +34,7 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP150 – Home Assistant: Zahl als Text und Wiederholungsabbruch (Gerätetest)](wp150.md)
 - [WP151 – Unterbrechen mit Weckwort bei Gesprächston (Gerätetest)](wp151.md)
 - [WP154 – Sicherheitsstufe je Tool und Home-Assistant-Gerät (Gerätetest)](wp154.md)
+- [WP156 – „Hey Wendelin“ in Texten und Benachrichtigung (Gerätetest)](wp156.md)
 - [WP157 – Sitzungssperre und Abfluss-Schutz (Gerätetest)](wp157.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)

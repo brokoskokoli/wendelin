@@ -159,8 +159,9 @@ class WakePlatform {
   Future<void> setTexts(Map<String, String> texts) async {
     try {
       await _channel.invokeMethod<void>('texts', {'texts': texts});
-    } on Object {
+    } on Object catch (e) {
       // Not on Android, or no engine: Kotlin keeps the texts it has.
+      debugPrint('wake-texts channel=error type=${e.runtimeType}');
     }
   }
 

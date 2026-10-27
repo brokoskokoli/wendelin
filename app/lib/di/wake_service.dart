@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show immutable;
+import 'package:flutter/foundation.dart' show debugPrint, immutable;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
@@ -58,8 +58,9 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
     // goes to the service as well.
     try {
       ref.listen(uiLanguageProvider, (_, _) => unawaited(push()));
-    } on Object {
+    } on Object catch (e) {
       // No settings yet (plain provider tests): the texts follow the system.
+      debugPrint('wake-texts listen=skipped type=${e.runtimeType}');
     }
     return WakeServiceSettings(
       enabled: await settings.get(wakeEnabledKey) ?? false,
@@ -80,9 +81,10 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
     // Before `configure`: that call may start the service, which needs them.
     try {
       await platform.setTexts(wakeNotificationTexts(uiTexts(ref)));
-    } on Object {
+    } on Object catch (e) {
       // No binding for the system language (plain provider tests): Kotlin
       // keeps the texts it has, or German.
+      debugPrint('wake-texts result=error type=${e.runtimeType}');
     }
     if (!ref.mounted) return;
     await platform.configure(

@@ -3038,7 +3038,7 @@
     }
   },
   "wakeNotifChannelDesc": "Zeigt, dass Wendelin auf „Hey Wendelin“ hört.",
-  "wakeNotifEnded": "Das Wake Word wurde beendet ({reason}). Tippe, um es wieder einzuschalten.",
+  "wakeNotifEnded": "Das Aktivierungswort wurde beendet ({reason}). Tippe, um es wieder einzuschalten.",
   "@wakeNotifEnded": {
     "placeholders": {
       "reason": {
@@ -3048,7 +3048,7 @@
   },
   "wakeNotifListeningText": "Das Mikrofon ist an. Audio bleibt auf dem Gerät.",
   "wakeNotifListeningTitle": "Wendelin hört auf „Hey Wendelin“",
-  "wakeNotifNoRole": "Wendelin muss der Assistent sein, damit das Wake Word nach einem Neustart laufen kann.",
+  "wakeNotifNoRole": "Wendelin muss der Assistent sein, damit das Aktivierungswort nach einem Neustart laufen kann.",
   "wakeNotifOff": "Aus",
   "wakeNotifPause": "Pause 1 h",
   "wakeNotifPausedText": "Bis {time} Uhr, das Mikrofon ist frei.",
@@ -3061,7 +3061,7 @@
   },
   "wakeNotifPausedTitle": "Wendelin pausiert",
   "wakeNotifReenableAction": "Wieder einschalten",
-  "wakeNotifReenableTitle": "Wake Word ist aus",
+  "wakeNotifReenableTitle": "Aktivierungswort ist aus",
   "wakeNotifResume": "Fortsetzen",
   "wakeServiceSectionAlways": "Immer",
   "wakeServiceSectionAlwaysHint": "Kostet spürbar Akku.",

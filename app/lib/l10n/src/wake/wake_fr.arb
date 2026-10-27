@@ -205,8 +205,8 @@
   "wakeNotifPausedTitle": "Wendelin est en pause",
   "wakeNotifPausedText": "Jusqu’à {time}, le micro est libre.",
   "wakeNotifResume": "Reprendre",
-  "wakeNotifReenableTitle": "Le mot d’éveil est désactivé",
+  "wakeNotifReenableTitle": "Le mot d’activation est désactivé",
   "wakeNotifReenableAction": "Réactiver",
-  "wakeNotifNoRole": "Wendelin doit être l’assistant pour que le mot d’éveil fonctionne après un redémarrage.",
-  "wakeNotifEnded": "Le mot d’éveil s’est arrêté ({reason}). Touchez pour le réactiver."
+  "wakeNotifNoRole": "Wendelin doit être l’assistant pour que le mot d’activation fonctionne après un redémarrage.",
+  "wakeNotifEnded": "Le mot d’activation s’est arrêté ({reason}). Touchez pour le réactiver."
 }

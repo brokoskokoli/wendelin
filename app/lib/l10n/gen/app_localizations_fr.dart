@@ -5227,7 +5227,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String wakeNotifEnded(String reason) {
-    return 'Le mot d’éveil s’est arrêté ($reason). Touchez pour le réactiver.';
+    return 'Le mot d’activation s’est arrêté ($reason). Touchez pour le réactiver.';
   }
 
   @override
@@ -5239,7 +5239,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeNotifNoRole =>
-      'Wendelin doit être l’assistant pour que le mot d’éveil fonctionne après un redémarrage.';
+      'Wendelin doit être l’assistant pour que le mot d’activation fonctionne après un redémarrage.';
 
   @override
   String get wakeNotifOff => 'Arrêter';
@@ -5259,7 +5259,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get wakeNotifReenableAction => 'Réactiver';
 
   @override
-  String get wakeNotifReenableTitle => 'Le mot d’éveil est désactivé';
+  String get wakeNotifReenableTitle => 'Le mot d’activation est désactivé';
 
   @override
   String get wakeNotifResume => 'Reprendre';

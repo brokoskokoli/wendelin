@@ -8838,7 +8838,7 @@ abstract class AppLocalizations {
   /// No description provided for @wakeNotifEnded.
   ///
   /// In de, this message translates to:
-  /// **'Das Wake Word wurde beendet ({reason}). Tippe, um es wieder einzuschalten.'**
+  /// **'Das Aktivierungswort wurde beendet ({reason}). Tippe, um es wieder einzuschalten.'**
   String wakeNotifEnded(String reason);
 
   /// No description provided for @wakeNotifListeningText.
@@ -8856,7 +8856,7 @@ abstract class AppLocalizations {
   /// No description provided for @wakeNotifNoRole.
   ///
   /// In de, this message translates to:
-  /// **'Wendelin muss der Assistent sein, damit das Wake Word nach einem Neustart laufen kann.'**
+  /// **'Wendelin muss der Assistent sein, damit das Aktivierungswort nach einem Neustart laufen kann.'**
   String get wakeNotifNoRole;
 
   /// No description provided for @wakeNotifOff.
@@ -8892,7 +8892,7 @@ abstract class AppLocalizations {
   /// No description provided for @wakeNotifReenableTitle.
   ///
   /// In de, this message translates to:
-  /// **'Wake Word ist aus'**
+  /// **'Aktivierungswort ist aus'**
   String get wakeNotifReenableTitle;
 
   /// No description provided for @wakeNotifResume.

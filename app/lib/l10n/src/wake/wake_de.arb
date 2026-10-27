@@ -418,10 +418,10 @@
     }
   },
   "wakeNotifResume": "Fortsetzen",
-  "wakeNotifReenableTitle": "Wake Word ist aus",
+  "wakeNotifReenableTitle": "Aktivierungswort ist aus",
   "wakeNotifReenableAction": "Wieder einschalten",
-  "wakeNotifNoRole": "Wendelin muss der Assistent sein, damit das Wake Word nach einem Neustart laufen kann.",
-  "wakeNotifEnded": "Das Wake Word wurde beendet ({reason}). Tippe, um es wieder einzuschalten.",
+  "wakeNotifNoRole": "Wendelin muss der Assistent sein, damit das Aktivierungswort nach einem Neustart laufen kann.",
+  "wakeNotifEnded": "Das Aktivierungswort wurde beendet ({reason}). Tippe, um es wieder einzuschalten.",
   "@wakeNotifEnded": {
     "placeholders": {
       "reason": {

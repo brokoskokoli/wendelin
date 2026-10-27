@@ -350,7 +350,20 @@ void main() {
     });
 
     test('andere Wörter vor dem Wake Word bleiben stehen (WP156)', () {
-      for (final w in ['Danke', 'Also', 'Ach', 'Na', 'Nein']) {
+      for (final w in [
+        'Danke',
+        'Also',
+        'Ach',
+        'Na',
+        'Nein',
+        'Die',
+        'Und',
+        // In heyWordsLenient (Prüfung), but no greeting for the cut.
+        'Ja',
+        'Nee',
+        'Ah',
+        'Yeah',
+      ]) {
         expect(
           stripWakeWord('$w Wendelin, schalte an'),
           '$w Wendelin, schalte an',

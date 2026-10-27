@@ -43,10 +43,10 @@ class WakeTexts(private val stored: (String) -> String?) {
             "pausedTitle" to "Wendelin pausiert",
             "pausedText" to "Bis {time} Uhr, das Mikrofon ist frei.",
             "resume" to "Fortsetzen",
-            "reenableTitle" to "Wake Word ist aus",
+            "reenableTitle" to "Aktivierungswort ist aus",
             "reenableAction" to "Wieder einschalten",
-            "noRole" to "Wendelin muss der Assistent sein, damit das Wake Word nach einem Neustart laufen kann.",
-            "ended" to "Das Wake Word wurde beendet ({reason}). Tippe, um es wieder einzuschalten.",
+            "noRole" to "Wendelin muss der Assistent sein, damit das Aktivierungswort nach einem Neustart laufen kann.",
+            "ended" to "Das Aktivierungswort wurde beendet ({reason}). Tippe, um es wieder einzuschalten.",
         )
 
         /** The known, non-blank, not overlong entries of [args] (what the app sent). */
