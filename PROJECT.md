@@ -7,7 +7,7 @@ Diese Datei sagt den globalen Skills und Agenten (`project-supervisor`, `wp-supe
 - **Zweck:** Persönlicher Sprachassistent (Flutter, Android zuerst).
 - **Repository:** öffentlich auf GitHub (Regeln „Öffentliches Repo“ in `docs/agents/common.md`).
 - **Maintainer:** der Nutzer.
-- **Orchestrator-Sitzung:** `claude --name "Wendelin projekt"` mit `/project-supervisor mach weiter`. Paket-Sitzungen bekommen den Namen im Prompt und melden sich dort.
+- **Orchestrator-Sitzung:** beliebiger Name, Start mit `/project-supervisor mach weiter`. Paket- und Research-Sitzungen bekommen den aktuellen Namen im Prompt und melden sich dort.
 
 ## Arbeitsorte
 
