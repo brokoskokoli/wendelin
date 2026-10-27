@@ -2094,8 +2094,45 @@ class AppLocalizationsDe extends AppLocalizations {
   String get levelHelpD => 'Entsperrt und mit Bestätigung auf dem Display.';
 
   @override
+  String get levelKindClimate => 'Klima';
+
+  @override
+  String get levelKindCover => 'Rollos';
+
+  @override
+  String get levelKindIntro =>
+      'Gilt für alle Geräte einer Art, die keine eigene Stufe haben. Schloss, Alarm, Garage, Tor und Tür gibt es nur je Gerät (Home-Assistant-Einrichtung). Eine eigene Gerätestufe gewinnt immer. Szenen mit unbekannten Mitgliedern laufen höchstens auf Stufe C, Szenen mit kritischem Mitglied nie niedriger als dieses.';
+
+  @override
+  String get levelKindLight => 'Licht';
+
+  @override
+  String get levelKindMedia => 'Medien';
+
+  @override
+  String get levelKindScene => 'Szenen';
+
+  @override
+  String get levelKindSummaryCover =>
+      'Standard: D (Rollos mit altem „ohne Rückfrage“: C)';
+
+  @override
+  String get levelKindSwitch => 'Schalter';
+
+  @override
+  String get levelKindTitle => 'Stufe je Geräteart';
+
+  @override
   String get levelLegacyRemove =>
       'Altes „Immer bestätigen“ entfernen (das Gerät bestimmt die Stufe)';
+
+  @override
+  String get levelRefCall =>
+      'Die Stufe legst du je Geräteart fest (unten) oder je Gerät in der Home-Assistant-Einrichtung.';
+
+  @override
+  String get levelRefSecure =>
+      'Schloss, Alarm, Garage, Tor und Tür: Stufe je Gerät in der Home-Assistant-Einrichtung. Rollos: siehe „Stufe je Geräteart“.';
 
   @override
   String get levelRestore => 'Standard wiederherstellen';
@@ -2117,6 +2154,11 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String levelSummaryKind(String level) {
+    return 'Stufe $level · von Geräteart';
+  }
+
+  @override
   String get levelSummaryScene => 'Standard: je nach Mitgliedern';
 
   @override
@@ -2125,6 +2167,14 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get levelWarnDeviceMessage =>
       'Schloss, Alarm, Tor oder Tür lassen sich dann ohne Bestätigung bedienen, bei Stufe A sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.';
+
+  @override
+  String get levelWarnKindCover =>
+      'Alle Rollos dieser Art lassen sich dann ohne Bestätigung bewegen, bei Stufe A sogar bei gesperrtem Gerät. Garage, Tor und Tür sind davon ausgenommen. Die Verantwortung liegt bei dir.';
+
+  @override
+  String get levelWarnKindSwitch =>
+      'Schalter können Steckdosen und damit Geräte wie Heizung oder Herd schalten. Bei Stufe A geht das sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.';
 
   @override
   String get levelWarnPersonalMessage =>

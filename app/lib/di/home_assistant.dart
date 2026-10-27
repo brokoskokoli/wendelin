@@ -160,6 +160,12 @@ final haStoreProvider = Provider<SecretStoreHa>(
   (ref) => SecretStoreHa(ref.watch(secretStoreProvider)),
 );
 
+/// The levels per device kind (WP160). The settings change them with
+/// [HaEntityStore.saveKindLevels] and then invalidate this provider.
+final haKindLevelsProvider = FutureProvider<HaKindLevels>(
+  (ref) => ref.watch(haStoreProvider).kindLevels(),
+);
+
 /// Client of the Home Assistant API; tests override it with `FakeHaApi`.
 final haApiProvider = Provider<HaApi>(
   (ref) => HttpHaApi(

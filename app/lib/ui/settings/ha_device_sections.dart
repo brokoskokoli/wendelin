@@ -49,6 +49,7 @@ class HaAreaSection extends StatelessWidget {
     required this.choiceOf,
     required this.onToggle,
     required this.onLevel,
+    this.kinds = const HaKindLevels(),
     super.key,
   });
 
@@ -69,6 +70,10 @@ class HaAreaSection extends StatelessWidget {
 
   /// Sets the level of a device, `null` = default.
   final void Function(HaEntity entity, SecurityLevel? level) onLevel;
+
+  /// The levels per device kind (WP160); they count for devices without a
+  /// level of their own.
+  final HaKindLevels kinds;
 
   /// Domains whose A/B level gets the hint (lock, alarm, gate, door).
   static bool dangerous(HaEntity e) =>
@@ -111,12 +116,21 @@ class HaAreaSection extends StatelessWidget {
       chosen,
       liveClass: e.deviceClass,
       scene: HaSceneKind.safe,
+      kinds: kinds,
     );
+    final own = chosen.level != null || chosen.alwaysConfirm;
+    // The kind counts (the level differs from the one without it): shown as
+    // „von Geräteart“, the device itself has no choice to restore.
+    final fromKind =
+        !own &&
+        level !=
+            haEffectiveLevel(
+              chosen,
+              liveClass: e.deviceClass,
+              scene: HaSceneKind.safe,
+            );
     final isDefault =
-        chosen.level == null &&
-        !chosen.alwaysConfirm &&
-        !chosen.noConfirm &&
-        level == defaultOf(e);
+        fromKind || (!own && !chosen.noConfirm && level == defaultOf(e));
     return SecurityLevelPicker(
       idKey: e.entityId,
       name: e.name,
@@ -124,7 +138,9 @@ class HaAreaSection extends StatelessWidget {
       isDefault: isDefault,
       // A scene without a chosen level runs on B or D, depending on its
       // members at every call: do not claim „Stufe B · Standard“.
-      summary: e.domain == 'scene' && isDefault
+      summary: fromKind
+          ? context.l10n.levelSummaryKind(level.name.toUpperCase())
+          : e.domain == 'scene' && isDefault
           ? context.l10n.levelSummaryScene
           : null,
       warnLevels: dangerous(e)

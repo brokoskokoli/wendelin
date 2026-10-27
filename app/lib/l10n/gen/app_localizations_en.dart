@@ -2073,8 +2073,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelHelpD => 'Unlocked and with a confirmation on the display.';
 
   @override
+  String get levelKindClimate => 'Climate';
+
+  @override
+  String get levelKindCover => 'Blinds';
+
+  @override
+  String get levelKindIntro =>
+      'Applies to all devices of a kind that have no level of their own. Locks, alarms, garage, gate and door can only be set per device (Home Assistant setup). A device\'s own level always wins. Scenes with unknown members run at level C at most, scenes with a critical member never lower than that member.';
+
+  @override
+  String get levelKindLight => 'Lights';
+
+  @override
+  String get levelKindMedia => 'Media';
+
+  @override
+  String get levelKindScene => 'Scenes';
+
+  @override
+  String get levelKindSummaryCover =>
+      'Default: D (blinds with the old \"no confirmation\": C)';
+
+  @override
+  String get levelKindSwitch => 'Switches';
+
+  @override
+  String get levelKindTitle => 'Level per device kind';
+
+  @override
   String get levelLegacyRemove =>
       'Remove the old “Always confirm” (the device sets the level)';
+
+  @override
+  String get levelRefCall =>
+      'Set the level per device kind (below) or per device in the Home Assistant setup.';
+
+  @override
+  String get levelRefSecure =>
+      'Lock, alarm, garage, gate and door: level per device in the Home Assistant setup. Blinds: see \"Level per device kind\".';
 
   @override
   String get levelRestore => 'Restore default';
@@ -2096,6 +2133,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String levelSummaryKind(String level) {
+    return 'Level $level · from device kind';
+  }
+
+  @override
   String get levelSummaryScene => 'default: depends on the members';
 
   @override
@@ -2104,6 +2146,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get levelWarnDeviceMessage =>
       'A lock, alarm, gate or door can then be operated without a confirmation, at level A even while the device is locked. The responsibility is yours.';
+
+  @override
+  String get levelWarnKindCover =>
+      'All blinds of this kind can then move without confirmation, at level A even on a locked device. Garage, gate and door are excluded. The responsibility is yours.';
+
+  @override
+  String get levelWarnKindSwitch =>
+      'Switches can control sockets and so devices such as heating or stove. At level A this works even on a locked device. The responsibility is yours.';
 
   @override
   String get levelWarnPersonalMessage =>
