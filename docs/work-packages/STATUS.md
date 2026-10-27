@@ -111,10 +111,11 @@ Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 ## Nächste Schritte
 
 Stand 2026-10-27 (Orchestrator):
-0. Laufend: nichts. Gemergt: WP158 (b5ef90e3), WP153 (9778f8a8), WP155 (8e1e18b1, K126 bestätigt), WP156 (abb1ead7), WP157 (7ad79f58, K122/K125 bestätigt), WP154 (ffed7c83, K123 bestätigt), WP151 (0b94041d, K124 bestätigt). Test-APK rc8 (Tag v0.1.0-rc8, 1cc047f9).
+0. Laufend: nichts. Gemergt: WP158 (b5ef90e3), WP153 (9778f8a8), WP155 (8e1e18b1, K126 bestätigt), WP156 (abb1ead7), WP157 (7ad79f58, K122/K125 bestätigt), WP154 (ffed7c83, K123 bestätigt), WP151 (0b94041d, K124 bestätigt). Test-APK rc10 (Tag v0.1.0-rc10, 3e17f4b1); WP158 ist erst im nächsten RC.
 1. Danach: Prüfseite Weckwort-Archiv auf Auftrag des Maintainers; sonst M6 nur mit Go.
 2. Gerätetest beim Maintainer: rc10 (T30-WP153), rc9 (T29-WP155, T29-WP156, T29-WP157), rc8 (T28-WP151, T28-WP154), rc7 (T27-WP149, T27-WP150, T26-WP148).
-3. Später: Prüfseite für das Weckwort-Archiv (Anhören, Markieren), danach Hey-Pflicht in der Erkennung (K115) und Training mit eigenem HW-Kopf; wake_continuous_e2e (WP68-Altlast); offen aus M5/M6 nur mit Go: WP100/WP101, STT-Messung (K99), WP132, WP138.
+3. Gemeldete Fehler ohne Paket (Maintainer 2026-10-23): (a) Anbieter-Setup zeigt „GPU-Prüfung über NVIDIA“ auch, wenn der Anbieter keinen GPU-Nachweis liefert (`provider_setup/finish_step.dart`, `gpu_check_section.dart`, Fähigkeit je Modell prüfen) → ausblenden; (b) SMS- und Benachrichtigungszugriff lassen sich bei APK-Installation nicht aktivieren („aus Sicherheitsgründen nicht zugelassen“, Android 13+ „Eingeschränkte Einstellungen“) → Sperre erkennen, Schritt-für-Schritt-Hinweis mit Knopf zu den App-Infos (bisher nur ein Satz im Medien-Hinweis). Technisch offen: Python-Tests in `tool/train_wake_word/` laufen in keinem CI-Job; Gerätetest Stationsmodus nach WP158.
+4. Später: Prüfseite für das Weckwort-Archiv (Anhören, Markieren), danach Hey-Pflicht in der Erkennung (K115) und Training mit eigenem HW-Kopf; wake_continuous_e2e (WP68-Altlast); offen aus M5/M6 nur mit Go: WP100/WP101, STT-Messung (K99), WP132, WP138.
 
 Ältere Reihenfolge M5 (bestätigt 2026-10-19, erledigt bzw. überholt):
 
