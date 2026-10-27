@@ -109,7 +109,7 @@ Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP160, WP1
 | WP160 | Home Assistant: Stufe für ha__call/ha__call_secure einstellbar, Licht gesperrt steuerbar | in Arbeit | Meldung Maintainer 2026-10-27 nach WP154 |
 | WP161 | Spotify: „spielt“, aber nirgends Musik (Zielgerät, Prüfung nach play, ehrliche Suche) | in Arbeit | Gerätetest Maintainer 2026-10-27 |
 | WP162 | Lizenzen der Sprachmodelle als Unterseite (Mini) | in Arbeit | Wunsch Maintainer 2026-10-27; läuft als Sub-Agent im Orchestrator |
-| WP163 | Gesperrt: Anfrage und Antwort im Overlay, Entsperren-Knopf oben, kein pauschaler Sperrtext | in Arbeit | Wunsch Maintainer 2026-10-27; 3. Sitzung mit Freigabe |
+| WP163 | Gesperrt: Anfrage und Antwort im Overlay, Entsperren-Knopf oben, kein pauschaler Sperrtext; Teil B: Aktionen wie Navigation nach dem Entsperren ausführen | in Arbeit | Wunsch Maintainer 2026-10-27; 3. Sitzung mit Freigabe |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
