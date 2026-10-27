@@ -10,13 +10,22 @@ import 'editor_parts.dart';
 /// home network, enabled and time limit.
 class RunSection extends StatelessWidget {
   /// Creates the section.
-  const RunSection({super.key, required this.draft, required this.onEdit});
+  const RunSection({
+    super.key,
+    required this.draft,
+    required this.onEdit,
+    this.levelField,
+  });
 
   /// The tool being edited.
   final HttpToolDraft draft;
 
   /// Edit callback.
   final DraftEdit onEdit;
+
+  /// The security level A–D of the tool (WP160); `null` while it has no
+  /// valid name yet.
+  final Widget? levelField;
 
   Widget _levelChoice(BuildContext context) {
     final d = draft;
@@ -55,6 +64,7 @@ class RunSection extends StatelessWidget {
       title: context.l10n.httpRunExecution,
       children: [
         _levelChoice(context),
+        ?levelField,
         SettingsRow(
           title: context.l10n.httpRunNoAsk,
           detail: d.autoRunAvailable

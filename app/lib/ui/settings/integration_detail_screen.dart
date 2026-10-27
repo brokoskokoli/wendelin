@@ -16,6 +16,7 @@ import 'ha_kind_section.dart';
 import 'security_level_picker.dart';
 import 'settings_page.dart';
 import 'settings_routes.dart';
+import 'tool_level_field.dart';
 
 /// Tools of one integration: each on/off, and `read`/`write` tools can be
 /// set to „Immer nachfragen“. Levels can only be made stricter (K8 b):
@@ -307,10 +308,5 @@ class SensitiveLevelSection extends ConsumerWidget {
 /// with outside effect warns at A, B and C; a tool of a [Integration.sensitive]
 /// integration (personal content) at A and B. Others (flashlight, harmless
 /// devices) never warn.
-Set<SecurityLevel> warnLevelsOf(Tool tool, Integration integration) {
-  if (tool.risk == RiskLevel.external) {
-    return const {SecurityLevel.a, SecurityLevel.b, SecurityLevel.c};
-  }
-  if (integration.sensitive) return const {SecurityLevel.a, SecurityLevel.b};
-  return const {};
-}
+Set<SecurityLevel> warnLevelsOf(Tool tool, Integration integration) =>
+    warnLevelsFor(tool.risk, sensitive: integration.sensitive);

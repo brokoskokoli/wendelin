@@ -6,9 +6,11 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_mcp/wendelin_mcp.dart';
 
 import '../../../di/mcp/mcp_providers.dart';
+import '../../../di/preferences.dart';
 import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
+import '../tool_level_field.dart';
 import 'mcp_labels.dart';
 import 'mcp_secret_dialogs.dart' show guardMcp;
 
@@ -106,6 +108,7 @@ Future<void> showMcpToolSheet(
       tool: tool,
       config: config,
       mcpTool: server.offered[tool.name],
+      sensitive: config.sensitive,
       choices: _choices(context.l10n, base),
       selected: (i) => mcpChoiceSelected(base, override, i),
       onPick: (change) {
@@ -126,6 +129,7 @@ class _ToolSheet extends StatelessWidget {
     required this.tool,
     required this.config,
     required this.mcpTool,
+    required this.sensitive,
     required this.choices,
     required this.selected,
     required this.onPick,
@@ -134,13 +138,14 @@ class _ToolSheet extends StatelessWidget {
   final McpToolInfo tool;
   final McpServerConfig config;
   final McpTool? mcpTool;
+  final bool sensitive;
   final List<_Choice> choices;
   final bool Function(int index) selected;
   final void Function(McpToolOverride Function(McpToolOverride)) onPick;
 
   @override
   Widget build(BuildContext context) => SafeArea(
-    child: Padding(
+    child: SingleChildScrollView(
       padding: const EdgeInsets.all(WSpace.screen),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -180,6 +185,25 @@ class _ToolSheet extends StatelessWidget {
                         : null,
                   ),
               ],
+            ),
+          // The security level A–D (WP160), same as for built-in tools. Not
+          // under „alle bestätigen“: that rule must not be loosened here.
+          if (mcpTool case final t? when !config.confirmAll)
+            Consumer(
+              builder: (_, ref, _) => ToolLevelField(
+                toolName: t.name,
+                risk: t.risk,
+                sensitive: sensitive,
+                stored: ref.watch(toolPrefsProvider).levelOf(t.name),
+                onChanged: (l) {
+                  final prefs = ref.read(toolPrefsProvider);
+                  unawaited(
+                    ref
+                        .read(toolPrefsProvider.notifier)
+                        .set(prefs.withLevel(t.name, l)),
+                  );
+                },
+              ),
             ),
           if (mcpTool != null && mcpTool!.unsupportedSchemaParts.isNotEmpty)
             Text(

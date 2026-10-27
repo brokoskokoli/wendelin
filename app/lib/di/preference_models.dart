@@ -178,6 +178,25 @@ final class ToolPrefs {
     sensitive: sensitive,
   );
 
+  /// A copy where the stored level of [from] (also the legacy "always
+  /// confirm") now belongs to [to]: a renamed tool keeps its level instead
+  /// of falling back to the default. An entry of [to] is replaced.
+  ToolPrefs renamed(String from, String to) {
+    final raw = levelOf(from);
+    if (from == to || raw == null) return this;
+    return ToolPrefs(
+      disabled: disabled,
+      alwaysConfirm: {...alwaysConfirm}..removeAll([from, to]),
+      levels: {
+        for (final e in levels.entries)
+          if (e.key != from && e.key != to) e.key: e.value,
+        to: raw,
+      },
+      sensitiveMinimum: sensitiveMinimum,
+      sensitive: sensitive,
+    );
+  }
+
   /// A copy with another [level] for sensitive integrations.
   ToolPrefs withSensitiveMinimum(PrivacyLevel? level) => ToolPrefs(
     disabled: disabled,

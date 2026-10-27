@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wendelin_core/wendelin_core.dart' show SecurityLevel;
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 import '../../di/http_tools.dart';
+import '../../di/preferences.dart';
 import '../../di/providers.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
@@ -16,6 +18,7 @@ import 'http_tool_editor/source_section.dart';
 import 'http_tool_editor/test_run_panel.dart';
 import 'http_tool_editor/tool_section.dart';
 import 'settings_page.dart';
+import 'tool_level_field.dart';
 
 export 'http_tool_editor/placeholder_text_controller.dart';
 export 'http_tool_editor/test_run_panel.dart' show HttpTestResultView;
@@ -47,6 +50,11 @@ class _EditorState extends ConsumerState<HttpToolEditorScreen> {
   String? _testError;
   bool _testing = false;
   bool _saving = false;
+
+  /// The level the user picked here (`null` = default); written with the
+  /// tool on save, so a tool that is never saved leaves no entry.
+  SecurityLevel? _pickedLevel;
+  bool _levelPicked = false;
 
   @override
   void initState() {
@@ -126,7 +134,7 @@ class _EditorState extends ConsumerState<HttpToolEditorScreen> {
           onEdit: _edit,
         ),
         ArgsSection(draft: draft, onEdit: _edit),
-        RunSection(draft: draft, onEdit: _edit),
+        RunSection(draft: draft, onEdit: _edit, levelField: _levelField()),
         if (problem != null)
           Text(
             problem,
@@ -155,6 +163,37 @@ class _EditorState extends ConsumerState<HttpToolEditorScreen> {
           ),
       ],
     );
+  }
+
+  String get _toolName => 'http__${_draft.name.trim()}';
+
+  Widget? _levelField() {
+    if (_draft.name.trim().isEmpty) return null;
+    var prefs = ref.watch(toolPrefsProvider);
+    final old = widget.definition?.toolName;
+    // A renamed tool keeps its level (see [_saveLevel]).
+    if (old != null) prefs = prefs.renamed(old, _toolName);
+    return ToolLevelField(
+      toolName: _toolName,
+      risk: _draft.effectiveRisk,
+      sensitive: _draft.sensitive,
+      stored: _levelPicked ? _pickedLevel?.name : prefs.levelOf(_toolName),
+      onChanged: (l) => setState(() {
+        _levelPicked = true;
+        _pickedLevel = l;
+      }),
+    );
+  }
+
+  /// Stores the level with the tool: a picked one under the (new) name,
+  /// otherwise the level of the old name moves along with a rename.
+  Future<void> _saveLevel() async {
+    final notifier = ref.read(toolPrefsProvider.notifier);
+    var prefs = ref.read(toolPrefsProvider);
+    final old = widget.definition?.toolName;
+    if (old != null && old != _toolName) prefs = prefs.renamed(old, _toolName);
+    if (_levelPicked) prefs = prefs.withLevel(_toolName, _pickedLevel);
+    await notifier.set(prefs);
   }
 
   Future<void> _test() async {
@@ -207,6 +246,7 @@ class _EditorState extends ConsumerState<HttpToolEditorScreen> {
     try {
       await enableHttpIntegrationIfNew(settings, registered, definition);
       await repository.save(definition, secretValues: _draft.secretChanges());
+      await _saveLevel();
     } on FormatException catch (e) {
       if (mounted) {
         setState(() => _saving = false);
@@ -228,6 +268,10 @@ class _EditorState extends ConsumerState<HttpToolEditorScreen> {
     );
     if (!ok) return;
     await repository.delete(_draft.id);
+    final prefs = ref.read(toolPrefsProvider);
+    await ref
+        .read(toolPrefsProvider.notifier)
+        .set(prefs.withLevel(widget.definition!.toolName, null));
     if (mounted) Navigator.of(context).pop();
   }
 }

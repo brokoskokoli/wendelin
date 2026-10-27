@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/integration_providers.dart';
+import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/ui/settings/ha_device_sections.dart';
 import 'package:wendelin/ui/settings/ha_screen.dart';
 import 'package:wendelin/ui/settings/integration_detail_screen.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
+import 'package:wendelin_mcp/wendelin_mcp.dart';
 
+import '../support/http_tools_support.dart';
+import '../support/mcp_support.dart';
 import '../support/test_env.dart';
 import '../ui/helpers.dart' show setView;
 import 'integrations_screen_test.dart' show settle;
@@ -182,8 +186,9 @@ void main() {
     final env = TestEnv(enabled: const {'ha'});
     final c = await pumpPage(tester, env, const IntegrationDetailScreen('ha'));
     final all = c.read(integrationsProvider);
-    // Bekannte Lücke (TODO WP160-2c): MCP- und HTTP-Tools kommen erst zur
-    // Laufzeit aus der Registry und sind hier nicht aufgezählt.
+    // MCP- und HTTP-Tools kommen erst zur Laufzeit aus der Registry: sie
+    // prüft der Test darunter, ihre eigenen Oberflächen die Tests in
+    // `mcp/mcp_level_test.dart` und `settings/http_level_test.dart`.
     expect(all, isNotEmpty);
     final names = <String>{};
     for (final i in all.values) {
@@ -205,5 +210,57 @@ void main() {
         );
       }
     }
+  });
+
+  testWidgets('MCP- und HTTP-Tools der Registry haben eine Stufenauswahl', (
+    tester,
+  ) async {
+    final env = TestEnv(
+      enabled: const {'mcp_homeserver', 'http'},
+      extraOverrides: mcpOverrides(),
+    );
+    await tester.runAsync(() async {
+      await seedServers(
+        env,
+        [
+          (
+            config: McpServerConfig(
+              id: 'srv',
+              name: 'Homeserver',
+              slug: 'homeserver',
+              url: Uri.parse('http://homeserver.local:3000/mcp'),
+              auth: McpBearerAuth(McpSecretRefs.bearer('srv')),
+            ),
+            tools: homeToolInfos(),
+            check: null,
+          ),
+        ],
+        secrets: {McpSecretRefs.bearer('srv'): 'token'},
+      );
+      await storeHttpTools(env, [testHttpTool()]);
+    });
+    final c = await pumpPage(tester, env, const IntegrationDetailScreen('ha'));
+    c.read(userIntegrationSyncProvider);
+    for (var i = 0; i < 100; i++) {
+      final ids = c.read(toolRegistryProvider).integrations.map((i) => i.id);
+      if (ids.contains('mcp_homeserver') && ids.contains('http')) break;
+      await settle(tester);
+    }
+    final tools = <String>[];
+    for (final id in ['mcp_homeserver', 'http']) {
+      await pumpPage(tester, env, IntegrationDetailScreen(id));
+      final integration = c
+          .read(toolRegistryProvider)
+          .integrations
+          .firstWhere((i) => i.id == id)
+          .integration;
+      expect(integration.tools, isNotEmpty, reason: id);
+      for (final t in integration.tools) {
+        tools.add(t.name);
+        expect(key('levelDetails_${t.name}'), findsOneWidget, reason: t.name);
+      }
+    }
+    expect(tools, contains('http__licht'));
+    expect(tools, contains('mcp_homeserver__get_state'));
   });
 }
