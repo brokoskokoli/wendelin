@@ -1,4 +1,4 @@
-// WP160 Analyse: kommt die speaker-enroll-Zeile über voiceLog an?
+// WP160: die speaker-enroll-Zeile kommt über voiceLog an, ohne Namen.
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -24,7 +24,14 @@ void main() {
             name: 'Anna',
             samples: [for (var i = 0; i < 5; i++) Int16List(48000)],
           );
-      expect(lines.where((l) => l.contains('speaker-enroll')), isNotEmpty);
+      expect(
+        lines.where(
+          (l) => l.startsWith('Wendelin/voice: speaker-enroll samples=5 '),
+        ),
+        hasLength(1),
+      );
+      expect(lines.any((l) => l.contains('speaker-enroll-failed')), isFalse);
+      expect(lines.any((l) => l.contains('Anna')), isFalse);
     },
   );
 }

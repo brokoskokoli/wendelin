@@ -1,5 +1,5 @@
-// WP160 Analyse: Rollo gesperrt mit erkannter Stimme (Handy-Log 19:02:42).
-// Erwartung ADR 0022: Standard C/D läuft gesperrt nie.
+// WP160 Dauertest: Rollo gesperrt mit erkannter Stimme (Handy-Log 19:02:42).
+// ADR 0022: Standard C/D läuft gesperrt nie; Gegenprobe A/B läuft.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/di/startup.dart';
@@ -43,7 +43,7 @@ Future<(TestEnv, FakeLlmProvider)> _run(
   await env.secrets.write('ha.entities', entities);
   env.ha.set('light.a', 'off', const {});
   env.ha.set('cover.r', 'closed', const {'device_class': 'shutter'});
-  // Kein Licht auf A, nur Rollo; Modelllauf nur, wenn Umfang > Lampe.
+  // light.a (Stufe laut Entities) ist die Positivkontrolle neben dem Rollo.
   final platform = FakeAssistantPlatform()
     ..locked = true
     ..unlockSucceeds = false;

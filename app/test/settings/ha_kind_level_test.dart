@@ -121,6 +121,40 @@ void main() {
     }
   });
 
+  testWidgets('Lesefehler im Art-Speicher: jede Art D (Abschnitt)', (
+    tester,
+  ) async {
+    final env = TestEnv(
+      enabled: const {'ha'},
+      extraOverrides: [
+        haKindLevelsProvider.overrideWith((ref) => throw StateError('kaputt')),
+      ],
+    );
+    await pumpPage(tester, env, const IntegrationDetailScreen('ha'));
+    for (final k in ['light', 'media', 'scene', 'switch', 'climate', 'cover']) {
+      expect(head(tester, k), 'Details · Stufe D · geändert', reason: k);
+    }
+  });
+
+  testWidgets('Lesefehler im Art-Speicher: Gerätezeile zeigt D von Geräteart', (
+    tester,
+  ) async {
+    final env = TestEnv(
+      enabled: const {'ha'},
+      extraOverrides: [
+        haKindLevelsProvider.overrideWith((ref) => throw StateError('kaputt')),
+      ],
+    );
+    await env.secrets.write('ha.url', 'http://192.168.1.20:8123');
+    await env.secrets.write('ha.token', 'kanarien-token');
+    await env.secrets.write(
+      'ha.entities',
+      '[{"id":"light.kitchen","name":"Küche Deckenlicht","area":"Küche"}]',
+    );
+    await pumpPage(tester, env, const HaScreen());
+    expect(find.text('Details · Stufe D · von Geräteart'), findsOneWidget);
+  });
+
   testWidgets('ha__call und ha__call_secure verweisen auf die Stufen', (
     tester,
   ) async {
