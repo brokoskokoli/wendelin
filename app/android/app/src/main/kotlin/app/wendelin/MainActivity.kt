@@ -11,6 +11,7 @@ import io.flutter.embedding.engine.FlutterEngine
 class MainActivity : WendelinActivity() {
     private var battery: BatteryChannel? = null
     private var wake: WakeChannel? = null
+    private var restricted: RestrictedSettingsChannel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,6 +23,7 @@ class MainActivity : WendelinActivity() {
         super.configureFlutterEngine(flutterEngine)
         battery = BatteryChannel(this, flutterEngine.dartExecutor.binaryMessenger)
         wake = WakeChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+        restricted = RestrictedSettingsChannel(this, flutterEngine.dartExecutor.binaryMessenger)
     }
 
     // The chat is not visible any more (WP93); Dart reports it again when it is.
@@ -40,6 +42,8 @@ class MainActivity : WendelinActivity() {
         battery = null
         wake?.dispose()
         wake = null
+        restricted?.dispose()
+        restricted = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 }

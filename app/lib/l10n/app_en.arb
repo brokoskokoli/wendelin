@@ -439,7 +439,7 @@
   },
   "confYesCall": "Call",
   "confYesSend": "Send",
-  "integrationsContactsRationale": "Wendelin needs access to your contacts to find numbers by name, plus the SMS and phone permissions. Android asks you next. Wendelin never sends an SMS or places a call unless you confirmed the preview with name and number first (by tap or by saying “yes”). Neither works while the device is locked. Without the phone permission Wendelin only opens the dialer.",
+  "integrationsContactsRationale": "Wendelin needs access to your contacts to find numbers by name, plus the SMS and phone permissions. Android asks you next. Wendelin never sends an SMS or places a call unless you confirmed the preview with name and number first (by tap or by saying “yes”). Neither works while the device is locked. Without the phone permission Wendelin only opens the dialer. If Android blocks the SMS permission, Wendelin then explains how to allow it.",
   "developerModeActiveHint": "Developer mode on – extended logging",
   "developerModeOff": "Developer mode off",
   "developerModeOn": "Developer mode on",
@@ -506,6 +506,8 @@
       }
     }
   },
+  "gpuEvidenceUnverified": "The GPU evidence could not be checked. The GPU check cannot be chosen here and stays “Off”; the other checks stay active. The choice appears if the check works when you edit the profile.",
+  "gpuNoEvidenceFinishHidden": "{hint}. The model stays usable. The GPU check cannot be chosen here and stays “Off”; the other checks stay active.",
   "haAddressLabel": "Address",
   "haApproved": "{n, plural, one{1 device approved} other{{n} devices approved}}",
   "haConnect": "Connect",
@@ -964,7 +966,7 @@
   "toolResultUndone": "Undone",
   "toolTlsEncrypted": "Tools end-to-end encrypted",
   "toolTlsHint": "Tool calls are protected by the verified connection up to the enclave, but not additionally encrypted.",
-  "integrationsMediaRationale": "To tell you what is playing and to skip within an audiobook or podcast, Wendelin needs “Notification access”. Android opens that page next: pick Wendelin in the list and turn it on (on newer Android versions, first choose “Allow restricted settings” in the app info). Wendelin does not read notifications, only media playback. Pause, resume and back work without it.",
+  "integrationsMediaRationale": "To tell you what is playing and to skip within an audiobook or podcast, Wendelin needs “Notification access”. Android opens that page next: pick Wendelin in the list and turn it on (if Android blocks it, Wendelin then explains how to allow it). Wendelin does not read notifications, only media playback. Pause, resume and back work without it.",
   "obsIndexBuilding": "Building index …",
   "obsIndexBuildingProgress": "Building index: {indexed} notes, {pending} to go",
   "obsIndexCurrent": "{notes} in the index · up to date",
@@ -1163,6 +1165,19 @@
   },
   "quickSwitchSemanticsAction": "Switch agent",
   "quickSwitchTitle": "Switch agent",
+  "restrictedSettingsBody": "{what} is missing. If Android reported that this setting is restricted or was not allowed for security reasons (Wendelin was installed from a file), allow it like this:",
+  "@restrictedSettingsBody": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "restrictedSettingsOpenAppInfo": "Open app info",
+  "restrictedSettingsSteps": "1. Tap “Open app info”.\n2. Tap ⋮ at the top right and choose “Allow restricted settings”. The entry only appears after the first failed attempt.\n3. Go back to Wendelin and switch the integration on again.",
+  "restrictedSettingsTitle": "Permission missing, maybe blocked by Android",
+  "restrictedSettingsWhatAccess": "Notification access",
+  "restrictedSettingsWhatSms": "The SMS permission",
   "condBuilderAddCondition": "+ Condition",
   "condBuilderAddConditionInGroup": "+ Condition in group",
   "condBuilderAddGroup": "+ Group",

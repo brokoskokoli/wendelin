@@ -17,5 +17,5 @@
   },
   "confYesCall": "Anrufen",
   "confYesSend": "Absenden",
-  "integrationsContactsRationale": "Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm."
+  "integrationsContactsRationale": "Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm. Sperrt Android die SMS-Freigabe, erklärt Wendelin danach, wie du sie erlaubst."
 }

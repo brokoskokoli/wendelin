@@ -1404,7 +1404,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get integrationsContactsRationale =>
-      'Wendelin needs access to your contacts to find numbers by name, plus the SMS and phone permissions. Android asks you next. Wendelin never sends an SMS or places a call unless you confirmed the preview with name and number first (by tap or by saying “yes”). Neither works while the device is locked. Without the phone permission Wendelin only opens the dialer.';
+      'Wendelin needs access to your contacts to find numbers by name, plus the SMS and phone permissions. Android asks you next. Wendelin never sends an SMS or places a call unless you confirmed the preview with name and number first (by tap or by saying “yes”). Neither works while the device is locked. Without the phone permission Wendelin only opens the dialer. If Android blocks the SMS permission, Wendelin then explains how to allow it.';
 
   @override
   String get developerModeActiveHint => 'Developer mode on – extended logging';
@@ -1515,6 +1515,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String integrationsErrUnavailable(String service) {
     return '$service is not reachable · paused';
+  }
+
+  @override
+  String get gpuEvidenceUnverified =>
+      'The GPU evidence could not be checked. The GPU check cannot be chosen here and stays “Off”; the other checks stay active. The choice appears if the check works when you edit the profile.';
+
+  @override
+  String gpuNoEvidenceFinishHidden(String hint) {
+    return '$hint. The model stays usable. The GPU check cannot be chosen here and stays “Off”; the other checks stay active.';
   }
 
   @override
@@ -2850,7 +2859,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get integrationsMediaRationale =>
-      'To tell you what is playing and to skip within an audiobook or podcast, Wendelin needs “Notification access”. Android opens that page next: pick Wendelin in the list and turn it on (on newer Android versions, first choose “Allow restricted settings” in the app info). Wendelin does not read notifications, only media playback. Pause, resume and back work without it.';
+      'To tell you what is playing and to skip within an audiobook or podcast, Wendelin needs “Notification access”. Android opens that page next: pick Wendelin in the list and turn it on (if Android blocks it, Wendelin then explains how to allow it). Wendelin does not read notifications, only media playback. Pause, resume and back work without it.';
 
   @override
   String get obsIndexBuilding => 'Building index …';
@@ -3482,6 +3491,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get quickSwitchTitle => 'Switch agent';
+
+  @override
+  String restrictedSettingsBody(String what) {
+    return '$what is missing. If Android reported that this setting is restricted or was not allowed for security reasons (Wendelin was installed from a file), allow it like this:';
+  }
+
+  @override
+  String get restrictedSettingsOpenAppInfo => 'Open app info';
+
+  @override
+  String get restrictedSettingsSteps =>
+      '1. Tap “Open app info”.\n2. Tap ⋮ at the top right and choose “Allow restricted settings”. The entry only appears after the first failed attempt.\n3. Go back to Wendelin and switch the integration on again.';
+
+  @override
+  String get restrictedSettingsTitle =>
+      'Permission missing, maybe blocked by Android';
+
+  @override
+  String get restrictedSettingsWhatAccess => 'Notification access';
+
+  @override
+  String get restrictedSettingsWhatSms => 'The SMS permission';
 
   @override
   String get condBuilderAddCondition => '+ Condition';

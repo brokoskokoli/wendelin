@@ -13,6 +13,7 @@ const prefixAreas = <String, String>{
   'stage': 'attest',
   'shield': 'attest',
   'check': 'attest',
+  'restricted': 'restricted',
   'wake': 'wake',
   'barge': 'wake',
   'mic': 'wake',

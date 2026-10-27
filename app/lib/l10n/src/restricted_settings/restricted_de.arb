@@ -1,0 +1,15 @@
+{
+  "restrictedSettingsTitle": "Freigabe fehlt, evtl. von Android gesperrt",
+  "restrictedSettingsBody": "{what} fehlt. Hat Android gemeldet, dass diese Einstellung eingeschränkt ist bzw. aus Sicherheitsgründen nicht zugelassen wurde (Wendelin wurde aus einer Datei installiert), dann gib sie so frei:",
+  "@restrictedSettingsBody": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "restrictedSettingsWhatSms": "Die SMS-Berechtigung",
+  "restrictedSettingsWhatAccess": "Der Benachrichtigungszugriff",
+  "restrictedSettingsSteps": "1. „App-Infos öffnen“ tippen.\n2. Oben rechts auf ⋮ tippen und „Eingeschränkte Einstellungen zulassen“ wählen. Der Eintrag erscheint erst nach dem ersten gescheiterten Versuch.\n3. Zurück zu Wendelin gehen und die Integration erneut einschalten.",
+  "restrictedSettingsOpenAppInfo": "App-Infos öffnen"
+}
