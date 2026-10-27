@@ -9,7 +9,6 @@ import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/overlay/unlock_window.dart';
-import 'package:wendelin/voice/locked_agent_run.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_voice/fakes.dart';
