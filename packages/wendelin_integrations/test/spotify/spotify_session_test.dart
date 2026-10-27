@@ -586,6 +586,224 @@ void main() {
       await expectLater(start(), throwsA(same(spotifyNoDevice)));
     });
 
+    group('Bestätigung', () {
+      late FakeMediaControlPort media;
+
+      MediaSnapshot snap({String? package, bool playing = true}) =>
+          MediaSnapshot(
+            packageName: package ?? spotifyAndroidPackage,
+            appName: 'Spotify',
+            playing: playing,
+          );
+
+      void withMedia() {
+        session = SpotifySession(
+          api,
+          secrets,
+          launcher: launcher,
+          hostDevice: host,
+          media: media,
+          clock: clock,
+          onDiagnostic: (e, f) => diag.add((e, f)),
+          delay: (d) async {
+            waits.add(d);
+            clock.advance(d);
+          },
+        );
+      }
+
+      setUp(() => media = FakeMediaControlPort());
+
+      test('Web-API: is_playing mit stehendem Fortschritt gilt nicht '
+          '(totes Gerät), einmal wecken', () async {
+        api
+          ..knownDevices.add(phone)
+          ..stuckDeviceIds.add('dev1');
+        await expectLater(start(), throwsA(isA<PortException>()));
+        expect(diag.last.$2['result'], 'stalled');
+        expect(diag.last.$2['via'], 'api');
+        expect(launcher.wakes, 1);
+        expect(count('play'), 2);
+      });
+
+      test('Web-API: wachsender Fortschritt bestätigt (via=api)', () async {
+        api.knownDevices.add(phone);
+        final r = await start();
+        expect(r.confirmed, isTrue);
+        expect(diag.last.$2['via'], 'api');
+        expect(count('playback'), 2);
+      });
+
+      test('Handy mit Sitzungszugriff: Spotify-Sitzung spielt bestätigt, '
+          'auch wenn die Web-API stehen bleibt (via=session)', () async {
+        api
+          ..knownDevices.add(phone)
+          ..stuckDeviceIds.add('dev1');
+        media.snapshot = snap();
+        withMedia();
+        final r = await start();
+        expect(r.confirmed, isTrue);
+        expect(diag.last.$2['via'], 'session');
+        expect(count('playback'), 0);
+      });
+
+      test('Handy mit Sitzungszugriff: Web-API spielt, aber keine '
+          'Spotify-Sitzung läuft: nicht bestätigt', () async {
+        api.knownDevices.add(phone);
+        media.snapshot = snap(package: 'com.google.android.youtube');
+        withMedia();
+        await expectLater(start(), throwsA(isA<PortException>()));
+        expect(diag.last.$2['via'], 'session');
+        expect(count('playback'), 0);
+        expect(launcher.wakes, 1);
+      });
+
+      test('Spotify-Sitzung pausiert: nicht bestätigt', () async {
+        api.knownDevices.add(phone);
+        media.snapshot = snap(playing: false);
+        withMedia();
+        await expectLater(start(), throwsA(isA<PortException>()));
+      });
+
+      test('ohne Sitzungszugriff: Web-API (via=api)', () async {
+        api.knownDevices.add(phone);
+        media
+          ..access = false
+          ..snapshot = snap(playing: false);
+        withMedia();
+        final r = await start();
+        expect(r.confirmed, isTrue);
+        expect(diag.last.$2['via'], 'api');
+        expect(media.methodCalls, isNot(contains('nowPlaying')));
+      });
+
+      test('Fehler der Mediensitzung: zurück auf die Web-API, kein '
+          'Abbruch', () async {
+        api.knownDevices.add(phone);
+        media.failNext('nowPlaying');
+        withMedia();
+        final r = await start();
+        expect(r.confirmed, isTrue);
+        expect(diag.last.$2['via'], 'api');
+      });
+
+      test('benanntes anderes Gerät: Web-API, Mediensitzung bleibt '
+          'unberührt', () async {
+        api.knownDevices.addAll([phone, speaker]);
+        media.snapshot = snap(playing: false);
+        withMedia();
+        final r = await start(name: 'Wohnzimmer');
+        expect(r.confirmed, isTrue);
+        expect(r.isPhone, isFalse);
+        expect(diag.last.$2['via'], 'api');
+        expect(media.methodCalls, isEmpty);
+      });
+    });
+
+    group('Handy lehnt den Befehl ab', () {
+      setUp(() => api.knownDevices.add(phone));
+
+      for (final (label, error) in [
+        (
+          '404',
+          const PortException(
+            PortErrorKind.notFound,
+            'Spotify: nicht '
+            'gefunden (HTTP 404)',
+          ),
+        ),
+        (
+          '5xx',
+          const PortException(
+            PortErrorKind.unavailable,
+            'Spotify hat einen '
+            'Serverfehler (HTTP 502)',
+          ),
+        ),
+      ]) {
+        test('$label: genau einmal wecken und wiederholen', () async {
+          api
+            ..rejectingDeviceIds.add('dev1')
+            ..rejectStatus = error;
+          launcher.onWake = api.rejectingDeviceIds.clear;
+          final r = await start();
+          expect(r.confirmed, isTrue);
+          expect(launcher.wakes, 1);
+          expect(count('play'), 2);
+        });
+      }
+
+      test(
+        'bleibt es abgelehnt: genau ein Wecken, der Fehler geht hoch',
+        () async {
+          api.rejectingDeviceIds.add('dev1');
+          await expectLater(start(), _port(PortErrorKind.notFound));
+          expect(launcher.wakes, 1);
+          expect(count('play'), 2);
+        },
+      );
+
+      test('ohne Launcher: der ursprüngliche Fehler', () async {
+        api.rejectingDeviceIds.add('dev1');
+        launcher.installed = false;
+        await expectLater(start(), _port(PortErrorKind.notFound));
+        expect(count('play'), 1);
+      });
+
+      test('429 und Berechtigung sind kein Weckgrund', () async {
+        for (final error in [
+          spotifyRateLimited,
+          const PortException(PortErrorKind.rejected, 'verweigert'),
+        ]) {
+          api.failNext('play', error);
+          await expectLater(start(), throwsA(same(error)));
+        }
+        expect(launcher.wakes, 0);
+        expect(count('play'), 2);
+      });
+
+      test('anderes Gerät (nicht das Handy) lehnt ab: kein Wecken', () async {
+        api
+          ..knownDevices.add(speaker)
+          ..rejectingDeviceIds.add('spk');
+        await expectLater(
+          start(name: 'Wohnzimmer'),
+          _port(PortErrorKind.notFound),
+        );
+        expect(launcher.wakes, 0);
+      });
+    });
+
+    test('eingeschränktes Gerät mit Handy-Namen wird nie Ziel', () async {
+      api.knownDevices.add(
+        const SpotifyDevice(
+          id: 'r',
+          name: 'Pixel 8',
+          type: 'Smartphone',
+          isRestricted: true,
+        ),
+      );
+      host.hostNames = {'Pixel 8'};
+      launcher.installed = false;
+      await expectLater(start(), throwsA(same(spotifyNoDevice)));
+      expect(count('play'), 0);
+      launcher.installed = true;
+      await expectLater(start(name: 'Pixel 8'), _port(PortErrorKind.notFound));
+      expect(count('play'), 0);
+    });
+
+    test('Typregel: die ID wird nicht gemerkt, nur Namenstreffer', () async {
+      const other = SpotifyDevice(id: 'x', name: 'Tablet', type: 'Smartphone');
+      api.knownDevices.add(phone);
+      await start();
+      expect(diag.first.$2['via'], 'type');
+      // A second smartphone appears: without a remembered id the type rule
+      // no longer picks one (and nothing can wake the app).
+      api.knownDevices.add(other);
+      launcher.installed = false;
+      await expectLater(start(), throwsA(same(spotifyNoDevice)));
+    });
+
     test('Diagnose enthält weder Gerätenamen noch IDs', () async {
       api.knownDevices.add(phone);
       await start();

@@ -54,6 +54,8 @@ List<Override> withIntegrations(TestEnv env) => [
   spotifyAuthBrowserProvider.overrideWithValue(env.spotifyBrowser),
   spotifyLauncherProvider.overrideWithValue(env.spotifyLauncher),
   spotifyHostDeviceProvider.overrideWithValue(env.spotifyHostDevice),
+  // Checks of „spotify__play“ do not wait in real time.
+  spotifyDelayProvider.overrideWithValue((_) async {}),
   appShareProvider.overrideWithValue(
     (package, text) async => env.shared.add((package, text)),
   ),

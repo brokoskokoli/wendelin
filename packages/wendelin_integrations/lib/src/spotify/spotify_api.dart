@@ -292,6 +292,13 @@ const spotifyNoDevice = PortException(
   'etwas abspielen.',
 );
 
+/// Spotify answered 429 or the client is blocked after one. Like all
+/// `unavailable` errors, but the session never wakes the app for it.
+const spotifyRateLimited = PortException(
+  PortErrorKind.unavailable,
+  'Spotify: Anfragelimit erreicht, später erneut versuchen',
+);
+
 /// The account is not Premium (Spotify: 403 `PREMIUM_REQUIRED`).
 const spotifyPremiumRequired = PortException(
   PortErrorKind.rejected,

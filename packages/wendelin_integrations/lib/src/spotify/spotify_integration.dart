@@ -1,12 +1,10 @@
 import 'package:wendelin_core/wendelin_core.dart';
 
 import '../common/port_exception.dart';
+import '../media/media_port.dart';
 import 'spotify_api.dart';
 import 'spotify_session.dart';
 import 'spotify_tools.dart';
-
-/// Android package of the Spotify app (wake-up, app detection).
-const spotifyAndroidPackage = 'com.spotify.music';
 
 /// Spotify playback (`spotify__…` tools) over the Web API.
 ///
@@ -19,6 +17,7 @@ final class SpotifyIntegration implements Integration {
     this.secrets, {
     SpotifyAppLauncher? launcher,
     SpotifyHostDevice? hostDevice,
+    MediaControlPort? media,
     void Function(String event, Map<String, Object> fields)? onDiagnostic,
     void Function(String message, PortErrorKind kind)? onError,
     void Function()? onRecovered,
@@ -28,6 +27,7 @@ final class SpotifyIntegration implements Integration {
          secrets,
          launcher: launcher,
          hostDevice: hostDevice,
+         media: media,
          onDiagnostic: onDiagnostic,
          onError: onError,
          onRecovered: onRecovered,

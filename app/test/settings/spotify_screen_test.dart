@@ -168,9 +168,8 @@ void main() {
     expect(await env.secrets.read('spotify.session'), isNull);
   });
 
-  testWidgets('spotify__play: Gerätewahl über den Handy-Namen und Prüfung im '
-      'Dev-Log, ohne Gerätenamen, Titel oder URIs', (tester) async {
-    final env = TestEnv(enabled: const {'spotify'});
+  /// Plays a track on the phone (found by its name) and returns the dev log.
+  Future<List<String>> playOnPhone(WidgetTester tester, TestEnv env) async {
     await loginSpotify(env);
     env.spotifyHostDevice.hostNames = {'Mein Telefon'};
     env.spotify.knownDevices.addAll(const [
@@ -201,12 +200,38 @@ void main() {
     expect(lines.where((l) => l.contains('spotify-device')), [
       predicate<String>((l) => l.contains('via="name"')),
     ]);
-    expect(lines.where((l) => l.contains('spotify-verify')), [
-      predicate<String>((l) => l.contains('result="playing"')),
-    ]);
     for (final l in lines) {
       expect(l, isNot(contains('Mein Telefon')));
       expect(l, isNot(contains('spotify:track')));
     }
+    return lines;
+  }
+
+  testWidgets('spotify__play mit Mediensitzungszugriff: Spotify-Sitzung '
+      'bestätigt, Dev-Log mit via=session', (tester) async {
+    final env = TestEnv(enabled: const {'spotify'});
+    env.media.snapshot = const MediaSnapshot(
+      packageName: spotifyAndroidPackage,
+      appName: 'Spotify',
+      playing: true,
+    );
+    final lines = await playOnPhone(tester, env);
+    expect(lines.where((l) => l.contains('spotify-verify')), [
+      predicate<String>(
+        (l) => l.contains('result="playing"') && l.contains('via="session"'),
+      ),
+    ]);
+  });
+
+  testWidgets('spotify__play ohne Mediensitzungszugriff: Web-API bestätigt, '
+      'Dev-Log mit via=api', (tester) async {
+    final env = TestEnv(enabled: const {'spotify'});
+    env.media.access = false;
+    final lines = await playOnPhone(tester, env);
+    expect(lines.where((l) => l.contains('spotify-verify')), [
+      predicate<String>(
+        (l) => l.contains('result="playing"') && l.contains('via="api"'),
+      ),
+    ]);
   });
 }

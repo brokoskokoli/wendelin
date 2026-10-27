@@ -321,6 +321,11 @@ void main() {
       expect(launcher.wakes, 1);
     });
 
+    test('geprüft auf dem Handy: fester Satz „läuft“', () async {
+      final o = await call('spotify__play', {'query': 'bohemian'});
+      expect(o.fixed, isA<ConfirmationSentence>());
+    });
+
     test('nichts spielt trotz Wecken: Fehler statt „Spielt“', () async {
       api.frozenDeviceIds.add('dev1');
       final o = await call('spotify__play', {'query': 'bohemian'});
@@ -341,6 +346,8 @@ void main() {
         expect(o.isError, isFalse);
         expect(o.text, contains('nicht geprüft'));
         expect(launcher.wakes, 0);
+        // Not spoken as „läuft“: the model words the unchecked result.
+        expect(o.fixed, isNull);
       },
     );
 
@@ -353,6 +360,7 @@ void main() {
       });
       expect(o.text, contains('auf „Wohnzimmer“'));
       expect(api.lastPlay!.deviceId, 'tv');
+      expect(o.fixed, isNull);
       api.activeDeviceId = 'dev1';
       await o.undo!.run();
       expect(api.lastPlay!.deviceId, 'tv');

@@ -8,7 +8,7 @@ export 'src/spotify/spotify_api.dart';
 export 'src/spotify/spotify_integration.dart';
 export 'src/spotify/spotify_login.dart';
 export 'src/spotify/spotify_session.dart'
-    show SpotifyDelay, SpotifySession, SpotifyStart;
+    show SpotifyDelay, SpotifySession, SpotifyStart, spotifyAndroidPackage;
 export 'src/spotify/spotify_tools.dart'
     show
         SpotifyNextTool,

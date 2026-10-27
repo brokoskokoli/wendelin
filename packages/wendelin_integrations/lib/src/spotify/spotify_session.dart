@@ -1,7 +1,12 @@
 import 'package:wendelin_core/wendelin_core.dart';
 
 import '../common/port_exception.dart';
+import '../media/media_port.dart';
 import 'spotify_api.dart';
+
+/// Android package of the Spotify app (wake-up, app detection, media
+/// session check).
+const spotifyAndroidPackage = 'com.spotify.music';
 
 /// Waits [d] (injectable so tests do not sleep).
 typedef SpotifyDelay = Future<void> Function(Duration d);
@@ -28,6 +33,7 @@ final class SpotifySession {
     this.secrets, {
     this.launcher,
     this.hostDevice,
+    this.media,
     this.onDiagnostic,
     this.onError,
     this.onRecovered,
@@ -46,6 +52,11 @@ final class SpotifySession {
 
   /// Names of this phone, to find its Connect device; optional.
   final SpotifyHostDevice? hostDevice;
+
+  /// The phone's media sessions: with notification access, Spotify's own
+  /// session proves that the phone plays (a dead Connect device may still
+  /// show `is_playing` in the Web API); optional.
+  final MediaControlPort? media;
 
   /// Diagnostics (`spotify-device`, `spotify-verify`) without titles, URIs,
   /// device names or tokens.
@@ -152,10 +163,12 @@ final class SpotifySession {
   ///
   /// The target is the phone (see [_phone]) or, if [deviceName] is given, the
   /// device of that name. The command always carries the target's `device_id`.
-  /// The state is read up to [verifyAttempts] times; success needs
-  /// `isPlaying` on the target. If the phone does not play, the Spotify app
-  /// is woken **once** and the command repeated; a failed check (429,
-  /// offline) ends at once with `confirmed == false`.
+  /// The state is read up to [verifyAttempts] times (see [_verify]: for the
+  /// phone with notification access Spotify's media session must be playing,
+  /// else the Web API must show the target playing with a growing position).
+  /// If the phone does not play, or rejects the command (404, 5xx: frozen
+  /// app), the Spotify app is woken **once** and the command repeated; a
+  /// failed check (429, offline) ends at once with `confirmed == false`.
   /// Throws [spotifyNoDevice] (no phone device, app not wakeable) and a
   /// [PortException] with an honest text if nothing plays.
   Future<SpotifyStart> startPlayback(
@@ -173,8 +186,18 @@ final class SpotifySession {
       confirmed: confirmed,
     );
 
-    await run((a) => op(a, target.id));
-    var result = await _verify(target);
+    // A phone that is listed but rejects the command is treated like one
+    // that does not play (429, 401/403 and the like are not).
+    PortException? rejection;
+    try {
+      await run((a) => op(a, target.id));
+    } on PortException catch (e) {
+      if (!isPhone || woke || !_deadDevice(e)) rethrow;
+      rejection = e;
+    }
+    var result = rejection != null
+        ? _Verify.idle
+        : await _verify(target, isPhone);
     if (result == _Verify.unchecked) return done(false);
     if (result != _Verify.playing && isPhone && !woke && await _wake()) {
       woke = true;
@@ -182,16 +205,20 @@ final class SpotifySession {
       if (again != null) {
         _diagnose('spotify-device', 'phone', again.via, woke, chosen.count);
         target = again.device;
+        rejection = null;
         try {
           await run((a) => op(a, target.id));
         } on PortException catch (e) {
           if (e.kind != PortErrorKind.notFound) rethrow;
+          rejection = e;
         }
-        result = await _verify(target);
+        result = await _verify(target, isPhone);
         if (result == _Verify.unchecked) return done(false);
       }
     }
     if (result != _Verify.playing) {
+      // The phone rejected the (last) command: say that, not „läuft nichts“.
+      if (rejection != null) throw rejection;
       throw PortException(
         PortErrorKind.failed,
         isPhone
@@ -263,12 +290,51 @@ final class SpotifySession {
     return null;
   }
 
-  Future<_Verify> _verify(SpotifyDevice target) async {
+  /// 404 (device gone) or a server error: the listed device does not work.
+  /// 429 (`spotifyRateLimited`), offline-independent auth errors and the like
+  /// are not a reason to wake the app.
+  static bool _deadDevice(PortException e) =>
+      e.kind == PortErrorKind.notFound ||
+      (e.kind == PortErrorKind.unavailable &&
+          !identical(e, spotifyRateLimited));
+
+  /// Looks up to [verifyAttempts] times whether [target] plays.
+  ///
+  /// For the phone with notification access: Spotify's own media session
+  /// (`com.spotify.music`) must be playing (`via=session`). Otherwise the
+  /// Web API must show the target playing and `progress_ms` growing between
+  /// two reads (`via=api`): `is_playing` alone also appears for a dead
+  /// device. A failing media session falls back to the Web API.
+  Future<_Verify> _verify(SpotifyDevice target, bool isPhone) async {
     var result = _Verify.idle;
     var attempts = 0;
+    var via = 'api';
+    if (isPhone && media != null) {
+      try {
+        if (await media!.hasSessionAccess()) via = 'session';
+      } on PortException {
+        // Web API only.
+      }
+    }
+    int? lastProgress;
     for (var i = 0; i < verifyAttempts; i++) {
       await _delay(verifyInterval);
       attempts++;
+      if (via == 'session') {
+        try {
+          final snap = await media!.nowPlaying();
+          result =
+              snap != null &&
+                  snap.packageName == spotifyAndroidPackage &&
+                  snap.playing
+              ? _Verify.playing
+              : _Verify.idle;
+          if (result == _Verify.playing) break;
+          continue;
+        } on PortException {
+          via = 'api';
+        }
+      }
       SpotifyPlayback? state;
       try {
         state = await run(api.playback);
@@ -278,16 +344,27 @@ final class SpotifySession {
         break;
       }
       if (state != null && state.isPlaying) {
-        result = _isTarget(state, target)
-            ? _Verify.playing
-            : _Verify.otherDevice;
+        if (!_isTarget(state, target)) {
+          result = _Verify.otherDevice;
+          lastProgress = null;
+        } else {
+          final p = state.progressMs;
+          if (lastProgress != null && p != null && p > lastProgress) {
+            result = _Verify.playing;
+          } else {
+            result = _Verify.stalled;
+            lastProgress = p;
+          }
+        }
       } else {
         result = _Verify.idle;
+        lastProgress = null;
       }
       if (result == _Verify.playing) break;
     }
     onDiagnostic?.call('spotify-verify', {
       'result': result.label,
+      'via': via,
       'attempts': attempts,
     });
     return result;
@@ -355,7 +432,8 @@ final class SpotifySession {
         if (phones.length == 1) found = (device: phones.single, via: 'type');
       }
     }
-    if (found != null) _phoneId = found.device.id;
+    // Only a name match is remembered: the type rule is a guess.
+    if (found != null && found.via != 'type') _phoneId = found.device.id;
     return found;
   }
 
@@ -425,6 +503,7 @@ enum _Verify {
   playing('playing'),
   idle('idle'),
   otherDevice('other-device'),
+  stalled('stalled'),
   unchecked('unchecked');
 
   const _Verify(this.label);

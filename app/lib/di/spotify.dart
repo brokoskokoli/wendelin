@@ -80,6 +80,10 @@ final spotifyHostDeviceProvider = Provider<SpotifyHostDevice>(
   (ref) => const ChannelSpotifyHostDevice(),
 );
 
+/// Pause between the playback checks; `null` = real time. Tests override it
+/// to wait not at all.
+final spotifyDelayProvider = Provider<SpotifyDelay?>((ref) => null);
+
 /// The login flow of the settings page.
 final spotifyLoginProvider = Provider<SpotifyLogin>(
   (ref) => SpotifyLogin(

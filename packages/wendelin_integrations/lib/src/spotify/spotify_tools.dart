@@ -280,8 +280,12 @@ final class SpotifyPlayTool extends IntegrationTool
           : '$base Gesendet, aber die Wiedergabe konnte nicht geprüft '
                 'werden.',
       summary: target == null ? 'Weiter' : 'Spielt ${target.label}',
+      // Fixed sentence only for checked playback on the phone; otherwise the
+      // model words the result (other device, not checked) from the text.
       // A label is the uri or a server name; never read it aloud.
-      fixed: const ConfirmationSentence('media.play'),
+      fixed: start.confirmed && start.isPhone
+          ? const ConfirmationSentence('media.play')
+          : null,
       undo: UndoAction(
         label: before != null && before.isPlaying && target != null
             ? 'Vorheriges wieder spielen'

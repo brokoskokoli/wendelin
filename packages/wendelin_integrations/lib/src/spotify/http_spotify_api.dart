@@ -57,11 +57,6 @@ final class HttpSpotifyApi implements SpotifyApi {
     '$_service: unerwartete Antwort (Format geändert?)',
   );
 
-  static const _rateLimited = PortException(
-    PortErrorKind.unavailable,
-    '$_service: Anfragelimit erreicht, später erneut versuchen',
-  );
-
   @override
   Future<SpotifyAuth> exchangeCode({
     required String clientId,
@@ -307,7 +302,7 @@ final class HttpSpotifyApi implements SpotifyApi {
     if (blocked != null) {
       if (_clock.now().isBefore(blocked)) {
         _log?.call('$_service $operation → gesperrt (Anfragelimit)');
-        throw _rateLimited;
+        throw spotifyRateLimited;
       }
       _blockedUntil = null;
     }
@@ -331,7 +326,7 @@ final class HttpSpotifyApi implements SpotifyApi {
     _log?.call('$_service $operation → ${response.statusCode}');
     if (response.statusCode == 429) {
       _blockedUntil = _clock.now().add(_retryAfter(response.headers));
-      throw _rateLimited;
+      throw spotifyRateLimited;
     }
     return response;
   }
