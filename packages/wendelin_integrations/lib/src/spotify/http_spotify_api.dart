@@ -57,11 +57,6 @@ final class HttpSpotifyApi implements SpotifyApi {
     '$_service: unerwartete Antwort (Format geändert?)',
   );
 
-  static const _rateLimited = PortException(
-    PortErrorKind.unavailable,
-    '$_service: Anfragelimit erreicht, später erneut versuchen',
-  );
-
   @override
   Future<SpotifyAuth> exchangeCode({
     required String clientId,
@@ -139,7 +134,7 @@ final class HttpSpotifyApi implements SpotifyApi {
       {
         'q': query,
         'type': kinds.map((k) => k.name).join(','),
-        'limit': '$limit',
+        'limit': '${_fetchLimit(kinds, limit)}',
       },
     );
     final map = _object(_decode(await _call('search', 'GET', url, auth)));
@@ -149,12 +144,11 @@ final class HttpSpotifyApi implements SpotifyApi {
       if (page == null) continue;
       final raw = _object(page)['items'];
       if (raw is! List<Object?>) throw _malformed;
-      for (final e in raw) {
-        // Playlists can contain null entries.
-        if (e == null) continue;
-        final item = _item(kind, _object(e));
-        if (item != null) items.add(item);
-      }
+      // Playlists can contain null entries.
+      items.addAll(
+        [for (final e in raw) ?(e == null ? null : _item(kind, _object(e)))]
+            .take(limit),
+      );
     }
     return items;
   }
@@ -199,6 +193,7 @@ final class HttpSpotifyApi implements SpotifyApi {
       contextUri: _optString(_obj(m['context']), 'uri'),
       progressMs: m['progress_ms'] is int ? m['progress_ms'] as int : null,
       deviceName: _optString(_obj(m['device']), 'name'),
+      deviceId: _optString(_obj(m['device']), 'id'),
     );
   }
 
@@ -215,12 +210,7 @@ final class HttpSpotifyApi implements SpotifyApi {
       for (final e in raw)
         if (_obj(e)
             case {'id': final String id, 'name': final String name} && final d)
-          SpotifyDevice(
-            id: id,
-            name: name,
-            isActive: d['is_active'] == true,
-            isRestricted: d['is_restricted'] == true,
-          ),
+          _device(id, name, d),
     ];
   }
 
@@ -312,7 +302,7 @@ final class HttpSpotifyApi implements SpotifyApi {
     if (blocked != null) {
       if (_clock.now().isBefore(blocked)) {
         _log?.call('$_service $operation → gesperrt (Anfragelimit)');
-        throw _rateLimited;
+        throw spotifyRateLimited;
       }
       _blockedUntil = null;
     }
@@ -336,7 +326,7 @@ final class HttpSpotifyApi implements SpotifyApi {
     _log?.call('$_service $operation → ${response.statusCode}');
     if (response.statusCode == 429) {
       _blockedUntil = _clock.now().add(_retryAfter(response.headers));
-      throw _rateLimited;
+      throw spotifyRateLimited;
     }
     return response;
   }
@@ -441,3 +431,19 @@ final class HttpSpotifyApi implements SpotifyApi {
     return names.isEmpty ? null : names.join(', ');
   }
 }
+
+SpotifyDevice _device(String id, String name, Map<String, Object?> d) {
+  final type = d['type'];
+  return SpotifyDevice(
+    id: id,
+    name: name,
+    isActive: d['is_active'] == true,
+    isRestricted: d['is_restricted'] == true,
+    type: type is String ? type : null,
+  );
+}
+
+/// Spotify fills `playlists.items` with `null` for hidden playlists and still
+/// counts them against `limit`: ask for 10 (the maximum for new apps), cut later.
+int _fetchLimit(Set<SpotifyKind> kinds, int limit) =>
+    kinds.contains(SpotifyKind.playlist) && limit < 10 ? 10 : limit;

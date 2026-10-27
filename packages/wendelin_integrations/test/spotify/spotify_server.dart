@@ -93,6 +93,7 @@ const devicesJson = {
       'name': 'Pixel 8',
       'is_active': false,
       'is_restricted': false,
+      'type': 'Smartphone',
     },
     {'id': 'dev2', 'name': 'Echo', 'is_active': false, 'is_restricted': true},
     {'name': 'ohne Id'},

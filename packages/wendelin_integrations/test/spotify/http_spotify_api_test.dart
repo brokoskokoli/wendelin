@@ -37,7 +37,7 @@ void main() {
       expect(req.url.queryParameters, {
         'q': 'queen',
         'type': 'track,album,artist,playlist',
-        'limit': '3',
+        'limit': '10',
       });
       expect(req.headers['Authorization'], 'Bearer tok-access');
       expect(hits.map((h) => h.label), [
@@ -49,6 +49,53 @@ void main() {
       ]);
       expect(hits.first.kind, SpotifyKind.track);
       expect(hits.first.uri, 'spotify:track:4u7EnebtmKWzUH433cf5Qv');
+    });
+
+    test('Playlist-Suche: null-Einträge zählen gegen limit, darum wird mehr '
+        'abgefragt und auf limit gekürzt', () async {
+      // Like Spotify: hidden playlists come back as null but fill the page.
+      final all = <Object?>[
+        for (var i = 0; i < 5; i++) null,
+        for (var i = 0; i < 4; i++)
+          {
+            'name': 'Evening Chill $i',
+            'uri': 'spotify:playlist:abcdefghij123$i',
+            'owner': {'display_name': 'Jemand'},
+          },
+      ];
+      final server = SpotifyServer((req) {
+        final n = int.parse(req.url.queryParameters['limit']!);
+        return jsonResponse({
+          'playlists': {'items': all.take(n).toList()},
+        });
+      });
+      final hits = await server.api().search(_auth, 'Evening Chill', {
+        SpotifyKind.playlist,
+      });
+      expect(hits.map((h) => h.name), [
+        'Evening Chill 0',
+        'Evening Chill 1',
+        'Evening Chill 2',
+        'Evening Chill 3',
+      ]);
+      expect(hits.first.by, 'Jemand');
+    });
+
+    test('Suche: pro Art höchstens limit Treffer', () async {
+      final server = SpotifyServer(
+        (_) => jsonResponse({
+          'playlists': {
+            'items': [
+              for (var i = 0; i < 6; i++)
+                {'name': 'P$i', 'uri': 'spotify:playlist:abcdefghij123$i'},
+            ],
+          },
+        }),
+      );
+      final hits = await server.api().search(_auth, 'x', {
+        SpotifyKind.playlist,
+      }, limit: 2);
+      expect(hits.map((h) => h.name), ['P0', 'P1']);
     });
 
     test(
@@ -66,6 +113,7 @@ void main() {
         expect(p.contextUri, 'spotify:album:6X9k3iKZrQK3SDKpOZnB7M');
         expect(p.progressMs, 61000);
         expect(p.deviceName, 'Pixel 8');
+        expect(p.deviceId, 'dev1');
         answer = http.Response('', 204);
         expect(await server.api().playback(_auth), isNull);
       },
@@ -94,6 +142,7 @@ void main() {
       final d = await server.api().devices(_auth);
       expect(d.map((e) => e.id), ['dev1', 'dev2']);
       expect(d.last.isRestricted, isTrue);
+      expect(d.first.type, 'Smartphone');
     });
 
     test('Play: Titel, Kontext, Fortsetzen, Gerät', () async {

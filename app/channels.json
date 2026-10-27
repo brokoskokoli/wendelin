@@ -2,10 +2,14 @@
   "dartNames": "app/lib/platform/channels.dart",
   "channels": {
     "app.wendelin/apps": {
-      "dart": ["app/lib/platform/channel_app_presence_port.dart"],
+      "dart": [
+        "app/lib/platform/channel_app_presence_port.dart",
+        "app/lib/platform/spotify_platform.dart"
+      ],
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/AppsChannel.kt"],
       "toKotlin": {
-        "isInstalled": {"args": ["package"], "returns": "value"}
+        "isInstalled": {"args": ["package"], "returns": "value"},
+        "deviceNames": {"args": [], "returns": "list"}
       },
       "toDart": {}
     },

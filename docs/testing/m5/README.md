@@ -40,6 +40,7 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP157 – Sitzungssperre und Abfluss-Schutz (Gerätetest)](wp157.md)
 - [WP159 Einrichtung: GPU-Prüfung nur mit Nachweis (Teil A)](wp159.md)
 - [WP160 – Stufe je Geräteart, Sprechererkennung-Diagnose, Stufen für MCP/HTTP-Tools (Gerätetest)](wp160.md)
+- [WP161 – Spotify spielt auf dem Handy und prüft die Wiedergabe](wp161.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)
 - [WP85 Kontakte, SMS und Anrufe (`contacts`)](wp85.md)
