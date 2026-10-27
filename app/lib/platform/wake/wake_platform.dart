@@ -145,9 +145,21 @@ class WakePlatform {
 
   /// Mirrors the developer mode (WP148) to Kotlin, which tells the wake
   /// engine (it has no database): audio recordings only while it is on.
-  Future<void> setDevMode({required bool enabled}) async {
+  ///
+  /// Switching off with [clear]: the service itself deletes the short-lived
+  /// recordings (and the wake archive if [deleteArchive]) once its own
+  /// writes are over, so a write that was under way cannot bring the folder
+  /// back after the app deleted it (WP155).
+  Future<void> setDevMode({
+    required bool enabled,
+    bool deleteArchive = false,
+  }) async {
     try {
-      await _channel.invokeMethod<void>('devMode', {'on': enabled});
+      await _channel.invokeMethod<void>('devMode', {
+        'on': enabled,
+        if (!enabled) 'clear': true,
+        if (!enabled && deleteArchive) 'archive': true,
+      });
     } on Object {
       // Not on Android, or no engine: the service then stays at its value.
     }

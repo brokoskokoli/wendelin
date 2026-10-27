@@ -1,0 +1,43 @@
+{
+  "devArchiveTitle": "Archive du mot d'éveil",
+  "devArchiveSummary": "{cases} entrées, {size}",
+  "@devArchiveSummary": {
+    "placeholders": {
+      "cases": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "devArchiveEmpty": "Aucune entrée pour l'instant",
+  "devArchiveDelete": "Supprimer l'archive",
+  "devArchiveDeleteTitle": "Supprimer l'archive ?",
+  "devArchiveDeleteMessage": "Tous les enregistrements collectés du mot d'éveil ({cases} entrées, {size}) seront supprimés. Cette action est irréversible.",
+  "@devArchiveDeleteMessage": {
+    "placeholders": {
+      "cases": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "devArchiveDeleted": "Archive supprimée",
+  "devArchiveOffTitle": "Supprimer aussi l'archive du mot d'éveil ?",
+  "devArchiveOffMessage": "Les enregistrements éphémères sont supprimés. L'archive du mot d'éveil ({cases} entrées, {size}) peut rester ou être supprimée aussi.",
+  "@devArchiveOffMessage": {
+    "placeholders": {
+      "cases": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "devArchiveKeep": "Conserver",
+  "devArchiveDeleteToo": "Supprimer aussi"
+}

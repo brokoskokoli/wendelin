@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// Replacement for redacted values.
 const redactedValue = '***';
 
@@ -15,8 +17,16 @@ const redactedValue = '***';
 /// `header`/`key` instead of `name`) have their `value` replaced when the
 /// name names a secret.
 ///
+/// WP155: the keys `pin` and `otp` (also as a word of a key, such as
+/// `user_pin`) are always replaced; `code` for a string or a number of 4 or
+/// more digits (a 3-digit HTTP status stays); `state` only for a string of 8 or more
+/// characters (OAuth state), a device state such as `on` stays.
+///
 /// By value: in every string, `Bearer <token>`, `sk-…` keys and secret
-/// query parameters (`?api_key=…`, `&key=…`, `token=…`) are masked.
+/// query parameters (`?api_key=…`, `&key=…`, `token=…`, and `pin`/`otp`/`code`/`state`,
+/// as in an OAuth callback `?code=…&state=…`) are masked.
+///
+/// A string holding JSON is parsed and redacted by key as well.
 ///
 /// `null` stays `null`. Maps and lists are processed recursively.
 Object? redactSecrets(Object? value) {
@@ -35,8 +45,27 @@ Object? redactSecrets(Object? value) {
     };
   }
   if (value is List<Object?>) return value.map(redactSecrets).toList();
-  if (value is String) return redactSecretValues(value);
+  if (value is String) return _redactString(value);
   return value;
+}
+
+/// A string that holds JSON (`"args": "{\"pin\":\"1234\"}"`) is decoded, redacted
+/// by key and encoded again (only when something changed); anything else, or
+/// text that is no JSON, goes through [redactSecretValues].
+String _redactString(String value) {
+  final t = value.trimLeft();
+  if (t.startsWith('{') || t.startsWith('[')) {
+    try {
+      final decoded = jsonDecode(value);
+      final encoded = jsonEncode(redactSecrets(decoded));
+      // Keys of the decoded JSON are not checked by key; the text pass
+      // catches e.g. `u?token=SECRET` used as a key.
+      if (encoded != jsonEncode(decoded)) return redactSecretValues(encoded);
+    } on Object {
+      // No JSON after all, or too deep (StackOverflowError): plain text below.
+    }
+  }
+  return redactSecretValues(value);
 }
 
 /// Whether the field [key] with [value] must be redacted (see
@@ -45,22 +74,39 @@ bool shouldRedactField(String key, Object? value) {
   if (value == null) return false;
   return switch (_classify(key)) {
     _KeyClass.credential => true,
+    // WP155: an OAuth `state` is a long random string; a device state such as
+    // `on`/`heat` is not a secret.
+    _KeyClass.state => value is String ? value.length >= 8 : value is! bool,
+    // WP155: `code` is a one-time code as a string or a number of 4+ digits;
+    // a 3-digit number is an HTTP status and stays readable.
+    _KeyClass.code => switch (value) {
+      String() => true,
+      num() => value.isFinite && value.abs().truncate().toString().length >= 4,
+      _ => false,
+    },
     _KeyClass.token => value is! num && value is! bool,
     _KeyClass.none => false,
   };
 }
 
 /// Whether [key] looks like it names a secret (credential or token key).
-bool looksLikeSecretKey(String key) => _classify(key) != _KeyClass.none;
+bool looksLikeSecretKey(String key) => switch (_classify(key)) {
+  _KeyClass.credential || _KeyClass.token || _KeyClass.code => true,
+  _KeyClass.state || _KeyClass.none => false,
+};
 
 /// Masks secrets inside a free-text [value]: `Bearer …`, `sk-…` keys and
 /// secret URL query parameters.
 String redactSecretValues(String value) => value
     .replaceAllMapped(_bearer, (m) => '${m.group(1)} $redactedValue')
     .replaceAll(_skKey, redactedValue)
-    .replaceAllMapped(_queryParam, (m) => '${m.group(1)}=$redactedValue');
+    .replaceAllMapped(_queryParam, (m) => '${m.group(1)}=$redactedValue')
+    .replaceAllMapped(
+      _encodedQueryParam,
+      (m) => '${m.group(1)}%3D$redactedValue',
+    );
 
-enum _KeyClass { none, token, credential }
+enum _KeyClass { none, token, credential, state, code }
 
 const _credentialFragments = [
   'apikey',
@@ -75,7 +121,41 @@ const _credentialFragments = [
   'bearer',
 ];
 
-const _exactCredentialKeys = {'auth', 'key'};
+// WP155: one-time codes and PINs (`pin`, `otp`, `code`, `user_pin`, `otpCode`)
+// are credentials, whatever their type (`{"pin": 1234}`).
+// `tan` (transaction number) is one as well.
+const _exactCredentialKeys = {'auth', 'key', 'pin', 'otp'};
+const _credentialWords = {'pin', 'otp', 'tan'};
+
+// What makes a `…code` a one-time code (`verification_code`, `smsCode`,
+// `auth-code`); `status_code`, `country_code`, `error_code`, `zip_code`
+// stay readable.
+const _codeQualifiers = [
+  'verification',
+  'verify',
+  'auth',
+  'authorization',
+  'sms',
+  'security',
+  'confirm',
+  'confirmation',
+  'login',
+  'access',
+  'reset',
+  'pairing',
+  'activation',
+  'recovery',
+  'backup',
+  'mfa',
+  '2fa',
+  'otp',
+  'onetime',
+  'twofactor',
+  'pass',
+];
+
+bool _isOneTimeCode(String joined) =>
+    _codeQualifiers.any((q) => joined.endsWith('${q}code'));
 
 final _separators = RegExp(r'[_\-.\s]');
 final _wordBoundary = RegExp(r'[_\-.\s]+|(?<=[a-z0-9])(?=[A-Z])');
@@ -93,6 +173,12 @@ _KeyClass _classify(String key) {
       .toList();
   // `basicAuth`, `proxy_auth`, `x-auth`: "auth" as the last word.
   if (words.isNotEmpty && words.last == 'auth') return _KeyClass.credential;
+  if (words.any(_credentialWords.contains)) return _KeyClass.credential;
+  // After the credential words: `otp_code`, `authorization_code` stay credentials.
+  if (joined == 'code' || _isOneTimeCode(joined)) return _KeyClass.code;
+  if (words.isNotEmpty && words.last == 'state') {
+    return _KeyClass.state;
+  }
   if (words.any((w) => w == 'token' || w == 'tokens')) return _KeyClass.token;
   return _KeyClass.none;
 }
@@ -108,8 +194,24 @@ String? _pairName(Map<Object?, Object?> map) {
 
 final _bearer = RegExp(r'\b(Bearer|Basic)\s+[^\s"]+', caseSensitive: false);
 final _skKey = RegExp(r'\bsk-[A-Za-z0-9_-]{16,}');
+// Names of a secret in a query or fragment; the `…code` forms as in
+// [_codeQualifiers] (`verification_code=…`).
+const _queryKeys =
+    r'api[_-]?key|key|access[_-]?token|token|auth|password|secret|'
+    r'client[_-]?secret|sig|signature|pin|otp|tan|code|state|'
+    r'(?:verification|verify|auth|authorization|sms|security|confirm|'
+    r'confirmation|login|access|reset|pairing|activation|recovery|backup|'
+    r'mfa|2fa|otp|one[_-]?time|two[_-]?factor|pass)[_-]?code';
+
+// After `?`, `&` or `#` (fragment of an OAuth redirect).
 final _queryParam = RegExp(
-  r'(?<=[?&])((?:api[_-]?key|key|access[_-]?token|token|auth|password|'
-  r'secret|client[_-]?secret|sig|signature))=[^&\s#"]+',
+  '(?<=[?&#])($_queryKeys)=[^&\\s#"]+',
+  caseSensitive: false,
+);
+
+// The same inside a URL-encoded value (`redirect_uri=https%3A%2F%2F…%3Fcode%3D…`):
+// `%3F`, `%26` or `%23` in front, `%3D` as the equals sign.
+final _encodedQueryParam = RegExp(
+  '(?<=%3F|%26|%23)($_queryKeys)%3D(?:(?!%26|%23)[^&\\s"])+',
   caseSensitive: false,
 );

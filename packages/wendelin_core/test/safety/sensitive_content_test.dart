@@ -49,6 +49,11 @@ void main() {
       ('Kundennummer 0111111111111119', null), // Luhn-gültig, führende 0
       ('Mitglied 1111111111111117', null), // Luhn-gültig, führende 1
       ('Telefon +49 170 1234567', null),
+      (
+        'Die PIN-Eingabe dauert lange',
+        null,
+      ), // WP155: Bindestrich ohne Leerzeichen
+      ('Pin-Nummern sind schwach', null),
       ('Telefon +49 4111 1111 1111 1111', null), // mit + ignoriert
       ('Telefon + 4111111111111111', null),
       ('Ruf an: 4917012345675', null), // 13 Ziffern ab 49, Luhn-gültig
@@ -111,6 +116,10 @@ void main() {
       ('PIN-Code: 0815', cred),
       ('Pin-Nummer: 0000', cred),
       ('PIN 1234', cred),
+      ('PIN – 1234', cred), // WP155: Gedankenstrich als Trenner
+      ('PIN — 1234 bitte', cred),
+      ('Passwort - hunter2', cred),
+      ('Pin - 4711', cred),
       ('PUK: 12345678', cred),
       ('TAN ist 123456', cred),
       ('Geheimzahl: 1234', cred),
@@ -239,6 +248,15 @@ void main() {
       ('Passwort =. hunter2', '***', 'hunter2'),
       ('PIN=:. 1', '***', '1'),
       ('PIN 1234. Danke', '*** Danke', '1234'),
+      ('PIN – 1234', '***', '1234'),
+      ('Meine PIN — 4711 merken', 'Meine ***', '4711'),
+      // WP155 (Überschwärzung): nur die Klausel mit dem Wert, der Rest bleibt.
+      ('TAN 123456. Danke', '*** Danke', '123456'),
+      (
+        'Die TAN 123456. Danke schön, bis bald.',
+        'Die *** Danke schön, bis bald.',
+        '123456',
+      ),
     ]) {
       test(text, () {
         final out = redactSensitiveContent(text);

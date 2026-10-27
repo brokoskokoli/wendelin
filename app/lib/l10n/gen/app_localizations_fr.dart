@@ -10,6 +10,46 @@ class AppLocalizationsFr extends AppLocalizations {
   AppLocalizationsFr([String locale = 'fr']) : super(locale);
 
   @override
+  String get devArchiveDelete => 'Supprimer l\'archive';
+
+  @override
+  String devArchiveDeleteMessage(int cases, String size) {
+    return 'Tous les enregistrements collectés du mot d\'éveil ($cases entrées, $size) seront supprimés. Cette action est irréversible.';
+  }
+
+  @override
+  String get devArchiveDeleteTitle => 'Supprimer l\'archive ?';
+
+  @override
+  String get devArchiveDeleteToo => 'Supprimer aussi';
+
+  @override
+  String get devArchiveDeleted => 'Archive supprimée';
+
+  @override
+  String get devArchiveEmpty => 'Aucune entrée pour l\'instant';
+
+  @override
+  String get devArchiveKeep => 'Conserver';
+
+  @override
+  String devArchiveOffMessage(int cases, String size) {
+    return 'Les enregistrements éphémères sont supprimés. L\'archive du mot d\'éveil ($cases entrées, $size) peut rester ou être supprimée aussi.';
+  }
+
+  @override
+  String get devArchiveOffTitle =>
+      'Supprimer aussi l\'archive du mot d\'éveil ?';
+
+  @override
+  String devArchiveSummary(int cases, String size) {
+    return '$cases entrées, $size';
+  }
+
+  @override
+  String get devArchiveTitle => 'Archive du mot d\'éveil';
+
+  @override
   String get agentNoticeCancelled => 'Annulé.';
 
   @override

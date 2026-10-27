@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../voice/dev_archive.dart';
 import '../../voice/dev_audio.dart';
 import '../../voice/dev_log.dart';
 import '../../voice/voice_log.dart';
@@ -96,9 +98,18 @@ final class WakeHost {
         // WP148: the app (via Kotlin) switched the developer mode; only an
         // explicit `true` turns it on.
         devLogEnabled = args['on'] == true;
+        _devGen++;
+        // WP155: switched off and asked to clean up: once the writes under
+        // way here are over (they stop at the flag), delete what the app's
+        // own deletion may have missed.
+        if (args['on'] == false && args['clear'] == true) {
+          _sweep = _sweepAfterOff(deleteArchive: args['archive'] == true);
+          unawaited(_sweep);
+        }
       case 'run':
         // The flag as Kotlin has stored it; anything else is off.
         devLogEnabled = args['dev'] == true;
+        _devGen++;
         unawaited(cleanDevAudio());
         await _serial(
           () => _run(
@@ -178,6 +189,15 @@ final class WakeHost {
     WakeWordEngine engine, {
     required bool verify,
   }) async {
+    final band = wakeBandFor(station: _station);
+    devArchiveSetInfo('idle', {
+      'mode': 'idle',
+      'detector': _detector.name,
+      'station': _station,
+      'verify': verify,
+      'verify_from': band.verifyFrom,
+      'accept_from': band.acceptFrom,
+    });
     final listener = WakeWordListener(
       audio: audio,
       engine: _LoggingEngine(engine, _detector, verify: verify),
@@ -190,6 +210,8 @@ final class WakeHost {
       preRoll: wakePreRoll,
       // Developer mode (WP148): audio of candidates and checks.
       devClips: devAudioClips,
+      // The band of this run: at or above its verify limit is a candidate.
+      nearMissAbove: band.verifyFrom,
     );
     _listener = listener;
     _subs
@@ -330,6 +352,27 @@ final class WakeHost {
     }
   }
 
+  /// After the developer mode went off: waits for the writes of this
+  /// isolate, then deletes (unless the mode came back on meanwhile).
+  Future<void> _sweepAfterOff({required bool deleteArchive}) async {
+    // The mode may come back on (and write) at any step: every step checks
+    // the flag and the generation (off, on, off again is a new mode too).
+    final gen = _devGen;
+    bool stale() => devLogEnabled || gen != _devGen;
+    await devArchiveIdle;
+    await devAudioIdle;
+    if (stale()) return;
+    await deleteDevAudio();
+    if (deleteArchive && !stale()) await clearDevArchive();
+  }
+
+  int _devGen = 0;
+  Future<void>? _sweep;
+
+  /// Completes when the last cleaning after "off" is over (tests).
+  @visibleForTesting
+  Future<void> get sweepIdle => _sweep ?? Future<void>.value();
+
   Future<void> _fail(String reason) async {
     if (_ending) return;
     _ending = true;
@@ -377,7 +420,7 @@ final class WakeHost {
 const wakePreRoll = Duration(milliseconds: 2500);
 
 /// Logs every stage 1 candidate: score and rule, nothing else.
-final class _LoggingEngine implements WakeWordEngine {
+final class _LoggingEngine implements WakeWordEngine, ScoringWakeEngine {
   _LoggingEngine(this.inner, this.detector, {required this.verify});
 
   final WakeWordEngine inner;
@@ -389,6 +432,12 @@ final class _LoggingEngine implements WakeWordEngine {
 
   @override
   Future<void> open(List<KeywordSpec> keywords) => inner.open(keywords);
+
+  // WP155: the window scores of the inner engine go to the listener.
+  @override
+  set scoreSink(void Function(int endSample, double score)? sink) {
+    if (inner case final ScoringWakeEngine e) e.scoreSink = sink;
+  }
 
   @override
   Future<List<WakeWordHit>> accept(Int16List frame) async {
@@ -421,13 +470,18 @@ final class _LoggingEngine implements WakeWordEngine {
 
 /// Logs the verdict of stage 2 (`ok`, `no`, or `skip` if it could not
 /// decide, which counts as not confirmed).
-final class _LoggingVerifier implements WakeEndAwareVerifier {
+final class _LoggingVerifier implements WakeEndAwareVerifier, VerdictDetail {
   _LoggingVerifier(this.inner);
 
   final WakeVerifier inner;
 
   @override
   String get kind => inner.kind;
+
+  // WP155: the numbers of the inner verifier (B) for the wake archive.
+  @override
+  Map<String, Object?> get lastDetail =>
+      inner is VerdictDetail ? (inner as VerdictDetail).lastDetail : const {};
 
   @override
   Future<bool> confirm(Int16List pcm) => confirmAt(pcm, -1);

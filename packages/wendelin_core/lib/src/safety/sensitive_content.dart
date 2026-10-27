@@ -284,7 +284,8 @@ final _credential = RegExp(
   // Keyword, up to four words, then an assignment and a value.
   '$_keyword'
   r'(?:\s+[\p{L}\p{N}-]+){0,4}?'
-  r'(?:\s*[:=]|\s+(?:ist|lautet|heißt|heisst|war|is|was)(?![\p{L}\p{N}]))'
+  r'(?:\s*[:=]|\s+[–—-]+(?=\s)|'
+  r'\s+(?:ist|lautet|heißt|heisst|war|is|was)(?![\p{L}\p{N}]))'
   r'\s*\S'
   // Or keyword directly followed by a value containing a digit.
   '|$_keyword'

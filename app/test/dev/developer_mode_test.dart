@@ -13,6 +13,7 @@ import 'package:wendelin/ui/settings/app_language_screen.dart';
 import 'package:wendelin/ui/settings/barge_debug_sheet.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
 import 'package:wendelin/ui/settings/voice_screen.dart';
+import 'package:wendelin/voice/dev_audio.dart';
 import 'package:wendelin/voice/dev_log.dart';
 import 'package:wendelin_storage/fakes.dart';
 
@@ -31,6 +32,10 @@ Future<void> _tapSystem(WidgetTester tester, int times) async {
 
 void main() {
   const hint = 'Entwicklermodus an – erweitertes Logging';
+
+  // WP155: switching off looks at the (here: absent) archive folder; the
+  // plugin lookup of the real one never answers in a widget test.
+  setUp(() => devAudioDirectory = () async => null);
 
   testWidgets('10× System schaltet ein, 10× wieder aus (Hinweis zählt ab 7.)', (
     tester,

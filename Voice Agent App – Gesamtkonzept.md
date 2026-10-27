@@ -419,7 +419,7 @@ Alle Secrets liegen im Android Keystore bzw. iOS Keychain, alle Verläufe nur lo
 
 - Audit-Log (SQLite): Zeit, Auslöser, Transkript, Routing-Entscheidung, Provider und Modell, jeder Tool-Call mit Argumenten und Ergebnis-Status, Bestätigungen, Eskalationen, Kosten, TEE-Prüfergebnis.
 - Aufbewahrung einstellbar (Standard 30 Tage), komplett löschbar, Export als JSON ohne Texte und Argumente (K43).
-- Ausnahme Entwicklermodus (bewusst eingeschaltet): Inhalte im Log und WAV-Ausschnitte lokal für höchstens 1 Tag, Zugangsdaten geschwärzt (K120).
+- Ausnahme Entwicklermodus (bewusst eingeschaltet): Inhalte im Log und WAV-Ausschnitte lokal für höchstens 1 Tag, Zugangsdaten geschwärzt (K120); dazu ein Weckwort-Archiv als Trainingsdaten (Treffer nur mit Vorlauf, ohne Befehl), bis 1 GB, ohne Ablauf; beim Ausschalten werden die Dev-Aufnahmen gelöscht, das Archiv nur nach Rückfrage (K126).
 - Debug-Log getrennt davon, standardmäßig aus; enthält nie Secrets.
 
 **Berechtigungen**: Jede Android- bzw. iOS-Berechtigung wird erst angefragt, wenn die zugehörige Integration aktiviert wird, mit einer kurzen Erklärung davor.

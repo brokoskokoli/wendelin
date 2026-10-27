@@ -92,6 +92,23 @@ void main() {
       expect(lines.single, contains('…(1004)'));
     });
 
+    test('WP155: pin, otp und code (Text oder 4+ Stellen) werden '
+        'geschwärzt, ein HTTP-Status bleibt', () {
+      devLogEnabled = true;
+      devLog('t', {
+        'args': devJson('{"pin":"1234","otp":99,"code":"AB12","status":404}'),
+        'num': devJson('{"code":424242}'),
+        'http': devJson('{"code":404}'),
+        'url': 'https://x.test/cb?code=AbC123&state=Zq9Kq1&ok=1',
+      });
+      final all = lines.single;
+      for (final secret in ['1234', 'AB12', '424242', 'AbC123', 'Zq9Kq1']) {
+        expect(all, isNot(contains(secret)), reason: secret);
+      }
+      expect(all, contains('404'));
+      expect(all, contains('ok=1'));
+    });
+
     test('Secrets bleiben auch im Entwicklermodus geschwärzt', () {
       devLogEnabled = true;
       devLog('t', {

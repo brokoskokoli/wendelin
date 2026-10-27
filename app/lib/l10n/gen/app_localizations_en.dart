@@ -10,6 +10,45 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get devArchiveDelete => 'Delete archive';
+
+  @override
+  String devArchiveDeleteMessage(int cases, String size) {
+    return 'All collected wake word recordings ($cases entries, $size) will be deleted. This cannot be undone.';
+  }
+
+  @override
+  String get devArchiveDeleteTitle => 'Delete the archive?';
+
+  @override
+  String get devArchiveDeleteToo => 'Delete too';
+
+  @override
+  String get devArchiveDeleted => 'Archive deleted';
+
+  @override
+  String get devArchiveEmpty => 'No entries yet';
+
+  @override
+  String get devArchiveKeep => 'Keep';
+
+  @override
+  String devArchiveOffMessage(int cases, String size) {
+    return 'The short-lived recordings are deleted. The wake word archive ($cases entries, $size) can stay or be deleted as well.';
+  }
+
+  @override
+  String get devArchiveOffTitle => 'Delete the wake word archive too?';
+
+  @override
+  String devArchiveSummary(int cases, String size) {
+    return '$cases entries, $size';
+  }
+
+  @override
+  String get devArchiveTitle => 'Wake word archive';
+
+  @override
   String get agentNoticeCancelled => 'Cancelled.';
 
   @override
