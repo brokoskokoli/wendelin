@@ -403,7 +403,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
 
   /// Aborts the voice request (listening, recognition, answer, speech
   /// output, a spoken confirmation). An open confirmation counts as „no“.
-  Future<void> cancel() async {
+  Future<void> cancel([VoiceCancelReason why = VoiceCancelReason.tap]) async {
     _cancels++;
     _abortCapture?.call();
     final tts = _promptTts;
@@ -415,7 +415,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       if (!ref.mounted) return;
       state = state.copyWith(preparing: false);
     }
-    await _pipeline?.cancel();
+    await _pipeline?.cancel(why);
   }
 
   /// The app went to the background (screen off, other app, overlay
