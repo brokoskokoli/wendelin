@@ -356,6 +356,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       _discardedNotice = false;
     });
     ref.read(lockedModeProvider.notifier).set(false);
+    ref.read(lockedExchangeProvider.notifier).clear();
     // Gone meanwhile (home, screen off): nothing listens or sends.
     if (!await _unlockWatch.visibleAfterUnlock(() => mounted)) {
       if (mounted) await _close('hidden');
@@ -380,6 +381,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     final container = ProviderScope.containerOf(context, listen: false);
     final platform = _platform;
     ref.read(lockedPendingProvider.notifier).clear();
+    ref.read(lockedExchangeProvider.notifier).clear();
     // An open GPU block is dropped with the overlay (WP82).
     unawaited(_agent.resolveGpuBlock(sendWithout: false));
     // Stop first (host channels), then release the host (WP145).

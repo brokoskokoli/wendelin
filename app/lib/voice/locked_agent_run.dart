@@ -86,6 +86,47 @@ final class LockedPending extends Notifier<LockedPendingRequest?> {
   }
 }
 
+/// The current request on the locked device and the answer to it (WP163,
+/// ADR 0022 L2/L3): what the overlay may show while locked. Only what was
+/// heard and what is spoken anyway; never tool names, arguments or results,
+/// never a history. Memory only, not stored, not logged.
+final class LockedExchange {
+  /// Creates the exchange.
+  const LockedExchange(this.request, {this.answer});
+
+  /// What was said (speech-to-text result).
+  final String request;
+
+  /// What the assistant answers (also spoken); `null` while the answer is
+  /// pending or when the run ended without one (cancelled).
+  final String? answer;
+}
+
+/// The one current [LockedExchange] of the locked overlay, if any.
+final lockedExchangeProvider =
+    NotifierProvider<LockedExchangeNotifier, LockedExchange?>(
+      LockedExchangeNotifier.new,
+    );
+
+/// State of [lockedExchangeProvider]; a new request replaces the old one.
+final class LockedExchangeNotifier extends Notifier<LockedExchange?> {
+  @override
+  LockedExchange? build() => null;
+
+  /// A new request starts (replaces request and answer of the one before).
+  void begin(String request) => state = LockedExchange(request);
+
+  /// The answer to the current request (ignored without a request).
+  void answer(String text) {
+    final e = state;
+    if (e == null) return;
+    state = LockedExchange(e.request, answer: text);
+  }
+
+  /// Drops request and answer (unlock, overlay closed).
+  void clear() => state = null;
+}
+
 /// How a locally recognized [LockedCommand] ended.
 enum LockedCommandResult {
   /// The tool ran.
@@ -262,6 +303,8 @@ final class LockGateAgentRun implements AgentRun {
     required this.trigger,
     this.modelRun,
     this.onPartlyDone,
+    this.onRequest,
+    this.onAnswer,
     this.log,
   });
 
@@ -289,6 +332,15 @@ final class LockGateAgentRun implements AgentRun {
   /// (no double run, [trigger] for the audit log).
   final void Function(String trigger)? onPartlyDone;
 
+  /// A request arrives while locked (WP163): the overlay shows it. Not
+  /// called when unlocked.
+  final void Function(UserInput input)? onRequest;
+
+  /// The answer of a locked request, exactly the text of a model run, the
+  /// local command or the fixed sentence (WP163). Not called if the run is
+  /// cancelled before it ends.
+  final void Function(String text)? onAnswer;
+
   /// Diagnostics without any content (`locked-cmd …`).
   final void Function(String line)? log;
 
@@ -304,6 +356,7 @@ final class LockGateAgentRun implements AgentRun {
   }
 
   Stream<AgentEvent> _locked(UserInput input) async* {
+    onRequest?.call(input);
     final command = matchLockedCommand(input.text);
     // Who is speaking (WP154 L3): only a recognized voice counts for level B.
     final access = AccessContext.lockedFor(input);
@@ -350,6 +403,10 @@ final class LockGateAgentRun implements AgentRun {
         }
       }
       yield event;
+      // After the yield: a cancelled stream ends there and records nothing.
+      // A failed run has no answer text (the pipeline speaks its own
+      // wording for the error kind), so the overlay shows the request only.
+      if (event is AgentDone) onAnswer?.call(event.finalText);
     }
     // A call the policy turned down: the unlock is offered. The request only
     // waits for it if nothing ran yet; otherwise the repeat after the unlock
@@ -366,6 +423,7 @@ final class LockGateAgentRun implements AgentRun {
   Stream<AgentEvent> _say(String say) async* {
     yield AgentTextDelta(say);
     yield AgentDone(finalText: say, stopReason: StopReason.endTurn);
+    onAnswer?.call(say);
   }
 
   @override
@@ -405,6 +463,9 @@ LockGateAgentRun lockGateFor(
     ref.read(auditRecorderProvider).lockedRefused(trigger: t);
     ref.read(lockedRefusalsProvider.notifier).bump();
   },
+  onRequest: (input) =>
+      ref.read(lockedExchangeProvider.notifier).begin(input.text),
+  onAnswer: (text) => ref.read(lockedExchangeProvider.notifier).answer(text),
   trigger: trigger,
   log: voiceLog,
 );
