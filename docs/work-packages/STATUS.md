@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete, solange der Maintainer am Rechner ist (
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP160, WP161, WP162 (Mini), WP163 (3 Sitzungen, Freigabe Maintainer 2026-10-27); Test-APK v0.1.0-rc10; als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP160, WP161, WP163 (3 Sitzungen, Freigabe Maintainer 2026-10-27); Test-APK v0.1.0-rc10; als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -108,7 +108,7 @@ Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP160, WP1
 | WP159 | Einrichtung: GPU-Prüfung nur mit Nachweis, Hinweis auf „Eingeschränkte Einstellungen“ (SMS/Benachrichtigungen) | gemergt (f0f9cafe) | K127, K128 offen; Ursache: Android 13+ Eingeschränkte Einstellungen bei Installation aus Datei (adb install nicht betroffen), AppOp für Apps nicht lesbar → bedingter Hinweis nach Installationsquelle. Folgepunkte: Gerätetest `docs/testing/m5/wp159.md` (A1–A3, B1–B4); Kontakte-Integration zeigt „Aktiv“ auch ohne SMS (setupState prüft nur READ_CONTACTS); Commit-Hooks führen kein Gate aus (Briefing-Annahme prüfen); E2E nur AOSP, je Szenario 1 Lauf |
 | WP160 | Home Assistant: Stufe für ha__call/ha__call_secure einstellbar, Licht gesperrt steuerbar | in Arbeit | Meldung Maintainer 2026-10-27 nach WP154 |
 | WP161 | Spotify: „spielt“, aber nirgends Musik (Zielgerät, Prüfung nach play, ehrliche Suche) | in Arbeit | Gerätetest Maintainer 2026-10-27 |
-| WP162 | Lizenzen der Sprachmodelle als Unterseite (Mini) | in Arbeit | Wunsch Maintainer 2026-10-27; läuft als Sub-Agent im Orchestrator |
+| WP162 | Lizenzen der Sprachmodelle als Unterseite (Mini) | gemergt (9f556fa2) | Unterseite /settings/voice/licenses; Soll offen: Abschnittsüberschrift wiederholt den Seitentitel (voice_licenses_screen.dart:21) |
 | WP163 | Gesperrt: Anfrage und Antwort im Overlay, Entsperren-Knopf oben, kein pauschaler Sperrtext; Teil B: Aktionen wie Navigation nach dem Entsperren ausführen | in Arbeit | Wunsch Maintainer 2026-10-27; 3. Sitzung mit Freigabe |
 | WP164 | Kontakte: Felder gezielt abfragen, Navigation zu Kontakt in einem Schritt, Waze-Integration | geplant | Wunsch Maintainer 2026-10-27; Start nach Merge von WP163 (Merkmal „wirkt nur entsperrt“) |
 
