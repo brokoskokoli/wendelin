@@ -17,9 +17,17 @@ OAuth 2.0 Authorization Code mit PKCE, ohne Client-Secret. Der Nutzer legt unter
 
 Client-ID und Tokens liegen nur im `SpotifySecrets` (App: `flutter_secure_storage`, Schlüssel `spotify.*`), nie in Logs, Einstellungen oder Exporten. `SpotifySession` erneuert den Access-Token vor Ablauf bzw. bei 401 (einmal) und pausiert die Integration (Fehlerzustand), wenn der Refresh-Token abgelehnt wird.
 
-## Kein aktives Gerät
+## Ziel und Prüfung von `spotify__play` (WP161)
 
-Die Web API spielt nur auf einem Spotify-Connect-Gerät. Ist keins aktiv, nimmt `SpotifySession.playbackCommand` ein bekanntes Gerät; gibt es keins und der Befehl startet Musik (`play`, `queue_add`), weckt es die Spotify-App per `SpotifyAppLauncher` (App: Intent `spotify:`) und fragt bis zu `wakeAttempts` Mal im Abstand `wakeInterval` nach dem Gerät. Das App Remote SDK wird nicht benutzt: Es braucht eine Registrierung der App bei Spotify und eine proprietäre AAR (Lizenz „Spotify Developer Terms“, nicht Open Source), und der Intent genügt.
+Ziel ist immer das Handy, nicht „das gerade aktive Gerät“ (das kann ein toter Rechner sein, der Befehle annimmt und nichts spielt). `SpotifySession.startPlayback` wählt das Gerät in dieser Reihenfolge: ein vom Nutzer genannter Gerätename (Parameter `device`, nur auf ausdrücklichen Wunsch); sonst das Handy, erkannt am gemerkten Gerät, an den Namen aus `SpotifyHostDevice` (App: Gerätename, Marktname und Modell über den Apps-Kanal `deviceNames`) oder am einzigen Gerät vom Typ `Smartphone`. Bei mehreren Smartphones ohne Namenstreffer gilt das Handy als nicht gelistet (kein Raten).
+
+Ein 2xx auf den Befehl heißt nicht, dass etwas spielt. Darum fragt die Session danach bis zu `verifyAttempts` Mal `GET /me/player` und meldet Erfolg nur, wenn dort `is_playing` auf dem Ziel gesehen wird. Das Ziel wird an `device.id` erkannt; liefert Spotify keine Id (erlaubt bei eingeschränkten oder privaten Geräten), zählt der Gerätename (ohne Groß-/Kleinschreibung). Fehlt beides, gilt es als nicht bestätigt. Läuft auf dem Handy nichts, wird die Spotify-App genau einmal geweckt (Intent `spotify:`), auf das Gerät gewartet und der Befehl wiederholt; danach folgt ein ehrlicher Fehler statt „läuft“. `queue_add` und Pause/Weiter nutzen weiter `playbackCommand` (altes Verhalten ohne Prüfung).
+
+Diagnose (`onDiagnostic`, App: Dev-Log `Wendelin/dev`): `spotify-device` (`target` phone/named, `via` cache/name/type, `woke`, `devices`) und `spotify-verify` (`result` playing/idle/other-device/unchecked, `attempts`). Nie Titel, URIs, Tokens oder Gerätenamen.
+
+## Kein aktives Gerät (andere Befehle)
+
+Pause, Weiter, Zurück und `queue_add` gehen über `SpotifySession.playbackCommand`: Ist kein Gerät aktiv, nimmt es ein bekanntes Gerät; gibt es keins und der Befehl startet Musik (`queue_add`), weckt es die Spotify-App per `SpotifyAppLauncher` und fragt bis zu `wakeAttempts` Mal im Abstand `wakeInterval` nach dem Gerät. Das App Remote SDK wird nicht benutzt: Es braucht eine Registrierung der App bei Spotify und eine proprietäre AAR (Lizenz „Spotify Developer Terms“, nicht Open Source), und der Intent genügt.
 
 ## Fehlertexte
 
@@ -28,5 +36,6 @@ Kein Premium (403 `PREMIUM_REQUIRED`), kein Gerät (404 `NO_ACTIVE_DEVICE`), nic
 ## Hinweise
 
 - Titel, Künstler und Playlistnamen sind fremde Daten: Die Ergebnisse tragen `spotifyDataNotice`, URIs werden gegen `spotifyUriPattern` geprüft.
-- Die Tools fragen höchstens 5 Treffer je Art ab (3 bei Suche über alle Arten).
+- Die Tools liefern höchstens 5 Treffer je Art (3 bei Suche über alle Arten). Bei Playlists fragt die API mit `limit=10` ab und kürzt danach: Spotify füllt `playlists.items` mit `null` für ausgeblendete Playlists und zählt sie gegen `limit`; mit `limit=5` konnte die Seite nur aus `null` bestehen (Ergebnis „nichts gefunden“). Ursache am Gerät nicht live bestätigt, siehe `docs/testing/m5/wp161.md`.
+- Ohne Treffer sagt `spotify__play` ehrlich „nichts gefunden, nichts abgespielt“ und bietet höchstens eine Alternative an; es spielt nie still etwas anderes.
 - Prüfpunkte für das Gerät: `docs/testing/m5/README.md`.

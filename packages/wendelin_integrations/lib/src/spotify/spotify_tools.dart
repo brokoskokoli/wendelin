@@ -95,7 +95,10 @@ Future<({String uri, SpotifyKind kind, String label})> _resolve(
   if (hits.isEmpty) {
     throw PortException(
       PortErrorKind.notFound,
-      'Spotify findet zu „$query“ nichts (${kind.name}).',
+      'Spotify findet zu „$query“ nichts (${kind.name}). Es wurde nichts '
+      'abgespielt; sag das dem Nutzer ehrlich und biete höchstens eine '
+      'Alternative an (z. B. spotify__search ohne type), spiel sie nicht '
+      'ungefragt.',
     );
   }
   final hit = hits.first;
@@ -118,7 +121,9 @@ final class SpotifySearchTool extends IntegrationTool
   String get description =>
       'Search Spotify for tracks, albums, artists or playlists. Returns '
       'names with Spotify URIs that spotify__play and spotify__queue_add '
-      'accept. To just play something, spotify__play with query is enough.';
+      'accept. To just play something, spotify__play with query is enough. '
+      'An empty result means Spotify found nothing: say so, do not pretend '
+      'or play something else unasked.';
 
   @override
   Map<String, Object?> get inputSchema => const {
@@ -151,6 +156,8 @@ final class SpotifySearchTool extends IntegrationTool
     return ToolOutcome.text(
       '$spotifyDataNotice\n${jsonEncode({
         'results': [for (final h in hits) h.toJson()],
+        if (hits.isEmpty) 'hint': 'Kein Treffer. Dem Nutzer ehrlich sagen; einen Ersatz nur '
+              'anbieten, nicht abspielen.',
       })}',
       summary: '${hits.length} Treffer für „$query“',
     );
@@ -227,7 +234,8 @@ final class SpotifyPlayTool extends IntegrationTool
       'playlist, by query or by URI. Without query and uri, continues the '
       'paused music. Plays on this phone (starts the Spotify app if needed); '
       'set device only if the user names another device. Success is only '
-      'reported when playback was seen.';
+      'reported when playback was seen. If nothing is found, tell the user '
+      'and only offer an alternative; never play a different item silently.';
 
   @override
   Map<String, Object?> get inputSchema => const {

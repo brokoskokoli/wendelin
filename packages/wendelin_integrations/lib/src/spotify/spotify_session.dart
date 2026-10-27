@@ -174,7 +174,7 @@ final class SpotifySession {
     );
 
     await run((a) => op(a, target.id));
-    var result = await _verify(target.id);
+    var result = await _verify(target);
     if (result == _Verify.unchecked) return done(false);
     if (result != _Verify.playing && isPhone && !woke && await _wake()) {
       woke = true;
@@ -187,7 +187,7 @@ final class SpotifySession {
         } on PortException catch (e) {
           if (e.kind != PortErrorKind.notFound) rethrow;
         }
-        result = await _verify(target.id);
+        result = await _verify(target);
         if (result == _Verify.unchecked) return done(false);
       }
     }
@@ -263,7 +263,7 @@ final class SpotifySession {
     return null;
   }
 
-  Future<_Verify> _verify(String deviceId) async {
+  Future<_Verify> _verify(SpotifyDevice target) async {
     var result = _Verify.idle;
     var attempts = 0;
     for (var i = 0; i < verifyAttempts; i++) {
@@ -278,7 +278,7 @@ final class SpotifySession {
         break;
       }
       if (state != null && state.isPlaying) {
-        result = state.deviceId == deviceId
+        result = _isTarget(state, target)
             ? _Verify.playing
             : _Verify.otherDevice;
       } else {
@@ -291,6 +291,17 @@ final class SpotifySession {
       'attempts': attempts,
     });
     return result;
+  }
+
+  /// Spotify may send `device.id: null` (restricted or private devices);
+  /// then only the device name can tell whether [state] is on [target].
+  static bool _isTarget(SpotifyPlayback state, SpotifyDevice target) {
+    final id = state.deviceId;
+    if (id != null) return id == target.id;
+    final name = state.deviceName?.trim().toLowerCase();
+    return name != null &&
+        name.isNotEmpty &&
+        name == target.name.trim().toLowerCase();
   }
 
   void _diagnose(String event, String target, String via, bool woke, int n) =>

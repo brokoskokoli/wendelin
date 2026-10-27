@@ -139,7 +139,8 @@ final class HttpSpotifyApi implements SpotifyApi {
       {
         'q': query,
         'type': kinds.map((k) => k.name).join(','),
-        'limit': '$limit',
+        'limit':
+            '${kinds.contains(SpotifyKind.playlist) ? _fetch(limit) : limit}',
       },
     );
     final map = _object(_decode(await _call('search', 'GET', url, auth)));
@@ -149,15 +150,26 @@ final class HttpSpotifyApi implements SpotifyApi {
       if (page == null) continue;
       final raw = _object(page)['items'];
       if (raw is! List<Object?>) throw _malformed;
+      var kept = 0;
       for (final e in raw) {
         // Playlists can contain null entries.
-        if (e == null) continue;
+        if (e == null || kept >= limit) continue;
         final item = _item(kind, _object(e));
-        if (item != null) items.add(item);
+        if (item == null) continue;
+        items.add(item);
+        kept++;
       }
     }
     return items;
   }
+
+  /// Spotify fills `playlists.items` with `null` for playlists it hides and
+  /// still counts them against `limit`; a small limit can then return only
+  /// `null`s. Ask for more (Spotify's maximum for new apps is 10) and cut
+  /// the real hits down to [limit] afterwards.
+  static int _fetch(int limit) => limit < _maxFetch ? _maxFetch : limit;
+
+  static const _maxFetch = 10;
 
   SpotifyItem? _item(SpotifyKind kind, Map<String, Object?> m) {
     final uri = m['uri'];

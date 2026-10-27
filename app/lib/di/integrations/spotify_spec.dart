@@ -4,6 +4,7 @@ import 'package:wendelin_integrations/spotify.dart';
 
 import '../app_requirements.dart';
 import '../core_providers.dart';
+import '../../voice/dev_log.dart';
 import '../spotify.dart';
 import 'integration_spec.dart';
 
@@ -11,6 +12,7 @@ typedef _SpotifyDeps = ({
   SpotifyApi api,
   SpotifySecrets secrets,
   SpotifyAppLauncher launcher,
+  SpotifyHostDevice hostDevice,
 });
 
 /// Spotify playback over the Web API.
@@ -23,6 +25,7 @@ final spotifySpec = IntegrationSpec(
           api: ref.watch(spotifyApiProvider),
           secrets: ref.watch(spotifySecretsProvider),
           launcher: ref.watch(spotifyLauncherProvider),
+          hostDevice: ref.watch(spotifyHostDeviceProvider),
         ),
   isSupported: (d) => d.extra<_SpotifyDeps>('spotify') != null,
   // Any Spotify Connect device works; the app is only needed to wake the
@@ -36,6 +39,9 @@ final spotifySpec = IntegrationSpec(
       deps.api,
       deps.secrets,
       launcher: deps.launcher,
+      hostDevice: deps.hostDevice,
+      // Events only (device choice, check result), no titles or names.
+      onDiagnostic: devLog,
       onError: (_, kind) => d.reportError?.call('spotify', pausedError, kind),
       onRecovered: () => d.clearError?.call('spotify'),
     );

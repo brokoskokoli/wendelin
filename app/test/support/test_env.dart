@@ -180,6 +180,7 @@ final class TestEnv {
 
   /// Wakes the Spotify app.
   final spotifyLauncher = FakeSpotifyLauncher();
+  final spotifyHostDevice = FakeSpotifyHostDevice();
 
   /// Texts shared with other apps (package, text).
   final shared = <(String, String)>[];

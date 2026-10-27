@@ -75,6 +75,11 @@ final spotifyLauncherProvider = Provider<SpotifyAppLauncher>(
   (ref) => const IntentSpotifyLauncher(),
 );
 
+/// The phone's own names, to find its Spotify device; tests override it.
+final spotifyHostDeviceProvider = Provider<SpotifyHostDevice>(
+  (ref) => const ChannelSpotifyHostDevice(),
+);
+
 /// The login flow of the settings page.
 final spotifyLoginProvider = Provider<SpotifyLogin>(
   (ref) => SpotifyLogin(

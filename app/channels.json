@@ -5,7 +5,8 @@
       "dart": ["app/lib/platform/channel_app_presence_port.dart"],
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/AppsChannel.kt"],
       "toKotlin": {
-        "isInstalled": {"args": ["package"], "returns": "value"}
+        "isInstalled": {"args": ["package"], "returns": "value"},
+        "deviceNames": {"args": [], "returns": "value"}
       },
       "toDart": {}
     },

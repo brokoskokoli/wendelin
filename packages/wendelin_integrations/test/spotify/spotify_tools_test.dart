@@ -90,6 +90,22 @@ void main() {
       ]);
     });
 
+    test('kein Treffer: ehrlicher Hinweis, nichts abgespielt', () async {
+      final o = await call('spotify__search', {
+        'query': 'zzzzqqqq',
+        'type': 'playlist',
+      });
+      expect(o.isError, isFalse);
+      expect(data(o)['results'], isEmpty);
+      expect(data(o)['hint'], contains('Kein Treffer'));
+      final p = await call('spotify__play', {
+        'query': 'zzzzqqqq',
+        'type': 'playlist',
+      });
+      expect(p.isError, isTrue);
+      expect(p.text, contains('nichts abgespielt'));
+    });
+
     test('ohne Art: alle vier Arten', () async {
       final o = await call('spotify__search', {'query': 'queen'});
       final kinds = [

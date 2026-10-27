@@ -53,6 +53,7 @@ List<Override> withIntegrations(TestEnv env) => [
   spotifyApiProvider.overrideWithValue(env.spotify),
   spotifyAuthBrowserProvider.overrideWithValue(env.spotifyBrowser),
   spotifyLauncherProvider.overrideWithValue(env.spotifyLauncher),
+  spotifyHostDeviceProvider.overrideWithValue(env.spotifyHostDevice),
   appShareProvider.overrideWithValue(
     (package, text) async => env.shared.add((package, text)),
   ),

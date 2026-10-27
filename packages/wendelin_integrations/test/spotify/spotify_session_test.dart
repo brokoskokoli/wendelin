@@ -425,6 +425,28 @@ void main() {
     });
 
     test(
+      'device.id null im Wiedergabezustand: Prüfung über den Gerätenamen',
+      () async {
+        api
+          ..knownDevices.add(phone)
+          ..playbackWithoutDeviceId = true;
+        final r = await start();
+        expect(r.confirmed, isTrue);
+        expect(launcher.wakes, 0);
+      },
+    );
+
+    test('device.id null und anderer Gerätename: nicht bestätigt (kein '
+        'Namens-Raten)', () async {
+      api
+        ..knownDevices.addAll([desktop, phone])
+        ..playbackWithoutDeviceId = true;
+      // The phone is the target, but the desktop is the one that plays.
+      api.onPlay = () => api.activeDeviceId = 'pc';
+      await expectLater(start(), throwsA(isA<PortException>()));
+    });
+
+    test(
       'Handy gelistet, aber eingefroren: einmal wecken, dann spielt es',
       () async {
         api

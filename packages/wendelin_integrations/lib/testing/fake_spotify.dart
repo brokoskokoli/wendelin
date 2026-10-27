@@ -76,6 +76,10 @@ final class FakeSpotifyApi with FakeFailures implements SpotifyApi {
   /// active device and leaves [playing] false.
   final Set<String> frozenDeviceIds = {};
 
+  /// Like Spotify for restricted or private devices: the playback state
+  /// carries the device name but `device.id` is null.
+  bool playbackWithoutDeviceId = false;
+
   /// Current track, context and position.
   String? trackUri;
   String? contextUri;
@@ -216,7 +220,7 @@ final class FakeSpotifyApi with FakeFailures implements SpotifyApi {
       contextUri: contextUri,
       progressMs: positionMs,
       deviceName: knownDevices.firstWhere((d) => d.id == activeDeviceId).name,
-      deviceId: activeDeviceId,
+      deviceId: playbackWithoutDeviceId ? null : activeDeviceId,
     );
   }
 

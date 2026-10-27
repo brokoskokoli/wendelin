@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/spotify.dart';
 import 'package:wendelin/ui/settings/spotify_screen.dart';
+import 'package:wendelin/voice/dev_log.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
@@ -165,5 +166,47 @@ void main() {
     expect(failed.actionLabel, 'Erneut versuchen');
     // Abgelaufene Anmeldung: Tokens sind gelöscht, Einrichtung nötig.
     expect(await env.secrets.read('spotify.session'), isNull);
+  });
+
+  testWidgets('spotify__play: Gerätewahl über den Handy-Namen und Prüfung im '
+      'Dev-Log, ohne Gerätenamen, Titel oder URIs', (tester) async {
+    final env = TestEnv(enabled: const {'spotify'});
+    await loginSpotify(env);
+    env.spotifyHostDevice.hostNames = {'Mein Telefon'};
+    env.spotify.knownDevices.addAll(const [
+      SpotifyDevice(id: 'pc', name: 'Rechner', type: 'Computer'),
+      SpotifyDevice(id: 'a', name: 'Mein Telefon', type: 'Smartphone'),
+      SpotifyDevice(id: 'b', name: 'Zweites', type: 'Smartphone'),
+    ]);
+    final c = await pumpIntegrations(tester, env);
+    final lines = <String>[];
+    devLogSink = lines.add;
+    devLogEnabled = true;
+    addTearDown(() => devLogEnabled = false);
+    final play = spotifyIntegrationOf(c.read(integrationsProvider))!.tools
+        .firstWhere((t) => t.name == 'spotify__play');
+    final out = await tester.runAsync(
+      () => play.execute(
+        {'uri': 'spotify:track:4u7EnebtmKWzUH433cf5Qv'},
+        ToolContext(
+          sessionId: 's',
+          clock: FixedClock(DateTime.utc(2026, 10, 13, 12)),
+          locale: 'de-DE',
+          timeZone: 'Europe/Berlin',
+        ),
+      ),
+    );
+    expect(out!.isError, isFalse, reason: out.text);
+    expect(env.spotify.lastPlay!.deviceId, 'a');
+    expect(lines.where((l) => l.contains('spotify-device')), [
+      predicate<String>((l) => l.contains('via="name"')),
+    ]);
+    expect(lines.where((l) => l.contains('spotify-verify')), [
+      predicate<String>((l) => l.contains('result="playing"')),
+    ]);
+    for (final l in lines) {
+      expect(l, isNot(contains('Mein Telefon')));
+      expect(l, isNot(contains('spotify:track')));
+    }
   });
 }
