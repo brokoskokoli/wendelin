@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete, solange der Maintainer am Rechner ist (
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP160, WP161, WP163 (3 Sitzungen, Freigabe Maintainer 2026-10-27); Test-APK v0.1.0-rc10; als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP160, WP163 (3 Sitzungen, Freigabe Maintainer 2026-10-27); Test-APK v0.1.0-rc10; als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -107,7 +107,7 @@ Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP160, WP1
 | WP158 | Robustheit: Fehler beim Mikrofonstart, Stationskanal | gemergt (b5ef90e3) | Projekt-Review 2026-10-26 (Befunde 6, 7). isLocked() liefert bei Kanalfehler true (fail-closed, Log lock-check-failed; wake_chat öffnet dann Overlay); nach geworfenem Start Übergabe sofort beendet; Stationskanal als StationAmbientChannel, neuerer Host gewinnt. Folgepunkte: Gerätetest Stationsmodus (Helligkeit/Umgebungslicht) mit nächstem RC; lokales gate --changed fand directives_ordering nicht (erst CI), prüfen |
 | WP159 | Einrichtung: GPU-Prüfung nur mit Nachweis, Hinweis auf „Eingeschränkte Einstellungen“ (SMS/Benachrichtigungen) | gemergt (f0f9cafe) | K127, K128 offen; Ursache: Android 13+ Eingeschränkte Einstellungen bei Installation aus Datei (adb install nicht betroffen), AppOp für Apps nicht lesbar → bedingter Hinweis nach Installationsquelle. Folgepunkte: Gerätetest `docs/testing/m5/wp159.md` (A1–A3, B1–B4); Kontakte-Integration zeigt „Aktiv“ auch ohne SMS (setupState prüft nur READ_CONTACTS); Commit-Hooks führen kein Gate aus (Briefing-Annahme prüfen); E2E nur AOSP, je Szenario 1 Lauf |
 | WP160 | Home Assistant: Stufe für ha__call/ha__call_secure einstellbar, Licht gesperrt steuerbar | in Arbeit | Meldung Maintainer 2026-10-27 nach WP154 |
-| WP161 | Spotify: „spielt“, aber nirgends Musik (Zielgerät, Prüfung nach play, ehrliche Suche) | in Arbeit | Gerätetest Maintainer 2026-10-27 |
+| WP161 | Spotify: „spielt“, aber nirgends Musik (Zielgerät, Prüfung nach play, ehrliche Suche) | gemergt (6d8f39a0) | K129 offen; Ursache: Befehl ohne device_id ging an totes, noch „aktives“ Connect-Gerät, 204 ungeprüft. Folgepunkte: Gerätetest `docs/testing/m5/wp161.md` (eingefroren, Fremdgerät aktiv, benanntes Gerät, Playlist); Zweifel: Playlist-Ursache nur per Fixture, Handy-Gerätename ungeprüft; Soll: MediaSessionPick zählt BUFFERING/CONNECTING als spielend, toter Doku-Verweis spotify_session.dart:177; Hinweis: Spotify in Akku-Ausnahme (MIUI friert ein) |
 | WP162 | Lizenzen der Sprachmodelle als Unterseite (Mini) | gemergt (9f556fa2) | Unterseite /settings/voice/licenses; Soll offen: Abschnittsüberschrift wiederholt den Seitentitel (voice_licenses_screen.dart:21) |
 | WP163 | Gesperrt: Anfrage und Antwort im Overlay, Entsperren-Knopf oben, kein pauschaler Sperrtext; Teil B: Aktionen wie Navigation nach dem Entsperren ausführen | in Arbeit | Wunsch Maintainer 2026-10-27; 3. Sitzung mit Freigabe |
 | WP164 | Kontakte: Felder gezielt abfragen, Navigation zu Kontakt in einem Schritt, Waze-Integration | geplant | Wunsch Maintainer 2026-10-27; Start nach Merge von WP163 (Merkmal „wirkt nur entsperrt“) |
@@ -117,7 +117,7 @@ Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 ## Nächste Schritte
 
 Stand 2026-10-27 (Orchestrator):
-0. Laufend: WP161 (Spotify ohne Wiedergabe), WP160 (HA-Stufe, Licht gesperrt; Test-APK v0.1.0-wp160.1 beim Maintainer, Vorabversion danach löschen). Gemergt: WP159 (f0f9cafe, K127/K128 offen). Danach rc11 mit WP158–WP160. Gemergt: WP158 (b5ef90e3), WP153 (9778f8a8), WP155 (8e1e18b1, K126 bestätigt), WP156 (abb1ead7), WP157 (7ad79f58, K122/K125 bestätigt), WP154 (ffed7c83, K123 bestätigt), WP151 (0b94041d, K124 bestätigt). Test-APK rc10 (Tag v0.1.0-rc10, 3e17f4b1); WP158 ist erst im nächsten RC.
+0. Laufend: WP160 (HA-Stufe, Licht gesperrt; Test-APK v0.1.0-wp160.1 beim Maintainer, Vorabversion danach löschen). Gemergt: WP159 (f0f9cafe, K127/K128 offen). Danach rc11 mit WP158–WP160. Gemergt: WP158 (b5ef90e3), WP153 (9778f8a8), WP155 (8e1e18b1, K126 bestätigt), WP156 (abb1ead7), WP157 (7ad79f58, K122/K125 bestätigt), WP154 (ffed7c83, K123 bestätigt), WP151 (0b94041d, K124 bestätigt). Test-APK rc10 (Tag v0.1.0-rc10, 3e17f4b1); WP158 ist erst im nächsten RC.
 1. Danach: Prüfseite Weckwort-Archiv auf Auftrag des Maintainers; sonst M6 nur mit Go.
 2. Gerätetest beim Maintainer: rc10 (T30-WP153), rc9 (T29-WP155, T29-WP156, T29-WP157), rc8 (T28-WP151, T28-WP154), rc7 (T27-WP149, T27-WP150, T26-WP148).
 3. Erledigt mit WP159: (a) Anbieter-Setup zeigt „GPU-Prüfung über NVIDIA“ auch, wenn der Anbieter keinen GPU-Nachweis liefert (`provider_setup/finish_step.dart`, `gpu_check_section.dart`, Fähigkeit je Modell prüfen) → ausblenden; (b) SMS- und Benachrichtigungszugriff lassen sich bei APK-Installation nicht aktivieren („aus Sicherheitsgründen nicht zugelassen“, Android 13+ „Eingeschränkte Einstellungen“) → Sperre erkennen, Schritt-für-Schritt-Hinweis mit Knopf zu den App-Infos (bisher nur ein Satz im Medien-Hinweis). Technisch offen: Python-Tests in `tool/train_wake_word/` laufen in keinem CI-Job; Gerätetest Stationsmodus nach WP158.
