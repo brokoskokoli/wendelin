@@ -10,7 +10,7 @@
 ## Inhalt
 - Ursache belegen (Fake-API-Tests für: aktives Fremdgerät, eingefrorenes Handy-Gerät, kein Gerät; ggf. Dev-Log-Zeilen `spotify-device`/`spotify-verify` ohne Titel/Tokens).
 - Nach `play` den Zustand prüfen (`GET /me/player`: `is_playing`, Gerät). Läuft nichts: Spotify-App wecken, das Handy-Gerät gezielt wählen (`device_id`, ggf. Transfer), erneut prüfen; scheitert es, ehrliche Fehlermeldung statt „Spielt“.
-- Zielgerät: Standard das Handy, auf dem Wendelin läuft (wenn die Spotify-App installiert ist); ein anderes Gerät nur, wenn der Nutzer es nennt oder dort schon Musik läuft. Mit dem Maintainer klären (Buttons, Empfehlung).
+- Zielgerät (Entscheidung Maintainer 2026-10-27): Wird der Befehl am Handy gegeben, spielt die Musik auf dem Handy; die Spotify-App wird gestartet, wenn sie noch nicht läuft. Ein anderes Gerät nur, wenn der Nutzer es ausdrücklich nennt. Befund dazu: Die Desktop-App zeigte Wiedergabe auf einem anderen Gerät im Haus, dort lief aber nichts. Der Befehl ging an ein totes, für Spotify noch „aktives“ Connect-Gerät.
 - Antwort nennt das Gerät, wenn es nicht das Handy ist.
 - Erfolglose Suche nach einer Playlist: ehrlich sagen und Ersatz anbieten bzw. kennzeichnen, statt still ein beliebiges Album zu spielen (Tool-Ergebnistext/Beschreibung).
 - Wecken auf MIUI/HyperOS (eingefrorene App) am Handy prüfen lassen; der Intent `spotify:` startet die App ggf. nicht in den Vordergrund.
