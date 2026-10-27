@@ -231,7 +231,11 @@ final class ToolExecutor
         // Allowed by the level, but the action needs the unlocked device
         // (WP163 B): not run, the caller remembers the call for the unlock.
         return (
-          ToolOutcome.error(deferredText, summary: deferredSummary),
+          ToolOutcome.error(
+            deferredText,
+            summary: deferredSummary,
+            endsRun: true,
+          ),
           AuditStatus.denied,
           AuditDecision.denied,
         );

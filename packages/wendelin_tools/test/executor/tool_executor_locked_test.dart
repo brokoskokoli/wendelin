@@ -45,6 +45,33 @@ Future<List<ToolInvocationEvent>> _run(ToolExecutor e, String tool) =>
 ToolOutcome _outcome(List<ToolInvocationEvent> events) =>
     events.whereType<ToolFinished>().single.outcome;
 
+/// A tool marked [WorksOnlyUnlocked]; counts its executions.
+final class _UnlockedOnly implements Tool, WorksOnlyUnlocked {
+  _UnlockedOnly({required this.name, this.risk = RiskLevel.write});
+
+  @override
+  final String name;
+  @override
+  final RiskLevel risk;
+  @override
+  String get description => 'x';
+  @override
+  Map<String, Object?> get inputSchema => const {'type': 'object'};
+  int callCount = 0;
+
+  @override
+  Future<ToolOutcome> execute(
+    Map<String, Object?> args,
+    ToolContext ctx,
+  ) async {
+    callCount++;
+    return ToolOutcome.text('ok');
+  }
+
+  @override
+  String describeForConfirmation(Map<String, Object?> args) => name;
+}
+
 void main() {
   const locked = AccessContext.lockedUnknownVoice;
 
@@ -196,6 +223,63 @@ void main() {
       expect(out.summary, ToolExecutor.unlockSummary);
     },
   );
+
+  group('WP163 B: WorksOnlyUnlocked', () {
+    ToolExecutor exec(Tool t, AccessContext a, _Audit audit) {
+      final policy = RiskPolicy()..setLevel(t.name, SecurityLevel.a);
+      return ToolExecutor(
+        catalog: _Catalog([t]),
+        policy: policy,
+        audit: audit,
+        access: a,
+      );
+    }
+
+    test(
+      'gesperrt + Stufe erlaubt: nicht ausgeführt, endet den Lauf',
+      () async {
+        final tool = _UnlockedOnly(name: 'm__nav');
+        final audit = _Audit();
+        final out = _outcome(await _run(exec(tool, locked, audit), 'm__nav'));
+        expect(tool.callCount, 0, reason: 'nie ausgeführt');
+        expect(out.summary, ToolExecutor.deferredSummary);
+        expect(out.isError, isTrue);
+        expect(out.endsRun, isTrue);
+        expect(audit.entries.single.status, AuditStatus.denied);
+        expect(audit.entries.single.whileLocked, isTrue);
+      },
+    );
+
+    test('entsperrt: wird ausgeführt', () async {
+      final tool = _UnlockedOnly(name: 'm__nav');
+      final out = _outcome(
+        await _run(exec(tool, AccessContext.unlocked, _Audit()), 'm__nav'),
+      );
+      expect(tool.callCount, 1);
+      expect(out.isError, isFalse);
+      expect(out.endsRun, isFalse);
+    });
+
+    test(
+      'gesperrt + Stufe nicht erlaubt: alter Pfad „Entsperren nötig“',
+      () async {
+        final tool = _UnlockedOnly(name: 'm__nav');
+        // Stufe C (Standard) ohne Freigabe gesperrt.
+        final e = ToolExecutor(catalog: _Catalog([tool]), access: locked);
+        final out = _outcome(await _run(e, 'm__nav'));
+        expect(tool.callCount, 0);
+        expect(out.summary, ToolExecutor.unlockSummary);
+        expect(out.endsRun, isFalse);
+      },
+    );
+
+    test('gesperrt, gewöhnliches Tool auf A: läuft (kein Marker)', () async {
+      final tool = FakeTool(name: 't__x', risk: RiskLevel.write);
+      final out = _outcome(await _run(exec(tool, locked, _Audit()), 't__x'));
+      expect(tool.callCount, 1);
+      expect(out.endsRun, isFalse);
+    });
+  });
 
   test('effectiveRisk berücksichtigt den Kontext', () {
     final tool = FakeTool(name: 't__write', risk: RiskLevel.write);

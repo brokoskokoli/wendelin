@@ -387,6 +387,21 @@ final class ToolRound {
     );
   }
 
+  /// The stop for a [round] with a call whose outcome ends the run
+  /// ([ToolOutcome.endsRun]), or `null`. Closes the round first (verify,
+  /// results in the history). The run ends as cancelled: nothing to say, no
+  /// error; the caller of the run answers.
+  Future<RunStop?> stopOnEndsRun(ToolRoundRun round, AgentConfig config) async {
+    final ends = [
+      for (final e in _state.executed)
+        if (e.outcome.endsRun && round.pending.any((c) => c.id == e.call.id)) e,
+    ];
+    if (ends.isEmpty) return null;
+    await verify(round);
+    await _state.append(Message.toolResults(resultsOf(round)));
+    return RunStop(failedEvent(AgentErrorKind.cancelled, config));
+  }
+
   /// The earlier execution [call] would repeat, if any: a call with the
   /// same id from the model *and* the same tool and arguments. Equal ids
   /// with other content are an id collision, not a repetition (see

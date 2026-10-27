@@ -392,9 +392,7 @@ abstract final class LockedTexts {
               ? 'Veuillez déverrouiller pour naviguer.'
               : 'Veuillez déverrouiller pour cela.',
         'en' =>
-          navigation
-              ? 'Please unlock to navigate.'
-              : 'Please unlock for that.',
+          navigation ? 'Please unlock to navigate.' : 'Please unlock for that.',
         _ =>
           navigation
               ? 'Zum Navigieren bitte entsperren.'
@@ -574,9 +572,9 @@ final class LockGateAgentRun implements AgentRun {
       }
       if (event is ToolCallFinished) {
         if (event.outcome.summary == ToolExecutor.deferredSummary) {
-          // Works only unlocked: the run ends here (see below).
+          // Works only unlocked: the run ends here (see below). The agent
+          // itself sends no further request ([ToolOutcome.endsRun]).
           deferred ??= event.call;
-          model.cancel(); // before the yield: the run must not start another call
         } else if (event.outcome.summary == ToolExecutor.unlockSummary) {
           refused = true;
         } else if (!event.outcome.isError) {
