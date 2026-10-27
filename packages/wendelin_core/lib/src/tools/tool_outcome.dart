@@ -32,6 +32,7 @@ final class ToolOutcome {
     this.undo,
     this.summary,
     this.fixed,
+    this.endsRun = false,
   }) : content = List.unmodifiable(content);
 
   /// Successful outcome with a single text block.
@@ -49,10 +50,15 @@ final class ToolOutcome {
 
   /// Failed outcome with a readable [message] for the model (no stack
   /// traces).
-  factory ToolOutcome.error(String message, {String? summary}) => ToolOutcome(
+  factory ToolOutcome.error(
+    String message, {
+    String? summary,
+    bool endsRun = false,
+  }) => ToolOutcome(
     content: [TextBlock(message)],
     isError: true,
     summary: summary,
+    endsRun: endsRun,
   );
 
   /// The user declined the confirmation; not an error, the model should
@@ -91,6 +97,12 @@ final class ToolOutcome {
   /// tools that implement [FixedConfirmationTool]. `null` = the model words
   /// the answer. Never sent to the model.
   final ConfirmationSentence? fixed;
+
+  /// The run ends with this round: the agent records the results and sends
+  /// no further model request (WP163 B: a call held back until the unlock;
+  /// the caller answers). Checked by the agent before the next request, so
+  /// it does not depend on when a listener reacts.
+  final bool endsRun;
 
   /// Concatenated text of all [TextBlock]s in [content].
   String get text => content.whereType<TextBlock>().map((b) => b.text).join();

@@ -1344,8 +1344,6 @@
     }
   },
   "overlayKeepTalking": "Weiter sprechen",
-  "overlayLockedText": "Auf dem Sperrbildschirm zeigt und sagt Wendelin nichts aus deinen Daten. Nur die Taschenlampe geht auch gesperrt. Alles andere erst nach dem Entsperren.",
-  "overlayLockedTitle": "Gerät entsperren",
   "overlayTextInput": "Texteingabe",
   "overlayUnlock": "Entsperren",
   "overlayUnlockCancelled": "Entsperren abgebrochen. Deine Anfrage wurde verworfen.",

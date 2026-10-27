@@ -18,13 +18,14 @@ typedef Executed = ({ToolCallBlock call, ToolOutcome outcome});
 bool isDeclined(ToolOutcome o) =>
     !o.isError && o.text == ToolOutcome.declinedText;
 
-/// A run ended early (abort or limit); carries the terminal event.
+/// A run ended early (abort, limit or a call that ends it); carries the
+/// terminal event.
 final class RunStop implements Exception {
   /// Creates the stop with its terminal [event].
   RunStop(this.event);
 
   /// The terminal event of the run.
-  final AgentFailed event;
+  final AgentEvent event;
 }
 
 /// What the units of a run need from the loop: event output, the cancel

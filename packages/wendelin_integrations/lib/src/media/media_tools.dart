@@ -302,7 +302,7 @@ final class MediaSeekTool extends IntegrationTool
 /// `media__open_audible` (write): opens the Audible app, optionally with a
 /// title search, only if it is installed.
 final class OpenAudibleTool extends IntegrationTool
-    implements TrustedContentSource, NoNetworkTarget {
+    implements TrustedContentSource, NoNetworkTarget, WorksOnlyUnlocked {
   /// Creates the tool.
   const OpenAudibleTool(this.port, this.apps);
 

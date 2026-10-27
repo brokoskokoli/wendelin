@@ -4198,18 +4198,6 @@ abstract class AppLocalizations {
   /// **'Weiter sprechen'**
   String get overlayKeepTalking;
 
-  /// No description provided for @overlayLockedText.
-  ///
-  /// In de, this message translates to:
-  /// **'Auf dem Sperrbildschirm zeigt und sagt Wendelin nichts aus deinen Daten. Nur die Taschenlampe geht auch gesperrt. Alles andere erst nach dem Entsperren.'**
-  String get overlayLockedText;
-
-  /// No description provided for @overlayLockedTitle.
-  ///
-  /// In de, this message translates to:
-  /// **'Gerät entsperren'**
-  String get overlayLockedTitle;
-
   /// No description provided for @overlayTextInput.
   ///
   /// In de, this message translates to:

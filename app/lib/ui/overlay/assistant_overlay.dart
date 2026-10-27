@@ -114,6 +114,10 @@ bool _requestRunning(WidgetRef ref) =>
     ref.read(voiceControllerProvider).active ||
     ref.read(agentControllerProvider).running;
 
+// What the locked sheet shows: request and answer only (WP163).
+OverlayExchange _lockedExchange(LockedExchange? e) =>
+    OverlayExchange(request: e?.request, answer: e?.answer);
+
 /// Takes the audio of the wake word hit and plays the tone (WP68).
 Future<WakePreRoll?> _takeWake(WidgetRef ref, {required bool tone}) =>
     takeWakePreRoll(
@@ -345,7 +349,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     );
     if (!mounted) return;
     final pending = ref.read(lockedPendingProvider);
-    final text = ref.read(lockedPendingProvider.notifier).take();
+    final request = ref.read(lockedPendingProvider.notifier).take();
     if (!ok) {
       // Cancelled: the request is gone, say so (fixed text).
       if (pending != null) setState(() => _discardedNotice = true);
@@ -355,7 +359,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       _locked = false;
       _discardedNotice = false;
     });
-    ref.read(lockedModeProvider.notifier).set(false);
+    endLockedMode(ref);
     // Gone meanwhile (home, screen off): nothing listens or sends.
     if (!await _unlockWatch.visibleAfterUnlock(() => mounted)) {
       if (mounted) await _close('hidden');
@@ -364,10 +368,10 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     _voice.prewarm();
     // The request from before goes on now, answered here and read aloud
     // (K85); without one, the overlay listens again.
-    if (text != null) {
-      if (!_closing && !await _voice.answerText(text) && mounted && !_closing) {
-        unawaited(_agent.send(text));
-      }
+    if (request != null) {
+      final spoken =
+          !_closing && await answerRemembered(ref, request, _voice.answerText);
+      if (!spoken && mounted && !_closing) unawaited(_agent.send(request.text));
     } else if (!_closing && !_requestRunning(ref)) {
       _triggers.fire();
     }
@@ -379,12 +383,12 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     voiceLog('overlay-close', {'by': by});
     final container = ProviderScope.containerOf(context, listen: false);
     final platform = _platform;
-    ref.read(lockedPendingProvider.notifier).clear();
+    dropLockedState(ref);
     // An open GPU block is dropped with the overlay (WP82).
     unawaited(_agent.resolveGpuBlock(sendWithout: false));
     // Stop first (host channels), then release the host (WP145).
     await _voice.suspend();
-    ref.read(lockedModeProvider.notifier).set(false);
+    endLockedMode(ref);
     _agent.cancel();
     final released = await platform.releaseHost();
     await AssistantOverlayScreen._finishClose(
@@ -433,7 +437,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
         : () => unawaited(_agent.newTopic()),
     checkStatus: conversation.verification?.checkStatus,
     exchange: _locked
-        ? const OverlayExchange()
+        ? _lockedExchange(ref.watch(lockedExchangeProvider))
         : OverlayExchange.of(
             conversation.entries.sublist(
               _hideBefore > conversation.entries.length ? 0 : _hideBefore,

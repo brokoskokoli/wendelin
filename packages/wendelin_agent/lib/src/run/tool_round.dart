@@ -366,25 +366,17 @@ final class ToolRound {
   }
 
   /// The stop for a [round] whose call failed [maxSameFailures] times (see
-  /// [repeatedFailure]), or `null`. Closes the round first (verify, results
-  /// in the history) so every tool call has a result.
+  /// [repeatedFailure]) or whose outcome ends the run ([ToolOutcome.endsRun],
+  /// WP163 B), or `null`. Closes the round first so every call has a result.
   Future<RunStop?> stopOnRepeatedFailure(
     ToolRoundRun round,
     AgentConfig config,
   ) async {
     final error = repeatedFailure(round);
-    if (error == null) return null;
+    if (error == null && !_endsRun(_state.executed, round)) return null;
     await verify(round);
     await _state.append(Message.toolResults(resultsOf(round)));
-    return RunStop(
-      failedEvent(
-        AgentErrorKind.repeatedToolError,
-        config,
-        tool: error.tool,
-        detail: error.error,
-        repeats: error.count,
-      ),
-    );
+    return _stopOf(error, config);
   }
 
   /// The earlier execution [call] would repeat, if any: a call with the
@@ -425,6 +417,29 @@ final class ToolRound {
     );
   }
 }
+
+/// The stop for a repeated [error], else for a run ended by a call (WP163 B):
+/// an ordinary end without text, not a failure or a cancellation (the caller
+/// of the run answers; the transcript shows no error).
+RunStop _stopOf(
+  ({String tool, String error, int count})? error,
+  AgentConfig config,
+) => RunStop(
+  error == null
+      ? const AgentDone(finalText: '', stopReason: StopReason.endTurn)
+      : failedEvent(
+          AgentErrorKind.repeatedToolError,
+          config,
+          tool: error.tool,
+          detail: error.error,
+          repeats: error.count,
+        ),
+);
+
+/// Whether a call of [round] has an outcome that ends the run.
+bool _endsRun(Iterable<Executed> executed, ToolRoundRun round) => executed.any(
+  (e) => e.outcome.endsRun && round.pending.any((c) => c.id == e.call.id),
+);
 
 /// A tool round that was executed and waits for the receipt of its answer.
 final class ToolRoundRun {

@@ -8,7 +8,7 @@
 app/lib/ui/attestation/attestation_texts.dart: 1  # Regex auf Pakettexte
 app/lib/ui/design/compositions.dart: 18  # Beispieldaten der Goldens
 app/lib/ui/design/gallery.dart: 17  # Beispieldaten der Galerie
-app/lib/agent/agent_controller.dart: 2  # interne Fehler, Log
+app/lib/agent/agent_controller.dart: 1  # interne Fehler, Log
 app/lib/agent/conversation_state.dart: 1  # gesprochener GPU-Hinweis
 app/lib/agent/new_topic_command.dart: 3  # Sprachbefehle und Muster
 app/lib/di/agent_providers.dart: 3  # Statusmeldungen, Log
@@ -32,7 +32,6 @@ app/lib/di/voice_settings_providers.dart: 1  # debugPrint
 app/lib/di/wake_providers.dart: 1  # VoiceException-Rückfalltext
 app/lib/di/weather_config.dart: 1  # FormatException, Log
 app/lib/voice/confirm_prompts.dart: 6  # gesprochen
-app/lib/voice/locked_agent_run.dart: 2  # gesprochen (Sperrbildschirm)
 app/lib/voice/primed_audio_input.dart: 1  # VoiceException-Rückfalltext
 app/lib/voice/voice_components.dart: 1  # Beispielsatz für Vokabular/STT
 app/lib/voice/wake/wake_calibrator.dart: 1  # StateError, Log

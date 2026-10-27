@@ -7,7 +7,6 @@ import 'package:wendelin/di/integrations/registry.dart';
 import 'package:wendelin/di/preference_models.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
-import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin_core/testing.dart';
@@ -109,15 +108,51 @@ void main() {
     expect(log.toString(), isNot(contains('spät')));
   });
 
-  testWidgets('gesperrt: Sheet zeigt weder Verlauf noch Text noch Tool-Karte', (
+  testWidgets(
+    'gesperrt: Sheet zeigt Anfrage, aber weder Verlauf noch Tool-Karte',
+    (tester) async {
+      final (c, _, _) = await run(tester, 'Was steht morgen im Kalender?');
+      expect(find.text('Entsperren'), findsOneWidget);
+      // Der Verlauf liegt im Agenten, wird gesperrt aber nicht gerendert.
+      expect(c.read(agentControllerProvider).entries, isNotEmpty);
+      expect(find.textContaining('Tauchen'), findsNothing);
+      expect(find.byType(ToolResultCard), findsNothing);
+      expect(llm.requests, isEmpty);
+      expect(c.read(voiceControllerProvider).active, isFalse);
+    },
+  );
+
+  testWidgets('gesperrt: Entsperren oben, darunter Anfrage und Antwort', (
     tester,
   ) async {
-    await run(tester, 'Was steht morgen im Kalender?');
-    expect(find.text(AppLocalizationsDe().overlayLockedTitle), findsOneWidget);
+    await run(tester, 'Taschenlampe an');
+    final button = find.text('Entsperren');
+    final request = find.text('„Taschenlampe an“');
+    final answer = find.text('Taschenlampe an.');
+    expect(button, findsOneWidget);
+    expect(request, findsOneWidget);
+    expect(answer, findsOneWidget);
+    expect(
+      tester.getTopLeft(button).dy,
+      lessThan(tester.getTopLeft(request).dy),
+    );
+    expect(
+      tester.getTopLeft(request).dy,
+      lessThan(tester.getTopLeft(answer).dy),
+    );
+    // Der alte pauschale Sperrtext ist weg.
+    expect(find.textContaining('Auf dem Sperrbildschirm'), findsNothing);
+    expect(find.textContaining('Gerät entsperren'), findsNothing);
+  });
+
+  testWidgets('gesperrt: Verweigerung zeigt nur den Entsperren-nötig-Satz', (
+    tester,
+  ) async {
+    await run(tester, 'Wie spät ist es');
+    expect(find.text('„Wie spät ist es“'), findsOneWidget);
+    expect(find.text('Bitte entsperre das Telefon.'), findsOneWidget);
+    expect(find.textContaining('Auf dem Sperrbildschirm'), findsNothing);
     expect(find.textContaining('Tauchen'), findsNothing);
-    expect(find.textContaining('Kalender'), findsNothing);
-    expect(find.byType(ToolResultCard), findsNothing);
-    expect(llm.requests, isEmpty);
   });
 
   testWidgets('Taschenlampen-Integration aus: Befehl wird nicht ausgeführt', (

@@ -251,18 +251,24 @@ class OverlaySheet extends StatelessWidget {
   }
 
   /// While the lock state is still unknown ([onUnlock] `null`) the sheet
-  /// stays empty.
-  List<Widget> _lockedContent(BuildContext context) => [
-    if (onUnlock != null) ...[
-      Text(context.l10n.overlayLockedTitle, style: WText.transcript),
-      Text(context.l10n.overlayLockedText, style: WText.answer),
-      if (lockedNotice != null) Text(lockedNotice!, style: WText.answer),
-      FilledButton(
-        onPressed: onUnlock,
-        child: Text(context.l10n.overlayUnlock),
-      ),
-    ],
-  ];
+  /// stays empty. Locked it shows the unlock button and only the request and
+  /// the answer of [exchange] (what is spoken anyway, WP163); never its
+  /// tools, notice or any history.
+  List<Widget> _lockedContent(BuildContext context) {
+    final request = exchange.request;
+    final answer = exchange.answer;
+    return [
+      if (onUnlock != null) ...[
+        FilledButton(
+          onPressed: onUnlock,
+          child: Text(context.l10n.overlayUnlock),
+        ),
+        if (lockedNotice != null) Text(lockedNotice!, style: WText.answer),
+        if (request != null) Text('„$request“', style: WText.quote),
+        if (answer != null) AssistantText(answer),
+      ],
+    ];
+  }
 
   List<Widget> _content(BuildContext context) {
     final request = exchange.request;

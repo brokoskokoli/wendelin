@@ -2410,13 +2410,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get overlayKeepTalking => 'Keep talking';
 
   @override
-  String get overlayLockedText =>
-      'On the lock screen Wendelin shows and says nothing from your data. Only the flashlight also works while locked. Everything else only after unlocking.';
-
-  @override
-  String get overlayLockedTitle => 'Unlock device';
-
-  @override
   String get overlayTextInput => 'Text input';
 
   @override

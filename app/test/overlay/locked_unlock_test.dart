@@ -89,9 +89,10 @@ void main() {
     expect(platform.finished, 0, reason: 'Overlay bleibt offen');
     expect(c.read(lockedPendingProvider), isNull);
     expect(c.read(lockedModeProvider), isFalse);
+    expect(c.read(lockedExchangeProvider), isNull, reason: 'WP163: Entsperren');
   });
 
-  testWidgets('Vor dem Entsperren: kein Modellaufruf, nichts sichtbar', (
+  testWidgets('Vor dem Entsperren: kein Modellaufruf, keine Antwort sichtbar', (
     tester,
   ) async {
     platform.unlockGate = Completer<bool>();
@@ -99,8 +100,13 @@ void main() {
     expect(platform.unlockRequests, 1);
     expect(llm.requests, isEmpty);
     expect(find.textContaining('Uhr'), findsNothing);
-    expect(find.textContaining('spät'), findsNothing);
+    // WP163: die Anfrage ist gesperrt sichtbar, der Antwortinhalt nicht.
+    expect(find.textContaining('spät'), findsOneWidget);
     expect(c.read(lockedPendingProvider)?.text, 'Wie spät ist es');
+    // WP163: gesperrt halten Anfrage und gesprochener Satz im Speicher.
+    final ex = c.read(lockedExchangeProvider);
+    expect(ex?.request, 'Wie spät ist es');
+    expect(ex?.answer, 'Bitte entsperre das Telefon.');
     platform.unlockGate!.complete(false);
     await tester.pump();
   });
@@ -275,6 +281,17 @@ void main() {
       await tester.pump();
       expect(c.read(lockedPendingProvider), isNull);
     });
+  });
+
+  testWidgets('WP163: gesperrte Anfrage und Antwort werden beim Schließen '
+      'verworfen', (tester) async {
+    platform.unlockSucceeds = false;
+    final c = await open(tester);
+    env.clock.advance(unlockGrace);
+    expect(c.read(lockedExchangeProvider), isNotNull);
+    await platform.closeHandler!();
+    await tester.pump();
+    expect(c.read(lockedExchangeProvider), isNull);
   });
 
   group('UnlockWatch.visibleAfterUnlock', () {

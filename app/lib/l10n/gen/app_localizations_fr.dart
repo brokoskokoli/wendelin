@@ -2446,13 +2446,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get overlayKeepTalking => 'Continuer à parler';
 
   @override
-  String get overlayLockedText =>
-      'Sur l’écran de verrouillage, Wendelin n’affiche ni ne dit rien de vos données. Seule la lampe de poche fonctionne aussi verrouillé. Tout le reste seulement après le déverrouillage.';
-
-  @override
-  String get overlayLockedTitle => 'Déverrouiller l’appareil';
-
-  @override
   String get overlayTextInput => 'Saisie de texte';
 
   @override

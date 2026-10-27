@@ -245,7 +245,7 @@ final class ListFolderTool extends IntegrationTool
 /// `obsidian__open_note` (write): opens the note in the Obsidian app via
 /// an `obsidian://open` link.
 final class OpenNoteTool extends IntegrationTool
-    implements NoNetworkTarget, TrustedContentSource {
+    implements NoNetworkTarget, TrustedContentSource, WorksOnlyUnlocked {
   /// Creates the tool.
   const OpenNoteTool(this.env);
 

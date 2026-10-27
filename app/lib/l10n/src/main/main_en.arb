@@ -40,8 +40,6 @@
   "overlayFollowUpComing": "Conversation mode off · can be turned on in settings",
   "overlayFollowUpWindow": "Still listening for {seconds} s · “Stop” ends it",
   "overlayKeepTalking": "Keep talking",
-  "overlayLockedText": "On the lock screen Wendelin shows and says nothing from your data. Only the flashlight also works while locked. Everything else only after unlocking.",
-  "overlayLockedTitle": "Unlock device",
   "overlayTextInput": "Text input",
   "overlayUnlock": "Unlock",
   "privateBannerConfidential": "Confidential: memory used (since {since})",
