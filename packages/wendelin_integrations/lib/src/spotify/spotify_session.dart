@@ -27,6 +27,8 @@ final class SpotifySession {
     this.api,
     this.secrets, {
     this.launcher,
+    this.hostDevice,
+    this.onDiagnostic,
     this.onError,
     this.onRecovered,
     this._clock = const SystemClock(),
@@ -42,6 +44,13 @@ final class SpotifySession {
   /// Wakes the Spotify app; `null` if the platform cannot.
   final SpotifyAppLauncher? launcher;
 
+  /// Names of this phone, to find its Connect device; optional.
+  final SpotifyHostDevice? hostDevice;
+
+  /// Diagnostics (`spotify-device`, `spotify-verify`) without titles, URIs,
+  /// device names or tokens.
+  final void Function(String event, Map<String, Object> fields)? onDiagnostic;
+
   /// Called with a German message when the integration must show „Fehler“.
   final void Function(String message, PortErrorKind kind)? onError;
 
@@ -56,6 +65,15 @@ final class SpotifySession {
 
   /// Pause between those polls.
   static const wakeInterval = Duration(seconds: 2);
+
+  /// How often [startPlayback] looks at the playback state.
+  static const verifyAttempts = 3;
+
+  /// Wait before each of those looks.
+  static const verifyInterval = Duration(seconds: 1);
+
+  /// Id of the phone's device once recognised (memory only).
+  String? _phoneId;
 
   SpotifyAuth? _auth;
   Future<SpotifyAuth>? _renewing;
@@ -130,6 +148,201 @@ final class SpotifySession {
     return run((a) => op(a, id));
   }
 
+  /// Starts music (`op` gets the target's id) and checks that it plays.
+  ///
+  /// The target is the phone (see [_phone]) or, if [deviceName] is given, the
+  /// device of that name. The command always carries the target's `device_id`.
+  /// The state is read up to [verifyAttempts] times; success needs
+  /// `isPlaying` on the target. If the phone does not play, the Spotify app
+  /// is woken **once** and the command repeated; a failed check (429,
+  /// offline) ends at once with `confirmed == false`.
+  /// Throws [spotifyNoDevice] (no phone device, app not wakeable) and a
+  /// [PortException] with an honest text if nothing plays.
+  Future<SpotifyStart> startPlayback(
+    Future<void> Function(SpotifyAuth auth, String deviceId) op, {
+    String? deviceName,
+  }) async {
+    var usable = await _usable();
+    var woke = false;
+    SpotifyDevice target;
+    var phone = await _phone(usable);
+    if (deviceName != null) {
+      final found = _byName(usable, deviceName);
+      if (found == null) {
+        final names = usable.map((d) => d.name).join(', ');
+        throw PortException(
+          PortErrorKind.notFound,
+          'Spotify kennt kein Gerät „$deviceName“. '
+          'Verfügbar: ${names.isEmpty ? 'keins' : names}.',
+        );
+      }
+      target = found;
+      _diagnose('spotify-device', 'named', 'name', woke, usable.length);
+    } else {
+      if (phone == null) {
+        if (!await _wake()) throw spotifyNoDevice;
+        woke = true;
+        phone = await _waitForPhone();
+        if (phone == null) throw spotifyNoDevice;
+        usable = await _usable();
+      }
+      target = phone.device;
+      _diagnose('spotify-device', 'phone', phone.via, woke, usable.length);
+    }
+    final isPhone = deviceName == null || target.id == phone?.device.id;
+
+    await run((a) => op(a, target.id));
+    var result = await _verify(target.id);
+    if (result == _Verify.unchecked) {
+      return (
+        deviceId: target.id,
+        deviceName: target.name,
+        isPhone: isPhone,
+        confirmed: false,
+      );
+    }
+    if (result != _Verify.playing && isPhone && !woke && await _wake()) {
+      woke = true;
+      final again = await _waitForPhone();
+      if (again != null) {
+        _diagnose('spotify-device', 'phone', again.via, woke, usable.length);
+        target = again.device;
+        try {
+          await run((a) => op(a, target.id));
+        } on PortException catch (e) {
+          if (e.kind != PortErrorKind.notFound) rethrow;
+        }
+        result = await _verify(target.id);
+        if (result == _Verify.unchecked) {
+          return (
+            deviceId: target.id,
+            deviceName: target.name,
+            isPhone: true,
+            confirmed: false,
+          );
+        }
+      }
+    }
+    if (result != _Verify.playing) {
+      throw PortException(
+        PortErrorKind.failed,
+        isPhone
+            ? 'Spotify hat den Befehl angenommen, aber auf dem Handy läuft '
+                  'nichts. Die Spotify-App reagiert nicht; bitte Spotify '
+                  'einmal selbst öffnen und dann noch einmal versuchen.'
+            : 'Spotify hat den Befehl angenommen, aber auf dem Gerät '
+                  '„${target.name}“ läuft nichts.',
+      );
+    }
+    return (
+      deviceId: target.id,
+      deviceName: target.name,
+      isPhone: isPhone,
+      confirmed: true,
+    );
+  }
+
+  Future<List<SpotifyDevice>> _usable() async => [
+    for (final d in await run(api.devices))
+      if (!d.isRestricted) d,
+  ];
+
+  Future<bool> _wake() async => launcher != null && await launcher!.wake();
+
+  Future<({SpotifyDevice device, String via})?> _waitForPhone() async {
+    for (var i = 0; i < wakeAttempts; i++) {
+      await _delay(wakeInterval);
+      final found = await _phone(await _usable());
+      if (found != null) return found;
+    }
+    return null;
+  }
+
+  Future<_Verify> _verify(String deviceId) async {
+    var result = _Verify.idle;
+    var attempts = 0;
+    for (var i = 0; i < verifyAttempts; i++) {
+      await _delay(verifyInterval);
+      attempts++;
+      SpotifyPlayback? state;
+      try {
+        state = await run(api.playback);
+      } on PortException catch (e) {
+        if (e.kind == PortErrorKind.permissionDenied) rethrow;
+        result = _Verify.unchecked;
+        break;
+      }
+      if (state != null && state.isPlaying) {
+        result = state.deviceId == deviceId
+            ? _Verify.playing
+            : _Verify.otherDevice;
+      } else {
+        result = _Verify.idle;
+      }
+      if (result == _Verify.playing) break;
+    }
+    onDiagnostic?.call('spotify-verify', {
+      'result': result.label,
+      'attempts': attempts,
+    });
+    return result;
+  }
+
+  void _diagnose(String event, String target, String via, bool woke, int n) =>
+      onDiagnostic?.call(event, {
+        'target': target,
+        'via': via,
+        'woke': woke,
+        'devices': n,
+      });
+
+  static SpotifyDevice? _byName(List<SpotifyDevice> devices, String name) {
+    final wanted = name.trim().toLowerCase();
+    if (wanted.isEmpty) return null;
+    for (final d in devices) {
+      if (d.name.trim().toLowerCase() == wanted) return d;
+    }
+    for (final d in devices) {
+      if (d.name.toLowerCase().contains(wanted)) return d;
+    }
+    return null;
+  }
+
+  /// The phone's device among [usable]: the remembered id, a name of the
+  /// phone, or the only smartphone.
+  Future<({SpotifyDevice device, String via})?> _phone(
+    List<SpotifyDevice> usable,
+  ) async {
+    ({SpotifyDevice device, String via})? found;
+    final cached = usable.where((d) => d.id == _phoneId).firstOrNull;
+    if (cached != null) {
+      found = (device: cached, via: 'cache');
+    } else {
+      Set<String> names = const {};
+      try {
+        names = {
+          for (final n in await hostDevice?.names() ?? const <String>{})
+            n.trim().toLowerCase(),
+        }..remove('');
+      } on Object {
+        // Names are optional help; the type rule still applies.
+      }
+      final byName = usable
+          .where((d) => names.contains(d.name.trim().toLowerCase()))
+          .firstOrNull;
+      if (byName != null) {
+        found = (device: byName, via: 'name');
+      } else {
+        final phones = usable
+            .where((d) => d.type?.toLowerCase() == 'smartphone')
+            .toList();
+        if (phones.length == 1) found = (device: phones.single, via: 'type');
+      }
+    }
+    if (found != null) _phoneId = found.device.id;
+    return found;
+  }
+
   Future<String?> _findDevice() async {
     var id = await _pick();
     if (id != null) return id;
@@ -181,4 +394,23 @@ final class SpotifySession {
     await secrets.saveAuth(fresh);
     return fresh;
   }
+}
+
+/// Outcome of [SpotifySession.startPlayback]: the device it targeted, whether
+/// that is the phone and whether playback was seen on it.
+typedef SpotifyStart = ({
+  String deviceId,
+  String deviceName,
+  bool isPhone,
+  bool confirmed,
+});
+
+enum _Verify {
+  playing('playing'),
+  idle('idle'),
+  otherDevice('other-device'),
+  unchecked('unchecked');
+
+  const _Verify(this.label);
+  final String label;
 }

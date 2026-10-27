@@ -18,6 +18,8 @@ final class SpotifyIntegration implements Integration {
     SpotifyApi api,
     this.secrets, {
     SpotifyAppLauncher? launcher,
+    SpotifyHostDevice? hostDevice,
+    void Function(String event, Map<String, Object> fields)? onDiagnostic,
     void Function(String message, PortErrorKind kind)? onError,
     void Function()? onRecovered,
     SpotifyDelay? delay,
@@ -25,6 +27,8 @@ final class SpotifyIntegration implements Integration {
          api,
          secrets,
          launcher: launcher,
+         hostDevice: hostDevice,
+         onDiagnostic: onDiagnostic,
          onError: onError,
          onRecovered: onRecovered,
          delay: delay,

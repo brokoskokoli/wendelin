@@ -66,6 +66,7 @@ void main() {
         expect(p.contextUri, 'spotify:album:6X9k3iKZrQK3SDKpOZnB7M');
         expect(p.progressMs, 61000);
         expect(p.deviceName, 'Pixel 8');
+        expect(p.deviceId, 'dev1');
         answer = http.Response('', 204);
         expect(await server.api().playback(_auth), isNull);
       },
@@ -94,6 +95,7 @@ void main() {
       final d = await server.api().devices(_auth);
       expect(d.map((e) => e.id), ['dev1', 'dev2']);
       expect(d.last.isRestricted, isTrue);
+      expect(d.first.type, 'Smartphone');
     });
 
     test('Play: Titel, Kontext, Fortsetzen, Gerät', () async {

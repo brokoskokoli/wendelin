@@ -199,6 +199,7 @@ final class HttpSpotifyApi implements SpotifyApi {
       contextUri: _optString(_obj(m['context']), 'uri'),
       progressMs: m['progress_ms'] is int ? m['progress_ms'] as int : null,
       deviceName: _optString(_obj(m['device']), 'name'),
+      deviceId: _optString(_obj(m['device']), 'id'),
     );
   }
 
@@ -220,6 +221,7 @@ final class HttpSpotifyApi implements SpotifyApi {
             name: name,
             isActive: d['is_active'] == true,
             isRestricted: d['is_restricted'] == true,
+            type: _optString(d, 'type'),
           ),
     ];
   }

@@ -31,6 +31,13 @@ const _kindProp = {
       'Default track.',
 };
 
+const _deviceProp = {
+  'type': 'string',
+  'description':
+      'Name of another Spotify device (e.g. "Wohnzimmer"), ONLY if the user '
+      'explicitly names it. Default: this phone.',
+};
+
 const _uriProp = {
   'type': 'string',
   'description':
@@ -218,12 +225,19 @@ final class SpotifyPlayTool extends IntegrationTool
   String get description =>
       'Play something on Spotify: a track, album, artist (top tracks) or '
       'playlist, by query or by URI. Without query and uri, continues the '
-      'paused music. Starts the Spotify app if no device is active.';
+      'paused music. Plays on this phone (starts the Spotify app if needed); '
+      'set device only if the user names another device. Success is only '
+      'reported when playback was seen.';
 
   @override
   Map<String, Object?> get inputSchema => const {
     'type': 'object',
-    'properties': {'query': _queryProp, 'type': _kindProp, 'uri': _uriProp},
+    'properties': {
+      'query': _queryProp,
+      'type': _kindProp,
+      'uri': _uriProp,
+      'device': _deviceProp,
+    },
     'required': <String>[],
   };
 
@@ -238,7 +252,7 @@ final class SpotifyPlayTool extends IntegrationTool
     final wanted = args.has('query') || args.has('uri');
     final target = wanted ? await _resolve(session, args) : null;
     final before = await _stateBefore();
-    await session.playbackCommand(
+    final start = await session.startPlayback(
       (a, device) => session.api.play(
         a,
         deviceId: device,
@@ -247,12 +261,17 @@ final class SpotifyPlayTool extends IntegrationTool
             ? target.uri
             : null,
       ),
-      wake: true,
+      deviceName: args.optString('device'),
     );
+    final where = start.isPhone ? '' : ' auf „${start.deviceName}“';
+    final base = target == null
+        ? 'Wiedergabe fortgesetzt$where.'
+        : 'Spielt$where: ${target.label} (${target.uri}).';
     return ToolOutcome.text(
-      target == null
-          ? 'Wiedergabe fortgesetzt.'
-          : 'Spielt: ${target.label} (${target.uri}).',
+      start.confirmed
+          ? base
+          : '$base Gesendet, aber die Wiedergabe konnte nicht geprüft '
+                'werden.',
       summary: target == null ? 'Weiter' : 'Spielt ${target.label}',
       // A label is the uri or a server name; never read it aloud.
       fixed: const ConfirmationSentence('media.play'),
@@ -260,7 +279,8 @@ final class SpotifyPlayTool extends IntegrationTool
         label: before != null && before.isPlaying && target != null
             ? 'Vorheriges wieder spielen'
             : 'Pausieren',
-        run: () => _undo(before, resumed: target == null),
+        run: () =>
+            _undo(before, resumed: target == null, deviceId: start.deviceId),
       ),
     );
   }
@@ -274,7 +294,11 @@ final class SpotifyPlayTool extends IntegrationTool
     }
   }
 
-  Future<void> _undo(SpotifyPlayback? before, {required bool resumed}) async {
+  Future<void> _undo(
+    SpotifyPlayback? before, {
+    required bool resumed,
+    required String deviceId,
+  }) async {
     final previous = before?.trackUri;
     if (before != null && before.isPlaying && !resumed && previous != null) {
       // Spotify accepts an offset only inside albums and playlists.
@@ -287,18 +311,20 @@ final class SpotifyPlayTool extends IntegrationTool
         (a) => inList
             ? session.api.play(
                 a,
+                deviceId: deviceId,
                 contextUri: context,
                 offsetUri: previous,
                 positionMs: before.progressMs,
               )
             : session.api.play(
                 a,
+                deviceId: deviceId,
                 uris: [previous],
                 positionMs: before.progressMs,
               ),
       );
     } else {
-      await session.run(session.api.pause);
+      await session.run((a) => session.api.pause(a, deviceId: deviceId));
     }
   }
 

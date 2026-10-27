@@ -74,6 +74,7 @@ final class SpotifyDevice {
     required this.name,
     this.isActive = false,
     this.isRestricted = false,
+    this.type,
   });
 
   /// Device id for `device_id`.
@@ -87,6 +88,16 @@ final class SpotifyDevice {
 
   /// Whether it cannot be controlled by the Web API.
   final bool isRestricted;
+
+  /// Spotify's device type, e.g. `Smartphone`, `Computer`, `Speaker`.
+  final String? type;
+}
+
+/// Names of the phone Wendelin runs on (e.g. device name, market name), to
+/// recognise its Spotify Connect device.
+abstract interface class SpotifyHostDevice {
+  /// The names this phone may show up with in Spotify.
+  Future<Set<String>> names();
 }
 
 /// The playback state (`GET /me/player`).
@@ -102,6 +113,7 @@ final class SpotifyPlayback {
     this.contextUri,
     this.progressMs,
     this.deviceName,
+    this.deviceId,
   });
 
   /// Whether music is playing (not paused).
@@ -127,6 +139,9 @@ final class SpotifyPlayback {
 
   /// Name of the device playing.
   final String? deviceName;
+
+  /// Id of the device playing (`device.id`).
+  final String? deviceId;
 
   /// JSON for the model.
   Map<String, Object?> toJson() => {
