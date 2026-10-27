@@ -1422,7 +1422,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get integrationsContactsRationale =>
-      'Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm.';
+      'Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm. Sperrt Android die SMS-Freigabe, erklärt Wendelin danach, wie du sie erlaubst.';
 
   @override
   String get developerModeActiveHint =>
@@ -1534,6 +1534,15 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String integrationsErrUnavailable(String service) {
     return '$service ist nicht erreichbar · pausiert';
+  }
+
+  @override
+  String get gpuEvidenceUnverified =>
+      'GPU-Nachweis konnte nicht geprüft werden. Die GPU-Prüfung ist hier nicht wählbar und bleibt „Aus“; die übrigen Prüfungen bleiben aktiv. Die Auswahl erscheint, wenn die Prüfung beim Bearbeiten des Profils gelingt.';
+
+  @override
+  String gpuNoEvidenceFinishHidden(String hint) {
+    return '$hint. Das Modell bleibt nutzbar. Die GPU-Prüfung ist hier nicht wählbar und bleibt „Aus“; die übrigen Prüfungen bleiben aktiv.';
   }
 
   @override
@@ -2929,7 +2938,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get integrationsMediaRationale =>
-      'Damit Wendelin sagen kann, was läuft, und im Hörbuch oder Podcast spulen kann, braucht es den „Benachrichtigungszugriff“. Android öffnet gleich die Seite dazu: Wendelin in der Liste wählen und einschalten (bei neueren Android-Versionen vorher in den App-Infos „Eingeschränkte Einstellungen zulassen“ wählen). Wendelin liest keine Benachrichtigungen, nur die Medienwiedergabe. Pause, Weiter und Zurück gehen auch ohne.';
+      'Damit Wendelin sagen kann, was läuft, und im Hörbuch oder Podcast spulen kann, braucht es den „Benachrichtigungszugriff“. Android öffnet gleich die Seite dazu: Wendelin in der Liste wählen und einschalten (sperrt Android die Freigabe, erklärt Wendelin danach, wie du sie erlaubst). Wendelin liest keine Benachrichtigungen, nur die Medienwiedergabe. Pause, Weiter und Zurück gehen auch ohne.';
 
   @override
   String get obsIndexBuilding => 'Index wird aufgebaut …';
@@ -3560,6 +3569,28 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get quickSwitchTitle => 'Agent wechseln';
+
+  @override
+  String restrictedSettingsBody(String what) {
+    return '$what fehlt. Hat Android gemeldet, dass diese Einstellung eingeschränkt ist bzw. aus Sicherheitsgründen nicht zugelassen wurde (Wendelin wurde aus einer Datei installiert), dann gib sie so frei:';
+  }
+
+  @override
+  String get restrictedSettingsOpenAppInfo => 'App-Infos öffnen';
+
+  @override
+  String get restrictedSettingsSteps =>
+      '1. „App-Infos öffnen“ tippen.\n2. Oben rechts auf ⋮ tippen und „Eingeschränkte Einstellungen zulassen“ wählen. Der Eintrag erscheint erst nach dem ersten gescheiterten Versuch.\n3. Zurück zu Wendelin gehen und die Integration erneut einschalten.';
+
+  @override
+  String get restrictedSettingsTitle =>
+      'Freigabe fehlt, evtl. von Android gesperrt';
+
+  @override
+  String get restrictedSettingsWhatAccess => 'Der Benachrichtigungszugriff';
+
+  @override
+  String get restrictedSettingsWhatSms => 'Die SMS-Berechtigung';
 
   @override
   String get condBuilderAddCondition => '+ Bedingung';

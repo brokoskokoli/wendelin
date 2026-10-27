@@ -11,6 +11,76 @@ import '../gpu_check_section.dart';
 import '../settings_page.dart';
 import 'attestation_stages_card.dart';
 
+/// Whether the GPU choice is offered (WP159).
+///
+/// Only with GPU evidence (`true`). Without it (`false`) the choice is hidden
+/// and „off“ is saved: „Before“ would block every request for lack of
+/// evidence, „After“ would only raise false warnings. `null` means not
+/// judgeable: the provider has no verifier (nothing to offer) or the check
+/// failed (network, unreadable evidence); the choice is hidden as well, and
+/// for the failed check [finishStep] says so. A profile that already stores a
+/// mode other than „off“ keeps the choice visible, so nothing is loosened
+/// silently.
+bool gpuChoiceVisible({
+  required bool attested,
+  required bool? gpuEvidence,
+  required GpuCheckMode savedMode,
+}) => attested && (gpuEvidence == true || savedMode != GpuCheckMode.off);
+
+/// Mode to save: a hidden choice always saves „off“ (WP159), whatever the
+/// state of the choice says (robust against a later way back in the setup).
+GpuCheckMode gpuModeToSave({
+  required bool attested,
+  required bool? gpuEvidence,
+  required GpuCheckMode savedMode,
+  required GpuCheckMode chosen,
+}) =>
+    gpuChoiceVisible(
+      attested: attested,
+      gpuEvidence: gpuEvidence,
+      savedMode: savedMode,
+    )
+    ? chosen
+    : GpuCheckMode.off;
+
+/// GPU part of the finish step: info cards about the evidence (none offered
+/// or the local check failed) and the choice, if it is offered.
+List<Widget> _gpuParts(
+  AppLocalizations l, {
+  required (bool, bool?, bool, GpuCheckMode) gpu,
+  required GpuCheckMode mode,
+  required void Function(GpuCheckMode) onMode,
+}) {
+  final (attested, evidence, checkFailed, saved) = gpu;
+  final visible = gpuChoiceVisible(
+    attested: attested,
+    gpuEvidence: evidence,
+    savedMode: saved,
+  );
+  return [
+    if (attested && evidence == false) _noEvidenceCard(l, visible),
+    if (attested && evidence == null && checkFailed && !visible)
+      StatusCard(
+        key: const ValueKey('gpuEvidenceUnverified'),
+        status: CheckStatus.info,
+        title: l.gpuNoEvidenceFinishTitle,
+        detail: l.gpuEvidenceUnverified,
+      ),
+    if (visible) GpuCheckSection(mode: mode, onChanged: onMode),
+  ];
+}
+
+StatusCard _noEvidenceCard(AppLocalizations l, bool choiceVisible) =>
+    StatusCard(
+      key: const ValueKey('noGpuEvidence'),
+      status: CheckStatus.info,
+      title: l.gpuNoEvidenceFinishTitle,
+      // The text refers to the choice below only if it is shown.
+      detail: choiceVisible
+          ? l.gpuNoEvidenceFinishText(l.gpuNoEvidenceHint)
+          : l.gpuNoEvidenceFinishHidden(l.gpuNoEvidenceHint),
+    );
+
 /// Step 4: privacy level, monthly budget and warning threshold.
 List<Widget> finishStep({
   required AppLocalizations l,
@@ -25,7 +95,9 @@ List<Widget> finishStep({
   required bool attested,
   required GpuCheckMode gpuMode,
   required void Function(GpuCheckMode mode) onGpuMode,
-  required bool noGpuEvidence,
+  required bool? gpuEvidence,
+  required bool gpuCheckFailed,
+  required GpuCheckMode savedGpuMode,
   required VoidCallback onSave,
 }) {
   return [
@@ -38,14 +110,12 @@ List<Widget> finishStep({
       AttestationStagesCard(result.stages),
     if (result != null && attested)
       ..._restrictionNote(l, stageViews(result.stages)),
-    if (attested && noGpuEvidence)
-      StatusCard(
-        key: const ValueKey('noGpuEvidence'),
-        status: CheckStatus.info,
-        title: l.gpuNoEvidenceFinishTitle,
-        detail: l.gpuNoEvidenceFinishText(l.gpuNoEvidenceHint),
-      ),
-    if (attested) GpuCheckSection(mode: gpuMode, onChanged: onGpuMode),
+    ..._gpuParts(
+      l,
+      gpu: (attested, gpuEvidence, gpuCheckFailed, savedGpuMode),
+      mode: gpuMode,
+      onMode: onGpuMode,
+    ),
     if (detected != null)
       Text(
         [

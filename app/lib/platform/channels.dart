@@ -43,6 +43,9 @@ const networkChannelName = 'app.wendelin/network';
 /// `MulticastChannel.kt`: Wi-Fi multicast lock for mDNS (Home Assistant search).
 const multicastChannelName = 'app.wendelin/multicast';
 
+/// `RestrictedSettingsChannel.kt`: restricted settings state (WP159) and app info.
+const restrictedSettingsChannelName = 'app.wendelin/restricted_settings';
+
 /// `NotifyChannel.kt`: system notification for a failed TEE check.
 const notifyChannelName = 'app.wendelin/notify';
 

@@ -439,7 +439,7 @@
   },
   "confYesCall": "Appeler",
   "confYesSend": "Envoyer",
-  "integrationsContactsRationale": "Wendelin a besoin d’accéder à tes contacts pour trouver les numéros par nom, ainsi qu’aux droits SMS et téléphone. Android te le demandera ensuite. Wendelin n’envoie jamais de SMS et n’appelle jamais sans que tu aies confirmé l’aperçu avec le nom et le numéro (en touchant l’écran ou en disant « oui »). Rien de tout cela ne marche appareil verrouillé. Sans le droit téléphone, Wendelin ouvre seulement le clavier d’appel.",
+  "integrationsContactsRationale": "Wendelin a besoin d’accéder à tes contacts pour trouver les numéros par nom, ainsi qu’aux droits SMS et téléphone. Android te le demandera ensuite. Wendelin n’envoie jamais de SMS et n’appelle jamais sans que tu aies confirmé l’aperçu avec le nom et le numéro (en touchant l’écran ou en disant « oui »). Rien de tout cela ne marche appareil verrouillé. Sans le droit téléphone, Wendelin ouvre seulement le clavier d’appel. Si Android bloque le droit SMS, Wendelin explique ensuite comment l’autoriser.",
   "developerModeActiveHint": "Mode développeur activé – journal étendu",
   "developerModeOff": "Mode développeur désactivé",
   "developerModeOn": "Mode développeur activé",
@@ -506,6 +506,8 @@
       }
     }
   },
+  "gpuEvidenceUnverified": "La preuve GPU n’a pas pu être vérifiée. La vérification du GPU n’est pas sélectionnable ici et reste « Désactivée » ; les autres vérifications restent actives. Le choix apparaît si la vérification réussit lors de la modification du profil.",
+  "gpuNoEvidenceFinishHidden": "{hint}. Le modèle reste utilisable. La vérification du GPU n’est pas sélectionnable ici et reste « Désactivée » ; les autres vérifications restent actives.",
   "haAddressLabel": "Adresse",
   "haApproved": "{n, plural, one{1 appareil autorisé} other{{n} appareils autorisés}}",
   "haConnect": "Connecter",
@@ -994,7 +996,7 @@
   "toolResultUndone": "Annulé",
   "toolTlsEncrypted": "Outils chiffrés de bout en bout",
   "toolTlsHint": "Les appels d’outils sont protégés par la connexion vérifiée jusqu’à l’enclave, mais pas chiffrés en plus.",
-  "integrationsMediaRationale": "Pour vous dire ce qui est en cours de lecture et avancer ou reculer dans un livre audio ou un podcast, Wendelin a besoin de « l’accès aux notifications ». Android ouvre ensuite cette page : choisissez Wendelin dans la liste et activez-le (sur les versions récentes d’Android, choisissez d’abord « Autoriser les paramètres restreints » dans les infos de l’appli). Wendelin ne lit pas les notifications, seulement la lecture multimédia. Pause, reprise et retour fonctionnent aussi sans.",
+  "integrationsMediaRationale": "Pour vous dire ce qui est en cours de lecture et avancer ou reculer dans un livre audio ou un podcast, Wendelin a besoin de « l’accès aux notifications ». Android ouvre ensuite cette page : choisissez Wendelin dans la liste et activez-le (si Android le bloque, Wendelin explique ensuite comment l’autoriser). Wendelin ne lit pas les notifications, seulement la lecture multimédia. Pause, reprise et retour fonctionnent aussi sans.",
   "obsIndexBuilding": "Création de l’index …",
   "obsIndexBuildingProgress": "Création de l’index : {indexed} notes, encore {pending}",
   "obsIndexCurrent": "{notes} dans l’index · à jour",
@@ -1193,6 +1195,19 @@
   },
   "quickSwitchSemanticsAction": "Changer d'agent",
   "quickSwitchTitle": "Changer d'agent",
+  "restrictedSettingsBody": "{what} manque. Si Android a indiqué que ce paramètre est restreint ou n’a pas été autorisé pour des raisons de sécurité (Wendelin a été installée à partir d’un fichier), autorisez-le ainsi :",
+  "@restrictedSettingsBody": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "restrictedSettingsOpenAppInfo": "Ouvrir les infos de l’appli",
+  "restrictedSettingsSteps": "1. Touchez « Ouvrir les infos de l’appli ».\n2. Touchez ⋮ en haut à droite et choisissez « Autoriser les paramètres restreints ». L’entrée n’apparaît qu’après la première tentative échouée.\n3. Revenez dans Wendelin et réactivez l’intégration.",
+  "restrictedSettingsTitle": "Autorisation manquante, peut-être bloquée par Android",
+  "restrictedSettingsWhatAccess": "L’accès aux notifications",
+  "restrictedSettingsWhatSms": "L’autorisation SMS",
   "condBuilderAddCondition": "+ Condition",
   "condBuilderAddConditionInGroup": "+ Condition dans le groupe",
   "condBuilderAddGroup": "+ Groupe",

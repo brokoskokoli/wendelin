@@ -707,7 +707,7 @@
   },
   "confYesCall": "Anrufen",
   "confYesSend": "Absenden",
-  "integrationsContactsRationale": "Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm.",
+  "integrationsContactsRationale": "Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm. Sperrt Android die SMS-Freigabe, erklärt Wendelin danach, wie du sie erlaubst.",
   "developerModeActiveHint": "Entwicklermodus an – erweitertes Logging",
   "developerModeOff": "Entwicklermodus aus",
   "developerModeOn": "Entwicklermodus an",
@@ -770,6 +770,15 @@
   "@integrationsErrUnavailable": {
     "placeholders": {
       "service": {
+        "type": "String"
+      }
+    }
+  },
+  "gpuEvidenceUnverified": "GPU-Nachweis konnte nicht geprüft werden. Die GPU-Prüfung ist hier nicht wählbar und bleibt „Aus“; die übrigen Prüfungen bleiben aktiv. Die Auswahl erscheint, wenn die Prüfung beim Bearbeiten des Profils gelingt.",
+  "gpuNoEvidenceFinishHidden": "{hint}. Das Modell bleibt nutzbar. Die GPU-Prüfung ist hier nicht wählbar und bleibt „Aus“; die übrigen Prüfungen bleiben aktiv.",
+  "@gpuNoEvidenceFinishHidden": {
+    "placeholders": {
+      "hint": {
         "type": "String"
       }
     }
@@ -1701,7 +1710,7 @@
   "toolResultUndone": "Rückgängig gemacht",
   "toolTlsEncrypted": "Tools Ende-zu-Ende-verschlüsselt",
   "toolTlsHint": "Tool-Aufrufe sind über die geprüfte Verbindung bis in die Enklave geschützt, aber nicht zusätzlich verschlüsselt.",
-  "integrationsMediaRationale": "Damit Wendelin sagen kann, was läuft, und im Hörbuch oder Podcast spulen kann, braucht es den „Benachrichtigungszugriff“. Android öffnet gleich die Seite dazu: Wendelin in der Liste wählen und einschalten (bei neueren Android-Versionen vorher in den App-Infos „Eingeschränkte Einstellungen zulassen“ wählen). Wendelin liest keine Benachrichtigungen, nur die Medienwiedergabe. Pause, Weiter und Zurück gehen auch ohne.",
+  "integrationsMediaRationale": "Damit Wendelin sagen kann, was läuft, und im Hörbuch oder Podcast spulen kann, braucht es den „Benachrichtigungszugriff“. Android öffnet gleich die Seite dazu: Wendelin in der Liste wählen und einschalten (sperrt Android die Freigabe, erklärt Wendelin danach, wie du sie erlaubst). Wendelin liest keine Benachrichtigungen, nur die Medienwiedergabe. Pause, Weiter und Zurück gehen auch ohne.",
   "obsIndexBuilding": "Index wird aufgebaut …",
   "obsIndexBuildingProgress": "Index wird aufgebaut: {indexed} Notizen, noch {pending}",
   "@obsIndexBuildingProgress": {
@@ -2128,6 +2137,19 @@
   },
   "quickSwitchSemanticsAction": "Agent wechseln",
   "quickSwitchTitle": "Agent wechseln",
+  "restrictedSettingsBody": "{what} fehlt. Hat Android gemeldet, dass diese Einstellung eingeschränkt ist bzw. aus Sicherheitsgründen nicht zugelassen wurde (Wendelin wurde aus einer Datei installiert), dann gib sie so frei:",
+  "@restrictedSettingsBody": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "restrictedSettingsOpenAppInfo": "App-Infos öffnen",
+  "restrictedSettingsSteps": "1. „App-Infos öffnen“ tippen.\n2. Oben rechts auf ⋮ tippen und „Eingeschränkte Einstellungen zulassen“ wählen. Der Eintrag erscheint erst nach dem ersten gescheiterten Versuch.\n3. Zurück zu Wendelin gehen und die Integration erneut einschalten.",
+  "restrictedSettingsTitle": "Freigabe fehlt, evtl. von Android gesperrt",
+  "restrictedSettingsWhatAccess": "Der Benachrichtigungszugriff",
+  "restrictedSettingsWhatSms": "Die SMS-Berechtigung",
   "condBuilderAddCondition": "+ Bedingung",
   "condBuilderAddConditionInGroup": "+ Bedingung in Gruppe",
   "condBuilderAddGroup": "+ Gruppe",

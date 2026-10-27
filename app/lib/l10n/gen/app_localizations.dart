@@ -2515,7 +2515,7 @@ abstract class AppLocalizations {
   /// No description provided for @integrationsContactsRationale.
   ///
   /// In de, this message translates to:
-  /// **'Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm.'**
+  /// **'Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm. Sperrt Android die SMS-Freigabe, erklärt Wendelin danach, wie du sie erlaubst.'**
   String get integrationsContactsRationale;
 
   /// No description provided for @developerModeActiveHint.
@@ -2703,6 +2703,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'{service} ist nicht erreichbar · pausiert'**
   String integrationsErrUnavailable(String service);
+
+  /// No description provided for @gpuEvidenceUnverified.
+  ///
+  /// In de, this message translates to:
+  /// **'GPU-Nachweis konnte nicht geprüft werden. Die GPU-Prüfung ist hier nicht wählbar und bleibt „Aus“; die übrigen Prüfungen bleiben aktiv. Die Auswahl erscheint, wenn die Prüfung beim Bearbeiten des Profils gelingt.'**
+  String get gpuEvidenceUnverified;
+
+  /// No description provided for @gpuNoEvidenceFinishHidden.
+  ///
+  /// In de, this message translates to:
+  /// **'{hint}. Das Modell bleibt nutzbar. Die GPU-Prüfung ist hier nicht wählbar und bleibt „Aus“; die übrigen Prüfungen bleiben aktiv.'**
+  String gpuNoEvidenceFinishHidden(String hint);
 
   /// No description provided for @haAddressLabel.
   ///
@@ -5017,7 +5029,7 @@ abstract class AppLocalizations {
   /// No description provided for @integrationsMediaRationale.
   ///
   /// In de, this message translates to:
-  /// **'Damit Wendelin sagen kann, was läuft, und im Hörbuch oder Podcast spulen kann, braucht es den „Benachrichtigungszugriff“. Android öffnet gleich die Seite dazu: Wendelin in der Liste wählen und einschalten (bei neueren Android-Versionen vorher in den App-Infos „Eingeschränkte Einstellungen zulassen“ wählen). Wendelin liest keine Benachrichtigungen, nur die Medienwiedergabe. Pause, Weiter und Zurück gehen auch ohne.'**
+  /// **'Damit Wendelin sagen kann, was läuft, und im Hörbuch oder Podcast spulen kann, braucht es den „Benachrichtigungszugriff“. Android öffnet gleich die Seite dazu: Wendelin in der Liste wählen und einschalten (sperrt Android die Freigabe, erklärt Wendelin danach, wie du sie erlaubst). Wendelin liest keine Benachrichtigungen, nur die Medienwiedergabe. Pause, Weiter und Zurück gehen auch ohne.'**
   String get integrationsMediaRationale;
 
   /// No description provided for @obsIndexBuilding.
@@ -6056,6 +6068,42 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Agent wechseln'**
   String get quickSwitchTitle;
+
+  /// No description provided for @restrictedSettingsBody.
+  ///
+  /// In de, this message translates to:
+  /// **'{what} fehlt. Hat Android gemeldet, dass diese Einstellung eingeschränkt ist bzw. aus Sicherheitsgründen nicht zugelassen wurde (Wendelin wurde aus einer Datei installiert), dann gib sie so frei:'**
+  String restrictedSettingsBody(String what);
+
+  /// No description provided for @restrictedSettingsOpenAppInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'App-Infos öffnen'**
+  String get restrictedSettingsOpenAppInfo;
+
+  /// No description provided for @restrictedSettingsSteps.
+  ///
+  /// In de, this message translates to:
+  /// **'1. „App-Infos öffnen“ tippen.\n2. Oben rechts auf ⋮ tippen und „Eingeschränkte Einstellungen zulassen“ wählen. Der Eintrag erscheint erst nach dem ersten gescheiterten Versuch.\n3. Zurück zu Wendelin gehen und die Integration erneut einschalten.'**
+  String get restrictedSettingsSteps;
+
+  /// No description provided for @restrictedSettingsTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Freigabe fehlt, evtl. von Android gesperrt'**
+  String get restrictedSettingsTitle;
+
+  /// No description provided for @restrictedSettingsWhatAccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Benachrichtigungszugriff'**
+  String get restrictedSettingsWhatAccess;
+
+  /// No description provided for @restrictedSettingsWhatSms.
+  ///
+  /// In de, this message translates to:
+  /// **'Die SMS-Berechtigung'**
+  String get restrictedSettingsWhatSms;
 
   /// No description provided for @condBuilderAddCondition.
   ///
