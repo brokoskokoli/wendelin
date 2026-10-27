@@ -2432,13 +2432,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get overlayKeepTalking => 'Weiter sprechen';
 
   @override
-  String get overlayLockedText =>
-      'Auf dem Sperrbildschirm zeigt und sagt Wendelin nichts aus deinen Daten. Nur die Taschenlampe geht auch gesperrt. Alles andere erst nach dem Entsperren.';
-
-  @override
-  String get overlayLockedTitle => 'Gerät entsperren';
-
-  @override
   String get overlayTextInput => 'Texteingabe';
 
   @override

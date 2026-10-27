@@ -435,7 +435,10 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
         : () => unawaited(_agent.newTopic()),
     checkStatus: conversation.verification?.checkStatus,
     exchange: _locked
-        ? const OverlayExchange()
+        ? OverlayExchange(
+            request: ref.watch(lockedExchangeProvider)?.request,
+            answer: ref.watch(lockedExchangeProvider)?.answer,
+          )
         : OverlayExchange.of(
             conversation.entries.sublist(
               _hideBefore > conversation.entries.length ? 0 : _hideBefore,

@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/voice/locked_agent_run.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
+import 'package:wendelin_voice/wendelin_voice.dart' show VoiceTexts;
 
 final class _Inner implements AgentRun {
   @override
@@ -150,22 +151,94 @@ void main() {
     expect(shown, isNot(contains('Ergebnis')));
   });
 
-  test('Lauf scheitert: keine Antwort (nichts aus dem Fehler)', () async {
-    await ask(
-      gate(
+  test(
+    'Lauf scheitert: die gesprochene Fehlermeldung, nie das Detail',
+    () async {
+      await ask(
+        gate(
+          model: Stream.fromIterable([
+            const AgentFailed(
+              error: AgentErrorKind.provider,
+              message: 'Keine Verbindung.',
+              detail: 'secret-detail',
+            ),
+          ]),
+        ),
+        'Wetter',
+      );
+      expect(exchange()?.request, 'Wetter');
+      expect(exchange()?.answer, 'Keine Verbindung.');
+      expect(exchange()?.answer, isNot(contains('secret')));
+    },
+  );
+
+  test(
+    'Lauf scheitert in Englisch: derselbe Satz wie in der Sprachausgabe',
+    () async {
+      await gate(
         model: Stream.fromIterable([
           const AgentFailed(
-            error: AgentErrorKind.provider,
-            message: 'Keine Verbindung.',
-            detail: 'secret-detail',
+            error: AgentErrorKind.timeout,
+            message: 'Das dauert zu lange.',
           ),
         ]),
-      ),
-      'Wetter',
-    );
-    expect(exchange()?.request, 'Wetter');
-    expect(exchange()?.answer, isNull);
-  });
+      ).run(UserInput(text: 'Weather', language: 'en')).toList();
+      expect(exchange()?.answer, VoiceTexts.of('en').tooSlow);
+    },
+  );
+
+  test(
+    'Lauf abgebrochen (cancelled): keine Fehlermeldung als Antwort',
+    () async {
+      await ask(
+        gate(
+          model: Stream.fromIterable([
+            const AgentFailed(
+              error: AgentErrorKind.cancelled,
+              message: 'Abgebrochen.',
+            ),
+          ]),
+        ),
+        'Wetter',
+      );
+      expect(exchange()?.answer, isNull);
+    },
+  );
+
+  test(
+    'gesprochener Kurztext statt Endtext (angezeigt = gesprochen)',
+    () async {
+      await ask(
+        gate(
+          model: Stream.fromIterable([
+            const AgentSpokenText('Kurz: sonnig.'),
+            _done('Lang: sonnig, 21 Grad, Wind aus West.'),
+          ]),
+        ),
+        'Wetter',
+      );
+      expect(exchange()?.answer, 'Kurz: sonnig.');
+    },
+  );
+
+  test(
+    'Kurztext vor einem Werkzeugaufruf gilt nicht für den Endtext',
+    () async {
+      await ask(
+        gate(
+          model: Stream.fromIterable([
+            const AgentSpokenText('Ich schaue nach.'),
+            const ToolCallStarted(
+              ToolCallBlock(id: 'c1', name: 'weather', argumentsJson: '{}'),
+            ),
+            _done('Es ist sonnig.'),
+          ]),
+        ),
+        'Wetter',
+      );
+      expect(exchange()?.answer, 'Es ist sonnig.');
+    },
+  );
 
   test('Stream-Abbruch: Anfrage bleibt, Teiltext nicht als Antwort', () async {
     final events = StreamController<AgentEvent>();

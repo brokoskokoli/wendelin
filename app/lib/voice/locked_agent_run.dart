@@ -394,7 +394,17 @@ final class LockGateAgentRun implements AgentRun {
     _lockedRun = model;
     var refused = false;
     var anyDone = false;
+    // The `<spoken>` text of the current segment, as the pipeline speaks it
+    // (reset like there: new segment after a tool call, text reset).
+    String? spoken;
     await for (final event in model.run(input)) {
+      switch (event) {
+        case AgentSpokenText(:final text):
+          spoken = text;
+        case AgentTextReset() || ToolCallStarted() || ToolCallFinished():
+          spoken = null;
+        default:
+      }
       if (event is ToolCallFinished) {
         if (event.outcome.summary == ToolExecutor.unlockSummary) {
           refused = true;
@@ -404,9 +414,16 @@ final class LockGateAgentRun implements AgentRun {
       }
       yield event;
       // After the yield: a cancelled stream ends there and records nothing.
-      // A failed run has no answer text (the pipeline speaks its own
-      // wording for the error kind), so the overlay shows the request only.
-      if (event is AgentDone) onAnswer?.call(event.finalText);
+      // Shown is what is spoken: the `<spoken>` text if the run has one, else
+      // the final text; a failed run shows the wording the pipeline speaks.
+      switch (event) {
+        case AgentDone(:final finalText):
+          onAnswer?.call(spoken ?? finalText);
+        case AgentFailed(:final error, :final message)
+            when error != AgentErrorKind.cancelled:
+          onAnswer?.call(VoiceTexts.of(input.language).failure(error, message));
+        default:
+      }
     }
     // A call the policy turned down: the unlock is offered. The request only
     // waits for it if nothing ran yet; otherwise the repeat after the unlock

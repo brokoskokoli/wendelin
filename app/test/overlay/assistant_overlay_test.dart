@@ -14,7 +14,6 @@ import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/di/wake_settings.dart';
-import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/platform/assistant_platform.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/overlay/assistant_overlay.dart';
@@ -389,6 +388,34 @@ void main() {
   });
 
   testWidgets(
+    'Golden: Overlay gesperrt mit Anfrage und Antwort (WP163)',
+    tags: ['golden'],
+    (tester) async {
+      final env = TestEnv(
+        providerConfig: scripted(
+          FakeLlmProvider(const []),
+          name: 'Claude Haiku',
+        ),
+      );
+      final platform = FakeAssistantPlatform()..locked = true;
+      final c = await pumpOverlay(tester, env, platform, autoStart: false);
+      c.read(agentControllerProvider.notifier).seed(overlaySample());
+      c.read(lockedExchangeProvider.notifier)
+        ..begin('Mach die Wohnzimmerlampe an.')
+        ..answer('Die Wohnzimmerlampe ist an.');
+      await tester.pumpAndSettle();
+      expect(find.text('Entsperren'), findsOneWidget);
+      expect(find.text('„Mach die Wohnzimmerlampe an.“'), findsOneWidget);
+      expect(find.text('Die Wohnzimmerlampe ist an.'), findsOneWidget);
+      expect(find.textContaining('Tauchen'), findsNothing);
+      await expectLater(
+        find.byKey(goldenKey),
+        matchesGoldenFile('goldens/overlay_gesperrt.png'),
+      );
+    },
+  );
+
+  testWidgets(
     'Golden: Bestätigung im selben Sheet, Antwort per Stimme',
     tags: ['golden'],
     (tester) async {
@@ -668,10 +695,7 @@ void main() {
       );
       final c = await pumpOverlay(tester, env, platform);
       await tester.pump();
-      expect(
-        find.text(AppLocalizationsDe().overlayLockedTitle),
-        findsOneWidget,
-      );
+      expect(find.text('Entsperren'), findsOneWidget);
       // WP53: kein automatisches Entsperren; Wendelin hört gesperrt zu.
       expect(platform.unlockRequests, 0);
       expect(c.read(voiceControllerProvider).trigger, TriggerKind.assistant);
@@ -687,7 +711,7 @@ void main() {
       platform.unlockSucceeds = true;
       await tester.tap(find.text('Entsperren'));
       await tester.pump(const Duration(milliseconds: 10));
-      expect(find.text(AppLocalizationsDe().overlayLockedTitle), findsNothing);
+      expect(find.text('Entsperren'), findsNothing);
       expect(c.read(voiceControllerProvider).trigger, TriggerKind.assistant);
       await c.read(voiceControllerProvider.notifier).cancel();
     },
@@ -877,7 +901,7 @@ void main() {
     c.read(agentControllerProvider.notifier).seed(overlaySample());
     await tester.pump();
     expect(find.textContaining('Tauchen'), findsNothing);
-    expect(find.text(AppLocalizationsDe().overlayLockedTitle), findsNothing);
+    expect(find.text('Entsperren'), findsNothing);
     expect(
       tester.widget<MicButton>(find.byType(MicButton)).state,
       MicState.disabled,

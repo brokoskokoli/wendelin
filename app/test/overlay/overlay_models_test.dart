@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/voice_providers.dart';
-import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_voice/testing.dart';
@@ -54,10 +53,7 @@ void main() {
       final env = TestEnv(providerConfig: scripted(FakeLlmProvider(const [])));
       final c = await pumpOverlay(tester, env, platform, voice: counting());
       await tester.pump(const Duration(milliseconds: 10));
-      expect(
-        find.text(AppLocalizationsDe().overlayLockedTitle),
-        findsOneWidget,
-      );
+      expect(find.text('Entsperren'), findsOneWidget);
       expect(warm, 1, reason: 'einmal, beim Zuhören (Whisper lokal)');
 
       platform.unlockSucceeds = true;
