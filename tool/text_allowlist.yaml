@@ -8,7 +8,7 @@
 app/lib/ui/attestation/attestation_texts.dart: 1  # Regex auf Pakettexte
 app/lib/ui/design/compositions.dart: 18  # Beispieldaten der Goldens
 app/lib/ui/design/gallery.dart: 17  # Beispieldaten der Galerie
-app/lib/agent/agent_controller.dart: 2  # interne Fehler, Log
+app/lib/agent/agent_controller.dart: 1  # interne Fehler, Log
 app/lib/agent/conversation_state.dart: 1  # gesprochener GPU-Hinweis
 app/lib/agent/new_topic_command.dart: 3  # Sprachbefehle und Muster
 app/lib/di/agent_providers.dart: 3  # Statusmeldungen, Log

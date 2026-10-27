@@ -5,7 +5,7 @@
 app/lib/agent/agent_controller.dart: 623
 app/lib/agent/agent_controller.dart#AgentController: 585
 app/lib/agent/agent_controller.dart#AgentController._start: 85
-app/lib/agent/conversation_reducer.dart#ConversationReducer.apply: 122
+app/lib/agent/conversation_reducer.dart#ConversationReducer.apply: 113
 app/lib/ui/attestation/attestation_texts.dart#attestationMessage: 100
 app/lib/ui/attestation/stage_explanations.dart#_explanations: 123
 app/lib/ui/overlay/overlay_sheet.dart#OverlaySheet._content: 92

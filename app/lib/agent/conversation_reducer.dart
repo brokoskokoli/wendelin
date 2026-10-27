@@ -124,19 +124,10 @@ final class ConversationReducer {
       case EscalationConfirmationRequired() || RetryOfferRequired():
         return s.copyWith(pending: _handoverQuestion(event));
       case ToolCallFinished(:final call, :final outcome):
-        final phase = phaseOf(outcome);
-        final undo = phase == ToolPhase.done ? outcome.undo : null;
         var next = _updateTool(
           s.copyWith(clearOpen: true),
           call.id,
-          (t) => t.copyWith(
-            phase: phase,
-            summary: outcome.summary,
-            undoLabel: undo?.label,
-            undo: undo == null ? UndoPhase.none : UndoPhase.pending,
-            undoRemaining: undo == null ? Duration.zero : undoWindow,
-            shareText: bringShareTextFor(call, outcome),
-          ),
+          (t) => finishedTool(t, call, outcome),
         );
         final pending = next.pending;
         if (pending is ToolQuestion && pending.event.call.id == call.id) {
@@ -384,6 +375,20 @@ final class ConversationReducer {
     _ => throw ArgumentError.value(event, 'event'),
   };
 
+  /// [t] with the result of [call] ([outcome]) shown on its card.
+  ToolEntry finishedTool(ToolEntry t, ToolCallBlock call, ToolOutcome outcome) {
+    final phase = phaseOf(outcome);
+    final undo = phase == ToolPhase.done ? outcome.undo : null;
+    return t.copyWith(
+      phase: phase,
+      summary: outcome.summary,
+      undoLabel: undo?.label,
+      undo: undo == null ? UndoPhase.none : UndoPhase.pending,
+      undoRemaining: undo == null ? Duration.zero : undoWindow,
+      shareText: bringShareTextFor(call, outcome),
+    );
+  }
+
   ConversationState _updateTool(
     ConversationState s,
     String callId,
@@ -402,4 +407,29 @@ final class ConversationReducer {
     entries: [...s.entries, create('e${s.nextSeq}')],
     nextSeq: s.nextSeq + 1,
   );
+}
+
+/// The result of a call held back while locked (WP163 B) on its card.
+extension HeldBackTool on ConversationReducer {
+  /// Only the most recent card of that id that still shows the held-back
+  /// state changes: locked runs number their calls against an empty history,
+  /// so an older card of an open conversation may share the id. The open
+  /// text segment stays as it is.
+  ConversationState heldBackFinished(
+    ConversationState s,
+    ToolCallBlock call,
+    ToolOutcome outcome,
+  ) {
+    final i = s.entries.lastIndexWhere(
+      (e) =>
+          e is ToolEntry &&
+          e.id == call.id &&
+          e.phase == ToolPhase.failed &&
+          e.summary == ToolExecutor.deferredSummary,
+    );
+    if (i < 0) return s;
+    final entries = [...s.entries];
+    entries[i] = finishedTool(entries[i] as ToolEntry, call, outcome);
+    return s.copyWith(entries: entries);
+  }
 }

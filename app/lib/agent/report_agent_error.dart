@@ -7,6 +7,6 @@ void reportAgentError(Object error, StackTrace stack) =>
         exception: error,
         stack: stack,
         library: 'wendelin',
-        context: ErrorDescription('in der Agent-Anfrage'),
+        context: ErrorDescription('while running an agent request'),
       ),
     );

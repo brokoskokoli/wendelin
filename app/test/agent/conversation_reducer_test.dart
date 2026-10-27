@@ -679,4 +679,47 @@ void main() {
       expect(none.entries.single, isA<NoticeEntry>());
     });
   });
+
+  group('heldBackFinished (WP163 B)', () {
+    ToolEntry card(String id, ToolPhase phase, String? summary) => ToolEntry(
+      id,
+      toolName: 'maps__navigate',
+      phase: phase,
+      summary: summary,
+    );
+
+    test(
+      'ändert nur die zurückgestellte Karte, nicht die alte gleicher Id',
+      () {
+        final old = card('c1', ToolPhase.failed, 'Alt');
+        final held = card('c1', ToolPhase.failed, ToolExecutor.deferredSummary);
+        final s = ConversationState.empty.copyWith(
+          entries: [old, held],
+          openTextId: 'e9',
+        );
+        final out = reducer.heldBackFinished(
+          s,
+          _call,
+          ToolOutcome.text('ok', summary: 'Navigation gestartet'),
+        );
+        expect(out.entries[0], same(old));
+        final changed = out.entries[1] as ToolEntry;
+        expect(changed.phase, ToolPhase.done);
+        expect(changed.summary, 'Navigation gestartet');
+        expect(out.openTextId, 'e9', reason: 'offenes Segment bleibt');
+      },
+    );
+
+    test('ohne zurückgestellte Karte bleibt alles unverändert', () {
+      final s = ConversationState.empty.copyWith(
+        entries: [card('c1', ToolPhase.done, 'Alt')],
+      );
+      final out = reducer.heldBackFinished(
+        s,
+        _call,
+        ToolOutcome.text('ok', summary: 'x'),
+      );
+      expect(out, same(s));
+    });
+  });
 }

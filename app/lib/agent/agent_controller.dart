@@ -465,8 +465,8 @@ final class AgentController extends Notifier<ConversationState> {
   }
 
   /// The real result of a call held back while locked (WP163 B) on its card.
-  void finishHeldBackTool(ToolCallBlock call, ToolOutcome outcome) => state =
-      _reducer.apply(state, ToolCallFinished(call: call, outcome: outcome));
+  void finishHeldBackTool(ToolCallBlock call, ToolOutcome outcome) =>
+      state = _reducer.heldBackFinished(state, call, outcome);
 
   /// Adds a small hint line to the conversation („Abgebrochen.“,
   /// „Zurückgenommen.“).
