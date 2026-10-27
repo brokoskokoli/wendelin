@@ -26,6 +26,7 @@ const _none = GpuAttestationResult(
 Future<TestEnv> _openPhala(
   WidgetTester tester, {
   FakeGpuAttestationVerifier? gpu,
+  bool withoutVerifier = false,
 }) async {
   final env = TestEnv(
     storedProfiles: true,
@@ -33,7 +34,8 @@ Future<TestEnv> _openPhala(
       verifier: ScriptedVerifier(),
       gateway: ScriptedGateway(),
       // Default: the provider delivers GPU evidence (WP159).
-      gpu: gpu ?? FakeGpuAttestationVerifier(),
+      // `withoutVerifier`: provider without a GPU verifier (e.g. Tinfoil).
+      gpu: withoutVerifier ? null : (gpu ?? FakeGpuAttestationVerifier()),
     ),
   );
   setView(tester, const Size(390, 2400));
@@ -75,6 +77,19 @@ void main() {
 
   testWidgets('ohne Wahl wird „aus“ gespeichert', (tester) async {
     final env = await _openPhala(tester);
+    await _save(tester);
+    expect(
+      gpuModeOf((await env.storage.providerProfiles.list()).single),
+      GpuCheckMode.off,
+    );
+  });
+
+  testWidgets('attestiertes Profil ohne GPU-Prüfer: keine Auswahl, keine '
+      'Karte, „aus“ gespeichert', (tester) async {
+    final env = await _openPhala(tester, withoutVerifier: true);
+    expect(find.text('GPU-Prüfung über NVIDIA'), findsNothing);
+    expect(find.byKey(const ValueKey('gpuEvidenceUnverified')), findsNothing);
+    expect(find.byKey(const ValueKey('noGpuEvidence')), findsNothing);
     await _save(tester);
     expect(
       gpuModeOf((await env.storage.providerProfiles.list()).single),

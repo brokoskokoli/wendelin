@@ -18,8 +18,9 @@ import 'attestation_stages_card.dart';
 /// evidence, „After“ would only raise false warnings. `null` means not
 /// judgeable: the provider has no verifier (nothing to offer) or the check
 /// failed (network, unreadable evidence); the choice is hidden as well, and
-/// for the failed check [finishStep] says so. A profile that already stores a mode other than „off“ keeps the
-/// choice visible, so nothing is loosened silently.
+/// for the failed check [finishStep] says so. A profile that already stores a
+/// mode other than „off“ keeps the choice visible, so nothing is loosened
+/// silently.
 bool gpuChoiceVisible({
   required bool attested,
   required bool? gpuEvidence,

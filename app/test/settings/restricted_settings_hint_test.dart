@@ -144,7 +144,7 @@ void main() {
     });
 
     testWidgets('Registry-Ereignis nach der Anfrage: Hinweis ohne Resume '
-        '(Android setzt den Op schon beim gesperrten Versuch)', (tester) async {
+        '(die Anfrage ändert die Registry)', (tester) async {
       final fake = await _pumpAlone(tester, RestrictedFeature.sms);
       fake.current = _blocked;
       _registry(tester).sensitiveMinimum = PrivacyLevel.tee;
