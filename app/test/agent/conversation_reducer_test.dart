@@ -710,6 +710,43 @@ void main() {
       },
     );
 
+    test('echte failed-Karte gleicher Id (anderer Summary) bleibt same', () {
+      final s = ConversationState.empty.copyWith(
+        entries: [card('c1', ToolPhase.failed, 'Netzwerkfehler')],
+      );
+      final out = reducer.heldBackFinished(
+        s,
+        _call,
+        ToolOutcome.text('ok', summary: 'x'),
+      );
+      expect(out, same(s));
+    });
+
+    test(
+      'zwei zurückgestellte Karten gleicher Id: nur die jüngste ändert sich',
+      () {
+        final first = card(
+          'c1',
+          ToolPhase.failed,
+          ToolExecutor.deferredSummary,
+        );
+        final second = card(
+          'c1',
+          ToolPhase.failed,
+          ToolExecutor.deferredSummary,
+        );
+        final s = ConversationState.empty.copyWith(entries: [first, second]);
+        final out = reducer.heldBackFinished(
+          s,
+          _call,
+          ToolOutcome.text('ok', summary: 'Fertig'),
+        );
+        expect(out.entries[0], same(first));
+        expect((out.entries[1] as ToolEntry).phase, ToolPhase.done);
+        expect((out.entries[1] as ToolEntry).summary, 'Fertig');
+      },
+    );
+
     test('ohne zurückgestellte Karte bleibt alles unverändert', () {
       final s = ConversationState.empty.copyWith(
         entries: [card('c1', ToolPhase.done, 'Alt')],
