@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:platform/platform.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
+import 'channel_app_presence_port.dart' show appsChannelName;
 import 'channel_authorization_browser.dart';
 
 /// Wakes the Spotify app: `ACTION_VIEW` on `spotify:` addressed to the
@@ -77,6 +78,31 @@ final class ChannelSpotifyAuthBrowser implements SpotifyAuthBrowser {
           SpotifyBrowserFailure.stateMismatch,
         AuthorizationFailure.failed => SpotifyBrowserFailure.failed,
       });
+    }
+  }
+}
+
+/// [SpotifyHostDevice] over the apps channel (`deviceNames`, Kotlin
+/// `AppsChannel`): the device name the user gave, the market name and the
+/// model. Without the channel (other engine, test) it returns no names; the
+/// session then falls back to the device type.
+final class ChannelSpotifyHostDevice implements SpotifyHostDevice {
+  /// Creates the adapter; [channel] is injectable for tests.
+  const ChannelSpotifyHostDevice({
+    this._channel = const MethodChannel(appsChannelName),
+  });
+
+  final MethodChannel _channel;
+
+  @override
+  Future<Set<String>> names() async {
+    try {
+      final raw = await _channel.invokeMethod<List<Object?>>('deviceNames');
+      return {...?raw?.whereType<String>()};
+    } on PlatformException {
+      return const {};
+    } on MissingPluginException {
+      return const {};
     }
   }
 }

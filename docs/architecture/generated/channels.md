@@ -6,7 +6,7 @@ Aus `app/channels.json`: je Kanal die Dart- und Kotlin-Dateien und die Methoden 
 
 | Kanal (`app.wendelin/…` ohne Präfix) | Dart | Kotlin | Dart → Kotlin | Kotlin → Dart |
 | --- | --- | --- | --- | --- |
-| `apps` | `app/lib/platform/channel_app_presence_port.dart` | `app/android/app/src/main/kotlin/app/wendelin/AppsChannel.kt` | `isInstalled(package)` | – |
+| `apps` | `app/lib/platform/channel_app_presence_port.dart`<br>`app/lib/platform/spotify_platform.dart` | `app/android/app/src/main/kotlin/app/wendelin/AppsChannel.kt` | `isInstalled(package)`<br>`deviceNames()` | – |
 | `assistant` | `app/lib/platform/assistant_platform.dart` | `app/android/app/src/main/kotlin/app/wendelin/AssistantChannel.kt`<br>`app/android/app/src/main/kotlin/app/wendelin/RecognizerSwitch.kt` | `isDefaultAssistant()`<br>`openAssistantSettings()`<br>`isLocked()`<br>`requestUnlock()`<br>`isRecognizerOffered()`<br>`recognitionServiceState()`<br>`setRecognizerOffered(offered)`<br>`setRecognizerConfig(model, language, vadThreshold, minSpeechMs)`<br>`hasWakeHandoff()`<br>`takeWakeHandoff(keepOpen)`<br>`finishWakeHandoff()`<br>`appVoiceActive(active)`<br>`releaseHost()`<br>`teardownDone()`<br>`finish()` | `trigger()`<br>`close()` |
 | `auth` | `app/lib/platform/channel_authorization_browser.dart` | `app/android/app/src/main/kotlin/app/wendelin/AuthChannel.kt` | `isAvailable()`<br>`authorize(url, redirect, state)`<br>`open(url)` | – |
 | `restricted_settings` | `app/lib/platform/restricted_settings_platform.dart` | `app/android/app/src/main/kotlin/app/wendelin/RestrictedSettingsChannel.kt` | `restrictedSettings()`<br>`openAppInfo()` | – |

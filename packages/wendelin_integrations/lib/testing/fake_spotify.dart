@@ -67,6 +67,37 @@ final class FakeSpotifyApi with FakeFailures implements SpotifyApi {
   /// Whether music is playing.
   bool playing = false;
 
+  /// Runs after every accepted `play` (e.g. to inject a failure of the
+  /// following state check).
+  void Function()? onPlay;
+
+  /// Devices that accept commands (Spotify answers 2xx) but never play, like
+  /// a frozen app or a dead Connect device. A command to one makes it the
+  /// active device and leaves [playing] false.
+  final Set<String> frozenDeviceIds = {};
+
+  /// Devices that are listed but answer every command with an error (a
+  /// frozen app: 404 or 5xx), see [rejectStatus]. Nothing is played.
+  final Set<String> rejectingDeviceIds = {};
+
+  /// The error of a command to a [rejectingDeviceIds] device.
+  PortException rejectStatus = const PortException(
+    PortErrorKind.notFound,
+    'Spotify: nicht gefunden (HTTP 404)',
+  );
+
+  /// Devices that report `is_playing` but whose position never advances,
+  /// like a dead Connect device the server still believes in.
+  final Set<String> stuckDeviceIds = {};
+
+  /// How far the position advances with every state read while playing
+  /// (simulated time between two reads); 0 = never.
+  int progressStepMs = 1000;
+
+  /// Like Spotify for restricted or private devices: the playback state
+  /// carries the device name but `device.id` is null.
+  bool playbackWithoutDeviceId = false;
+
   /// Current track, context and position.
   String? trackUri;
   String? contextUri;
@@ -142,6 +173,7 @@ final class FakeSpotifyApi with FakeFailures implements SpotifyApi {
       if (!knownDevices.any((d) => d.id == deviceId)) {
         throw spotifyNoDevice;
       }
+      if (rejectingDeviceIds.contains(deviceId)) throw rejectStatus;
       activeDeviceId = deviceId;
     } else if (activeDeviceId == null) {
       throw spotifyNoDevice;
@@ -200,13 +232,18 @@ final class FakeSpotifyApi with FakeFailures implements SpotifyApi {
     enter('playback');
     _check(auth);
     if (activeDeviceId == null) return null;
+    final progress = positionMs;
+    if (playing && !stuckDeviceIds.contains(activeDeviceId)) {
+      positionMs += progressStepMs;
+    }
     return SpotifyPlayback(
       isPlaying: playing,
       title: title,
       trackUri: trackUri,
       contextUri: contextUri,
-      progressMs: positionMs,
+      progressMs: progress,
       deviceName: knownDevices.firstWhere((d) => d.id == activeDeviceId).name,
+      deviceId: playbackWithoutDeviceId ? null : activeDeviceId,
     );
   }
 
@@ -221,6 +258,7 @@ final class FakeSpotifyApi with FakeFailures implements SpotifyApi {
           name: d.name,
           isActive: d.id == activeDeviceId,
           isRestricted: d.isRestricted,
+          type: d.type,
         ),
     ];
   }
@@ -257,7 +295,8 @@ final class FakeSpotifyApi with FakeFailures implements SpotifyApi {
     this.positionMs =
         positionMs ??
         (uris != null || contextUri != null ? 0 : this.positionMs);
-    playing = true;
+    playing = !frozenDeviceIds.contains(activeDeviceId);
+    onPlay?.call();
   }
 
   @override
@@ -308,6 +347,18 @@ final class FakeSpotifySecrets implements SpotifySecrets {
 
   @override
   Future<void> saveAuth(SpotifyAuth? auth) async => storedAuth = auth;
+}
+
+/// [SpotifyHostDevice] with fixed names.
+final class FakeSpotifyHostDevice implements SpotifyHostDevice {
+  /// Creates the port with the phone's [hostNames].
+  FakeSpotifyHostDevice([this.hostNames = const {}]);
+
+  /// Names of the phone.
+  Set<String> hostNames;
+
+  @override
+  Future<Set<String>> names() async => hostNames;
 }
 
 /// [SpotifyAppLauncher] that counts wake-ups; [onWake] can make a device

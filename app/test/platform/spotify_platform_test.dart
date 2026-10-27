@@ -104,4 +104,29 @@ void main() {
       },
     );
   });
+
+  group('ChannelSpotifyHostDevice', () {
+    const apps = MethodChannel('app.wendelin/apps');
+    tearDown(() => messenger.setMockMethodCallHandler(apps, null));
+
+    test('liefert die Namen des Kanals', () async {
+      messenger.setMockMethodCallHandler(apps, (call) async {
+        expect(call.method, 'deviceNames');
+        return ['Mein Telefon', 'Pixel 8'];
+      });
+      expect(await const ChannelSpotifyHostDevice().names(), {
+        'Mein Telefon',
+        'Pixel 8',
+      });
+    });
+
+    test('Kanal fehlt oder scheitert: keine Namen statt Fehler', () async {
+      expect(await const ChannelSpotifyHostDevice().names(), isEmpty);
+      messenger.setMockMethodCallHandler(
+        apps,
+        (_) async => throw PlatformException(code: 'x'),
+      );
+      expect(await const ChannelSpotifyHostDevice().names(), isEmpty);
+    });
+  });
 }

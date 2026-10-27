@@ -122,6 +122,7 @@ Future<Integration> spotifyBackend(Clock clock) async {
     api,
     secrets,
     launcher: FakeSpotifyLauncher(),
+    hostDevice: FakeSpotifyHostDevice({phone.name}),
     delay: (_) async {},
   );
 }

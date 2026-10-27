@@ -8,7 +8,7 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 import '../helpers.dart';
 
 const _clientId = '0123456789abcdef0123456789abcdef';
-const _phone = SpotifyDevice(id: 'dev1', name: 'Pixel 8');
+const _phone = SpotifyDevice(id: 'dev1', name: 'Pixel 8', type: 'Smartphone');
 const _bohemian = 'spotify:track:4u7EnebtmKWzUH433cf5Qv';
 const _album = 'spotify:album:6X9k3iKZrQK3SDKpOZnB7M';
 
@@ -88,6 +88,22 @@ void main() {
           'uri': _bohemian,
         },
       ]);
+    });
+
+    test('kein Treffer: ehrlicher Hinweis, nichts abgespielt', () async {
+      final o = await call('spotify__search', {
+        'query': 'zzzzqqqq',
+        'type': 'playlist',
+      });
+      expect(o.isError, isFalse);
+      expect(data(o)['results'], isEmpty);
+      expect(data(o)['hint'], contains('Kein Treffer'));
+      final p = await call('spotify__play', {
+        'query': 'zzzzqqqq',
+        'type': 'playlist',
+      });
+      expect(p.isError, isTrue);
+      expect(p.text, contains('nichts abgespielt'));
     });
 
     test('ohne Art: alle vier Arten', () async {
@@ -276,6 +292,101 @@ void main() {
       final o = await call('spotify__play');
       await o.undo!.run();
       expect(api.playing, isFalse);
+    });
+  });
+
+  group('Wiedergabe-Ziel und Bestätigung', () {
+    const tv = SpotifyDevice(id: 'tv', name: 'Wohnzimmer', type: 'Speaker');
+
+    test(
+      'fremdes Gerät „aktiv“, 204 ohne Wiedergabe: spielt auf dem Handy',
+      () async {
+        api
+          ..knownDevices.add(tv)
+          ..activeDeviceId = 'tv'
+          ..frozenDeviceIds.add('tv');
+        final o = await call('spotify__play', {'query': 'bohemian'});
+        expect(o.isError, isFalse);
+        expect(o.text, isNot(contains(' auf ')));
+        expect(api.lastPlay!.deviceId, 'dev1');
+        expect(api.playing, isTrue);
+      },
+    );
+
+    test('eingefrorenes Handy: einmal wecken, dann Erfolg', () async {
+      api.frozenDeviceIds.add('dev1');
+      launcher.onWake = api.frozenDeviceIds.clear;
+      final o = await call('spotify__play', {'query': 'bohemian'});
+      expect(o.isError, isFalse);
+      expect(launcher.wakes, 1);
+    });
+
+    test('geprüft auf dem Handy: fester Satz „läuft“', () async {
+      final o = await call('spotify__play', {'query': 'bohemian'});
+      expect(o.fixed, isA<ConfirmationSentence>());
+    });
+
+    test('nichts spielt trotz Wecken: Fehler statt „Spielt“', () async {
+      api.frozenDeviceIds.add('dev1');
+      final o = await call('spotify__play', {'query': 'bohemian'});
+      expect(o.isError, isTrue);
+      expect(o.text, contains('auf dem Handy läuft nichts'));
+      expect(o.text, isNot(contains('Spielt')));
+      expect(launcher.wakes, 1);
+    });
+
+    test(
+      'Prüfung scheitert (429): gesendet, nicht geprüft, kein Fehler',
+      () async {
+        api.onPlay = () => api.failNext(
+          'playback',
+          const PortException(PortErrorKind.unavailable, 'Anfragelimit'),
+        );
+        final o = await call('spotify__play', {'query': 'bohemian'});
+        expect(o.isError, isFalse);
+        expect(o.text, contains('nicht geprüft'));
+        expect(launcher.wakes, 0);
+        // Not spoken as „läuft“: the model words the unchecked result.
+        expect(o.fixed, isNull);
+      },
+    );
+
+    test('device: nennt das Gerät; Undo geht an dasselbe Gerät', () async {
+      api.knownDevices.add(tv);
+      playing(uri: 'spotify:track:7hQJA50XrCWABAu5v6QZ4i', title: 'Davor');
+      final o = await call('spotify__play', {
+        'query': 'bohemian',
+        'device': 'wohnzimmer',
+      });
+      expect(o.text, contains('auf „Wohnzimmer“'));
+      expect(api.lastPlay!.deviceId, 'tv');
+      expect(o.fixed, isNull);
+      api.activeDeviceId = 'dev1';
+      await o.undo!.run();
+      expect(api.lastPlay!.deviceId, 'tv');
+      expect(api.activeDeviceId, 'tv');
+    });
+
+    test('Undo (Pause) geht an das Zielgerät', () async {
+      api.knownDevices.add(tv);
+      final o = await call('spotify__play', {
+        'query': 'bohemian',
+        'device': 'Wohnzimmer',
+      });
+      api.activeDeviceId = 'dev1';
+      await o.undo!.run();
+      expect(api.activeDeviceId, 'tv');
+      expect(api.playing, isFalse);
+    });
+
+    test('unbekanntes Gerät: Fehler, nichts gespielt', () async {
+      final o = await call('spotify__play', {
+        'query': 'bohemian',
+        'device': 'Keller',
+      });
+      expect(o.isError, isTrue);
+      expect(o.text, contains('kennt kein Gerät „Keller“'));
+      expect(api.lastPlay, isNull);
     });
   });
 
