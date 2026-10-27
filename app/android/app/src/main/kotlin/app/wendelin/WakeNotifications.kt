@@ -13,7 +13,8 @@ import java.util.Locale
 /**
  * The notifications of the wake-word service (WP50): the permanent one while it listens or is
  * paused (own quiet channel, buttons „Pause 1 h“ and „Aus“) and the hint „Wieder einschalten“
- * after it ended without the user's wish. No content of any kind.
+ * after it ended without the user's wish. No content of any kind. The texts come from
+ * [WakeTexts] (app language, WP156).
  */
 object WakeNotifications {
     const val CHANNEL_ID = "wake-word"
@@ -26,7 +27,7 @@ object WakeNotifications {
     private fun ensureChannel(context: Context) {
         manager(context).createNotificationChannel(
             NotificationChannel(CHANNEL_ID, "Wake Word", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Zeigt, dass Wendelin auf „Wendelin“ hört."
+                description = WakeTexts.load(context).channelDesc
                 setShowBadge(false)
             },
         )
@@ -65,35 +66,39 @@ object WakeNotifications {
         Notification.Action.Builder(null, label, pi).build()
 
     /** Permanent notification while listening; [note] names a pause by a conflict. */
-    fun listening(context: Context, note: String? = null): Notification =
-        builder(
+    fun listening(context: Context, note: String? = null): Notification {
+        val texts = WakeTexts.load(context)
+        return builder(
             context,
-            "Wendelin hört auf „Wendelin“",
-            note ?: "Das Mikrofon ist an. Audio bleibt auf dem Gerät.",
+            texts.listeningTitle,
+            note ?: texts.listeningText,
         )
             .setOngoing(true)
-            .addAction(act(context, "Pause 1 h", action(context, WakeWordService.ACTION_PAUSE)))
-            .addAction(act(context, "Aus", action(context, WakeWordService.ACTION_OFF)))
+            .addAction(act(context, texts.pause, action(context, WakeWordService.ACTION_PAUSE)))
+            .addAction(act(context, texts.off, action(context, WakeWordService.ACTION_OFF)))
             .build()
+    }
 
     /** Permanent notification during „Pause 1 h“. */
     fun paused(context: Context, untilMs: Long): Notification {
         val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(untilMs))
-        return builder(context, "Wendelin pausiert", "Bis $time Uhr, das Mikrofon ist frei.")
+        val texts = WakeTexts.load(context)
+        return builder(context, texts.pausedTitle, texts.pausedText(time))
             .setOngoing(true)
-            .addAction(act(context, "Fortsetzen", action(context, WakeWordService.ACTION_RESUME)))
-            .addAction(act(context, "Aus", action(context, WakeWordService.ACTION_OFF)))
+            .addAction(act(context, texts.resume, action(context, WakeWordService.ACTION_RESUME)))
+            .addAction(act(context, texts.off, action(context, WakeWordService.ACTION_OFF)))
             .build()
     }
 
     /** „Wieder einschalten“ after the service ended on its own ([withAction]: it can restart). */
     fun showReenable(context: Context, text: String, withAction: Boolean) {
-        val b = builder(context, "Wake Word ist aus", text).setAutoCancel(true)
+        val texts = WakeTexts.load(context)
+        val b = builder(context, texts.reenableTitle, text).setAutoCancel(true)
         if (withAction) {
             b.addAction(
                 act(
                     context,
-                    "Wieder einschalten",
+                    texts.reenableAction,
                     action(context, WakeWordService.ACTION_START, "notif", foreground = true),
                 ),
             )

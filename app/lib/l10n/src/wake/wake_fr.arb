@@ -196,5 +196,17 @@
   "wakeWordTryNow": "Essayer maintenant",
   "wakeWordWhoCalibrate": "Qui calibrer ?",
   "wakeWordWhoJoins": "Qui s’ajoute ?",
-  "wakeWordWhoSpeaks": "Qui parle ?"
+  "wakeWordWhoSpeaks": "Qui parle ?",
+  "wakeNotifChannelDesc": "Indique que Wendelin écoute « Hey Wendelin ».",
+  "wakeNotifListeningTitle": "Wendelin écoute « Hey Wendelin »",
+  "wakeNotifListeningText": "Le micro est activé. L’audio reste sur l’appareil.",
+  "wakeNotifPause": "Pause 1 h",
+  "wakeNotifOff": "Arrêter",
+  "wakeNotifPausedTitle": "Wendelin est en pause",
+  "wakeNotifPausedText": "Jusqu’à {time}, le micro est libre.",
+  "wakeNotifResume": "Reprendre",
+  "wakeNotifReenableTitle": "Le mot d’éveil est désactivé",
+  "wakeNotifReenableAction": "Réactiver",
+  "wakeNotifNoRole": "Wendelin doit être l’assistant pour que le mot d’éveil fonctionne après un redémarrage.",
+  "wakeNotifEnded": "Le mot d’éveil s’est arrêté ({reason}). Touchez pour le réactiver."
 }

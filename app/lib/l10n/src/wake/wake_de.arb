@@ -402,5 +402,31 @@
   "wakeWordTryNow": "Jetzt ausprobieren",
   "wakeWordWhoCalibrate": "Wen kalibrieren?",
   "wakeWordWhoJoins": "Wer kommt dazu?",
-  "wakeWordWhoSpeaks": "Wer spricht?"
+  "wakeWordWhoSpeaks": "Wer spricht?",
+  "wakeNotifChannelDesc": "Zeigt, dass Wendelin auf „Hey Wendelin“ hört.",
+  "wakeNotifListeningTitle": "Wendelin hört auf „Hey Wendelin“",
+  "wakeNotifListeningText": "Das Mikrofon ist an. Audio bleibt auf dem Gerät.",
+  "wakeNotifPause": "Pause 1 h",
+  "wakeNotifOff": "Aus",
+  "wakeNotifPausedTitle": "Wendelin pausiert",
+  "wakeNotifPausedText": "Bis {time} Uhr, das Mikrofon ist frei.",
+  "@wakeNotifPausedText": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeNotifResume": "Fortsetzen",
+  "wakeNotifReenableTitle": "Wake Word ist aus",
+  "wakeNotifReenableAction": "Wieder einschalten",
+  "wakeNotifNoRole": "Wendelin muss der Assistent sein, damit das Wake Word nach einem Neustart laufen kann.",
+  "wakeNotifEnded": "Das Wake Word wurde beendet ({reason}). Tippe, um es wieder einzuschalten.",
+  "@wakeNotifEnded": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  }
 }

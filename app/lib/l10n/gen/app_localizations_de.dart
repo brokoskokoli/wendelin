@@ -5193,6 +5193,49 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get wakeNotifChannelDesc =>
+      'Zeigt, dass Wendelin auf „Hey Wendelin“ hört.';
+
+  @override
+  String wakeNotifEnded(String reason) {
+    return 'Das Wake Word wurde beendet ($reason). Tippe, um es wieder einzuschalten.';
+  }
+
+  @override
+  String get wakeNotifListeningText =>
+      'Das Mikrofon ist an. Audio bleibt auf dem Gerät.';
+
+  @override
+  String get wakeNotifListeningTitle => 'Wendelin hört auf „Hey Wendelin“';
+
+  @override
+  String get wakeNotifNoRole =>
+      'Wendelin muss der Assistent sein, damit das Wake Word nach einem Neustart laufen kann.';
+
+  @override
+  String get wakeNotifOff => 'Aus';
+
+  @override
+  String get wakeNotifPause => 'Pause 1 h';
+
+  @override
+  String wakeNotifPausedText(String time) {
+    return 'Bis $time Uhr, das Mikrofon ist frei.';
+  }
+
+  @override
+  String get wakeNotifPausedTitle => 'Wendelin pausiert';
+
+  @override
+  String get wakeNotifReenableAction => 'Wieder einschalten';
+
+  @override
+  String get wakeNotifReenableTitle => 'Wake Word ist aus';
+
+  @override
+  String get wakeNotifResume => 'Fortsetzen';
+
+  @override
   String get wakeServiceSectionAlways => 'Immer';
 
   @override

@@ -24,6 +24,9 @@ import 'integrations_screen_test.dart' show settle;
 import 'wake_word_screen_test.dart' show templates, wakeEnv;
 
 final class FakeWakePlatform extends WakePlatform {
+  @override
+  Future<void> setTexts(Map<String, String> texts) async {}
+
   WakeServiceStatus current = const WakeServiceStatus(holdsRole: true);
   final configured = <({bool enabled, WakeCondition condition})>[];
 

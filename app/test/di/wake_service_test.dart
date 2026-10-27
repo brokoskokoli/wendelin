@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/voice_settings_providers.dart';
 import 'package:wendelin/di/wake_providers.dart';
@@ -23,6 +24,12 @@ final class _FakePlatform extends WakePlatform {
     await gate;
     return snapshot;
   }
+
+  final texts = <Map<String, String>>[];
+
+  @override
+  Future<void> setTexts(Map<String, String> texts) async =>
+      this.texts.add(texts);
 
   final sent = <({bool enabled, WakeCondition condition, bool verify})>[];
 
@@ -51,6 +58,29 @@ void main() {
       ],
     );
     addTearDown(c.dispose);
+  });
+
+  // WP156: the notification speaks the app language and gets it before the
+  // service can start.
+  test('push schickt die Texte in der App-Sprache, vor configure', () async {
+    c.dispose();
+    c = ProviderContainer(
+      overrides: [
+        storageProvider.overrideWithValue(openInMemoryStorage()),
+        secretStoreProvider.overrideWithValue(InMemorySecretStore()),
+        wakePlatformProvider.overrideWithValue(platform),
+        uiLanguageProvider.overrideWithBuild((_, _) => 'en'),
+      ],
+    );
+    addTearDown(c.dispose);
+    await c.read(wakeServiceProvider.notifier).push();
+    // Every `configure` was preceded by the texts.
+    expect(platform.texts, isNotEmpty);
+    expect(platform.texts, hasLength(platform.sent.length));
+    final t = platform.texts.last;
+    expect(t['listeningTitle'], 'Wendelin listens for “Hey Wendelin”');
+    expect(t['pausedText'], contains('{time}'));
+    expect(t['ended'], contains('{reason}'));
   });
 
   test('Standard: aus, nur beim Laden', () async {

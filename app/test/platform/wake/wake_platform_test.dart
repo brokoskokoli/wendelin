@@ -30,6 +30,21 @@ void main() {
     });
   });
 
+  test('setTexts schickt die Texte unverändert an den Kanal', () async {
+    Object? sent;
+    String? method;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      method = call.method;
+      sent = call.arguments;
+      return null;
+    });
+    await WakePlatform().setTexts({'off': 'Off', 'pausedText': 'Until {time}'});
+    expect(method, 'texts');
+    expect(sent, {
+      'texts': {'off': 'Off', 'pausedText': 'Until {time}'},
+    });
+  });
+
   test('status liest die Antwort von Kotlin', () async {
     messenger.setMockMethodCallHandler(
       channel,

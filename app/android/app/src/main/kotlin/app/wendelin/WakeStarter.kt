@@ -36,7 +36,7 @@ object WakeStarter {
                 if (settings.enabled && decision.reason == "no-role") {
                     WakeNotifications.showReenable(
                         context,
-                        "Wendelin muss der Assistent sein, damit das Wake Word nach einem Neustart laufen kann.",
+                        WakeTexts.load(context).noRole,
                         withAction = false,
                     )
                 }

@@ -5222,6 +5222,49 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get wakeNotifChannelDesc =>
+      'Indique que Wendelin écoute « Hey Wendelin ».';
+
+  @override
+  String wakeNotifEnded(String reason) {
+    return 'Le mot d’éveil s’est arrêté ($reason). Touchez pour le réactiver.';
+  }
+
+  @override
+  String get wakeNotifListeningText =>
+      'Le micro est activé. L’audio reste sur l’appareil.';
+
+  @override
+  String get wakeNotifListeningTitle => 'Wendelin écoute « Hey Wendelin »';
+
+  @override
+  String get wakeNotifNoRole =>
+      'Wendelin doit être l’assistant pour que le mot d’éveil fonctionne après un redémarrage.';
+
+  @override
+  String get wakeNotifOff => 'Arrêter';
+
+  @override
+  String get wakeNotifPause => 'Pause 1 h';
+
+  @override
+  String wakeNotifPausedText(String time) {
+    return 'Jusqu’à $time, le micro est libre.';
+  }
+
+  @override
+  String get wakeNotifPausedTitle => 'Wendelin est en pause';
+
+  @override
+  String get wakeNotifReenableAction => 'Réactiver';
+
+  @override
+  String get wakeNotifReenableTitle => 'Le mot d’éveil est désactivé';
+
+  @override
+  String get wakeNotifResume => 'Reprendre';
+
+  @override
   String get wakeServiceSectionAlways => 'Toujours';
 
   @override

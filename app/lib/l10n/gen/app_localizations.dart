@@ -8829,6 +8829,78 @@ abstract class AppLocalizations {
   /// **'Für die Nachprüfung Sprachmodell laden ({v}).'**
   String wakeModelsVerifyNeeds(String v);
 
+  /// No description provided for @wakeNotifChannelDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeigt, dass Wendelin auf „Hey Wendelin“ hört.'**
+  String get wakeNotifChannelDesc;
+
+  /// No description provided for @wakeNotifEnded.
+  ///
+  /// In de, this message translates to:
+  /// **'Das Wake Word wurde beendet ({reason}). Tippe, um es wieder einzuschalten.'**
+  String wakeNotifEnded(String reason);
+
+  /// No description provided for @wakeNotifListeningText.
+  ///
+  /// In de, this message translates to:
+  /// **'Das Mikrofon ist an. Audio bleibt auf dem Gerät.'**
+  String get wakeNotifListeningText;
+
+  /// No description provided for @wakeNotifListeningTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendelin hört auf „Hey Wendelin“'**
+  String get wakeNotifListeningTitle;
+
+  /// No description provided for @wakeNotifNoRole.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendelin muss der Assistent sein, damit das Wake Word nach einem Neustart laufen kann.'**
+  String get wakeNotifNoRole;
+
+  /// No description provided for @wakeNotifOff.
+  ///
+  /// In de, this message translates to:
+  /// **'Aus'**
+  String get wakeNotifOff;
+
+  /// No description provided for @wakeNotifPause.
+  ///
+  /// In de, this message translates to:
+  /// **'Pause 1 h'**
+  String get wakeNotifPause;
+
+  /// No description provided for @wakeNotifPausedText.
+  ///
+  /// In de, this message translates to:
+  /// **'Bis {time} Uhr, das Mikrofon ist frei.'**
+  String wakeNotifPausedText(String time);
+
+  /// No description provided for @wakeNotifPausedTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendelin pausiert'**
+  String get wakeNotifPausedTitle;
+
+  /// No description provided for @wakeNotifReenableAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Wieder einschalten'**
+  String get wakeNotifReenableAction;
+
+  /// No description provided for @wakeNotifReenableTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Wake Word ist aus'**
+  String get wakeNotifReenableTitle;
+
+  /// No description provided for @wakeNotifResume.
+  ///
+  /// In de, this message translates to:
+  /// **'Fortsetzen'**
+  String get wakeNotifResume;
+
   /// No description provided for @wakeServiceSectionAlways.
   ///
   /// In de, this message translates to:
