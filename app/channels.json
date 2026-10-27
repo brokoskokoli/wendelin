@@ -52,6 +52,15 @@
       },
       "toDart": {}
     },
+    "app.wendelin/restricted_settings": {
+      "dart": ["app/lib/platform/restricted_settings_platform.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/RestrictedSettingsChannel.kt"],
+      "toKotlin": {
+        "restrictedSettings": {"args": [], "returns": "map"},
+        "openAppInfo": {"args": [], "returns": "value"}
+      },
+      "toDart": {}
+    },
     "app.wendelin/battery": {
       "dart": ["app/lib/platform/battery_platform.dart"],
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/BatteryChannel.kt"],
