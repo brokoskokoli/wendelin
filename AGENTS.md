@@ -10,7 +10,7 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 - `docs/adr/`: Architekturentscheidungen. Neue grundlegende Entscheidungen bekommen eine eigene ADR.
 
 ## Neue Orchestrator-Sitzung
-- Sitzung mit `claude --name "Wendelin projekt"` starten. Unter diesem Namen schicken die Paket-Sitzungen ihre Fertigmeldungen (Arbeitsorte und Rollen: `PROJECT.md`).
+- Sitzung mit beliebigem Namen starten (`claude --name "<Name>"`). Der Orchestrator gibt jeder Paket- und Research-Sitzung seinen aktuellen Namen im Prompt mit; dorthin kommen die Fertigmeldungen (Arbeitsorte und Rollen: `PROJECT.md`).
 - Mit `/project-supervisor mach weiter` setzt sie nach Abschnitt 0 „Fortsetzen“ fort. Der Stand kommt aus `docs/work-packages/STATUS.md` (Abschnitt „Nächste Schritte“), aus `git worktree list` und aus den Übergabedateien im Ordner james-wt/handoff neben dem Repo.
 
 ## Konzeptänderungen
