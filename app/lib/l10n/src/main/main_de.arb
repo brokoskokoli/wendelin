@@ -158,7 +158,7 @@
   "switchTopicBodyRunning": "Beim Wechsel des Modells beginnt ein neues Gespräch. Die laufende Antwort wird abgebrochen und der aktuelle Verlauf beendet (im Verlauf bleibt er abrufbar).",
   "switchTopicSwitch": "Wechseln",
   "switchTopicTitle": "Neues Gespräch beginnen?",
-  "mainMicHearing": "Wendelin hört mit: „Wendelin“ sagen oder tippen",
+  "mainMicHearing": "Wendelin hört mit: „Hey Wendelin“ sagen oder tippen",
   "overlayUnlockCancelled": "Entsperren abgebrochen. Deine Anfrage wurde verworfen.",
   "retryOfferDetail": "{fromName} antwortet gerade nicht. {toName} schützt deine Daten mindestens so gut. Schon ausgeführte Aktionen werden nicht wiederholt, nur die Antwort wird neu angefragt.",
   "@retryOfferDetail": {

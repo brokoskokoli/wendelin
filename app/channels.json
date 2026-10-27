@@ -280,6 +280,7 @@
       ],
       "toKotlin": {
         "configure": {"args": ["enabled", "mode", "verify", "detector"], "returns": "none"},
+        "texts": {"args": ["texts"], "returns": "none"},
         "devMode": {"args": ["on", "clear", "archive"], "returns": "none"},
         "status": {"args": [], "returns": "map"},
         "chatVisible": {"args": ["visible"], "returns": "none"},

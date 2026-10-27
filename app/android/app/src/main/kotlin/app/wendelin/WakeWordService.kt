@@ -259,7 +259,7 @@ class WakeWordService : Service() {
         if (reason in UNWANTED) {
             WakeNotifications.showReenable(
                 this,
-                "Das Wake Word wurde beendet ($reason). Tippe, um es wieder einzuschalten.",
+                WakeTexts.load(this).ended(reason),
                 withAction = reason != "no-role",
             )
         }

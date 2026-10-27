@@ -214,7 +214,9 @@ const _notSplitTail = {
   'und',
 };
 
-const _greetings = {'hey', 'hallo', 'hi', 'he', 'ok', 'okay', 'ey'};
+/// Greetings that [stripWakeWord] removes in front of the wake word:
+/// [heyWords] plus „hallo“ and „ok“ (WP156).
+const _greetings = {...heyWords, 'hallo', 'ok', 'okay'};
 
 /// [transcript] without the leading wake word (WP68): „Wendelin, schalte die
 /// Taschenlampe an“ becomes „schalte die Taschenlampe an“. Spellings as in

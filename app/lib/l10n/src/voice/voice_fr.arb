@@ -24,7 +24,7 @@
   "voiceConvBargeSpeech": "Toute parole (expérimental)",
   "voiceConvCustomBarge": "Un réglage personnalisé pour l’interruption est actif (réinitialisable sous « Avancé »).",
   "voiceConvInterrupt": "Interrompre pendant la réponse",
-  "voiceConvInterruptHint": "Avec « Wendelin », vous interrompez la sortie vocale.",
+  "voiceConvInterruptHint": "Avec « Hey Wendelin », vous interrompez la sortie vocale.",
   "voiceConvKeepListening": "Continuer à écouter après la réponse",
   "voiceConvKeepListeningDetail": "Après la réponse parlée, le microphone reste brièvement ouvert et vous pouvez poser une question sans toucher l’écran. « Merci » ou « Stop » y met fin.",
   "voiceConvKeepListeningLabel": "Continuer à écouter après la réponse",

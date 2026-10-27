@@ -5,9 +5,11 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/preferences.dart' show screenProtectionProvider;
 import 'package:wendelin/di/wake_providers.dart';
 import 'package:wendelin/di/wake_service.dart';
 import 'package:wendelin/di/wake_settings.dart';
+import 'package:wendelin/platform/screen_protection.dart';
 import 'package:wendelin/ui/settings/wake/wake_calibrate_screen.dart';
 import 'package:wendelin/ui/settings/wake/wake_enroll_screen.dart';
 import 'package:wendelin/ui/settings/wake/wake_test_screen.dart';
@@ -33,6 +35,15 @@ final class HangingAudio extends SequenceAudio {
     }
     return super.start();
   }
+}
+
+/// Screen lock without the platform channel: its answer comes in real time
+/// (about 200 ms measured, never when the channel hangs) and decided whether
+/// the calibration screen was already listening when the golden was taken.
+final class _NoScreen extends ScreenProtection {
+  const _NoScreen();
+  @override
+  Future<void> keepScreenOn({required bool on}) async {}
 }
 
 Future<void> golden(WidgetTester tester, String name) =>
@@ -88,12 +99,16 @@ void main() {
   });
 
   testWidgets('Golden Kalibrieren läuft', tags: ['golden'], (tester) async {
-    final env = wakeEnv(audio: HangingAudio([]));
+    final env = wakeEnv(
+      audio: HangingAudio([]),
+      extra: [screenProtectionProvider.overrideWithValue(const _NoScreen())],
+    );
     await pumpGoldenScreen(
       tester,
       env,
       WakeCalibrateScreen(templates: templates('a')),
     );
+    await until(tester, find.text('Noch 30 min'));
     await tester.pump(const Duration(milliseconds: 200));
     await golden(tester, 'wake_kalibrieren');
   });

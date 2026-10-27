@@ -8,6 +8,9 @@ import 'package:wendelin/platform/wake/wake_platform.dart';
 import '../support/test_env.dart';
 
 final class _Recording extends WakePlatform {
+  @override
+  Future<void> setTexts(Map<String, String> texts) async {}
+
   final modes = <bool>[];
   final archive = <bool>[];
 

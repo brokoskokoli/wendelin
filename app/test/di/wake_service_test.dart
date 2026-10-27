@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/voice_settings_providers.dart';
 import 'package:wendelin/di/wake_providers.dart';
@@ -24,6 +25,17 @@ final class _FakePlatform extends WakePlatform {
     return snapshot;
   }
 
+  final texts = <Map<String, String>>[];
+
+  /// Order of the calls that matter: `texts`, `configure`.
+  final calls = <String>[];
+
+  @override
+  Future<void> setTexts(Map<String, String> texts) async {
+    calls.add('texts');
+    this.texts.add(texts);
+  }
+
   final sent = <({bool enabled, WakeCondition condition, bool verify})>[];
 
   @override
@@ -32,8 +44,10 @@ final class _FakePlatform extends WakePlatform {
     required WakeCondition condition,
     required bool verify,
     String detector = 'auto',
-  }) async =>
-      sent.add((enabled: enabled, condition: condition, verify: verify));
+  }) async {
+    calls.add('configure');
+    sent.add((enabled: enabled, condition: condition, verify: verify));
+  }
 }
 
 void main() {
@@ -51,6 +65,58 @@ void main() {
       ],
     );
     addTearDown(c.dispose);
+  });
+
+  // WP156: the notification speaks the app language and gets it before the
+  // service can start.
+  test('push schickt die Texte in der App-Sprache, vor configure', () async {
+    c.dispose();
+    c = ProviderContainer(
+      overrides: [
+        storageProvider.overrideWithValue(openInMemoryStorage()),
+        secretStoreProvider.overrideWithValue(InMemorySecretStore()),
+        wakePlatformProvider.overrideWithValue(platform),
+        uiLanguageProvider.overrideWithBuild((_, _) => 'en'),
+      ],
+    );
+    addTearDown(c.dispose);
+    await c.read(wakeServiceProvider.notifier).push();
+    // The texts reach the service before `configure` (which may start it).
+    // Pushes can overlap, so: at no point have more `configure` calls been
+    // made than `texts` calls (each `configure` had its texts first).
+    expect(platform.calls, contains('configure'));
+    var open = 0;
+    for (final call in platform.calls) {
+      open += call == 'texts' ? 1 : -1;
+      expect(open, greaterThanOrEqualTo(0), reason: '${platform.calls}');
+    }
+    final t = platform.texts.last;
+    expect(t['listeningTitle'], 'Wendelin listens for “Hey Wendelin”');
+    expect(t['pausedText'], contains('{time}'));
+    expect(t['ended'], contains('{reason}'));
+  });
+
+  test('Sprachwechsel schickt die Texte neu in der neuen Sprache', () async {
+    c.dispose();
+    c = ProviderContainer(
+      overrides: [
+        storageProvider.overrideWithValue(openInMemoryStorage()),
+        secretStoreProvider.overrideWithValue(InMemorySecretStore()),
+        wakePlatformProvider.overrideWithValue(platform),
+        uiLanguageProvider.overrideWithBuild((_, _) => 'de'),
+      ],
+    );
+    addTearDown(c.dispose);
+    await c.read(wakeServiceProvider.future);
+    await c.read(wakeServiceProvider.notifier).push();
+    expect(platform.texts.last['listeningTitle'], contains('Hey Wendelin'));
+    final before = platform.texts.length;
+    // Not through `set`: it writes the settings, only the change matters.
+    c.read(uiLanguageProvider.notifier).state = 'fr';
+    await pumpEventQueue();
+    expect(platform.texts, hasLength(before + 1));
+    expect(platform.texts.last['listeningTitle'], contains('Hey Wendelin'));
+    expect(platform.texts.last['listeningTitle'], contains('écoute'));
   });
 
   test('Standard: aus, nur beim Laden', () async {

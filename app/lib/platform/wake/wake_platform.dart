@@ -165,6 +165,18 @@ class WakePlatform {
     }
   }
 
+  /// WP156: the notification texts of the service in the app language
+  /// (`key -> text`, placeholders `{time}` and `{reason}` stay in). Kotlin keeps
+  /// them for starts without the app; missing keys fall back to German.
+  Future<void> setTexts(Map<String, String> texts) async {
+    try {
+      await _channel.invokeMethod<void>('texts', {'texts': texts});
+    } on Object catch (e) {
+      // Not on Android, or no engine: Kotlin keeps the texts it has.
+      debugPrint('wake-texts channel=error type=${e.runtimeType}');
+    }
+  }
+
   /// Sets the wake word settings; Kotlin starts or stops the service.
   Future<void> configure({
     required bool enabled,

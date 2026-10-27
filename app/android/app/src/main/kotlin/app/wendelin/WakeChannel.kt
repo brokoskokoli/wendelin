@@ -52,6 +52,11 @@ class WakeChannel(private val context: Context, messenger: BinaryMessenger) :
                 WakeStarter.sync(context, "app")
                 result.success(null)
             }
+            // WP156: the notification texts in the app language, for starts without the app too.
+            "texts" -> {
+                WakeTexts.save(context, call.argument<Map<*, *>>("texts"))
+                result.success(null)
+            }
             // WP148: the app's developer mode; the wake engine records audio only while it is on.
             "devMode" -> {
                 val on = call.argument<Boolean>("on") == true

@@ -1,11 +1,13 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show immutable;
+import 'package:flutter/foundation.dart' show debugPrint, immutable;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
+import '../l10n/gen/app_localizations.dart';
 import '../platform/wake/wake_platform.dart';
 import 'core_providers.dart';
+import 'preferences.dart';
 import 'wake_providers.dart';
 
 // The wake word service switch (WP50): the settings live in the database;
@@ -52,6 +54,14 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
     ref.listen(wakeVerifyProvider, (_, _) => unawaited(push()));
     // WP129: the choice of the detection goes to the service as well.
     ref.listen(wakeDetectorProvider, (_, _) => unawaited(push()));
+    // WP156: the notification speaks the app language; a changed language
+    // goes to the service as well.
+    try {
+      ref.listen(uiLanguageProvider, (_, _) => unawaited(push()));
+    } on Object catch (e) {
+      // No settings yet (plain provider tests): the texts follow the system.
+      debugPrint('wake-texts listen=skipped type=${e.runtimeType}');
+    }
     return WakeServiceSettings(
       enabled: await settings.get(wakeEnabledKey) ?? false,
       condition: WakeCondition.parse(await settings.get(wakeConditionKey)),
@@ -67,14 +77,22 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
     if (!ref.mounted) return;
     final detector = await ref.read(wakeDetectorProvider.future);
     if (!ref.mounted) return;
-    await ref
-        .read(wakePlatformProvider)
-        .configure(
-          enabled: s.enabled,
-          condition: s.condition,
-          verify: verify,
-          detector: detector.name,
-        );
+    final platform = ref.read(wakePlatformProvider);
+    // Before `configure`: that call may start the service, which needs them.
+    try {
+      await platform.setTexts(wakeNotificationTexts(uiTexts(ref)));
+    } on Object catch (e) {
+      // No binding for the system language (plain provider tests): Kotlin
+      // keeps the texts it has, or German.
+      debugPrint('wake-texts result=error type=${e.runtimeType}');
+    }
+    if (!ref.mounted) return;
+    await platform.configure(
+      enabled: s.enabled,
+      condition: s.condition,
+      verify: verify,
+      detector: detector.name,
+    );
   }
 
   /// Start of the app: takes over „Aus“ from the notification (Kotlin
@@ -132,3 +150,20 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
     await push();
   }
 }
+
+/// The texts of the service notification (WP156), keys as in
+/// `WakeNotifications.kt`. `{time}` and `{reason}` are filled by Kotlin.
+Map<String, String> wakeNotificationTexts(AppLocalizations t) => {
+  'channelDesc': t.wakeNotifChannelDesc,
+  'listeningTitle': t.wakeNotifListeningTitle,
+  'listeningText': t.wakeNotifListeningText,
+  'pause': t.wakeNotifPause,
+  'off': t.wakeNotifOff,
+  'pausedTitle': t.wakeNotifPausedTitle,
+  'pausedText': t.wakeNotifPausedText('{time}'),
+  'resume': t.wakeNotifResume,
+  'reenableTitle': t.wakeNotifReenableTitle,
+  'reenableAction': t.wakeNotifReenableAction,
+  'noRole': t.wakeNotifNoRole,
+  'ended': t.wakeNotifEnded('{reason}'),
+};

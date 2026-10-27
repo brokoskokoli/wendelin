@@ -33,6 +33,9 @@ import 'main_screen_test.dart' show containerOf, pumpApp;
 
 /// Stand-in for the Kotlin side of the wake word service (main app).
 final class FakeWakePlatform extends WakePlatform {
+  @override
+  Future<void> setTexts(Map<String, String> texts) async {}
+
   Future<bool> Function()? handler;
   final visible = <bool>[];
   int done = 0;
