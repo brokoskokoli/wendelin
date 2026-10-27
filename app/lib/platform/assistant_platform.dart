@@ -7,8 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
-import 'channels.dart';
 import '../voice/voice_log.dart';
+import 'channels.dart';
 import 'voice/pcm.dart';
 
 export 'channels.dart' show assistantChannelName;
