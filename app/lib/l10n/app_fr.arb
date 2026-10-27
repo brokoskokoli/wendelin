@@ -561,7 +561,7 @@
   "httpRunHomeTarget": "Cible du réseau local",
   "httpRunHomeTargetDetail": "Peut pointer vers des adresses privées, alors aussi en http",
   "httpRunHomeTargetSem": "Cible du réseau local",
-  "httpRunLevel": "Niveau (suggestion pour {verb} : {name})",
+  "httpRunLevel": "Risque (suggestion pour {verb} : {name})",
   "httpRunNoAsk": "Exécuter sans demander (pas d’annulation)",
   "httpRunNoAskSem": "Exécuter sans demander",
   "httpRunOnlyWrite": "Uniquement pour POST/PUT/PATCH avec le niveau write",
@@ -699,6 +699,7 @@
   "levelKindCover": "Volets",
   "levelKindIntro": "S'applique à tous les appareils d'un type sans niveau propre. Serrure, alarme, garage, portail et porte se règlent seulement par appareil (configuration Home Assistant). Le niveau propre d'un appareil l'emporte toujours. Les scènes à membres inconnus s'exécutent au plus au niveau C, celles avec un membre critique jamais plus bas que lui.",
   "levelKindLight": "Lumières",
+  "levelKindLoading": "Chargement …",
   "levelKindMedia": "Médias",
   "levelKindScene": "Scènes",
   "levelKindSummaryCover": "Par défaut : D (volets avec l'ancien « sans confirmation » : C)",
@@ -734,6 +735,14 @@
   },
   "levelSummaryKind": "Niveau {level} · du type d'appareil",
   "@levelSummaryKind": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "levelSummaryKindScene": "Au plus niveau {level} · du type d'appareil, selon les membres",
+  "@levelSummaryKindScene": {
     "placeholders": {
       "level": {
         "type": "String"

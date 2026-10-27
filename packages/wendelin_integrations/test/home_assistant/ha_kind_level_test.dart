@@ -225,5 +225,19 @@ void main() {
         isFalse,
       );
     });
+
+    test('Speicher der Arten wirft: alle Arten D, auch für Licht A', () async {
+      final store = FakeHaEntityStore([_e('light.a')])
+        ..kinds = _k({'light': 'a'})
+        ..kindsError = StateError('Speicher unlesbar');
+      final ha = await integ(store);
+      expect(
+        await ha.anyAllowedWhileLocked(
+          const AccessContext(locked: true, speakerRecognized: true),
+        ),
+        isFalse,
+      );
+      expect((await ha.context.kindLevels()).isBroken, isTrue);
+    });
   });
 }

@@ -160,11 +160,19 @@ final userIntegrationCleanupsProvider = Provider<List<IntegrationCleanup>>(
     (removal) async {
       final prefs = ref.read(toolPrefsProvider);
       final tools = removal.toolNames;
+      // A deleted MCP server: every stored level of its tools goes, also of
+      // tools that were not known at deletion (server offline, renamed): a
+      // new server with the same slug must not inherit a looser level.
+      final prefix = removal.whole && removal.id.startsWith('mcp_')
+          ? '${removal.id}__'
+          : null;
+      bool levelGone(String tool) =>
+          tools.contains(tool) || (prefix != null && tool.startsWith(prefix));
       final markGone = removal.whole && prefs.sensitive.containsKey(removal.id);
       if (!markGone &&
           !prefs.disabled.any(tools.contains) &&
           !prefs.alwaysConfirm.any(tools.contains) &&
-          !prefs.levels.keys.any(tools.contains)) {
+          !prefs.levels.keys.any(levelGone)) {
         return;
       }
       await ref
@@ -175,7 +183,7 @@ final userIntegrationCleanupsProvider = Provider<List<IntegrationCleanup>>(
               alwaysConfirm: prefs.alwaysConfirm.difference(tools),
               levels: {
                 for (final e in prefs.levels.entries)
-                  if (!tools.contains(e.key)) e.key: e.value,
+                  if (!levelGone(e.key)) e.key: e.value,
               },
               sensitiveMinimum: prefs.sensitiveMinimum,
               sensitive: {

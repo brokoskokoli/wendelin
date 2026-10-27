@@ -37,11 +37,21 @@ class HaKindLevelSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.l10n;
-    // Still loading: show the defaults; an unreadable store is D (the
-    // store itself returns the broken levels).
-    final kinds = ref.watch(haKindLevelsProvider).value ?? const HaKindLevels();
+    final loaded = ref.watch(haKindLevelsProvider);
+    // No choice before the stored levels are read: a choice on an empty base
+    // would overwrite the stored kinds. An error counts as unreadable = D.
+    if (loaded.isLoading && !loaded.hasValue && !loaded.hasError) {
+      return SettingsSection(
+        key: const ValueKey('haKindSection'),
+        title: t.levelKindTitle,
+        children: [SettingsRow(title: t.levelKindLoading)],
+      );
+    }
+    final kinds = loaded.value ?? const HaKindLevels.broken();
     Future<void> set(HaKind k, SecurityLevel? l) async {
-      await ref.read(haStoreProvider).saveKindLevels(kinds.withLevel(k, l));
+      // Fresh from the store: never write over a stale copy.
+      final store = ref.read(haStoreProvider);
+      await store.saveKindLevels((await store.kindLevels()).withLevel(k, l));
       ref.invalidate(haKindLevelsProvider);
     }
 

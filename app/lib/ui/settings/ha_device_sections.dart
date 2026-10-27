@@ -138,8 +138,12 @@ class HaAreaSection extends StatelessWidget {
       isDefault: isDefault,
       // A scene without a chosen level runs on B or D, depending on its
       // members at every call: do not claim „Stufe B · Standard“.
+      // A scene takes the kind's level only as a ceiling: unknown members
+      // cap it at C, a critical member makes it D (K57).
       summary: fromKind
-          ? context.l10n.levelSummaryKind(level.name.toUpperCase())
+          ? (e.domain == 'scene' && level != SecurityLevel.d
+                ? context.l10n.levelSummaryKindScene(level.name.toUpperCase())
+                : context.l10n.levelSummaryKind(level.name.toUpperCase()))
           : e.domain == 'scene' && isDefault
           ? context.l10n.levelSummaryScene
           : null,

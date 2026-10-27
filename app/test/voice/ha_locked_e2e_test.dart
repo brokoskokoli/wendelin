@@ -1,7 +1,7 @@
-// WP160 Analyse (kein Fix): warum ist HA-Licht gesperrt nicht steuerbar?
-// Je Fall der Weg Befehlserkenner -> LockGateAgentRun -> lockedScopeProvider
+// Home Assistant gesperrt, Ende-zu-Ende (WP160, ADR 0022): je Fall der Weg
+// Befehlserkenner -> LockGateAgentRun -> lockedScopeProvider
 // -> RiskPolicy/ToolExecutor -> ha__call/haDecide, mit dem echten Overlay.
-// Erwartung je Test = ADR 0022 (L2/L3); ein roter Test zeigt eine Abweichung.
+// Erwartung je Fall = ADR 0022 (Stufen A-D je Gerät, Art und Tool).
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
@@ -149,7 +149,7 @@ void main() {
     });
 
     testWidgets('3b Licht A + gespeicherte Stufe D auf ha__call (levels): '
-        'wird ignoriert, Licht läuft (Tool-Stufe gilt für ha__call nicht)', (
+        'wirkt zusätzlich (strengere gewinnt), gesperrt Entsperren', (
       tester,
     ) async {
       final llm = _calls('light.a', 'turn_on');
@@ -158,8 +158,9 @@ void main() {
         _lightA,
         prefs: const ToolPrefs(levels: {'ha__call': 'd'}),
       );
-      await _say(tester, env, 'Flurlicht an');
-      expect(env.ha.calls.map((x) => x.service), ['turn_on']);
+      final r = await _say(tester, env, 'Flurlicht an');
+      expect(env.ha.calls, isEmpty);
+      expect(r.platform.unlockRequests, 1);
     });
 
     testWidgets('4 Licht A, nur HA aktiv (keine Taschenlampe): Modelllauf '
@@ -203,7 +204,7 @@ void main() {
     });
   });
 
-  group('WP160 Stufe je Geräteart (ha.kind_levels)', () {
+  group('Stufe je Geräteart (ha.kind_levels)', () {
     testWidgets('6a Art Licht A, Gerät ohne eigene Stufe, ohne Stimme: läuft, '
         'Modelllauf kommt, Prompt nur das Licht', (tester) async {
       final llm = _calls('light.b', 'turn_on');
@@ -285,19 +286,39 @@ void main() {
       },
     );
 
-    test('ToolPrefs.levels[ha__call]=c erreicht die Policy nicht', () async {
+    test('ToolPrefs.levels[ha__call]=c erreicht die Policy und sperrt '
+        'ha__call (zusätzlich zur Geräteart)', () async {
       final env = _env(
         FakeLlmProvider(const []),
         _lightA,
         prefs: const ToolPrefs(levels: {'ha__call': 'c'}),
       );
       final c = await boot(env);
-      expect(c.read(riskPolicyProvider).levelFor('ha__call'), isNull);
-      final s = await c.read(lockedScopeProvider)(
-        AccessContext.lockedUnknownVoice,
+      expect(c.read(riskPolicyProvider).levelFor('ha__call'), SecurityLevel.c);
+      expect(
+        await c.read(lockedScopeProvider)(AccessContext.lockedUnknownVoice),
+        isNull,
       );
-      expect(s?.tools, contains('ha__call'));
     });
+
+    test(
+      'ha__call_secure: eine gespeicherte Stufe A lockert nie (D bleibt)',
+      () async {
+        final env = _env(
+          FakeLlmProvider(const []),
+          _lightA,
+          prefs: const ToolPrefs(levels: {'ha__call_secure': 'a'}),
+        );
+        final c = await boot(env);
+        final secure = tool(c, 'ha__call_secure');
+        final policy = c.read(riskPolicyProvider);
+        expect(policy.decide(secure, 's'), PolicyDecision.confirm);
+        expect(
+          policy.decide(secure, 's', access: AccessContext.lockedUnknownVoice),
+          PolicyDecision.unlock,
+        );
+      },
+    );
 
     test(
       'ha__call_secure gesperrt: nie im Umfang, Policy = Entsperren',

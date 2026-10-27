@@ -391,7 +391,9 @@ class _HaScreenState extends ConsumerState<HaScreen> {
           entities: value,
           approved: _approved,
           choiceOf: (e) => _chosen[e.entityId] ?? e,
-          kinds: ref.watch(haKindLevelsProvider).value ?? const HaKindLevels(),
+          kinds:
+              ref.watch(haKindLevelsProvider).value ??
+              const HaKindLevels.broken(),
           onToggle: (e, on) => unawaited(_toggle(e, on)),
           onLevel: (e, level) => unawaited(_setLevel(e, level)),
         ),

@@ -35,6 +35,9 @@ final class FakeHaEntityStore implements HaEntityStore {
   /// The levels per device kind.
   HaKindLevels kinds = const HaKindLevels();
 
+  /// If set, [kindLevels] throws it (an unreadable store).
+  Object? kindsError;
+
   @override
   Future<List<HaEntity>> load() async => [...entities];
 
@@ -51,7 +54,10 @@ final class FakeHaEntityStore implements HaEntityStore {
   Future<void> saveLastSync(DateTime time) async => synced = time;
 
   @override
-  Future<HaKindLevels> kindLevels() async => kinds;
+  Future<HaKindLevels> kindLevels() async {
+    if (kindsError case final e?) throw e;
+    return kinds;
+  }
 
   @override
   Future<void> saveKindLevels(HaKindLevels levels) async => kinds = levels;

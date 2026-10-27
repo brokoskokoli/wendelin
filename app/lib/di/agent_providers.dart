@@ -33,7 +33,7 @@ import 'session_manager.dart';
 import 'voice_providers.dart' show voiceSettingsProvider;
 
 /// Tools whose level is not chosen per tool: the Home Assistant call tools
-/// take the level of the device (WP154), a tool level would bypass it.
+/// take the level of the device (WP154); a tool level only adds to it.
 bool toolLevelPerDevice(String tool) =>
     tool == 'ha__call' || tool == 'ha__call_secure';
 
@@ -45,11 +45,9 @@ final riskPolicyProvider = Provider<RiskPolicy>((ref) {
   );
   var known = <String>{};
   void apply(ToolPrefs prefs) {
-    // The call tools of Home Assistant only keep the legacy "always
-    // confirm" (D); a chosen level would bypass the device's own level.
-    String? raw(String n) => toolLevelPerDevice(n)
-        ? (prefs.alwaysConfirm.contains(n) ? 'd' : null)
-        : prefs.levelOf(n);
+    // A stored level of the Home Assistant call tools counts in addition to
+    // the device's own level (the policy lets it only tighten, ADR 0022).
+    String? raw(String n) => prefs.levelOf(n);
     final names = {
       for (final n in {...prefs.levels.keys, ...prefs.alwaysConfirm})
         if (raw(n) != null) n,

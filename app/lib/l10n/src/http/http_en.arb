@@ -24,7 +24,7 @@
   "httpRunHomeTarget": "Home network target",
   "httpRunHomeTargetDetail": "May point to private addresses, then http too",
   "httpRunHomeTargetSem": "Home network target",
-  "httpRunLevel": "Level (suggestion for {verb}: {name})",
+  "httpRunLevel": "Risk (suggestion for {verb}: {name})",
   "httpRunNoAsk": "Run without asking (no undo)",
   "httpRunNoAskSem": "Run without asking",
   "httpRunOnlyWrite": "Only for POST/PUT/PATCH with level write",

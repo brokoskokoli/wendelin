@@ -123,6 +123,15 @@ final class RiskPolicy {
     RiskLevel.external => SecurityLevel.d,
   };
 
+  /// The level the user stored for [tool] that counts: none for a tool with
+  /// a fixed level ([LevelFixedTool]: MCP "confirm all", `ha__call_secure`).
+  SecurityLevel? _storedLevel(Tool tool) {
+    if (tool is LevelFixedTool && (tool as LevelFixedTool).levelFixed) {
+      return null;
+    }
+    return _levels[tool.name];
+  }
+
   /// The standard level of [tool]: its own ([DefaultLevelTool]) or the one
   /// of its risk ([defaultLevelFor]).
   static SecurityLevel defaultLevelOf(Tool tool) => tool is DefaultLevelTool
@@ -371,7 +380,7 @@ final class RiskPolicy {
       if (override == PolicyAction.confirm || mustAsk) {
         return PolicyDecision.unlock;
       }
-      final stored = _levels[tool.name];
+      final stored = _storedLevel(tool);
       // A per-device tool is let through (it refuses itself), but a stored
       // tool level (the legacy "always confirm" = D) still counts: locked is
       // never looser than unlocked, the stricter of both wins.
@@ -385,7 +394,7 @@ final class RiskPolicy {
           ? PolicyDecision.allow
           : PolicyDecision.unlock;
     }
-    final level = _levels[tool.name];
+    final level = _storedLevel(tool);
     final base = level == null
         ? defaultFor(tool.risk)
         : switch (access.of(level)) {

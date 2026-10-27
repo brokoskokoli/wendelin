@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/home_assistant.dart';
 import 'package:wendelin/di/integration_providers.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/ui/settings/ha_device_sections.dart';
@@ -179,6 +182,62 @@ void main() {
     );
     await pump(const HaKindLevels({'cover': 'c'}), blind);
     expect(find.text('Details · Stufe C · von Geräteart'), findsOneWidget);
+  });
+
+  testWidgets('Szene mit Art-Stufe A: Zeile nennt „höchstens“, nicht die '
+      'Zusage; Art D bleibt D', (tester) async {
+    Future<void> pump(HaKindLevels kinds) async {
+      const e = HaEntity(entityId: 'scene.abend', name: 'Abend');
+      await tester.pumpWidget(
+        TestEnv().app(
+          home: Scaffold(
+            body: HaAreaSection(
+              title: 'Raum',
+              entities: [e],
+              approved: {e.entityId},
+              choiceOf: (x) => x,
+              onToggle: (_, _) {},
+              onLevel: (_, _) {},
+              kinds: kinds,
+            ),
+          ),
+        ),
+      );
+      await settle(tester);
+    }
+
+    await pump(const HaKindLevels({'scene': 'a'}));
+    expect(
+      find.text(
+        'Details · Höchstens Stufe A · von Geräteart, je nach '
+        'Mitgliedern',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Details · Stufe A'), findsNothing);
+    await pump(const HaKindLevels({'scene': 'd'}));
+    expect(find.text('Details · Stufe D · von Geräteart'), findsOneWidget);
+  });
+
+  testWidgets('Art-Abschnitt: vor dem Laden keine Wahl, danach Wahl ohne '
+      'gespeicherte Arten zu überschreiben', (tester) async {
+    final gate = Completer<HaKindLevels>();
+    final env = TestEnv(
+      enabled: const {'ha'},
+      extraOverrides: [haKindLevelsProvider.overrideWith((_) => gate.future)],
+    );
+    await env.secrets.write('ha.kind_levels', '{"light":"d"}');
+    await pumpPage(tester, env, const IntegrationDetailScreen('ha'));
+    expect(key('haKindSection'), findsOneWidget);
+    expect(key('levelDetails_kind_media'), findsNothing);
+    gate.complete(const HaKindLevels({'light': 'd'}));
+    await settle(tester);
+    // Changed in the meantime (stale copy in the widget): kept as well.
+    await tester.runAsync(
+      () => env.secrets.write('ha.kind_levels', '{"light":"d","switch":"d"}'),
+    );
+    await choose(tester, 'media', 'a');
+    expect(await stored(tester, env), '{"light":"d","switch":"d","media":"a"}');
   });
 
   testWidgets('Jedes Tool der Einstellungen hat eine Stufenauswahl oder einen '

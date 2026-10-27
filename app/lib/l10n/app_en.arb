@@ -561,7 +561,7 @@
   "httpRunHomeTarget": "Home network target",
   "httpRunHomeTargetDetail": "May point to private addresses, then http too",
   "httpRunHomeTargetSem": "Home network target",
-  "httpRunLevel": "Level (suggestion for {verb}: {name})",
+  "httpRunLevel": "Risk (suggestion for {verb}: {name})",
   "httpRunNoAsk": "Run without asking (no undo)",
   "httpRunNoAskSem": "Run without asking",
   "httpRunOnlyWrite": "Only for POST/PUT/PATCH with level write",
@@ -699,6 +699,7 @@
   "levelKindCover": "Blinds",
   "levelKindIntro": "Applies to all devices of a kind that have no level of their own. Locks, alarms, garage, gate and door can only be set per device (Home Assistant setup). A device's own level always wins. Scenes with unknown members run at level C at most, scenes with a critical member never lower than that member.",
   "levelKindLight": "Lights",
+  "levelKindLoading": "Loading …",
   "levelKindMedia": "Media",
   "levelKindScene": "Scenes",
   "levelKindSummaryCover": "Default: D (blinds with the old \"no confirmation\": C)",
@@ -734,6 +735,14 @@
   },
   "levelSummaryKind": "Level {level} · from device kind",
   "@levelSummaryKind": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "levelSummaryKindScene": "At most level {level} · from device kind, depends on the members",
+  "@levelSummaryKindScene": {
     "placeholders": {
       "level": {
         "type": "String"

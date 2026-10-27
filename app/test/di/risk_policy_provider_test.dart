@@ -16,7 +16,6 @@ final _read = FakeTool(name: 'p__read');
 final _write = FakeTool(name: 'p__write', risk: RiskLevel.write);
 final _external = FakeTool(name: 'p__send', risk: RiskLevel.external);
 final _haCall = FakeTool(name: 'ha__call', risk: RiskLevel.write);
-final _haSecure = FakeTool(name: 'ha__call_secure', risk: RiskLevel.external);
 
 _Handle _make(ToolPrefs prefs) {
   final env = TestEnv(startup: StartupSettings(toolPrefs: prefs));
@@ -78,14 +77,17 @@ void main() {
     expect(p.decide(_external, 's'), PolicyDecision.confirm);
   });
 
-  test('die HA-Aufruf-Tools ignorieren eine Tool-Stufe, nur D bleibt', () {
-    final p = _make(
-      const ToolPrefs(levels: {'ha__call': 'a', 'ha__call_secure': 'a'}),
-    ).policy;
-    expect(p.levelFor('ha__call'), isNull);
-    expect(p.levelFor('ha__call_secure'), isNull);
-    expect(p.decide(_haCall, 's'), PolicyDecision.allow);
-    expect(p.decide(_haSecure, 's'), PolicyDecision.confirm);
+  test('ha__call: eine Tool-Stufe wirkt zusätzlich, das alte „immer '
+      'bestätigen“ ebenso (D)', () {
+    final strict = _make(const ToolPrefs(levels: {'ha__call': 'd'})).policy;
+    expect(strict.levelFor('ha__call'), SecurityLevel.d);
+    expect(strict.decide(_haCall, 's'), PolicyDecision.confirm);
+    final c = _make(const ToolPrefs(levels: {'ha__call': 'c'})).policy;
+    expect(c.decide(_haCall, 's'), PolicyDecision.allow);
+    expect(
+      c.decide(_haCall, 's', access: AccessContext.lockedUnknownVoice),
+      PolicyDecision.unlock,
+    );
     final legacy = _make(const ToolPrefs(alwaysConfirm: {'ha__call'})).policy;
     expect(legacy.decide(_haCall, 's'), PolicyDecision.confirm);
   });

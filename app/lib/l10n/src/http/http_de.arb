@@ -52,7 +52,7 @@
   "httpRunHomeTarget": "Heimnetz-Ziel",
   "httpRunHomeTargetDetail": "Darf auf private Adressen zeigen, dann auch http",
   "httpRunHomeTargetSem": "Heimnetz-Ziel",
-  "httpRunLevel": "Stufe (Vorschlag für {verb}: {name})",
+  "httpRunLevel": "Risiko (Vorschlag für {verb}: {name})",
   "@httpRunLevel": {
     "placeholders": {
       "verb": {

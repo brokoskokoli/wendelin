@@ -56,5 +56,14 @@
   "levelWarnKindCover": "Alle Rollos dieser Art lassen sich dann ohne Bestätigung bewegen, bei Stufe A sogar bei gesperrtem Gerät. Garage, Tor und Tür sind davon ausgenommen. Die Verantwortung liegt bei dir.",
   "levelWarnKindSwitch": "Schalter können Steckdosen und damit Geräte wie Heizung oder Herd schalten. Bei Stufe A geht das sogar bei gesperrtem Gerät. Die Verantwortung liegt bei dir.",
   "levelRefCall": "Die Stufe legst du je Geräteart fest (unten) oder je Gerät in der Home-Assistant-Einrichtung.",
-  "levelRefSecure": "Schloss, Alarm, Garage, Tor und Tür: Stufe je Gerät in der Home-Assistant-Einrichtung. Rollos: siehe „Stufe je Geräteart“."
+  "levelRefSecure": "Schloss, Alarm, Garage, Tor und Tür: Stufe je Gerät in der Home-Assistant-Einrichtung. Rollos: siehe „Stufe je Geräteart“.",
+  "levelSummaryKindScene": "Höchstens Stufe {level} · von Geräteart, je nach Mitgliedern",
+  "@levelSummaryKindScene": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "levelKindLoading": "Lädt …"
 }

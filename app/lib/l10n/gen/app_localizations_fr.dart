@@ -1736,7 +1736,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String httpRunLevel(String verb, String name) {
-    return 'Niveau (suggestion pour $verb : $name)';
+    return 'Risque (suggestion pour $verb : $name)';
   }
 
   @override
@@ -2119,6 +2119,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get levelKindLight => 'Lumières';
 
   @override
+  String get levelKindLoading => 'Chargement …';
+
+  @override
   String get levelKindMedia => 'Médias';
 
   @override
@@ -2168,6 +2171,11 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String levelSummaryKind(String level) {
     return 'Niveau $level · du type d\'appareil';
+  }
+
+  @override
+  String levelSummaryKindScene(String level) {
+    return 'Au plus niveau $level · du type d\'appareil, selon les membres';
   }
 
   @override

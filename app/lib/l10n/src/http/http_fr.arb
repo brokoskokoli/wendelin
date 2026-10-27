@@ -24,7 +24,7 @@
   "httpRunHomeTarget": "Cible du réseau local",
   "httpRunHomeTargetDetail": "Peut pointer vers des adresses privées, alors aussi en http",
   "httpRunHomeTargetSem": "Cible du réseau local",
-  "httpRunLevel": "Niveau (suggestion pour {verb} : {name})",
+  "httpRunLevel": "Risque (suggestion pour {verb} : {name})",
   "httpRunNoAsk": "Exécuter sans demander (pas d’annulation)",
   "httpRunNoAskSem": "Exécuter sans demander",
   "httpRunOnlyWrite": "Uniquement pour POST/PUT/PATCH avec le niveau write",

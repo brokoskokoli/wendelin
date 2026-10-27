@@ -436,10 +436,15 @@ final class HaCallSecureTool extends HaCallTool
     implements
         ConfirmationPreparer,
         FixedConfirmationTool,
+        LevelFixedTool,
         NoNetworkTarget,
         TrustedContentSource {
   /// Creates the tool.
   const HaCallSecureTool(super.ctx);
+
+  /// Always D: a stored tool level never loosens it.
+  @override
+  bool get levelFixed => true;
 
   @override
   String get name => 'ha__call_secure';

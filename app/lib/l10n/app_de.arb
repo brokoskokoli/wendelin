@@ -864,7 +864,7 @@
   "httpRunHomeTarget": "Heimnetz-Ziel",
   "httpRunHomeTargetDetail": "Darf auf private Adressen zeigen, dann auch http",
   "httpRunHomeTargetSem": "Heimnetz-Ziel",
-  "httpRunLevel": "Stufe (Vorschlag für {verb}: {name})",
+  "httpRunLevel": "Risiko (Vorschlag für {verb}: {name})",
   "@httpRunLevel": {
     "placeholders": {
       "verb": {
@@ -1119,6 +1119,7 @@
   "levelKindCover": "Rollos",
   "levelKindIntro": "Gilt für alle Geräte einer Art, die keine eigene Stufe haben. Schloss, Alarm, Garage, Tor und Tür gibt es nur je Gerät (Home-Assistant-Einrichtung). Eine eigene Gerätestufe gewinnt immer. Szenen mit unbekannten Mitgliedern laufen höchstens auf Stufe C, Szenen mit kritischem Mitglied nie niedriger als dieses.",
   "levelKindLight": "Licht",
+  "levelKindLoading": "Lädt …",
   "levelKindMedia": "Medien",
   "levelKindScene": "Szenen",
   "levelKindSummaryCover": "Standard: D (Rollos mit altem „ohne Rückfrage“: C)",
@@ -1154,6 +1155,14 @@
   },
   "levelSummaryKind": "Stufe {level} · von Geräteart",
   "@levelSummaryKind": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "levelSummaryKindScene": "Höchstens Stufe {level} · von Geräteart, je nach Mitgliedern",
+  "@levelSummaryKindScene": {
     "placeholders": {
       "level": {
         "type": "String"

@@ -56,5 +56,14 @@
   "levelWarnKindCover": "Tous les volets de ce type pourront bouger sans confirmation, au niveau A même appareil verrouillé. Garage, portail et porte sont exclus. La responsabilité est la vôtre.",
   "levelWarnKindSwitch": "Les interrupteurs peuvent commander des prises, donc chauffage ou cuisinière. Au niveau A, même appareil verrouillé. La responsabilité est la vôtre.",
   "levelRefCall": "Réglez le niveau par type d'appareil (ci-dessous) ou par appareil dans la configuration Home Assistant.",
-  "levelRefSecure": "Serrure, alarme, garage, portail, porte : niveau par appareil dans la configuration Home Assistant. Volets : voir « Niveau par type d'appareil »."
+  "levelRefSecure": "Serrure, alarme, garage, portail, porte : niveau par appareil dans la configuration Home Assistant. Volets : voir « Niveau par type d'appareil ».",
+  "levelSummaryKindScene": "Au plus niveau {level} · du type d'appareil, selon les membres",
+  "@levelSummaryKindScene": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "levelKindLoading": "Chargement …"
 }

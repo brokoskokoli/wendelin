@@ -3037,7 +3037,7 @@ abstract class AppLocalizations {
   /// No description provided for @httpRunLevel.
   ///
   /// In de, this message translates to:
-  /// **'Stufe (Vorschlag für {verb}: {name})'**
+  /// **'Risiko (Vorschlag für {verb}: {name})'**
   String httpRunLevel(String verb, String name);
 
   /// No description provided for @httpRunNoAsk.
@@ -3652,6 +3652,12 @@ abstract class AppLocalizations {
   /// **'Licht'**
   String get levelKindLight;
 
+  /// No description provided for @levelKindLoading.
+  ///
+  /// In de, this message translates to:
+  /// **'Lädt …'**
+  String get levelKindLoading;
+
   /// No description provided for @levelKindMedia.
   ///
   /// In de, this message translates to:
@@ -3735,6 +3741,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Stufe {level} · von Geräteart'**
   String levelSummaryKind(String level);
+
+  /// No description provided for @levelSummaryKindScene.
+  ///
+  /// In de, this message translates to:
+  /// **'Höchstens Stufe {level} · von Geräteart, je nach Mitgliedern'**
+  String levelSummaryKindScene(String level);
 
   /// No description provided for @levelSummaryScene.
   ///

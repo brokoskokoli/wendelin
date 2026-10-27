@@ -11,6 +11,7 @@ import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/ui/settings/mcp/mcp_server_detail_screen.dart';
 import 'package:wendelin/ui/settings/mcp/mcp_servers_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_mcp/wendelin_mcp.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
@@ -174,6 +175,78 @@ void main() {
     await _sheet(tester, 'get_state');
     expect(_key('levelDetails_$_read'), findsNothing);
   });
+
+  testWidgets('„Alle Tools bestätigen“ überstimmt jede gespeicherte Stufe '
+      '(auch A): entsperrt Rückfrage, gesperrt Entsperren', (tester) async {
+    final c = await _open(
+      tester,
+      prefs: const ToolPrefs(levels: {_read: 'a', _write: 'b'}),
+      confirmAll: true,
+    );
+    final tools = c
+        .read(toolRegistryProvider)
+        .integrations
+        .expand((i) => i.integration.tools);
+    final policy = c.read(riskPolicyProvider);
+    for (final name in [_read, _write]) {
+      final tool = tools.firstWhere((t) => t.name == name);
+      expect(policy.decide(tool, 's'), PolicyDecision.confirm, reason: name);
+      expect(
+        policy.decide(tool, 's', access: AccessContext.lockedUnknownVoice),
+        PolicyDecision.unlock,
+        reason: name,
+      );
+    }
+  });
+
+  testWidgets(
+    'Server löschen entfernt alle Stufen mit Präfix, auch unbekannter '
+    'Tools; andere Server und HTTP bleiben',
+    (tester) async {
+      final c = await _open(
+        tester,
+        prefs: const ToolPrefs(
+          levels: {
+            _read: 'b',
+            'mcp_homeserver__ghost': 'a',
+            'mcp_other__x': 'a',
+            'http__licht': 'a',
+          },
+        ),
+      );
+      final integration = c
+          .read(toolRegistryProvider)
+          .integrations
+          .firstWhere((i) => i.id == 'mcp_homeserver')
+          .integration;
+      final cleanup = c.read(userIntegrationCleanupsProvider).first;
+      // Teilweises Entfernen (Tool umbenannt): nur die bekannten Tools.
+      await cleanup(
+        IntegrationRemoval(
+          integration: integration,
+          toolNames: {_read},
+          whole: false,
+        ),
+      );
+      expect(c.read(toolPrefsProvider).levels, {
+        'mcp_homeserver__ghost': 'a',
+        'mcp_other__x': 'a',
+        'http__licht': 'a',
+      });
+      // Der ganze Server weg: auch das unbekannte Tool.
+      await cleanup(
+        IntegrationRemoval(
+          integration: integration,
+          toolNames: {_read},
+          whole: true,
+        ),
+      );
+      expect(c.read(toolPrefsProvider).levels, {
+        'mcp_other__x': 'a',
+        'http__licht': 'a',
+      });
+    },
+  );
 
   testWidgets('Gesperrt läuft ein MCP-Tool nur auf A und nur ohne Stimme '
       'nach der Tabelle wie jedes Tool', (tester) async {
