@@ -86,13 +86,15 @@ class _SpotifyScreenState extends ConsumerState<SpotifyScreen> {
       await _refresh(registry);
     }
     if (!mounted) return;
+    if (error == null) {
+      // Commit while the field still holds the value, then clear it.
+      SecretField.finishAutofill();
+      _clientId.clear();
+    }
     setState(() {
       _busy = false;
       _error = error == null ? null : _words(error);
-      if (error == null) {
-        _signedIn = true;
-        _clientId.clear();
-      }
+      if (error == null) _signedIn = true;
     });
   }
 
@@ -207,13 +209,13 @@ class _SpotifyScreenState extends ConsumerState<SpotifyScreen> {
   }
 
   List<Widget> _loginForm() => [
-    TextField(
-      key: const ValueKey('spotifyClientId'),
-      controller: _clientId,
-      style: WText.body,
-      autocorrect: false,
-      enableSuggestions: false,
-      decoration: InputDecoration(labelText: context.l10n.spotifyClientIdLabel),
+    AutofillGroup(
+      onDisposeAction: AutofillContextAction.cancel,
+      child: SecretField(
+        key: const ValueKey('spotifyClientId'),
+        controller: _clientId,
+        label: context.l10n.spotifyClientIdLabel,
+      ),
     ),
     if (_error != null)
       Text(

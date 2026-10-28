@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/spotify.dart';
+import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/spotify_screen.dart';
 import 'package:wendelin/voice/dev_log.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -11,6 +12,7 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 import '../support/test_env.dart';
 import 'integrations_screen_test.dart';
+import 'secret_fields_test.dart' show expectSecret, fieldOf;
 
 const _clientId = '0123456789abcdef0123456789abcdef';
 
@@ -75,6 +77,44 @@ void main() {
     await tester.tap(find.byTooltip('Zurück'));
     await settle(tester);
     expect(tileWidget(tester, 'Spotify').status, IntegrationStatus.active);
+  });
+
+  testWidgets('Client-ID ist ein Geheimnis-Feld; Autofill-Commit läuft nach '
+      'erfolgreicher Anmeldung vor dem Leeren', (tester) async {
+    const key = ValueKey('spotifyClientId');
+    final seen = <String>[];
+    final original = SecretField.autofillFinisher;
+    SecretField.autofillFinisher = () =>
+        seen.add(fieldOf(tester, key).controller!.text);
+    addTearDown(() => SecretField.autofillFinisher = original);
+    final env = TestEnv(enabled: const {'spotify'});
+    await pumpIntegrations(tester, env);
+    await tester.tap(
+      find.descendant(
+        of: tile('Spotify'),
+        matching: find.widgetWithText(OutlinedButton, 'Einrichten'),
+      ),
+    );
+    await settle(tester);
+    expectSecret(tester, key);
+    final group = tester.widget<AutofillGroup>(
+      find.ancestor(of: find.byKey(key), matching: find.byType(AutofillGroup)),
+    );
+    expect(
+      group.onDisposeAction,
+      AutofillContextAction.cancel,
+      reason: 'Commit nur bei erfolgreicher Anmeldung',
+    );
+
+    await tester.enterText(find.byKey(key), 'zu-kurz');
+    await tester.tap(find.text('Bei Spotify anmelden'));
+    await settle(tester);
+    expect(seen, isEmpty, reason: 'kein Commit bei Fehler');
+
+    await tester.enterText(find.byKey(key), _clientId);
+    await tester.tap(find.text('Bei Spotify anmelden'));
+    await settle(tester);
+    expect(seen, [_clientId], reason: 'erst committen, dann leeren');
   });
 
   testWidgets('abgelehnte Anmeldung zeigt den Grund und speichert nichts', (
