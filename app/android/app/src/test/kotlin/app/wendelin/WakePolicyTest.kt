@@ -78,6 +78,13 @@ class WakePolicyTest {
     }
 
     @Test
+    fun inCommunicationModeIsAlwaysACall() {
+        // WP165: the app sets no communication mode itself, so mode 3 is never its own.
+        assertEquals("call", WakePolicy.conflict(audioMode = 3, foreignRecording = false))
+        assertEquals("call", WakeConflictWatcher.reasonFor(audioMode = 3, ownSession = 1, clients = emptyList()))
+    }
+
+    @Test
     fun callsAndForeignRecordingsNeedTheMicrophone() {
         assertEquals("call", WakePolicy.conflict(audioMode = 2, foreignRecording = false))
         assertEquals("call", WakePolicy.conflict(audioMode = 3, foreignRecording = true))

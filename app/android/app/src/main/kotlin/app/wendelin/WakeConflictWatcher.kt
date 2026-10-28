@@ -72,11 +72,11 @@ class WakeConflictWatcher(
 
         /**
          * The reason for the current state: a recording of another session that is not silenced
-         * counts; the app's own call path ([SpeechRoute.active]) is no call.
+         * counts.
          */
         internal fun reasonFor(audioMode: Int, ownSession: Int, clients: List<RecordingClient>): String? {
             val foreign = clients.any { it.session != ownSession && !it.silenced }
-            return WakePolicy.conflictNow(audioMode, foreign)
+            return WakePolicy.conflict(audioMode, foreign)
         }
     }
 }
