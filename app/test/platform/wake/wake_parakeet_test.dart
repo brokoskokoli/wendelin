@@ -6,8 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/voice_settings_providers.dart';
 import 'package:wendelin/di/wake_providers.dart';
-import 'package:wendelin/voice/wake/wake_storage.dart';
-import 'package:wendelin_storage/testing.dart';
 import 'package:wendelin/platform/voice/nemo_sherpa.dart';
 import 'package:wendelin/platform/voice/whisper_registry.dart';
 import 'package:wendelin/platform/voice/whisper_sherpa.dart';
@@ -15,6 +13,8 @@ import 'package:wendelin/platform/voice/whisper_stt.dart';
 import 'package:wendelin/platform/wake/device_wake_parts.dart';
 import 'package:wendelin/platform/wake/wake_detector.dart';
 import 'package:wendelin/platform/wake/wake_host.dart';
+import 'package:wendelin/voice/wake/wake_storage.dart';
+import 'package:wendelin_storage/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../recognizer/recognizer_host_test.dart' show FakeEngines;
