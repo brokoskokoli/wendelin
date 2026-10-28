@@ -272,9 +272,12 @@ final class SpotifyPlayTool extends IntegrationTool
     );
     final where = start.isPhone ? '' : ' auf „${start.deviceName}“';
     final fell = start.fellBackFrom;
+    // Only checked playback may claim "ich spiele"; unchecked just says sent.
     final hint = fell == null
         ? ''
-        : ' Auf „$fell“ kam nichts an, ich spiele auf dem Handy.';
+        : start.confirmed
+        ? ' Auf „$fell“ kam nichts an, ich spiele auf dem Handy.'
+        : ' Auf „$fell“ kam nichts an, ich habe es ans Handy geschickt.';
     final what = target == null ? null : '${target.label} (${target.uri})';
     final base =
         (target == null

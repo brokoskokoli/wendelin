@@ -423,6 +423,53 @@ void main() {
       },
     );
 
+    test(
+      'Ausweichen, Handy ungeprüft: ehrlich „geschickt“, nie „spiele“',
+      () async {
+        api
+          ..knownDevices.add(tv)
+          ..activeDeviceId = 'tv'
+          ..playing = true
+          ..rejectingDeviceIds.add('tv');
+        api.onPlay = () => api.failNext(
+          'playback',
+          const PortException(PortErrorKind.unavailable, 'Anfragelimit'),
+        );
+        final o = await call('spotify__play', {'query': 'bohemian'});
+        expect(o.isError, isFalse, reason: o.text);
+        expect(
+          o.text,
+          contains(
+            'Auf „Wohnzimmer“ kam nichts an, ich habe es ans Handy '
+            'geschickt.',
+          ),
+        );
+        expect(o.text, isNot(contains('ich spiele')));
+        expect(o.text, isNot(contains('Spielt')));
+        expect(o.summary, 'Gesendet');
+        expect(o.fixed, isNull);
+      },
+    );
+
+    test(
+      'Fortsetzen, Prüfung scheitert: „Fortsetzen gesendet“, kein „Spielt“',
+      () async {
+        playing();
+        api.playing = false;
+        api.onPlay = () => api.failNext(
+          'playback',
+          const PortException(PortErrorKind.unavailable, 'Anfragelimit'),
+        );
+        final o = await call('spotify__play');
+        expect(o.isError, isFalse);
+        expect(o.text, startsWith('Fortsetzen gesendet.'));
+        expect(o.text, contains('nicht geprüft werden'));
+        expect(o.text, isNot(contains('Spielt')));
+        expect(o.summary, 'Gesendet');
+        expect(o.fixed, isNull);
+      },
+    );
+
     test('device: nennt das Gerät; Undo geht an dasselbe Gerät', () async {
       api.knownDevices.add(tv);
       playing(uri: 'spotify:track:7hQJA50XrCWABAu5v6QZ4i', title: 'Davor');

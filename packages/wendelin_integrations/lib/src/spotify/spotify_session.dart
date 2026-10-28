@@ -262,16 +262,14 @@ final class SpotifySession {
     // (cast devices report late): stay there, unconfirmed, no error.
     if (result != SpotifyVerdict.playing && !isPhone) return done(false);
     if (result != SpotifyVerdict.playing) {
-      // The phone rejected the command and could not be woken.
+      // Only the phone gets here (a foreign device returned above): it
+      // rejected the command or could not be woken.
       if (rejection != null) throw rejection;
       throw PortException(
         PortErrorKind.failed,
-        isPhone
-            ? 'Spotify hat den Befehl angenommen, aber auf dem Handy läuft '
-                  'nichts. Die Spotify-App reagiert nicht; bitte Spotify '
-                  'einmal selbst öffnen und dann noch einmal versuchen.'
-            : 'Spotify hat den Befehl angenommen, aber auf dem Gerät '
-                  '„${target.name}“ läuft nichts.',
+        'Spotify hat den Befehl angenommen, aber auf dem Handy läuft '
+        'nichts. Die Spotify-App reagiert nicht; bitte Spotify '
+        'einmal selbst öffnen und dann noch einmal versuchen.',
       );
     }
     return done(true);
