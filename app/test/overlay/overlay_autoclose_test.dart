@@ -224,20 +224,6 @@ void main() {
       await endListening(tester, c);
       await expectOpen(tester);
     });
-
-    testWidgets('Mikrofon-Tipp beendet das Zuhoeren: kein Auto-Schliessen', (
-      tester,
-    ) async {
-      final c = await open(tester, autoStart: false);
-      c
-          .read(voiceControllerProvider.notifier)
-          .seed(const VoiceUiState(phase: VoiceState.listening));
-      await tester.pump();
-      await tester.tap(find.byType(MicButton));
-      await tester.pump();
-      c.read(voiceControllerProvider.notifier).seed(const VoiceUiState());
-      await expectOpen(tester);
-    });
   });
 
   testWidgets(
@@ -291,25 +277,87 @@ void main() {
     expect(closedByIdle(), isFalse);
   });
 
-  testWidgets(
-    'Mikrofon-Tipp betrifft nur diese Anfrage: die naechste schliesst '
-    'wieder',
-    (tester) async {
+  // Keyboard opened and closed again without sending (WP172).
+  group('Tastatur auf und wieder zu', () {
+    Future<void> openClose(WidgetTester t) async {
+      final tip = find.byTooltip(AppLocalizationsDe().overlayTextInput);
+      expect(tip, findsOneWidget);
+      await t.tap(tip);
+      await t.pump();
+      expect(logs.any((l) => l.contains('overlay-close')), isFalse);
+      await t.tap(tip);
+      await _pump(t, steps: 30);
+    }
+
+    testWidgets('nichts offen: schliesst by=idle', (tester) async {
+      await open(tester, autoStart: false);
+      await openClose(tester);
+      expect(closedByIdle(), isTrue);
+      expect(platform.calls.where((x) => x == 'releaseHost'), hasLength(1));
+    });
+
+    testWidgets('offene Rueckfrage: bleibt offen', (tester) async {
       final c = await open(tester, autoStart: false);
-      final v = c.read(voiceControllerProvider.notifier)
-        ..seed(const VoiceUiState(phase: VoiceState.listening));
-      await tester.pump();
+      c
+          .read(agentControllerProvider.notifier)
+          .seed(
+            ConversationState(
+              pending: ToolQuestion(
+                ConfirmationRequired(
+                  call: call('c1', 'calendar__delete_event', '{}'),
+                  description: 'Termin löschen',
+                  respond: (_) {},
+                ),
+                request: 'Lösch den Termin',
+              ),
+            ),
+          );
+      await openClose(tester);
+      expect(logs.any((l) => l.contains('overlay-close')), isFalse);
+    });
+
+    // (Locked, the keyboard button is disabled: no unlock case here.)
+    testWidgets('Antwort laeuft noch: bleibt offen', (tester) async {
+      final c = await open(tester, autoStart: false);
+      c
+          .read(agentControllerProvider.notifier)
+          .seed(ConversationState(running: true));
+      await openClose(tester);
+      expect(logs.any((l) => l.contains('overlay-close')), isFalse);
+    });
+  });
+
+  // Mic tap while listening or during the answer acts like a stop: short
+  // „Abgebrochen.“, then the stop path closes (by=stop, releaseHost).
+  for (final during in [
+    VoiceState.listening,
+    VoiceState.thinking,
+    VoiceState.speaking,
+  ]) {
+    testWidgets('Mikro-Tipp waehrend ${during.name}: wie Stopp, schliesst '
+        'by=stop', (tester) async {
+      if (during == VoiceState.thinking) {
+        llm = FakeLlmProvider([ScriptedTurn.hang()]);
+      }
+      await open(tester, speak: const Duration(minutes: 5));
+      for (var i = 0; i < 300 && !phases.contains(during); i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(phases.last, during);
       await tester.tap(find.byType(MicButton));
       await tester.pump();
-      v.seed(const VoiceUiState());
+      expect(find.text('Abgebrochen.'), findsOneWidget);
+      expect(closedBy('stop'), isFalse, reason: 'erst nach der Meldung');
+      await tester.pump(
+        AssistantOverlayScreen.stopCloseDelay +
+            const Duration(milliseconds: 50),
+      );
       await _pump(tester, steps: 5);
-      expect(closedByIdle(), isFalse, reason: 'Mikro-Tipp: bleibt offen');
-      platform.trigger(); // the next request (real pipeline)
-      await _pump(tester);
-      expect(llm.requests, hasLength(1));
-      expect(closedByIdle(), isTrue);
-    },
-  );
+      expect(closedBy('stop'), isTrue);
+      expect(closedByIdle(), isFalse);
+      expect(platform.calls.where((x) => x == 'releaseHost'), hasLength(1));
+    });
+  }
 
   testWidgets('Tastatur waehrend des echten Zuhoerens: kein Schliessen', (
     tester,

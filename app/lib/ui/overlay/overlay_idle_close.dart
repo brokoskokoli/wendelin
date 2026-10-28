@@ -51,10 +51,9 @@ class IdleCloser {
   final void Function(String by) close;
   final Duration Function() stopCloseDelay;
 
-  // Listening ended because of our own retrigger (not the end of a request)
-  // or because the user tapped the microphone off: no automatic close.
+  // Listening ended because of our own retrigger (not the end of a request):
+  // no automatic close.
   bool _retriggering = false;
-  bool _micCancelled = false;
 
   // A stop or error message is shown; this timer closes after it.
   Timer? _closeTimer;
@@ -70,9 +69,6 @@ class IdleCloser {
 
   /// Disposes the timer.
   void dispose() => cancelClose();
-
-  /// The user tapped the microphone off.
-  void micCancelled() => _micCancelled = true;
 
   /// Runs [cancel] (our own cancel at a retrigger or undo) without closing.
   Future<void> retrigger(Future<void> Function() cancel) async {
@@ -94,18 +90,19 @@ class IdleCloser {
       ),
       (was, now) {
         if (now) {
-          _micCancelled = false;
           cancelClose(); // listening again: no pending stop/error close
         }
         // Decide after the other reactions of the same moment (stop word,
         // unlock offer) set their blockers: idle is reported before them.
-        if (was == true && !now) scheduleMicrotask(_onListeningEnded);
+        if (was == true && !now) scheduleMicrotask(recheck);
       },
     );
   }
 
-  void _onListeningEnded() {
-    if (!enabled() || typing() || _micCancelled) {
+  /// Decides now, as at the end of listening (also after the keyboard was
+  /// closed again without sending).
+  void recheck() {
+    if (!enabled() || typing()) {
       return;
     }
     if (closing() || _retriggering || (_closeTimer?.isActive ?? false)) return;

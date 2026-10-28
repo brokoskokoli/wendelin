@@ -398,6 +398,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     if (ref.read(voiceControllerProvider).active) {
       unawaited(_voice.cancel(VoiceCancelReason.keyboard));
     }
+    if (!_typing) _idle.recheck(); // closed again, nothing left: closes
   }
 
   void _send(String text) {
@@ -473,7 +474,6 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
 
   void _onMic(VoiceUiState voice, ConversationState conversation) {
     if (voice.active) {
-      _idle.micCancelled();
       unawaited(_voice.cancel());
     } else if (conversation.running) {
       _agent.cancel();
