@@ -1,0 +1,22 @@
+# WP170 – Doku bereinigen: Widersprüche, Veraltetes, Doppelungen, Löschen von Erledigtem
+
+**Zuordnung:** Auftrag des Maintainers vom 2026-10-28: „Alle Dokumente querlesen, Unstimmigkeiten finden, Überflüssiges raus, Optimierungsvorschläge.“ Drei Prüfberichte (nur lesend erstellt) liegen außerhalb des Repos: `../james-wt/handoff/wp170-doc-review-regeln.md`, `-konzept.md`, `-pakete.md` (je Befund Datei:Zeile, Schwere, Vorschlag).
+
+## Entscheidungen Maintainer (2026-10-28)
+1. **TEE-Prüffehler:** Es gilt das Verhalten im Code (`retry_offer.dart`, K104/K28): nach einem Prüffehler (außer GPU-Stufe) wird ein anderer eingerichteter Anbieter mit mindestens gleicher Datenschutzstufe **angeboten**, gewechselt wird nur nach „Ja“, nie automatisch. K27-Text im Konzept und `docs/architecture/tee.md` entsprechend umformulieren (neuer K-Eintrag, der K27 präzisiert).
+2. **Commit-Trailer:** echtes Modell. Hook (`tool/hooks/commit-msg-guard.sh`) und CI-Prüfung akzeptieren `Co-Authored-By: Claude <Modell> <noreply@anthropic.com>` für jedes Claude-Modell (Muster, fail-closed für alles andere); `docs/agents/common.md` anpassen. Kein `Claude-Session`-Trailer.
+3. **Kamera/Bild gestrichen** (nicht nur zurückgestellt): aus `M6-PLAN.md`, Konzept und sonstiger Doku entfernen bzw. als gestrichen vermerken (README übernimmt WP169).
+4. **Erledigtes löschen, nicht archivieren:** Pläne M2–M5 und `M2-fixes.md`, `R-refactoring.md`, Paketdateien WP01–WP60, die Paketdateien zum entfernten Stopp-Wort/Gesprächston, `WP98-migration.md`, alte Gerätetests (`m2-device.md`, `m3-device.md`, `wp56-device.md`, Doppel `docs/notes/m3-device-test.md`) und weitere gemergte, nicht mehr gebrauchte Paketdateien nach Prüfung. Der Verlauf bleibt in Git. Verweise darauf in anderen Dokumenten anpassen (`check_docs` muss grün sein); Paketindex `docs/work-packages/README.md` auf Kurzform mit Verweis auf STATUS.
+
+## Inhalt
+- **Teil A (Regeln):** Bericht „regeln“ abarbeiten: Widersprüche (Gate im Commit-Hook gibt es nicht – Doku korrigieren, nicht den Hook erweitern; Parallelität 4 Sitzungen/1 Sub-Agent einheitlich; lokale App-Suite/Gate-Regeln einheitlich), `start-wendelin-coding.sh` auf project-supervisor ohne festen Namen bringen oder löschen, Doppelungen auf AGENTS.md als einzige Quelle reduzieren, `docs/agents/wp-supervisor.md` mit Projektdetails anlegen (Trailer, Gate-Pflicht `--changed` vor dem Push), RC-Tag-Schreibweise vereinheitlichen. Globale Dateien unter `~/.claude/` nicht ändern; Bedarf dort in der Fertigmeldung nennen.
+- **Teil B (Konzept/ADR/Architektur):** Bericht „konzept“ abarbeiten: überholten Konzepttext an die K-Einträge angleichen (Stopp-Wort, Gesprächston, iOS-Streuung, Spotify ohne App Remote SDK, alte Tool-Namen, Erinnerungen/Apps-Links ohne Code, Station nach Stufen), ADRs mit Vermerk „überholt durch …“ (0003, 0005 §5, 0006 §3, 0013, 0014 §3 → K44, 0015, 0016), Architektur (`ports.md`, `wiring.md` Prüfer B, `voice.md` Schwelle 0,50), Widerspruch „external immer bestätigen“ vs. „frei lockerbar“ nach ADR 0022 auflösen. Konzeptänderungen nicht still: Jede inhaltliche Änderung am Konzepttext bekommt einen K-Eintrag `offen` oder verweist auf einen bestehenden; Liste in der Fertigmeldung. Archivierung bestätigter K-Einträge nach den vorhandenen Regeln (`docs/concept-changelog/`, `check_concept`).
+- **Teil C (Pakete/Tests):** Bericht „pakete“ abarbeiten: überholte Gerätetest-Anleitungen mit Vermerk oder löschen (Stopp-Wort, Gesprächston, wp161 C2), fehlende Anleitungen `docs/testing/m5/wp158.md`, `wp162.md`, `wp167.md` (kurz) anlegen bzw. auf `wp166.md` verweisen, Pläne M5/M6 an den Stand anpassen, Löschliste aus Entscheidung 4 umsetzen, `~/ai/...`-Pfade in Paketdateien neutralisieren.
+
+## Abnahmekriterien
+- [ ] Jeder Befund der drei Berichte ist erledigt oder begründet verworfen (Liste in der Fertigmeldung bzw. `../james-wt/handoff/wp170-erledigt.md`).
+- [ ] Hook-Test: Trailer mit Sonnet/Opus/Haiku-Modellnamen wird angenommen, fremde Trailer/E-Mails abgelehnt (Selbsttest des Hooks, Mutationsbeleg).
+- [ ] `check_docs`, `check_concept`, `check_privacy` grün; `--changed` grün, CI grün, Review FREIGABE (Schwerpunkt: nichts Gültiges gelöscht, keine stille Konzeptänderung).
+
+## Parallel-Hinweise
+- WP169 läuft (README.md, README.de.md, LICENSE, REUSE, `website/`, `.github/workflows/pages.yml`). Diese Dateien hier **nicht** ändern; Hinweise für README in der Fertigmeldung nennen.

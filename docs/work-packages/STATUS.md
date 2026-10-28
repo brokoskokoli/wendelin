@@ -1,145 +1,75 @@
 # Umsetzungsstand
 
-Einzige Stelle für den Stand der Meilensteine und Arbeitspakete. Gepflegt vom Orchestrator auf `main`, bei jedem Start, Merge oder Verwerfen eines Pakets (Paket-Branches ändern diese Datei nicht).
+Einzige Stelle für den Stand der Meilensteine und Arbeitspakete. Gepflegt vom Orchestrator auf `main`, bei jedem Start, Merge oder Verwerfen eines Pakets (Paket-Branches ändern diese Datei nicht). Gemergte Pakete stehen nicht mehr einzeln hier (siehe `git log`, Pakettexte unter `docs/work-packages/`).
 
-Gleichzeitig laufen höchstens 2 Pakete, solange der Maintainer am Rechner ist (Rechnerlast, Maintainer 2026-10-18); bei Abwesenheit mit Freigabe bis 4, je 1 Sub-Agent (2026-10-19; AGENTS.md nennt die Obergrenze 4).
+Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` · `verworfen`
 
-Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
+Parallelität: bis zu 4 Paket-Sitzungen, je 1 Sub-Agent (AGENTS.md); Standard 2, solange der Maintainer am Rechner ist.
 
-Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP169; Release v0.1.0 (2fd52524, = rc13; RC-Releases auf GitHub gelöscht; nächster RC braucht eine höhere pubspec-Version); als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-28; läuft: WP169, WP170, WP171, WP172; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
 
 ## Meilensteine
 
-| Meilenstein | Pakete | Status |
-| --- | --- | --- |
-| M0 Gerüst, M1 Text-Agent | WP01–WP14 | erledigt |
-| M2 Sprache und Assistent (+ Nachbesserungen) | WP15–WP20, WP30–WP33 | erledigt |
-| M3 Routing, MCP, Erweiterung | WP21–WP29 | erledigt (Telefontest in M4 aufgegangen) |
-| Refactoring R1–R6 | WP35–WP40 | erledigt |
-| M4 Wake Word und TEE (+ Gerätetest-Korrekturen) | WP41–WP78, WP80 | erledigt; Rest offen: K47 (nach Stopp-Test 11.6), Test 11.7a (Maintainer) |
-| M5 Ausbau Android | WP76b–d, WP79, WP81–WP98, WP102–WP110 | in Arbeit (Plan `M5-PLAN.md`) |
-| M6 Ausbau 2: Kamera/Bild, Stationsmodus, Wake-Word-Vergleich, Modell-Empfehlung | WP99–WP101 (Stationsmodus), Rest offen | in Arbeit: WP99 (Go Maintainer 2026-10-19; WP92c ist in WP154 aufgegangen); Rest geplant (Plan `M6-PLAN.md`) |
-| M7 iOS | – | geplant |
+| Meilenstein | Inhalt | Pakete | Status |
+| --- | --- | --- | --- |
+| M0–M1 | Gerüst, Text-Agent | WP01–WP14 | erledigt |
+| M2 | Sprache und Assistent (+ Nachbesserungen) | WP15–WP20, WP30–WP33 | erledigt |
+| M3 | Routing, MCP, Erweiterung | WP21–WP29 | erledigt |
+| R1–R6 | Refactoring | WP35–WP40 | erledigt |
+| M4 | Wake Word und TEE (+ Gerätetest-Korrekturen) | WP41–WP78, WP80 | erledigt; Rest: K47 (nach Stopp-Test 11.6), Test 11.7a (Maintainer) |
+| M5 | Ausbau Android: Kontakte/SMS/Anrufe, Maps/Waze, Standort, Wetter, Aufgaben (Todoist/Google Tasks), Spotify und Mediensteuerung, Bring!, Home Assistant mit Sicherheitsstufen A–D, Sprechererkennung, Weckwort-Modell v8a + Prüfer B, Tinfoil/TEE in der App, App-Sprache, bessere Sprachmodelle und Stimmen, Overlay gesperrt (Entsperren, Aktionen danach), Stopp/Barge-in, Entwicklermodus mit Weckwort-Archiv, Leitplanken/CI | WP76a–d, WP79, WP81–WP98, WP102–WP168 | **erledigt** (abgeschlossen mit Release v0.1.0, 2026-10-28) |
+| M6 | Ausbau 2: Stationsmodus (WP99 Kern gemergt, WP158 Stationskanal), Wake-Word-Vergleich (WP106, WP111, WP121, WP133, WP137 gemergt), Modell-Empfehlung (WP112 gemergt); offen nur mit Go: WP100/WP101, WP132, WP138; Kamera/Bild in `M6-PLAN.md` noch als offen geführt (prüfen: laut Maintainer-Entscheidung gestrichen) | WP99–WP101, WP106, WP111, WP112 | teilweise erledigt (Plan `M6-PLAN.md`) |
+| M7 | iOS | – | geplant |
 
-## M5 im Detail
+## Laufende und offene Pakete
 
 | Paket | Titel | Status | Offen |
 | --- | --- | --- | --- |
-| WP76a | Tinfoil SEV-SNP (Rust) | gemergt | Folge: rsa-Upgrade; min_tcb in WP76d |
-| WP76b | Tinfoil Sigstore | gemergt cc12c9f | K59 bestätigt; Downgrade-Schutz in WP76d |
-| WP76c | Tinfoil EHBP/HPKE | gemergt 06498bc | K71 bestätigt; echte SNP-Bindung im Live-Pfad und Emulator-Lauf der attest-Contract-Suite in WP76d |
-| WP76d | Tinfoil in der App | gemergt c19b0966 | K73 bestätigt; Folge: Turin-Pinning, rsa-Upgrade (WP76a); kein Release-Cache über Speicher hinaus (GitHub ohne Token 60/h) |
-| WP79 | App-Sprache | gemergt 604ff80 | K60 bestätigt; Folge: Stoppwort-Hinweis im Overlay folgt UI- statt Sprech-Sprache; Scan-Test erkennt deutsche Ein-Wort-Texte ohne Umlaut nicht |
-| WP81 | Sofort vorlesen, Haken danach | gemergt | – |
-| WP81b | Nächster Modellaufruf parallel zur Quittung | gemergt 135dbbd | K70 bestätigt; Ersparnis am Emulator ~0,4 s bis erster Text, ~0,9 s bis fertig; Tool-Runden gegen echtes TEE-Gateway ungetestet (Fixture ohne Tool-Calls); overlay-Reihenfolge-Flake behoben (WP104: Phala-Hinweis aus loadRuleSet) |
-| WP81c | Parallele Runde sofort vorlesen | gemergt 07c67ba9 | K70 ergänzt; Einzelsatz vor Toolcall wird erst bei ToolCallStarted gesprochen (Splitter); E2E-Build braucht JAVA_HOME auf Android-Studio-JBR |
-| WP82 | GPU-Prüfung je Profil | gemergt ad50713 | Folge: AttestationStagesCard ignoriert info-Stufen |
-| WP83 | NRAS-Signatur | gemergt | K56 bestätigt |
-| WP84 | Spotify | gemergt f609849 | Folge (UX): falscher OAuth-state zeigt nur „Anmeldung abgebrochen“ (AuthChannel.kt lehnt vor Dart ab) |
-| WP85 | Kontakte/SMS/Anrufe | gemergt 314deb6 | K69 bestätigt (3 Fragen an Maintainer, u. a. diktierter Text im Anfrage-Audit → evtl. eigenes Paket); Sprachbestätigung nur per Unit-/Widget-Test, Gerätetest `docs/testing/m5/wp85.md`; Kontaktänderungen erreichen den Erkenner erst bei Resume/Aktivierung |
-| WP86 | Standort/Maps | gemergt f595fa0 | K67 bestätigt (Wetter-Position bei „keine Mindeststufe“, Frage an Maintainer); Gerätetest WP86.5 (geo: mit Karten-App, Google-Maps-Fall); E2E-Test liegt in `../james-wt/handoff/wp86-location_e2e_test.dart` (braucht Grant/geo fix im e2e-Skript) |
-| WP87 | Wetter/Meer | gemergt | – |
-| WP88 | Aufgaben | gemergt bb776da | K61 bestätigt; Folge: Erinnerung per Wecker/Timer, 🔁 fortschreiben; E2E-Test liegt in `../james-wt/handoff/wp88-e2e`; calendar_e2e_test sucht fest „Rückgängig · “ (auf englischem Emulator rot) |
-| WP89 | Todoist/Google Tasks | gemergt b4777882 | K72 bestätigt; Gerätetest mit echten Konten `docs/testing/m5/wp89.md` (WP89.1–15); Live-Tests ungelaufen (keine Tokens); Audit-Titel tasks__ und deutsche Resttexte → WP105 |
-| WP90 | Mediensteuerung | gemergt eb2cf31 | K65 bestätigt; Gerätetest WP90.1–7 (Audible, Ducking mit echter TTS, Zugriffsdialog) |
-| WP91 | Home Assistant | gemergt 8caa7cb | K58 bestätigt; E2E Fake-HA als run_ha in e2e_android.sh (WP104); Folge: CI-Filter: Änderung nur an `tool/check_apk.sh` startet apk-Job nicht |
-| WP92a–c | Sprechererkennung | WP92a gemergt e46f48c7; WP92b gemergt 3145db56; 92c aufgegangen in WP154 (2026-10-26) | K74, K77 bestätigt (2 Fragen: Datenlizenz CAM++, Schwelle); Gerätetest mit echten Stimmen `docs/testing/m5/wp92a.md` und `wp92b.md` (echte STT/Pipeline nur in Unit-Tests) vor 92c; e2e_android.sh deinstalliert die App am Ende |
-| WP93 | Wake Word im Chat | gemergt 7a722cba | keine Abweichung; „App im Hintergrund/Sperre → Overlay“ nur Unit-/JVM-Test, Handprüfpunkt `docs/testing/m5/wp93.md`; Folge: voice_controller `trigger` bleibt nach einem Zug auf wakeWord stehen; Gate kotlin-unit lokal nur mit JAVA_HOME=openjdk@21 (JDK 23/27 rot) → WP110 |
-| WP94 | Schnellwechsel Agent | gemergt 112d4be | keine Abweichung; Gerätecheck WP94.1/.7/.8 (Vibration, TTS-Abbruch, TalkBack); Restlücke: startet zwischen setDefault und newTopic eine Anfrage (Overlay), bleibt der Chat stehen (kein Verlaufsleck) |
-| WP95 | CI als Gate | gemergt | – |
-| WP96 | Gate schlank/stabil | gemergt 9023943 | Folge: `attestation_hub.dart:82` Default isLocked für unbekannte Profile ungetestet; Absenzprüfungen in `main_attestation_test` je ~1 s Echtzeit |
-| WP97 | Lastbremse/Cache | gemergt fd1b53b | zweites Gate 3,5 s, APK ohne cargo 47 s; Folge: SIGINT-Freigabe ungetestet, kein actions/cache in CI; 1 App-Test-Flake unter Last beim Merge (Wiederholung grün) |
-| WP98 | Konfliktarm | gemergt 2c14825 | Folge: id-Switches in labels.dart, settings_routes.dart, integration_detail_screen.dart; `--adopt` holt von main gelöschte Schlüssel zurück; Statustabelle aus Frontmatter |
-| WP102 | Spike bessere Sprache (Messung) | gemergt a3e640b | K66 bestätigt (Wahl Maintainer); Folge: Handy-Messung, WER mit echten Stimmen |
-| WP103 | Bessere Sprache einbauen | gemergt ff07cbd | K66/K68 bestätigt (Maintainers Modell-/Stimmenwahl, Katalog anpassbar); Gerätetest `docs/testing/m5/wp103.md` (RAM/RTF/Akku/Wärme); Kontaktnamen als Hinweis-Begriffe brauchen Neubau des contactNamesProvider durch WP85; Wake-Dienst ohne Hinweis-Begriffe |
-| WP104 | Liegengebliebene Gerätetests übernehmen | gemergt 3b45204b | K76 bestätigt; Folge: Mutationslauf zeigt keine Zeilennummer; fest deutsche Tests (tee_gpu, wake_enroll, voice_voices, voice_robustness) nur mit de; Liste `docs/testing/m5/wp104.md` |
-| WP105 | Folgepunkte Audit und Texte | gemergt f02332ef | Kachel-Fehlerzeile/Retry-Hinweise nur generisch (Fehlerart+Dienst), Meldungen ans Modell deutsch; Fehlerart durch onError/Registry → WP108; Gerätetest `docs/testing/m5/wp105.md` |
-| WP106 | Spike Wake Word Stationsmodus | gemergt 2e06c48e | K80 bestätigt; Notiz `docs/notes/wake-word-station-spike.md`; Empfehlung Station: v7/v9 M0,5 + persönliches Feintuning + Parakeet-Hotword 2,0, CAM++ nur TV-Filter; offen: mehr Sprecher/Räume, ≥1,5 h Negativ, Gerätemessung RAM/Akku; Modelle jetzt `~/wendelin-fixtures/models` |
-| WP107 | Bring! nur Tokens | gemergt cfab3c1e | K75 bestätigt (ergänzt); Gerätetest WP107.2 (falsches Passwort) und WP107.4 (Update von Vorversion) offen, `docs/testing/m5/wp107.md` |
-| WP108 | Fehlerart bis zur Integrationskachel | gemergt 55953025 | K78 bestätigt; „Erfolg setzt Fehlerart zurück“ app-seitig nur für Todoist/Spotify getestet (Bring!, Google Tasks, HA nur auf Paketebene); Gerätetest `docs/testing/m5/wp108.md` |
-| WP109 | Leitplanken (Regelquelle, main-Schutz, Größen-Ratsche, Aufräumskript) | gemergt d758e3c4 | K79 bestätigt; Teil B (Ruleset, Aufräumen, Skill) erledigt; neue Merge-Folge: merge_wp.sh → amend → STATUS → --changed → `WENDELIN_PUSH_MAIN=1 git push` → `cleanup_wt.sh --apply`; parallele Pakete müssen Größen-Baseline anpassen, wenn sie Warn-Dateien ändern; lokales Gate flakte unter Last (app), Nachlauf grün |
-| WP110 | Agenten-Leitplanken und CI-Entlastung (Claude-Hooks, Coder-Checkliste, docs-only-CI, Emulator-Sperre) | gemergt 2ff0fe8f | K81 bestätigt; beim Merge kotlin-unit rot (`bash bash gradlew`, wenn das JDK schon passt), vom Orchestrator behoben 9c7ffbc7; Folge: cleanup_wt.sh löscht die Urteilsdateien `<wp>-review*.md` mit (sollen für die Quote „erstes Review sauber“ erhalten bleiben; bis dahin sichert der Orchestrator sie vor dem Merge nach `james-wt/reviews/`); Guard-Restlücken in ENGINEERING.md (fängt pre-push ab) |
-| WP111 | Vergleich alternativer Wake Words („Hey Wendelin“, microWakeWord, sherpa-KWS) | gemergt fcf956d9 | K83 bestätigt; synthetisch: Zielwerte von keinem Wort erreicht, Empfehlung bei „Wendelin“ bleiben (v7 M0,3 + Parakeet-Hotword 2); Abweichungen: Testclips macOS-Systemstimmen statt Piper, persönliches Feintuning nicht neu gemessen, ohne CAM++-Stufe, Python-Selbsttests `tool/train_wake_word/test_measure.py` nicht im Gate; Folge: Teil B echte Aufnahmen (Folgepaket), Soll Re-Review (Test pick_neg-Aufruf `station_measure.py:215`, `requirements-mww.txt`), Kandidaten aus Klang-Recherche (Okay Wendelin, Hey Wendelino, Hey Kasimir) für späteren Vergleich |
-| WP112 | Modell-Empfehlung (150 Evals de/en/fr, 5 Anbieter, Empfehlung je Rolle) | gemergt d6ba4602 | K87 bestätigt; Kosten 1,48 $ (alle unter Obergrenze); Folge: Scorer soll Reasoning-Leck (`</think>`) als Fehlschlag werten, `fr-clarify-liste` zu streng, `live30.txt` enthält pending `de-lists-add`, Soll: CLI-Test Ledger-Budgetübergabe; Fallback je Rolle als eigenes Paket möglich |
-| WP113 | „Stopp“ während der Antwort mit Gegenprüfung, Anzeige „hört mit“ | gemergt e7e17b9b | K90 (Stopp gewinnt, Schwellen, Gegenprüfung 0,8 s, Echo-Filter); Gerätetest docs/testing/m5/wp113.md; Soll: stopOverridesWake-Verdrahtung wake_barge_in.dart:194 und Settle wake_word_barge_in.dart:170 ungetestet, _verify alte Generation :219 |
-| WP114 | Gesperrtes Handy: Overlay bleibt nach dem Entsperren, harmlose Aktionen ohne Entsperren | gemergt 82a0afe0 | K92; Gerätetest docs/testing/m5/wp114.md (Z.5-Ursache über Log locked-cmd, Home beim Entsperren); Soll: answerText-Abbruch beim Modell-Laden (voice_answer_text.dart:10), Mutanten M3/M5/M6/M8 |
-| WP115 | Große Modelle streamend entpacken (Parakeet v3), erkannte Sprache loggen | gemergt 781af471 | keine Abweichung; neue Logzeilen model-unpack(-ed/-failed), stt-lang; Gerätetest `docs/testing/m5/wp115.md`; Soll: Tests `a/b` dann `a` → corrupt, doppelte Datei → ok, Doc install() `model_installer.dart:84-86` (io-Ausnahme), io-Test mit chmod 555 scheitert als root |
-| WP116 | Einstellungsseiten: Überschriften, Info-Texte, Links | gemergt 75a243b6 | keine Abweichung (WText.sectionTitle, InfoBox, LinkButton; Varianten von Maintainer gewählt); Gerätetest `docs/testing/m5/wp116.md`; Soll: Leerzustand providersNone ohne Test/Golden |
-| WP117 | Weitere deutsche Stimmen (Ramona, Eva) | gemergt 49fca790 | K86; Lizenz M-AILABS (BSD-artig, Attribution) statt CC0; Soll: Stimmen später in eigene Datei auslagern (check_sizes) |
-| WP118 | Antwort als Gesprächston (bessere Echo-Unterdrückung), Schalter | gemergt 983346c4 | K93; Gerätetest docs/testing/m5/wp118.md; Stopp-E2E an/aus offen (Stopp-E2E auf main rot, siehe Nächste Schritte); Soll: Rennen erstes Play+Stopp (audio_playback.dart:65), Besitzer-Token bei dispose, WakeConflictWatcher.kt:61 ohne Test |
-| WP119 | Nächster Wecker auslesen, Tools vorab mitschicken | gemergt fb246094 | K91; Gerätetest docs/testing/m5/wp119.md; Soll: Test endSession räumt gemerkte Sprache auf |
-| WP120 | Antwortzeit vermessen, Pausen beim Vorlesen, früher vorlesen | gemergt ad6db5ad | K95; Gerätetest docs/testing/m5/wp120.md (10 Befehle, p50/p90); kein Schnell-Anbieter-Vergleich (kein Key); Stopp-E2E siehe Nächste Schritte |
-| WP121 | Wake Words mit echten Aufnahmen vergleichen (fair) | gemergt f5f59f2e | K98; Empfehlung bei „Wendelin“ bleiben; Folge: Negativ-Aufnahme mit Fernseher (≥ 1,5 h), weitere Sprecher, sherpa-Spalten WP106/WP111 neu rechnen |
-| WP122 | Feste Bestätigungssätze statt zweitem Modellaufruf | gemergt 4f596e66 | K97; Gerätetest T21-WP122; Soll: Test AgentDone.fixed, Satz „schon vorhanden“ (confirmation_texts de:30/34 en:45/48 fr:53/56), Doku fixed_confirmation.dart:20, toter Schlüssel lists_write_tools.dart:47; CI-Flake wake_lifecycle_test (UnmountedRefException) |
-| WP123 | Stopp sofort ab Antwortbeginn (Barge-in-Warmstart), Stopp-E2E stabil | gemergt ab054e98 | K96; E2E voice_stop_word/voice_barge_in je 3× offen (Last 15–18); Gerätetest T21-WP123; Soll: Provider-Test take statt snapshot (wake_providers.dart:204) |
-| WP124 | Emulator startet bei Bedarf, wird nach jedem E2E-Lauf beendet (E2E_KEEP_EMULATOR=1 für Serien) | gemergt 909738c1 | Wunsch Maintainer 2026-10-21; echter Lauf torch_e2e grün |
-| WP125 | Sammelpaket Soll-Befunde WP114/118/119/122, CI-Flake wake_lifecycle_test | gemergt (ed38ba1e) | E2E stop_word/barge_in grün; Punkte 1/6 in WP126; dazu: answerText bricht beim Modell-Laden ab (WP114), WakeServiceNotifier prüft ref.mounted nach awaits (Flake-Ursache). Folgepunkt: WakeConflictWatcher.refresh und releaseAll in dispose ohne Robolectric ungetestet |
-| WP126 | „Stopp“ nach Warmstart: Fehlkandidat auf Stille blockiert echtes Wort (Fehler aus WP123) | gemergt (d8c908dd) | K106; E2E stop_word/barge_in je 3× grün. Folgepunkte: (a) Stille-Embeddings scoren hoch (sfloor≈0,85), stopOverridesWake umgeht das Pegel-Gate der Engine – nur abgefangen, Engine-Fix offen; (b) Hauptwort-Ähnlichkeit in Stille 0,82–0,83 > thr 0,75: „Wendelin“ könnte nach Warmstart auf Stille auslösen (seit WP123) → in WP129 prüfen |
-| WP127 | Öffentliches Repo ohne Namen/Anwesenheit/lokale Pfade, Sperre (check_privacy, privacy-guard) | gemergt 51917089 | Entscheidung Maintainer 2026-10-22; Historie bleibt |
-| WP128 | Empfohlene Modelle markieren, Nachfrage bei Ausfall | gemergt 20c94d8b | K100, K104; Soll: retry_offer_card_test prüft „Stufe“ → findsNothing nicht (Mutant M4); Gerätetest docs/testing/m5/wp128.md |
-| WP129 | Trainiertes Wake-Word-Modell (v8a statt v7, K105) in der App, zweistufig | gemergt (727548e8) | Katalog-Eintrag Platzhalter bis Modell aus WP137 (clean); offen: Vorlagen-Weg leiser Raum, Parakeet-RAM/Laufzeit am Handy, Negativ-Aufnahme mit Fernseher |
-| WP130 | Wake-Word-Modell v8 (mehr Stimmen, Varianten, harte Negative) | gemergt (8f85b96c) | K105; Empfehlung v8a (Stufe 1 allein: Wendelin 80/77 %, Hey Wendelin 93/90 % bei 2 FA/h; v7 braucht dafür Stufe 2). Folgepunkte: M-AILABS-Lizenz vor Release-Asset belegen; Test „--allow-truncated fehlt im Volllauf“; cv_extract erkennt Abschneiden an Header-Grenze nicht (CV-Shard nicht gepinnt); v8c (hidden 256) zurückgestellt |
-| WP131 | Release-Signatur und automatischer APK-Build auf GitHub (Tag → Release) | gemergt (0501df86) | K109; Probe-Release geprüft (Signer CN=Wendelin, nicht Debug), ohne Secrets rot. Folgepunkte: Debug-Fallback-Warnung in check_apk.sh greift kaum (apksigner auf CN=Android Debug prüfen); versionCode-Anstieg ungeprüft; Tag-Schutzregel v* empfohlen; erster echter Tag v0.1.0 + Dispatch-Probe probe_missing_secrets auf main |
-| WP132 | Zwei Build-Varianten frei/Store (Vorbereitung) | geplant | K103; nur mit Go, nach WP131 und Gesamttest |
-| WP133 | Wake Word: Nutzen von Stufe 2, v8a gegen v8c nur synthetisch | gemergt (5dca4d8d) | K110; Empfehlung v8a, Stufe 1 ab 0,98, ≥ 0,999 direkt, 0,98–0,999 prüft hw2 (Ausschnitt 2,0/0,9 s). Folgepunkte: wortspezifischer Prüfer statt hw2 (Go Maintainer); c-syn vs a-syn mit mehreren Seeds; mehr Sprecher; Notiz :470 zwei Ungenauigkeiten |
-| WP134 | Stopp-Wort ausbauen, Vorlagen-Vergleich für „Wendelin“ zentrieren | gemergt (2d3ceecc) | K107, K112; offen: Handtests wp134 (Stopp mittendrin unterbricht nicht, Neueinlernen), Mindest-Recall des Kalibrators bei starkem Hintergrund, Timeout für hängendes am instrument in e2e_android.sh |
-| WP135 | Smart Home schneller: Geräteliste, Synonyme, feste Bestätigung, Schnellweg ohne KI, Rollo ohne Rückfrage | gemergt (c5ffc7f2) | K108, K111; offen: Gerätetest am Handy (Latenz nachher, Geräte neu freigeben), Rollo ohne Rückfrage nur Unit-Test, WP122-Ausfall bei gemischten Runden |
-| WP136 | Parakeet (NeMo) lädt nach dem Download nicht | gemergt (dc113dc1) | Ursache: oberste Ordnerebene im Archiv; offen: Gerätetest Teil A am Handy (Fehlergerät ohne Neu-Download), Wiederaufnahme nach Download-Abbruch |
-| WP137 | Wake Word: v8c mit echten Aufnahmen, wortspezifischer Prüfer statt Parakeet, Aufnahme-Anleitung | gemergt (a4952c60) | Ergebnis: v8a (clean) + Prüfer B für die App (WP143); Prüf-Split nur B4–6 (30 unabhängige Rufe); offen: Python-Tests ohne CI-Job, HW-Kopf für K115 (nach App-Test), words_measure-Schutz für eigene Modelle |
+| WP100 | Stationsmodus: Gespräch, Wiedergabe, Kacheln (braucht WP90, WP92) | geplant | nur mit Go |
+| WP101 | Stationsmodus: Ruhezeiten, Bluetooth, Wecker-Ansage | geplant | nur mit Go |
+| WP132 | Zwei Build-Varianten frei/Store (Vorbereitung), K103 | geplant | nur mit Go, nach WP131 und Gesamttest |
 | WP138 | Kompakt-Modus: kleines Sprach-Overlay mit Kreis und Haken | geplant | Idee Maintainer 2026-10-23; nur nach Gespräch und Go |
-| WP140 | Einlernen mit Inhaltsprüfung, unsichere Erkennung verwerfen, Ja/Nein robuster | gemergt (b9b857a9) | K114; offen: „Hey Wendelin“-Ausschnitt endet nach 440 ms Pause, Moduswechsel bzw. letzte Stimme löschen bei laufendem Dienst → „an“ ohne Zuhören, Erwartung „Kandidat“ in wake_enroll_e2e (schon vorher rot), e2e_android.sh spielt Parakeet nicht ein, Gerätetest am Handy |
-| WP141 | Wake Word: nach dem ersten Treffer bis 0,8 s weiter beobachten | gemergt (d25ec9dd) | K110-Nachtrag; offen: Versatzprobe des WP137-Prüfers vor dem Einbau, Ausreißer-Check verwirft im E2E 1/15 Einlern-Aufnahmen (WP140-Folgepunkt), Gerätetest leiser gedehnter Ruf und Latenz |
-| WP142 | Einlernen: weniger echte Rufe ablehnen | gemergt (c858edbc) | K116; HW abgelehnt: Parakeet 13,3 %, Whisper small 18,3 %, ruhig 0 %, Störer 0/880; offen: trennendes HW-Modell (Nachtraining), Gerätetest am Handy, Soll aus Review 2 |
-| WP143 | Wake Word in der App: v8a (clean) + Prüfer B | gemergt (f4ce6590) | K117; B 34 ms Median, ~300 MB PSS weniger, Silero-Leck behoben; offen: B-Schwelle aus einer Sitzung, B bei Rauschen strenger (Gerätetest mit TV), Prüfschritte von Hand (wp143.md), Engine-Leck → WP145 |
-| WP145 | Nativer Speicher wächst je Overlay | gemergt (105e176e) | K118, ADR 0021; Lade-Leck (~400 MB whisper beim Schließen während Laden) und Container-Teardown behoben, Engine-Group (Overlay öffnet ~1,4 → ~1,0 s); offen: Restzuwachs ~3,9 MB/Overlay am Emulator in Impeller-GLES (gfxstream), echte GLES-Geräte ungeprüft; Prüfschritt von Hand (wp145.md) |
-| WP146 | Spracherkennung nach dem Wake Word unbrauchbar (Übergabelücke, verworfener Vorlauf, Modell-Freigabe unter dem Overlay, Mikrofon-Überlappung) | gemergt (6defefc6) | K119; Ursachen docs/notes/wp146-ursachen.md, Hotword-Messung docs/notes/hotword-bias-2026-10-25.md (synthetisch); offen: Gerätetest wp146.md (wake-gap, Befehl während Stufe 2, Folgerunde), Weckwortrest vor dem Befehl (wake-strip, nach Gerätebefund), Weckwort-Test mit Prüferkette, E2E-Aufbau echte Übergabe + Parakeet, zwei Parakeet-Instanzen (~2 GB) möglich |
-| WP147 | Doku generieren, Konzept schlank, Review-Messung | gemergt (99c07c22) | review_stats 89 gültig; Probelauf Konzept 131 → 48 KB; Teil B (Archiv auf main, STATUS-K, ref/-Bestand abbauen) beim Orchestrator |
-| WP148 | Entwicklermodus mit erweitertem Logging (10× „System“) | gemergt (7a59e0fe) | K120 bestätigt; devLog (app/lib/voice/dev_log.dart), DevClips; Gerätetest (Mehrrunden, Overlay-Umschalten, Secrets, Bonus, Marken gegenhören); Folge: detectSensitiveContent erkennt „PIN – 1234“ u. ä. nicht, Tests Überschwärzung, Overlay übernimmt Umschalten erst ab nächster Sitzung, wake_service_e2e Einlernen 0/15 |
-| WP149 | Wake-Übergabe ohne Audiolücke | gemergt (ab06b1c0) | Ursache: WakeConflictWatcher stoppte Dienst-Mikro trotz keepOpen + verworfener Teil-Chunk; Handytest docs/testing/m5/wp149.md (xcorr nur synthetisch kalibriert); Folge: eigene vs. fremde Aufnahme per AppVoice-Session, ~690 ms Mikro-Öffnung |
-| WP150 | Home Assistant: Werkzeugschleife bei einem Licht mit Personennamen | gemergt (90a2a345) | K121 bestätigt; Ursache: Zahl als String, Validator lehnt ab, Modell wiederholt (Dev-Log 12:28); Gerätetest docs/testing/m5/wp150.md mit neuer APK; Folge: Agent-Fehlertexte nur deutsch (l10n) |
-| WP151 | Unterbrechen mit Weckwort bei Gesprächston | gemergt 0b94041d | Ursache: Parakeet liest das kurze „(Hey) Wendelin“ bei Gesprächston falsch; Fix Prüfer B beim Unterbrechen (offline 24/26 statt 9/26), Parakeet nur Rückfall/Echo-Fall; K124 bestätigt 2026-10-26. Mit erledigt: E2E-Einlernen (WP148-Folgepunkt), WakeEnroller nach dispose/Doppel-Speichern. Folgepunkte: Gerätetest `docs/testing/m5/wp151.md` (vorher Vorlagen neu einlernen); wake_continuous_e2e vorbestehend rot (WP68, silence.wav nicht kopiert, Timeout bei WAKE_RUNS>1); Soll-Reste wake_enroll_screen.dart:234-238, enroll_log.dart:16, wake_enroller.dart:339-354 ohne Logzeile, keine Obergrenze für Versuche; eigener Befehl „Berlin“ 0,70 > thr 0,68 |
-| WP152 | Hauptmenü: MCP-Server und HTTP-Tools nur unter Integrationen | gemergt (24c76bde) | „+ HTTP-Tool“ öffnet jetzt die Liste (Beschriftung ggf. „HTTP-Tools“); `AppRoutes.httpToolNew` ohne Aufrufer (Soll) |
-| WP153 | Gesperrtes Gerät: nach dem Entsperren sauber weitermachen | gemergt 9778f8a8 | Ursache: _unlock feuerte ohne gemerkte Anfrage einen neuen Trigger (Abbruch → Fenster zu), mit gemerkter Anfrage blockierten Folge-Zuhören/Sperr-Hinweis die Sprachantwort; ein zweiter Trigger während der Aufnahme startet jetzt neu statt abzubrechen; Log `overlay-close by=`. Folgepunkte: Gerätetest Maintainer `docs/testing/m5/wp153.md` (Fingerabdruck); Soll M5 (Guard agent.running) und M10 (whenIdle ohne Test); Weckwort-Übergabe lieferte am Gerät einmal „Yeah.“ statt der Anfrage (rc6) → Weckwort/STT |
-| WP154 | Home Assistant: Sicherheitsstufe je Gerät (A–D) | gemergt ffed7c83 | Stufen A–D für jedes Werkzeug und HA-Gerät, Gesperrt-Pfad über Policy/Executor (Projekt-Review Befund 1 erledigt), Stimme (B), ADR 0022, K123 bestätigt 2026-10-26; Folgepunkte: Gerätetest mit echten Stimmen/Wiedergabe/Kaltstart (`docs/testing/m5/wp154.md`), Goldens zeigen Material-Icons als Kästchen (Schrift in flutter_test_config nicht geladen), Undo nach gesperrtem Lauf im Audit unter Sitzung „locked“ |
-| WP155 | Entwicklermodus: Weckwort-Archiv für Training | gemergt 8e1e18b1 | Archiv `dev-audio/wake-archive/` mit index.jsonl (angenommen nur ~2 s Vorlauf, verworfen/busy/near-miss/Barge-in ±2 s), Deckel 1 GB (near-miss höchstens 50 %, zuerst gelöscht), Ausschalten: Dev-Aufnahmen weg, Archiv nach Rückfrage; Schwärzung erweitert; K126 bestätigt 2026-10-27. Folgepunkte: near-miss-Rate am Handy messen; Prüfseite (eigener Auftrag); Barge-E2E hing einmal am Testende; Restfall An während deleteDevAudio; E2E-Tests uncommittet in james-wt/e2e-keep/wp155 |
-| WP156 | „Hey Wendelin“ konsequent in Texten und Doku | gemergt abb1ead7 | Texte, Hinweise und Doku nennen „Hey Wendelin“; Dienst-Benachrichtigung ganz lokalisiert (12 Texte über Kanal, Deutsch als Rückfall), „Wake Word“ → „Aktivierungswort“; Erkennung unverändert (beide Wörter). Folgepunkte: E2E-Screenshot Benachrichtigung en/fr (`docs/testing/m5/wp156.md`); „Wake Word“ noch in wake_de.arb:101-102; Modellname wake_classifier_catalog.dart:61; ältere Testanleitungen nicht umgestellt; Systemsprachwechsel greift erst beim nächsten App-Start |
-| WP157 | Sicherheit: Sperre nach roter Quittung je Unterhaltung, Netz-Lesewerkzeuge nach fremden Inhalten | gemergt 7ad79f58 | Sperre nach Rot je Unterhaltung persistent (SessionLockStore), Rückfrage für Netz-Tools nach fremden Inhalten (Verlauf, 10 Turns), Haken „Kann unsichere Inhalte enthalten“, Sitzungsende nach ≥1 min unsichtbarem Fenster, ADR 0023; K122, K125 bestätigt 2026-10-27. Folgepunkte: Gerätetest `docs/testing/m5/wp157.md` (rote Quittung → Neustart, Websuche → HTTP-Karte, Schalter-UI, echter Kill >1 min); Store-_merge nicht atomar; Sperrtexte ohne l10n; Abwesenheitstest uncommittet in james-wt/e2e-keep/wp157 |
-| WP158 | Robustheit: Fehler beim Mikrofonstart, Stationskanal | gemergt (b5ef90e3) | Projekt-Review 2026-10-26 (Befunde 6, 7). isLocked() liefert bei Kanalfehler true (fail-closed, Log lock-check-failed; wake_chat öffnet dann Overlay); nach geworfenem Start Übergabe sofort beendet; Stationskanal als StationAmbientChannel, neuerer Host gewinnt. Folgepunkte: Gerätetest Stationsmodus (Helligkeit/Umgebungslicht) mit nächstem RC; lokales gate --changed fand directives_ordering nicht (erst CI), prüfen |
-| WP159 | Einrichtung: GPU-Prüfung nur mit Nachweis, Hinweis auf „Eingeschränkte Einstellungen“ (SMS/Benachrichtigungen) | gemergt (f0f9cafe) | K127, K128 offen; Ursache: Android 13+ Eingeschränkte Einstellungen bei Installation aus Datei (adb install nicht betroffen), AppOp für Apps nicht lesbar → bedingter Hinweis nach Installationsquelle. Folgepunkte: Gerätetest `docs/testing/m5/wp159.md` (A1–A3, B1–B4); Kontakte-Integration zeigt „Aktiv“ auch ohne SMS (setupState prüft nur READ_CONTACTS); Commit-Hooks führen kein Gate aus (Briefing-Annahme prüfen); E2E nur AOSP, je Szenario 1 Lauf |
-| WP160 | Home Assistant: Stufe für ha__call/ha__call_secure einstellbar, Licht gesperrt steuerbar | gemergt 4a3a38e6 | Ursache: Sprechererkennung lehnte den Maintainer ab (kalibrierte Schwelle 0,60, Scores 0,42–0,69); Obergrenze 0,50, NaN fail-closed; Stufe je Geräteart, MCP/HTTP A–D; ADR-0022-Nachtrag, K130 offen. Gerätetest wp160.2: 5/5 gesperrt erkannt. Folgepunkte: Falschannahme-Rate mit fremden Personen (`docs/testing/m5/wp160.md` (d)); Lücke im Handy-Log 18:58–19:01 ungeklärt |
-| WP161 | Spotify: „spielt“, aber nirgends Musik (Zielgerät, Prüfung nach play, ehrliche Suche) | gemergt (6d8f39a0) | K129 offen; Ursache: Befehl ohne device_id ging an totes, noch „aktives“ Connect-Gerät, 204 ungeprüft. Folgepunkte: Gerätetest `docs/testing/m5/wp161.md` (eingefroren, Fremdgerät aktiv, benanntes Gerät, Playlist); Zweifel: Playlist-Ursache nur per Fixture, Handy-Gerätename ungeprüft; Soll: MediaSessionPick zählt BUFFERING/CONNECTING als spielend, toter Doku-Verweis spotify_session.dart:177; Hinweis: Spotify in Akku-Ausnahme (MIUI friert ein) |
-| WP162 | Lizenzen der Sprachmodelle als Unterseite (Mini) | gemergt (9f556fa2) | Unterseite /settings/voice/licenses; Soll offen: Abschnittsüberschrift wiederholt den Seitentitel (voice_licenses_screen.dart:21) |
-| WP163 | Gesperrt: Anfrage und Antwort im Overlay, Entsperren-Knopf oben, kein pauschaler Sperrtext; Teil B: Aktionen wie Navigation nach dem Entsperren ausführen | gemergt 8375fb0e | K131 offen. Werkzeuge „wirkt nur entsperrt“: maps__navigate, maps__search_place, location__navigate_to, media__open_audible, obsidian__open_note, phone__call, station__start. Folgepunkte: Gerätetest `docs/testing/m5/wp163.md` (echte Route nach Entsperren, Abbruch/60 s, Telefon-App, Satz hör-/sichtbar); Spotify gesperrt ohne aktives Gerät prüfen; Backlog: Einträge gesperrter Läufe erscheinen nach dem Entsperren im Transkript (seit WP154), Tool-Call-Ids gesperrter Läufe können mit offener Unterhaltung kollidieren (eindeutige Ids); Tastaturknopf gesperrt optisch nicht als deaktiviert erkennbar; E2E endet im Testgerüst rot („SemanticsHandle active“) |
-| WP164 | Kontakte: Felder gezielt abfragen, Navigation zu Kontakt in einem Schritt, Waze-Integration | gemergt f132ff77 | K133 offen. Folgepunkte: Gerätetest `docs/testing/m5/wp164.md` (Waze installiert, navigiert q= direkt?, Navigation zu Kontakt mit Maps und Waze); Soll: zweiter Sortierschlüssel CONTACT_ID (ContactsChannel.kt:178), doppelte Anzeige-Bezeichnungen bei Teilsuche (contacts_tools.dart:586), gleiche Namen nur per Index unterscheidbar |
-| WP165 | Kommunikationsmodus raus: Schalter „Antwort als Gesprächston“ und zugehöriger Code entfernen, früherer Modus | gemergt 95b13cd3 | Ursache: mit Schalter an lief die Antwort als USAGE_VOICE_COMMUNICATION/MODE_IN_COMMUNICATION (Anruf-Stream, eigene Lautstärke), aus Code belegt. K132 offen (nimmt K88/K93 zurück). Bleiben: Prüfer B und Echo-Filter (WP151), MODIFY_AUDIO_SETTINGS, Aufnahme VOICE_COMMUNICATION+AEC (Entscheidung Maintainer 2026-10-28). Folgepunkte: Gerätetest `docs/testing/m5/wp165.md` (Lautstärke gleichbleibend, Stopp/Weckwort-Unterbrechen 10× ohne Gesprächston, Bluetooth, Update mit altem Schalter an); Soll: E2E-Messung „während Antwort 2“ auf laufende Wiedergabe warten lassen |
-| WP166 | Spotify: läuft schon etwas, dort weiterspielen statt aufs Handy wechseln | gemergt af519771 | K129 angepasst (offen). Regel: benannt > spielendes Gerät (Fortschritt wächst) > Handy; nicht bestätigt auf Fremdgerät → Handy mit Hinweis; 429 → kein Ausweichen. Folgepunkte: Gerätetest `docs/testing/m5/wp166.md` C1–C5 (Chromecast); ob Spotify für tote Geräte den Fortschritt weiterzählt, nur per Fake belegt |
-| WP167 | Spotify: Chromecast nach dem Befehl länger prüfen, ohne Bestätigung dort bleiben | gemergt 01f3f5a8 | K129 angepasst (offen). Ursache plausibel (3-s-Fenster zu kurz für Cast), nicht belegt; neues Diagnosefeld `spotify-verify progress=` belegt es im Gerätetest (`docs/testing/m5/wp166.md` C1/C4/C5). Folgepunkt: Commit-Hook ließ prefer_const-Lint durch (CI fing ihn) |
-| WP168 | Spotify-Client-ID als Passwortfeld (Passwortmanager) | gemergt cc347e92 | Mini-Paket ohne WP-Datei, Auftrag Maintainer direkt; kein Gerätetest nötig, keine Konzeptabweichung |
 | WP169 | GitHub-Repo auf Stand v0.1.0: Lizenz GPL-3.0-or-later, README en/de, Screenshots, Homepage | in Arbeit | Wunsch Maintainer 2026-10-28 |
+| WP170 | Doku bereinigen: Widersprüche, Veraltetes, Doppelungen, Erledigtes löschen | in Arbeit | Auftrag Maintainer 2026-10-28; Entscheidungen im Paket |
+| WP171 | Weckwort: zweite Prüfung scheitert still ohne Whisper (Zweitgerät), robust machen | in Arbeit | Gerätetest Maintainer 2026-10-28 |
+| WP172 | Overlay schließt nach dem Zuhören ohne Antwort, Weckwort wieder bereit | in Arbeit | Wunsch Maintainer 2026-10-28 |
 
-Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
+## Offen
+
+### Gerätetests beim Maintainer
+
+Aktuell rc11 bis rc13 = Release v0.1.0 (Testprotokoll-Blöcke T31-WP158 bis T31-WP165), dazu noch offen (laut „Nächste Schritte“ bisher):
+- T30-WP153, T29-WP155/-WP156/-WP157, T28-WP151/-WP154; T27-WP149/-WP150, T26-WP148 (prüfen: ob noch offen)
+- `docs/testing/m5/`: wp153, wp155, wp156, wp157, wp159 (A1–A3, B1–B4), wp160 ((d) Falschannahme-Rate), wp161, wp163, wp164, wp165, wp166 (C1–C5, Chromecast), wp151, wp154, wp149, wp150, wp148
+- Gerätetest Stationsmodus (Helligkeit/Umgebungslicht) nach WP158
+- Älteres, nur nach Prüfung: WP90.1–7, WP91, WP107.2/.4, WP108, WP113, WP114, WP118–WP120, WP135, WP136, WP140–WP146 (jeweils `docs/testing/m5/wpNNN.md`) (prüfen)
+- Test 11.7a und K47 (nach Stopp-Test 11.6), siehe M4
+
+### Offene Konzeptänderungen (Status offen, Änderungsprotokoll im Konzept)
+
+K127 offen, K128 offen, K129 offen, K130 offen, K131 offen, K132 offen, K133 offen. K115 ist zurückgestellt.
+
+### Bekannte Folgepunkte und Backlog
+
+- Tinfoil: rsa-Upgrade (WP76a), Turin-Pinning, min_tcb, echte SNP-Bindung im Live-Pfad, Emulator-Lauf der attest-Contract-Suite (WP76d); kein Release-Cache über Speicher hinaus (GitHub ohne Token 60/h)
+- Wake Word: Negativ-Aufnahme mit Fernseher (≥ 1,5 h), weitere Sprecher/Räume (WP106, WP121, WP129); HW-Kopf/Training und Prüfseite Weckwort-Archiv (K115); trennendes HW-Modell (WP142); B-Schwelle bei Rauschen (WP143); near-miss-Rate am Handy (WP155)
+- Python-Tests in `tool/train_wake_word/` laufen in keinem CI-Job (WP111, WP137); words_measure-Schutz für eigene Modelle (WP137)
+- wake_continuous_e2e (WP68-Altlast: silence.wav nicht kopiert, Timeout bei WAKE_RUNS>1)
+- Engine-Fix für Stille-Embeddings (sfloor≈0,85), stopOverridesWake umgeht Pegel-Gate (WP126); Hauptwort-Ähnlichkeit in Stille nach Warmstart (WP126) (prüfen)
+- Ungetestete Stellen: `wake_barge_in.dart:194`, `wake_word_barge_in.dart:170`, `:219` (WP113); `voice_answer_text.dart:10` (WP114); `audio_playback.dart:65` (WP118); `WakeConflictWatcher.kt:61`; `wake_providers.dart:204` (WP123) (prüfen)
+- Weckwort-Rest vor dem Befehl (wake-strip), zwei Parakeet-Instanzen (~2 GB) möglich (WP146); Restzuwachs ~3,9 MB/Overlay in Impeller-GLES, echte Geräte ungeprüft (WP145)
+- Spotify: Playlist-Ursache nur per Fixture, `spotify_session.dart:177` toter Doku-Verweis, MediaSessionPick zählt BUFFERING/CONNECTING als spielend (WP161); Fortschritt toter Geräte nur per Fake (WP166); falscher OAuth-state zeigt nur „Anmeldung abgebrochen“ (WP84)
+- Sperre/Stufen: Store-_merge nicht atomar, Sperrtexte ohne l10n (WP157); Einträge gesperrter Läufe im Transkript, kollidierende Tool-Call-Ids (WP163); Undo nach gesperrtem Lauf unter Sitzung „locked“ (WP154); `attestation_hub.dart:82` Default isLocked ungetestet (WP96)
+- Kontakte: Kontakte-Integration zeigt „Aktiv“ auch ohne SMS (WP159); Sortierschlüssel `ContactsChannel.kt:178`, doppelte Bezeichnungen `contacts_tools.dart:586` (WP164); Kontaktänderungen erreichen den Erkenner erst bei Resume (WP85)
+- Texte/l10n: „Wake Word“ in `wake_de.arb:101-102`, `wake_classifier_catalog.dart:61` (WP156); Agent-Fehlertexte nur deutsch (WP150); Überschrift `voice_licenses_screen.dart:21` (WP162); `AppRoutes.httpToolNew` ohne Aufrufer (WP152); Leerzustand providersNone ohne Test (WP116)
+- Tests/Gate: Goldens zeigen Material-Icons als Kästchen (WP154); E2E „SemanticsHandle active“ rot am Testende (WP163); E2E-Messung „während Antwort 2“ (WP165); lokales Gate fand `directives_ordering`/`prefer_const` nicht, erst CI (WP158, WP167); Commit-Hooks führen kein Gate aus (WP159); SIGINT-Freigabe, kein actions/cache (WP97)
+- Build/Release: Debug-Fallback-Warnung in `check_apk.sh`, versionCode-Anstieg, Tag-Schutzregel `v*` (WP131); CI-Filter: nur `tool/check_apk.sh` startet apk-Job nicht (WP91); `cleanup_wt.sh` löscht Urteilsdateien (WP110)
+- Modelle/Messung: Scorer-Leck `</think>`, `fr-clarify-liste`, `live30.txt` (WP112); Fallback je Rolle als eigenes Paket; STT-Messung mit echten Aufnahmen (K99)
+- Sonstiges: Stoppwort-Hinweis folgt UI- statt Sprech-Sprache (WP79); Erinnerung per Wecker/Timer (WP88); Spotify in Akku-Ausnahme (MIUI friert ein, WP161); Lücke im Handy-Log 18:58–19:01 (WP160)
 
 ## Nächste Schritte
 
-Stand 2026-10-27 (Orchestrator):
-0. Test-APK rc11 (Tag v0.1.0-rc11, ded48a2c) beim Maintainer, Blöcke T31-WP158 bis T31-WP165; K127–K133 offen. Gemergt: WP164 (f132ff77, K133 offen), WP165 (95b13cd3, K132 offen), WP163 (8375fb0e, K131 offen), WP160 (4a3a38e6, K130 offen), WP161, WP162, WP159 (f0f9cafe, K127/K128 offen). Danach rc11 mit WP158–WP165. Gemergt: WP158 (b5ef90e3), WP153 (9778f8a8), WP155 (8e1e18b1, K126 bestätigt), WP156 (abb1ead7), WP157 (7ad79f58, K122/K125 bestätigt), WP154 (ffed7c83, K123 bestätigt), WP151 (0b94041d, K124 bestätigt). Test-APK rc10 (Tag v0.1.0-rc10, 3e17f4b1); WP158 ist erst im nächsten RC.
-1. Danach: Prüfseite Weckwort-Archiv auf Auftrag des Maintainers; sonst M6 nur mit Go.
-2. Gerätetest beim Maintainer: rc10 (T30-WP153), rc9 (T29-WP155, T29-WP156, T29-WP157), rc8 (T28-WP151, T28-WP154), rc7 (T27-WP149, T27-WP150, T26-WP148).
-3. Erledigt mit WP159: (a) Anbieter-Setup zeigt „GPU-Prüfung über NVIDIA“ auch, wenn der Anbieter keinen GPU-Nachweis liefert (`provider_setup/finish_step.dart`, `gpu_check_section.dart`, Fähigkeit je Modell prüfen) → ausblenden; (b) SMS- und Benachrichtigungszugriff lassen sich bei APK-Installation nicht aktivieren („aus Sicherheitsgründen nicht zugelassen“, Android 13+ „Eingeschränkte Einstellungen“) → Sperre erkennen, Schritt-für-Schritt-Hinweis mit Knopf zu den App-Infos (bisher nur ein Satz im Medien-Hinweis). Technisch offen: Python-Tests in `tool/train_wake_word/` laufen in keinem CI-Job; Gerätetest Stationsmodus nach WP158.
-4. Später: Prüfseite für das Weckwort-Archiv (Anhören, Markieren), danach Hey-Pflicht in der Erkennung (K115) und Training mit eigenem HW-Kopf; wake_continuous_e2e (WP68-Altlast); offen aus M5/M6 nur mit Go: WP100/WP101, STT-Messung (K99), WP132, WP138.
-
-Ältere Reihenfolge M5 (bestätigt 2026-10-19, erledigt bzw. überholt):
-
-Reihenfolge M5 (bestätigt Maintainer 2026-10-19), je Schritt höchstens 2 Paket-Sitzungen; Pakete am Sprach-Controller (WP81b, WP92, WP93, WP103) nie gleichzeitig:
-
-0. erledigt: WP98, WP102; Merge ab jetzt mit `tool/merge_wp.sh <branch> [--squash]`, Paket-Anleitung `docs/work-packages/WP98-migration.md`
-1. WP97 Lastbremse/Cache, WP85 Kontakte/SMS/Anrufe
-2. WP103 Bessere Sprache einbauen, WP86 Standort/Maps
-3. WP81b Modellaufruf parallel zur Quittung, WP76c Tinfoil EHBP/HPKE
-4. WP76d Tinfoil in der App (Downgrade-Schutz K59), WP89 Todoist/Google Tasks
-5. WP92a→b→c Sprechererkennung, WP94 Schnellwechsel
-6. WP93 Wake Word im Chat
-
-Danach M6 (nur mit Go): WP99, dann WP100/WP101 (`M6-PLAN.md`). Pakete mit Alt-Commits per Squash mergen.
-
-Wartet auf Maintainer: K47 nach Stopp-Test 11.6, Test 11.7a, Gerätetests WP90.1–7 und WP91.
+1. WP169 läuft (GitHub-Repo auffrischen).
+2. Gerätetests beim Maintainer: rc13/v0.1.0 (T31) und die noch offenen Blöcke T30, T29, T28 (siehe „Offen“).
+3. K127–K133 vom Maintainer bestätigen lassen.
+4. Danach nur mit Go (M6): Prüfseite Weckwort-Archiv (dann Hey-Pflicht K115 und Training mit eigenem HW-Kopf), WP100/WP101, STT-Messung (K99), WP132, WP138.
