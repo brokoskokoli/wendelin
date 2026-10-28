@@ -137,8 +137,9 @@ void main() {
   // WP33/B6: D2 mit whisper-base. Der Skript-Provider übernimmt den
   // Notiznamen aus dem Transkript (wie ein Modell); gefunden wird die Notiz
   // über die Vokabular-Korrektur bzw. die phonetische Titelsuche. Nur
-  // b6-01 (Anna): Bei Reed/Flo erkennt base schon „Notiz“ nicht mehr
-  // („Was steht in meiner Gute? Es ist mit der Intest.“).
+  // b6-01 (Piper-Stimme thorsten): Die frühere say-Aufnahme anderer Stimmen
+  // (Reed/Flo) erkannte base schon „Notiz“ nicht mehr („Was steht in meiner
+  // Gute? Es ist mit der Intest.“); die Piper-Fixture ist neu zu prüfen.
   for (final fixture in ['b6-01']) {
     testWidgets('whisper-base: D2 ($fixture) findet die Notiz Wendelin-Test', (
       tester,

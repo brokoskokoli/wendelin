@@ -107,3 +107,5 @@ Wendelin ist freie Software unter der **GNU General Public License v3.0 oder neu
 ## Danksagungen
 
 Wendelin baut auf vielen Open-Source-Projekten auf, darunter [Flutter](https://flutter.dev), [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (lokale Spracherkennung und -ausgabe), [Whisper](https://github.com/openai/whisper) und [Parakeet](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3), [openWakeWord](https://github.com/dscripka/openWakeWord) (Merkmalsextraktoren für das Weckwort) und das [Model Context Protocol](https://modelcontextprotocol.io). Danke an alle, die sie pflegen.
+
+Die französischen Sprach-Testdateien (`app/test/fixtures/stt/fr-*.wav`, `b6-06.wav`) sind mit der Piper-Stimme `fr_FR-siwis-medium` erzeugt, trainiert auf der SIWIS French Speech Synthesis Database (University of Edinburgh, [doi:10.7488/ds/1705](https://doi.org/10.7488/ds/1705), CC-BY-4.0). Die deutschen und englischen Dateien nutzen Stimmen aus den Datensätzen Thorsten-Voice (CC0) und LJ Speech (gemeinfrei). Details: Kopf von `tool/make_stt_fixtures.sh`.

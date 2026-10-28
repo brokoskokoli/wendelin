@@ -26,11 +26,11 @@ void main() {
   final skip = ffiSkip;
   if (skip == null) useDesktopSherpa();
   final dir = modelsDir ?? '';
-  final padded = Int16List(4800 + fixture('de-03').samples.length + 12800)
+  final padded = Int16List(4800 + fixture('de-10').samples.length + 12800)
     ..setRange(
       4800,
-      4800 + fixture('de-03').samples.length,
-      fixture('de-03').samples,
+      4800 + fixture('de-10').samples.length,
+      fixture('de-10').samples,
     );
 
   group('Desktop-FFI', skip: skip, () {
@@ -49,7 +49,7 @@ void main() {
       name: 'Whisper base (Isolat)',
       sample: padded,
       sampleLanguage: 'de',
-      expectedText: 'milch und brot',
+      expectedText: 'liste an meine schwester',
     );
 
     voiceActivityDetectorContract(
@@ -90,10 +90,10 @@ void main() {
           modelId: 'whisper-base',
         );
         final t = await remote.transcribe(padded, language: 'de');
-        expect(t.text.toLowerCase(), contains('milch und brot'));
+        expect(t.text.toLowerCase(), contains('liste an meine schwester'));
         // The owner keeps working afterwards.
         final own = await (await whisper()).transcribe(padded, language: 'de');
-        expect(own.text.toLowerCase(), contains('milch und brot'));
+        expect(own.text.toLowerCase(), contains('liste an meine schwester'));
       },
     );
 
@@ -104,7 +104,7 @@ void main() {
       );
       final r = await b.transcribe(pcmToFloat(padded), language: 'de');
       expect(r.language, 'de');
-      expect(r.text.toLowerCase(), contains('brot'));
+      expect(r.text.toLowerCase(), contains('schwester'));
       await b.dispose();
       await b.worker.exited;
       expect(b.worker.killed, isFalse, reason: 'selbst beendet');
