@@ -11,6 +11,11 @@
 - Stufe 2 nimmt jedes installierte Erkennungsmodell (Parakeet bevorzugt, sonst Whisper) – auch im Vorlagen-Pfad – bzw. Prüfer B, wo vorgesehen.
 - Fehlt jedes passende Modell oder ist das Weckwort-Modell nicht nutzbar, zeigt die App einen deutlichen Hinweis (Weckwort-Einstellungen und Dienst-Benachrichtigung) mit Knopf zum Download, statt Treffer still zu verwerfen. Log nennt die Ursache (`wake-verify ... error=model_missing` o. ä., ohne Inhalte).
 
+## Präzisierung Maintainer (2026-10-28, sinngemäß)
+„Eigentlich sollte Whisper nicht mehr benutzt werden; es soll einfach das gerade geladene Modell verwendet werden, ob Parakeet oder Whisper. Und eigentlich soll immer Prüfer B prüfen – der sollte aktiv sein, war er bei mir gerade nicht.“
+- Stufe 2 ist **immer Prüfer B** (mit eingelernten Vorlagen), in beiden Detektor-Pfaden. Heute gibt `verifier()` im Pfad `templates` sofort Whisper zurück (`device_wake_parts.dart:315`), B wird dort nie genutzt. Rückfall nur, wenn B nicht entscheiden kann: das **geladene** Erkennungsmodell (Parakeet oder Whisper, was installiert/aktiv ist), nie fest Whisper.
+- Klären und belegen, warum B auf dem Gerät nicht aktiv war (Detektor `templates`, `useVerifierB` aus, keine Vorlagen-Folgen?). Fehlen Vorlagen für B: Hinweis „Weckwort neu einlernen“.
+
 ## Inhalt
 - Ursache belegen (Test mit nur Parakeet installiert: vorher rot), Detektor-Wahl prüfen und ggf. korrigieren (Weckwort-Modell geladen → Detektor `model`).
 - Fallback-Kette im Vorlagen-Pfad und beim Modell-Pfad vereinheitlichen; „Stopp“-Bezug ist seit WP134 entfallen (Kommentar in `device_wake_parts.dart:313` prüfen).
