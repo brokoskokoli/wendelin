@@ -6,7 +6,7 @@ Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) 
 
 Parallelität: bis zu 4 Paket-Sitzungen, je 1 Sub-Agent (AGENTS.md); Standard 2, solange der Maintainer am Rechner ist.
 
-Stand: 2026-10-28; läuft: WP169, WP170, WP171, WP172; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
+Stand: 2026-10-28; läuft: WP169, WP170, WP172; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
 
 ## Meilensteine
 
@@ -18,7 +18,7 @@ Stand: 2026-10-28; läuft: WP169, WP170, WP171, WP172; Release v0.1.0 (2fd52524)
 | R1–R6 | Refactoring | WP35–WP40 | erledigt |
 | M4 | Wake Word und TEE (+ Gerätetest-Korrekturen) | WP41–WP78, WP80 | erledigt; Rest: K47 (nach Stopp-Test 11.6), Test 11.7a (Maintainer) |
 | M5 | Ausbau Android: Kontakte/SMS/Anrufe, Maps/Waze, Standort, Wetter, Aufgaben (Todoist/Google Tasks), Spotify und Mediensteuerung, Bring!, Home Assistant mit Sicherheitsstufen A–D, Sprechererkennung, Weckwort-Modell v8a + Prüfer B, Tinfoil/TEE in der App, App-Sprache, bessere Sprachmodelle und Stimmen, Overlay gesperrt (Entsperren, Aktionen danach), Stopp/Barge-in, Entwicklermodus mit Weckwort-Archiv, Leitplanken/CI | WP76a–d, WP79, WP81–WP98, WP102–WP168 | **erledigt** (abgeschlossen mit Release v0.1.0, 2026-10-28) |
-| M6 | Ausbau 2: Stationsmodus (WP99 Kern gemergt, WP158 Stationskanal), Wake-Word-Vergleich (WP106, WP111, WP121, WP133, WP137 gemergt), Modell-Empfehlung (WP112 gemergt); offen nur mit Go: WP100/WP101, WP132, WP138; Kamera/Bild in `M6-PLAN.md` noch als offen geführt (prüfen: laut Maintainer-Entscheidung gestrichen) | WP99–WP101, WP106, WP111, WP112 | teilweise erledigt (Plan `M6-PLAN.md`) |
+| M6 | Ausbau 2: Stationsmodus (WP99 Kern gemergt, WP158 Stationskanal), Wake-Word-Vergleich (WP106, WP111, WP121, WP133, WP137 gemergt), Modell-Empfehlung (WP112 gemergt); offen nur mit Go: WP100/WP101, WP132, WP138; Kamera/Bild gestrichen (Maintainer 2026-10-28) | WP99–WP101, WP106, WP111, WP112 | teilweise erledigt (Plan `M6-PLAN.md`) |
 | M7 | iOS | – | geplant |
 
 ## Laufende und offene Pakete
@@ -31,7 +31,7 @@ Stand: 2026-10-28; läuft: WP169, WP170, WP171, WP172; Release v0.1.0 (2fd52524)
 | WP138 | Kompakt-Modus: kleines Sprach-Overlay mit Kreis und Haken | geplant | Idee Maintainer 2026-10-23; nur nach Gespräch und Go |
 | WP169 | GitHub-Repo auf Stand v0.1.0: Lizenz GPL-3.0-or-later, README en/de, Screenshots, Homepage | in Arbeit | Wunsch Maintainer 2026-10-28 |
 | WP170 | Doku bereinigen: Widersprüche, Veraltetes, Doppelungen, Erledigtes löschen | in Arbeit | Auftrag Maintainer 2026-10-28; Entscheidungen im Paket |
-| WP171 | Weckwort: zweite Prüfung scheitert still ohne Whisper (Zweitgerät), robust machen | in Arbeit | Gerätetest Maintainer 2026-10-28 |
+| WP171 | Weckwort: Stufe 2 immer Prüfer B, Rückfall auf installiertes Modell, Hinweis statt stillem Verwerfen | gemergt 8d2d699d | K138/K139 offen. Gerätetest `docs/testing/m5/wp171.md` (Benachrichtigungs-Tipp, Akku/fbLoads, Schatten-Fälle); Akku-Messung nur bei Auffälligkeit; `wake_align_test.dart:428` flaky unter Last; Overlay `start-failed reason=no-models` im E2E-Aufbau klären |
 | WP172 | Overlay schließt nach dem Zuhören ohne Antwort, Weckwort wieder bereit | in Arbeit | Wunsch Maintainer 2026-10-28 |
 | WP173 | Einstellungen umbauen: Routing unter Anbieter, „Erweiterte Einstellungen“, Sprache/Weckwort getrennt, Weckwort-Modell oben | geplant | Wunsch Maintainer 2026-10-28; Start nach WP171 |
 | WP174 | Einrichtungsassistent beim ersten Start (Anbieter, Sprache Pflicht; Weckwort, Integrationen, Personalisierung optional) | geplant | Wunsch Maintainer 2026-10-28; Start nach WP173 |
@@ -44,7 +44,7 @@ Aktuell rc11 bis rc13 = Release v0.1.0 (Testprotokoll-Blöcke T31-WP158 bis T31-
 - T30-WP153, T29-WP155/-WP156/-WP157, T28-WP151/-WP154; T27-WP149/-WP150, T26-WP148 (prüfen: ob noch offen)
 - `docs/testing/m5/`: wp153, wp155, wp156, wp157, wp159 (A1–A3, B1–B4), wp160 ((d) Falschannahme-Rate), wp161, wp163, wp164, wp165, wp166 (C1–C5, Chromecast), wp151, wp154, wp149, wp150, wp148
 - Gerätetest Stationsmodus (Helligkeit/Umgebungslicht) nach WP158
-- Älteres, nur nach Prüfung: WP90.1–7, WP91, WP107.2/.4, WP108, WP113, WP114, WP118–WP120, WP135, WP136, WP140–WP146 (jeweils `docs/testing/m5/wpNNN.md`) (prüfen)
+- Älteres, nur nach Prüfung: WP90.1–7, WP91, WP107.2/.4, WP108, WP113, WP114, WP119, WP120, WP135, WP136, WP140–WP146 (jeweils `docs/testing/m5/wpNNN.md`) (prüfen)
 - Test 11.7a und K47 (nach Stopp-Test 11.6), siehe M4
 
 ### Offene Konzeptänderungen (Status offen, Änderungsprotokoll im Konzept)
