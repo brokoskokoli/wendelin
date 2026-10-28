@@ -92,9 +92,9 @@ class WakeWordService : Service() {
             holdsRole = RecognizerSwitch.holdsAssistantRole(this),
             micGranted = WakeStarter.micGranted(this),
             charging = WakeStarter.isCharging(this),
-            nowMs = System.currentTimeMillis(), station = StationState.active,
+            nowMs = System.currentTimeMillis(), station = StationState.open,
         )
-        val forced = WakePolicy.forcedLog(settings, WakeStarter.isCharging(this), StationState.active)
+        val forced = WakePolicy.forcedLog(settings, WakeStarter.isCharging(this), StationState.open)
         if (decision is WakeDecision.Skip) {
             if (decision.reason == "paused") {
                 enterPause(settings.pausedUntilMs)
