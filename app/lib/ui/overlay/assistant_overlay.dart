@@ -144,12 +144,12 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   // up on a locked device.
   bool _locked = true;
   bool _lockKnown = false;
-  bool _typing = false;
-  bool _closing = false;
+  // _typed: the exchange was typed and stays open until the next trigger.
+  bool _typing = false, _typed = false, _closing = false;
   late final IdleCloser _idle = IdleCloser(
     ref: ref,
     enabled: () => mounted && AssistantOverlayScreen.closeWhenIdle,
-    typing: () => _typing,
+    typing: () => _typing || _typed,
     closing: () => _closing,
     locked: () => _locked,
     unlocking: () => _unlockWatch.busy,
@@ -271,7 +271,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     if (!mounted || _closing) return;
     ref.read(lockedModeProvider.notifier).set(locked);
     _idle.cancelClose();
-    setState(() => _typing = _discardedNotice = false);
+    setState(() => _typing = _typed = _discardedNotice = false);
     final voice = ref.read(voiceControllerProvider);
     if (voice.active) {
       await _idle.retrigger(() => _voice.cancel(VoiceCancelReason.retrigger));
@@ -406,6 +406,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       return;
     }
     _text.clear();
+    _typed = true;
     setState(() => _typing = false);
     unawaited(_agent.send(text));
   }

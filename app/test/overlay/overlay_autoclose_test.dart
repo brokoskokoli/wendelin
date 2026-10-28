@@ -3,7 +3,8 @@
 // again) and stays open while the user interacts or waits for an answer.
 import 'dart:async';
 
-import 'package:flutter/widgets.dart' show AppLifecycleState;
+import 'package:flutter/material.dart' show TextField;
+import 'package:flutter/widgets.dart' show AppLifecycleState, SizedBox;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
@@ -406,6 +407,55 @@ void main() {
     expect(closedByIdle(), isTrue);
     expect(closedBy('stop'), isFalse);
     expect(platform.calls.where((x) => x == 'releaseHost'), hasLength(1));
+  });
+
+  // Typed exchange stays open (maintainer decision), also after an undo.
+  testWidgets('Rueckgaengig nach getippter Anfrage: Fenster bleibt offen', (
+    tester,
+  ) async {
+    final c = await open(tester, autoStart: false);
+    c
+        .read(voiceControllerProvider.notifier)
+        .seed(const VoiceUiState(phase: VoiceState.listening));
+    await tester.pump();
+    await tester.tap(find.byTooltip(AppLocalizationsDe().overlayTextInput));
+    // The keyboard cancels the (seeded) listening: idle again.
+    c.read(voiceControllerProvider.notifier).seed(const VoiceUiState());
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'Wie spät ist es?');
+    await tester.testTextInput.receiveAction(TextInputAction.send);
+    await _pump(tester, steps: 30);
+    expect(c.read(agentControllerProvider).running, isFalse);
+    expect(llm.requests, hasLength(1), reason: 'getippte Anfrage lief');
+    c.read(agentControllerProvider.notifier).seed(overlaySample());
+    c
+        .read(undoManagerProvider)
+        .register('c1', UndoAction(label: 'x', run: () async {}));
+    await tester.pump();
+    await tester.tap(find.textContaining('Rückgängig'));
+    await _pump(tester, steps: 60);
+    await tester.pump(AssistantOverlayScreen.stopCloseDelay);
+    expect(logs.any((l) => l.contains('overlay-close')), isFalse);
+    expect(platform.calls, isNot(contains('releaseHost')));
+  });
+
+  testWidgets('Overlay waehrend „Zurueckgenommen.“ entfernt: kein Fehler', (
+    tester,
+  ) async {
+    final c = await open(tester, speak: const Duration(seconds: 3));
+    for (var i = 0; i < 200 && phases.lastOrNull != VoiceState.speaking; i++) {
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    c.read(agentControllerProvider.notifier).seed(overlaySample());
+    c
+        .read(undoManagerProvider)
+        .register('c1', UndoAction(label: 'x', run: () async {}));
+    await tester.pump();
+    await tester.tap(find.textContaining('Rückgängig'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpWidget(const SizedBox());
+    await _pump(tester, steps: 60); // the confirmation ends: recheck
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Rueckgaengig schlaegt fehl: kein Stopp, Schliessen ueber idle', (
