@@ -259,7 +259,7 @@
   "wakeServiceSectionChimeDetail": "Ein kurzer Ton, wenn Wendelin das Wort erkannt hat.",
   "wakeServiceSectionChooseAssistant": "Assistenten wählen",
   "wakeServiceSectionEnable": "Aktivierungswort einschalten",
-  "wakeServiceSectionEnableDetail": "Wendelin hört im Hintergrund auf „Hey Wendelin“.",
+  "wakeServiceSectionEnableDetail": "Wendelin hört im Hintergrund auf „Hey Wendelin“. Im Stationsmodus ist es immer an.",
   "wakeServiceSectionEndedEngine": "Beendet: Die Erkennung ist ausgefallen",
   "wakeServiceSectionEndedModel": "Beendet: Ein Modell für die Wake-Erkennung fehlt",
   "wakeServiceSectionEndedNoPermission": "Beendet: Mikrofon-Berechtigung fehlt",

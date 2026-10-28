@@ -92,8 +92,9 @@ class WakeWordService : Service() {
             holdsRole = RecognizerSwitch.holdsAssistantRole(this),
             micGranted = WakeStarter.micGranted(this),
             charging = WakeStarter.isCharging(this),
-            nowMs = System.currentTimeMillis(),
+            nowMs = System.currentTimeMillis(), station = StationState.active,
         )
+        val forced = WakePolicy.forcedLog(settings, WakeStarter.isCharging(this), StationState.active)
         if (decision is WakeDecision.Skip) {
             if (decision.reason == "paused") {
                 enterPause(settings.pausedUntilMs)
@@ -106,7 +107,7 @@ class WakeWordService : Service() {
         if (engine != null) {
             // Already listening: only the settings may have changed.
             engine?.send("run", settings.runArgs(StationState.active))
-            VoiceLog.i("wake-start result=ok source=$source again=true")
+            VoiceLog.i("wake-start result=ok source=$source again=true" + forced)
             return
         }
         val e = RecognizerEngine(this, ::onEngineCall, "wakeWordMain", ENGINE_CHANNEL)
@@ -121,7 +122,7 @@ class WakeWordService : Service() {
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "wendelin:wake").also { it.acquire() }
         WakeNotifications.update(this, gap.notification())
-        VoiceLog.i("wake-start result=ok source=$source mode=${settings.mode.key}")
+        VoiceLog.i("wake-start result=ok source=$source mode=${settings.mode.key}" + forced)
     }
 
     /** Calls from the Dart side of the engine (main thread). */

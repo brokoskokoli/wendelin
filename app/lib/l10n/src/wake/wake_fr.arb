@@ -118,7 +118,7 @@
   "wakeServiceSectionChimeDetail": "Un bref son quand Wendelin a reconnu le mot.",
   "wakeServiceSectionChooseAssistant": "Choisir l’assistant",
   "wakeServiceSectionEnable": "Activer le mot d’activation",
-  "wakeServiceSectionEnableDetail": "Wendelin écoute en arrière-plan le mot « Hey Wendelin ».",
+  "wakeServiceSectionEnableDetail": "Wendelin écoute en arrière-plan le mot « Hey Wendelin ». En mode station, il est toujours actif.",
   "wakeServiceSectionEndedEngine": "Arrêté : la reconnaissance a échoué",
   "wakeServiceSectionEndedModel": "Arrêté : un modèle de détection manque",
   "wakeServiceSectionEndedNoPermission": "Arrêté : autorisation du microphone manquante",

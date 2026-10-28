@@ -175,6 +175,8 @@ object WakePolicy {
     /**
      * Order of the reasons: off, no assistant role (decision 5), no microphone permission,
      * paused, not charging (only in mode [WakeMode.CHARGING]).
+     * WP171: while the station runs ([station]) the wake word is always on: `disabled` and
+     * `not-charging` do not apply (role, microphone and a pause the user set still do).
      */
     fun decide(
         settings: WakeSettings,
@@ -182,14 +184,22 @@ object WakePolicy {
         micGranted: Boolean,
         charging: Boolean,
         nowMs: Long,
+        station: Boolean = false,
     ): WakeDecision = when {
-        !settings.enabled -> WakeDecision.Skip("disabled")
+        !settings.enabled && !station -> WakeDecision.Skip("disabled")
         !holdsRole -> WakeDecision.Skip("no-role")
         !micGranted -> WakeDecision.Skip("no-permission")
         settings.pausedUntilMs > nowMs -> WakeDecision.Skip("paused")
-        settings.mode == WakeMode.CHARGING && !charging -> WakeDecision.Skip("not-charging")
+        settings.mode == WakeMode.CHARGING && !charging && !station -> WakeDecision.Skip("not-charging")
         else -> WakeDecision.Start
     }
+
+    /** WP171: whether the station alone keeps the service on (the settings would not): log `forced=station`. */
+    fun forcedByStation(settings: WakeSettings, charging: Boolean, station: Boolean): Boolean =
+        station && (!settings.enabled || (settings.mode == WakeMode.CHARGING && !charging))
+
+    fun forcedLog(settings: WakeSettings, charging: Boolean, station: Boolean): String =
+        if (forcedByStation(settings, charging, station)) " forced=station" else ""
 
     // Values of AudioManager.MODE_* (kept as numbers so no Android class is needed here).
     private const val MODE_IN_CALL = 2
