@@ -313,6 +313,52 @@ void main() {
       },
     );
 
+    test(
+      'läuft schon auf dem Fremdgerät: dort, genannt, kein fester Satz',
+      () async {
+        api
+          ..knownDevices.add(tv)
+          ..activeDeviceId = 'tv'
+          ..playing = true;
+        final o = await call('spotify__play', {'query': 'bohemian'});
+        expect(o.isError, isFalse);
+        expect(o.text, contains('auf „Wohnzimmer“'));
+        expect(api.lastPlay!.deviceId, 'tv');
+        expect(o.fixed, isNull);
+      },
+    );
+
+    test(
+      'Fremdgerät spielend, aber nichts kommt an: Handy mit Hinweis',
+      () async {
+        api
+          ..knownDevices.add(tv)
+          ..activeDeviceId = 'tv'
+          ..playing = true
+          ..frozenDeviceIds.add('tv');
+        final o = await call('spotify__play', {'query': 'bohemian'});
+        expect(o.isError, isFalse);
+        expect(
+          o.text,
+          contains('Auf „Wohnzimmer“ kam nichts an, ich spiele auf dem Handy.'),
+        );
+        expect(api.lastPlay!.deviceId, 'dev1');
+        expect(api.playing, isTrue);
+        expect(o.fixed, isNull);
+      },
+    );
+
+    test('Ausweichen, Handy spielt auch nicht: Fehler statt Erfolg', () async {
+      api
+        ..knownDevices.add(tv)
+        ..activeDeviceId = 'tv'
+        ..playing = true
+        ..frozenDeviceIds.addAll(['tv', 'dev1']);
+      final o = await call('spotify__play', {'query': 'bohemian'});
+      expect(o.isError, isTrue);
+      expect(o.text, isNot(contains('Spielt')));
+    });
+
     test('eingefrorenes Handy: einmal wecken, dann Erfolg', () async {
       api.frozenDeviceIds.add('dev1');
       launcher.onWake = api.frozenDeviceIds.clear;

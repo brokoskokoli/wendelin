@@ -5,6 +5,8 @@ import '../media/media_port.dart';
 import 'spotify_api.dart';
 import 'spotify_playback_verifier.dart';
 
+part 'spotify_session_devices.dart';
+
 /// Android package of the Spotify app (wake-up, app detection, media
 /// session check).
 const spotifyAndroidPackage = 'com.spotify.music';
@@ -172,8 +174,10 @@ final class SpotifySession {
 
   /// Starts music (`op` gets the target's id) and checks that it plays.
   ///
-  /// The target is the phone (see [_phone]) or, if [deviceName] is given, the
-  /// device of that name. The command always carries the target's `device_id`.
+  /// The target is the named device; else the device on which something plays
+  /// right now (checked twice, see [_playingElsewhere]; if nothing arrives
+  /// there, the phone takes over, `fellBackFrom` set); else the phone (see
+  /// [_phone]). The command always carries the target's `device_id`.
   /// The state is read up to [verifyAttempts] times (see [_verify]: for the
   /// phone with notification access Spotify's media session must be playing,
   /// else the Web API must show the target playing with a growing position).
@@ -185,8 +189,10 @@ final class SpotifySession {
   Future<SpotifyStart> startPlayback(
     Future<void> Function(SpotifyAuth auth, String deviceId) op, {
     String? deviceName,
+    bool preferActive = true,
+    String? fellBackFrom,
   }) async {
-    final chosen = await _choose(deviceName);
+    final chosen = await _choose(deviceName, preferActive: preferActive);
     var target = chosen.target;
     var woke = chosen.woke;
     final isPhone = chosen.isPhone;
@@ -195,7 +201,14 @@ final class SpotifySession {
       deviceName: target.name,
       isPhone: isPhone,
       confirmed: confirmed,
+      fellBackFrom: fellBackFrom,
     );
+
+    if (chosen.isActive) {
+      final played = await _playOnActive(op, target, fellBackFrom);
+      return played ??
+          startPlayback(op, preferActive: false, fellBackFrom: target.name);
+    }
 
     // A phone that is listed but rejects the command is treated like one
     // that does not play (429, 401/403 and the like are not).
@@ -254,13 +267,14 @@ final class SpotifySession {
 
   /// The target of [startPlayback]: the named device, else the phone (the
   /// app is woken once if the phone is not listed).
-  Future<({SpotifyDevice target, bool isPhone, bool woke, int count})> _choose(
-    String? deviceName,
-  ) async {
+  Future<
+    ({SpotifyDevice target, bool isPhone, bool woke, int count, bool isActive})
+  >
+  _choose(String? deviceName, {bool preferActive = true}) async {
     var usable = await _usable();
     var phone = await _phone(usable);
     if (deviceName != null) {
-      final found = _byName(usable, deviceName);
+      final found = _SpotifyDevices._byName(usable, deviceName);
       if (found == null) {
         final names = usable.map((d) => d.name).join(', ');
         throw PortException(
@@ -275,7 +289,21 @@ final class SpotifySession {
         isPhone: found.id == phone?.device.id,
         woke: false,
         count: usable.length,
+        isActive: false,
       );
+    }
+    if (preferActive) {
+      final active = await _playingElsewhere(usable, phone?.device.id);
+      if (active != null) {
+        _diagnose('spotify-device', 'active', 'playback', false, usable.length);
+        return (
+          target: active,
+          isPhone: false,
+          woke: false,
+          count: usable.length,
+          isActive: true,
+        );
+      }
     }
     var woke = false;
     if (phone == null) {
@@ -291,23 +319,8 @@ final class SpotifySession {
       isPhone: true,
       woke: woke,
       count: usable.length,
+      isActive: false,
     );
-  }
-
-  Future<List<SpotifyDevice>> _usable() async => [
-    for (final d in await run(api.devices))
-      if (!d.isRestricted) d,
-  ];
-
-  Future<bool> _wake() async => launcher != null && await launcher!.wake();
-
-  Future<({SpotifyDevice device, String via})?> _waitForPhone() async {
-    for (var i = 0; i < wakeAttempts; i++) {
-      await _delay(wakeInterval);
-      final found = await _phone(await _usable());
-      if (found != null) return found;
-    }
-    return null;
   }
 
   /// 404 (device gone) or a server error: the listed device does not work.
@@ -325,54 +338,6 @@ final class SpotifySession {
         'woke': woke,
         'devices': n,
       });
-
-  static SpotifyDevice? _byName(List<SpotifyDevice> devices, String name) {
-    final wanted = name.trim().toLowerCase();
-    if (wanted.isEmpty) return null;
-    for (final d in devices) {
-      if (d.name.trim().toLowerCase() == wanted) return d;
-    }
-    for (final d in devices) {
-      if (d.name.toLowerCase().contains(wanted)) return d;
-    }
-    return null;
-  }
-
-  /// The phone's device among [usable]: the remembered id, a name of the
-  /// phone, or the only smartphone.
-  Future<({SpotifyDevice device, String via})?> _phone(
-    List<SpotifyDevice> usable,
-  ) async {
-    ({SpotifyDevice device, String via})? found;
-    final cached = usable.where((d) => d.id == _phoneId).firstOrNull;
-    if (cached != null) {
-      found = (device: cached, via: 'cache');
-    } else {
-      Set<String> names = const {};
-      try {
-        names = {
-          for (final n in await hostDevice?.names() ?? const <String>{})
-            n.trim().toLowerCase(),
-        }..remove('');
-      } on Object {
-        // Names are optional help; the type rule still applies.
-      }
-      final byName = usable
-          .where((d) => names.contains(d.name.trim().toLowerCase()))
-          .firstOrNull;
-      if (byName != null) {
-        found = (device: byName, via: 'name');
-      } else {
-        final phones = usable
-            .where((d) => d.type?.toLowerCase() == 'smartphone')
-            .toList();
-        if (phones.length == 1) found = (device: phones.single, via: 'type');
-      }
-    }
-    // Only a name match is remembered: the type rule is a guess.
-    if (found != null && found.via != 'type') _phoneId = found.device.id;
-    return found;
-  }
 
   Future<String?> _findDevice() async {
     var id = await _pick();
@@ -428,10 +393,12 @@ final class SpotifySession {
 }
 
 /// Outcome of [SpotifySession.startPlayback]: the device it targeted, whether
-/// that is the phone and whether playback was seen on it.
+/// that is the phone and whether playback was seen on it. [fellBackFrom] is
+/// the name of the playing device that got nothing, when the phone took over.
 typedef SpotifyStart = ({
   String deviceId,
   String deviceName,
   bool isPhone,
   bool confirmed,
+  String? fellBackFrom,
 });
