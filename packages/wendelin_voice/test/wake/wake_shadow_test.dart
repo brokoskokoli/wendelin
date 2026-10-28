@@ -396,6 +396,34 @@ void main() {
       expect(f.meanReads, greaterThan(0));
     });
 
+    test('shadowCost: je Fenster eine Zeit, nur mit Schatten-Vorlagen und '
+        'Senke', () async {
+      Future<int> windows({
+        List<WakeTemplates> shadow = const [],
+        bool sink = true,
+      }) async {
+        final times = <Duration>[];
+        final e = CandidateWakeEngine(
+          features: FakeWakeFeatureExtractor(
+            windowEvery: 100,
+            windowFor: (end, _) =>
+                WakeWindow(endSample: end, embedding: _word, modelScore: 0.1),
+          ),
+          shadowTemplates: shadow,
+          shadowCost: times.add,
+          modelThreshold: 0.5,
+        );
+        if (sink) e.windowSink = (_) {};
+        await e.open([KeywordSpec.wendelin]);
+        await e.accept(Int16List(300));
+        return times.length;
+      }
+
+      expect(await windows(shadow: [_tpl()]), 3);
+      expect(await windows(), 0, reason: 'ohne Schatten-Vorlagen nichts');
+      expect(await windows(shadow: [_tpl()], sink: false), 0);
+    });
+
     test('werfende Senke ändert die Entscheidung nicht', () async {
       final (e, _) = await make(embedding: _word, templates: _tpl());
       e.windowSink = (_) => throw StateError('sink');

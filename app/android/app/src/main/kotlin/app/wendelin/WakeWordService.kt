@@ -106,13 +106,13 @@ class WakeWordService : Service() {
         }
         if (engine != null) {
             // Already listening: only the settings may have changed.
-            engine?.send("run", settings.runArgs(StationState.active))
+            engine?.send("run", settings.runArgsForStation())
             VoiceLog.i("wake-start result=ok source=$source again=true" + forced)
             return
         }
         val e = RecognizerEngine(this, ::onEngineCall, "wakeWordMain", ENGINE_CHANNEL)
         engine = e
-        e.send("run", settings.runArgs(StationState.active))
+        e.send("run", settings.runArgsForStation())
         watcher = WakeConflictWatcher(this, main, { mic?.sessionId ?: 0 }) { reason ->
             // Do not depend on Dart alone: a call or foreign recording closes the microphone here
             // (WP149: not the app's own AudioRecord in the hand-over overlap).
@@ -426,3 +426,10 @@ class WakeWordService : Service() {
 /** Channel arguments of `run` for the wake engine: stage 2, detector choice, station flag (WP129), developer mode (WP148). */
 internal fun WakeSettings.runArgs(stationActive: Boolean): Map<String, Any> =
     mapOf("verify" to verify, "detector" to detector, "station" to stationActive, "dev" to devMode)
+
+/**
+ * `run` arguments for the current station state. The flag follows [StationState.open], not `active` (WP171): with the
+ * screen dark the activity is stopped (`active` false), but the place is still the station and automatic detector
+ * choice must keep the classifier. Routing of a hit stays on `active`.
+ */
+internal fun WakeSettings.runArgsForStation(): Map<String, Any> = runArgs(StationState.open)

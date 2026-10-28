@@ -12,6 +12,7 @@ import '../../voice/dev_log.dart';
 import '../../voice/voice_log.dart';
 import '../channels.dart';
 import 'service_audio_input.dart';
+import 'wake_alive_log.dart';
 import 'wake_detector.dart';
 import 'wake_gap_tracker.dart';
 import 'wake_stage2_gap.dart';
@@ -24,9 +25,13 @@ abstract interface class WakeParts {
   /// Stage 1 for all learned voices; `null` if nothing is learned. WP129:
   /// [detector] chooses templates or the trained classifier, [station] the
   /// score band of the place; the classifier throws if its model is missing.
+  ///
+  /// [shadow] (WP171, developer mode): both detectors run, the other one only
+  /// rates the windows for the archive; the decision stays with [detector].
   Future<WakeWordEngine?> engine({
     WakeDetector detector = WakeDetector.templates,
     bool station = false,
+    bool shadow = false,
   });
 
   /// Stage 2 (WP171, both detectors): verifier B with the enrolled sequences;
@@ -89,6 +94,10 @@ final class WakeHost {
   _LoggingVerifier? _verifier;
   WakeDetector _detector = WakeDetector.templates;
   bool _station = false;
+  // WP171: whether the run was built with the developer-mode shadow detector
+  // (the engine is built once per run, so a switch restarts the run).
+  bool _shadow = false;
+  WakeDetectorChoice _choice = WakeDetectorChoice.auto;
   bool _started = false;
   final _holds = <String>{};
   final _subs = <StreamSubscription<Object?>>[];
@@ -128,6 +137,12 @@ final class WakeHost {
           _sweep = _sweepAfterOff(deleteArchive: args['archive'] == true);
           unawaited(_sweep);
         }
+        // WP171: the shadow detector is built with the run: restart on a switch.
+        await _serial(
+          () => _listener == null
+              ? Future<void>.value()
+              : _run(verify: _verify, choice: _choice, station: _station),
+        );
       case 'run':
         // The flag as Kotlin has stored it; anything else is off.
         devLogEnabled = args['dev'] == true;
@@ -185,20 +200,28 @@ final class WakeHost {
   }) async {
     if (_ending) return;
     final detector = choice.resolve(station: station);
+    final shadow = devLogEnabled;
     if (_listener != null &&
         _verify == verify &&
         _detector == detector &&
-        _station == station) {
+        _station == station &&
+        _shadow == shadow) {
       return;
     }
     await _stopListener();
     _verify = verify;
+    _choice = choice;
+    _shadow = shadow;
     _detector = detector;
     _station = station;
     _started = false;
     final WakeWordEngine? engine;
     try {
-      engine = await parts.engine(detector: detector, station: station);
+      engine = await parts.engine(
+        detector: detector,
+        station: station,
+        shadow: shadow,
+      );
     } on Object catch (e) {
       // The classifier without its model (WP140): the learned voice takes
       // over if there is one; without it the service ends and the settings
@@ -294,6 +317,7 @@ final class WakeHost {
       templates = await parts.engine(
         detector: WakeDetector.templates,
         station: _station,
+        shadow: _shadow,
       );
     } on Object {
       return false;
@@ -322,27 +346,7 @@ final class WakeHost {
   void _logAlive() {
     final stats = _listener?.stats;
     if (stats == null) return;
-    final fb = parts.fallbackStats;
-    String perHour(int n) =>
-        (stats.runtime.inSeconds < 60
-                ? 0.0
-                : n *
-                      Duration.microsecondsPerHour /
-                      stats.runtime.inMicroseconds)
-            .toStringAsFixed(1);
-    voiceLog('wake-alive', {
-      'cand': stats.candidates,
-      'ok': stats.confirmed,
-      'candPerH': stats.candidatesPerHour.toStringAsFixed(1),
-      'okPerH': stats.confirmedPerHour.toStringAsFixed(1),
-      'min': stats.runtime.inMinutes,
-      // WP171: what the recognizer fallback costs (loads stay far below
-      // checks while the model stays warm for `idleRelease`).
-      'fbLoads': fb.loads,
-      'fbChecks': fb.checks,
-      'fbLoadsPerH': perHour(fb.loads),
-      'fbChecksPerH': perHour(fb.checks),
-    });
+    logWakeAlive(stats, parts.fallbackStats, shadow: _shadow);
   }
 
   Future<void> _onDetection(WakeWordDetection d) => _serial(() async {
@@ -469,7 +473,7 @@ final class WakeHost {
 const wakePreRoll = Duration(milliseconds: 2500);
 
 /// Logs every stage 1 candidate: score and rule, nothing else.
-final class _LoggingEngine implements WakeWordEngine, ScoringWakeEngine {
+final class _LoggingEngine implements WakeWordEngine, ShadowScoringWakeEngine {
   _LoggingEngine(this.inner, this.detector, {required this.verify});
 
   final WakeWordEngine inner;
@@ -486,6 +490,19 @@ final class _LoggingEngine implements WakeWordEngine, ScoringWakeEngine {
   @override
   set scoreSink(void Function(int endSample, double score)? sink) {
     if (inner case final ScoringWakeEngine e) e.scoreSink = sink;
+  }
+
+  // WP171: both detectors' view of each window.
+  @override
+  set windowSink(void Function(WakeWindowScores window)? sink) {
+    if (sink != null) return attachWindowSink(inner, sink);
+    switch (inner) {
+      case final ShadowScoringWakeEngine e:
+        e.windowSink = null;
+      case final ScoringWakeEngine e:
+        e.scoreSink = null;
+      default:
+    }
   }
 
   @override

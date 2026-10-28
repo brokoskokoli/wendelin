@@ -134,6 +134,23 @@ class WakePolicyTest {
     }
 
     @Test
+    fun stationFlagFollowsOpenNotActive() {
+        // WP171: screen dark = activity stopped (active false), the station is still open: the detector stays.
+        val (oldOpen, oldActive) = StationState.open to StationState.active
+        try {
+            StationState.open = true
+            StationState.active = false
+            assertEquals(true, WakeSettings().runArgsForStation()["station"])
+            StationState.open = false
+            StationState.active = true
+            assertEquals(false, WakeSettings().runArgsForStation()["station"])
+        } finally {
+            StationState.open = oldOpen
+            StationState.active = oldActive
+        }
+    }
+
+    @Test
     fun channelArgumentsChangeOnlyWhatTheyName() {
         val old = WakeSettings(enabled = true, mode = WakeMode.ALWAYS, verify = true, pausedUntilMs = 5)
         assertEquals(old, old.withArgs(null))

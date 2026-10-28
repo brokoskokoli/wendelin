@@ -1,5 +1,7 @@
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import 'wake_shadow_cost.dart';
+
 /// Why stage 2 cannot decide (WP171). While it is set, every candidate that
 /// verifier B cannot judge is rejected (fail closed) or decided by the
 /// recognizer alone.
@@ -54,10 +56,14 @@ final class WakeFallbackStats {
   /// alone when B is off).
   int checks = 0;
 
+  /// WP171: developer-mode shadow detector, compute time per window.
+  final shadow = WakeShadowCost();
+
   /// Starts counting anew (a new listener).
   void reset() {
     loads = 0;
     checks = 0;
+    shadow.reset();
   }
 }
 

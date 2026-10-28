@@ -37,23 +37,34 @@ final class FakeParts implements WakeParts {
   int engines = 0;
   WakeDetector? lastDetector;
   bool? lastStation;
+  bool? lastShadow;
+
+  /// The `shadow` flag of every engine built, in order (WP171).
+  final shadows = <bool>[];
+
+  /// The engines built, in order (WP171).
+  final built = <FakeWakeWordEngine>[];
   WakeDetector? verifierDetector;
 
   @override
   Future<WakeWordEngine?> engine({
     WakeDetector detector = WakeDetector.templates,
     bool station = false,
+    bool shadow = false,
   }) async {
     engines++;
     lastDetector = detector;
     lastStation = station;
+    lastShadow = shadow;
+    shadows.add(shadow);
     final hit = !errorsOnlyModel || detector == WakeDetector.model;
     final error = engineError;
     if (hit && error != null) throw error;
     if (hit && openError != null) return OpenFailsEngine(openError!);
-    return engineless
-        ? null
-        : FakeWakeWordEngine(direct: direct, holdMs: holdMs);
+    if (engineless) return null;
+    final engine = FakeWakeWordEngine(direct: direct, holdMs: holdMs);
+    built.add(engine);
+    return engine;
   }
 
   @override

@@ -309,6 +309,7 @@ final class DeviceWakeParts implements WakeParts {
   Future<WakeWordEngine?> engine({
     WakeDetector detector = WakeDetector.templates,
     bool station = false,
+    bool shadow = false,
   }) async {
     if (detector == WakeDetector.model) {
       // WP129: stage 1 is the trained classifier (no templates needed); the
@@ -321,12 +322,25 @@ final class DeviceWakeParts implements WakeParts {
         directThreshold: band.acceptFrom,
         holdDuration: WakeClassifierRules.holdWindow,
         silenceFloor: WakeClassifierRules.silenceFloor(),
+        // WP171 (developer mode): the learned voices only rate the window.
+        shadowTemplates: shadow ? await _allTemplates() : const [],
+        shadowCost: shadow ? fallbackStats.shadow.add : null,
       );
     }
     final sets = await _allTemplates();
     if (sets.isEmpty) return null;
     return CandidateWakeEngine(
-      features: container.read(wakeFeaturesFactoryProvider)(),
+      // WP171 (developer mode): the same chain with the classifier (optional:
+      // without it the templates run on as before, one log line).
+      features: shadow
+          ? container.read(wakeShadowFeaturesFactoryProvider)(
+              classifyCost: fallbackStats.shadow.add,
+              onNote: (reason) => voiceLog('wake-shadow', {
+                'classifier': reason,
+                'effect': 'templates-only',
+              }),
+            )
+          : container.read(wakeFeaturesFactoryProvider)(),
       templates: sets.first,
       moreTemplates: sets.skip(1).toList(),
       // No classifier model yet (WP58): the personal templates decide.

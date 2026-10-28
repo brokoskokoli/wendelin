@@ -21,6 +21,7 @@ final class CandidateWakeEngine
     this.templates,
     this.moreTemplates = const [],
     this.shadowTemplates = const [],
+    this.shadowCost,
     this.modelThreshold = 0.5,
     this.refractory = const Duration(milliseconds: 1500),
     this.keywordId = 'wake',
@@ -43,6 +44,10 @@ final class CandidateWakeEngine
   /// WP171: templates that are only rated for the developer-mode report
   /// (classifier-first engine); they never enter the decision.
   final List<WakeTemplates> shadowTemplates;
+
+  /// WP171: gets the compute time of rating the [shadowTemplates] per window
+  /// (cost log of the developer mode); never called without them.
+  final void Function(Duration time)? shadowCost;
 
   /// Low classifier threshold (rule a).
   final double? modelThreshold;
@@ -178,7 +183,9 @@ final class CandidateWakeEngine
     if (sink == null) return;
     try {
       final shadow = _usable(shadowTemplates);
+      final clock = shadow.isEmpty ? null : (Stopwatch()..start());
       final t = shadow.isEmpty ? main : _closest(w.embedding, shadow);
+      if (clock != null) shadowCost?.call(clock.elapsed);
       final sim = t.similarity, thr = t.threshold;
       final raw = w.modelScore;
       sink((
