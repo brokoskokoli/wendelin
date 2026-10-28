@@ -83,7 +83,15 @@ Probeläufe: Actions → release → Run workflow (nur auf `main`; nur Build und
 
 ### Release-Kandidaten
 
-Ein Release-Kandidat heißt `v<pubspec-version>-rcN` (z. B. `v0.6.0-rc1`, ohne Punkt vor `N`). Der Project Supervisor baut ihn lokal nach diesem Abschnitt (Release-Schlüssel, `cd app && flutter build apk --release`) auf einem grünen `main`-Stand und legt APK und `VERSION.txt` (Commit-SHA, Version) im Testordner des Maintainers ab. Ein Git-Tag mit diesem Namen entsteht nur, wenn der Release-Workflow (Abschnitt 5) die Vorabversion bauen soll; ein lokaler Kandidat braucht keinen Tag.
+Ein Release-Kandidat heißt `v<pubspec-version>-rcN` (z. B. `v0.6.0-rc1`, ohne Punkt vor `N`) und ist ein Tag auf `main`. Ablauf (Project Supervisor):
+
+1. Auf genau dem Commit, der getaggt wird, ist das Gate grün (Abschnitt 5, Punkt 3 bricht sonst ab).
+2. Tag setzen und pushen: `git tag v<version>-rcN && git push origin v<version>-rcN`. Zwischen Tag und dem Rest der Kette kommt kein Commit auf `main`.
+3. `release.yml` baut die signierte Vorabversion (Abschnitt 5).
+4. Herunterladen: `gh release download v<version>-rcN -R <owner>/<repo>` in ein leeres Verzeichnis, dann `shasum -c SHA256SUMS`.
+5. APK und `VERSION.txt` (Commit-SHA, Version) in den Testordner des Maintainers legen.
+
+Nach einem echten Release zuerst die pubspec-Version erhöhen: `vX-rcN` sortiert vor `vX`, ein Kandidat zur bereits veröffentlichten Version wäre also älter als das Release.
 
 ## 7. Umstieg vom Debug-Schlüssel auf dem Handy
 

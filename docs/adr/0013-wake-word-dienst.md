@@ -2,7 +2,7 @@
 
 Status: teilweise überholt (umgesetzt, nachgezogen 2026-10-25; siehe Vermerk) · 2026-10-14
 
-**Vermerk 2026-10-28 (teilweise überholt durch K110, K117, K84, K124):** §3: Stufe 2 ist nicht mehr nur Whisper, sondern seit K110/K117 Prüfer B (Vorlagen-Vergleich) mit Parakeet als Rückfall ohne eingelernte Vorlagen, und prüft nur Treffer im Band 0,98–0,999. §8: Barge-in ist seit K84/K124 zweistufig (Kandidat, dann Prüfer B) und nicht mehr „ohne Stufe 2“. §7: Standard „nur beim Laden“, wählbar „immer“; Auto und Zeitfenster aus dem Konzept gibt es nicht (K136).
+**Vermerk 2026-10-28 (teilweise überholt durch K110, K117, K84, K124):** §3: Stufe 2 ist nicht mehr nur Whisper, sondern seit K110/K117 Prüfer B (Vorlagen-Vergleich) mit Parakeet als Rückfall ohne eingelernte Vorlagen, und prüft nur Treffer im Band 0,98–0,999. §8: Barge-in ist seit K84/K124 zweistufig (Kandidat, dann Prüfer B) und nicht mehr „ohne Stufe 2“. §7: Standard „nur beim Laden“, wählbar „immer“; Auto und Zeitfenster aus dem Konzept sind offen, noch kein Code (K136).
 
 ## Kontext
 K29 beschreibt die zweistufige Erkennung (WP44, WP60): Stufe 1 ist die openWakeWord-Merkmalskette mit den persönlichen Vorlagen aller eingelernten Sprecher, Stufe 2 die Whisper-Nachprüfung. WP50 Teil a bringt sie als Dauerdienst auf Android. Randbedingungen: Android 14+ verlangt für Mikrofon-Dienste den Typ `microphone` und einen sichtbaren Kontext beim Start, der Dienst soll in der Ruhe unter 200 MB bleiben (K14 c), ein Neustart ohne App-Aufruf soll ihn mit der Assistentenrolle zurückholen (Entscheidung Maintainer 5), Standard ist „nur beim Laden“ (Entscheidung 7).

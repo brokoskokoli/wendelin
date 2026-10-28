@@ -341,6 +341,15 @@ void _commitMsgGuard(SelfCheck t, Sandbox r) {
     return Process.runSync('sh', [guard, f.path]).exitCode;
   }
 
+  String re(String f) => RegExp(
+    r"^\s*(?:trailer_re|TRAILER_RE)='([^']*)'",
+    multiLine: true,
+  ).firstMatch(File(f).readAsStringSync())!.group(1)!;
+  t.eq(
+    re('tool/hooks/commit-msg-guard.sh'),
+    re('tool/check_commit_identity.sh'),
+    'commit-msg-guard und check_commit_identity: gleiches Trailer-Muster',
+  );
   for (final m in ['Sonnet 4.6', 'Opus 5.5 (1M context)', 'Haiku 4.5']) {
     t.eq(
       hook('x\n\nCo-Authored-By: Claude $m <noreply@anthropic.com>'),
@@ -353,6 +362,7 @@ void _commitMsgGuard(SelfCheck t, Sandbox r) {
     'Co-Authored-By: Claude Sonnet 4.6 <x@example.org>',
     'Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com> extra',
     'Co-Authored-By: Claude <noreply@anthropic.com>',
+    'Co-Authored-By: Claude Gpt 4 <noreply@anthropic.com>',
   ]) {
     t.isTrue(hook('x\n\n$m') != 0, 'commit-msg-guard: rot: $m');
   }
