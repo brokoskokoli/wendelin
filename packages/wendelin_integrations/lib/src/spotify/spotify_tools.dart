@@ -231,11 +231,10 @@ final class SpotifyPlayTool extends IntegrationTool
 
   @override
   String get description =>
-      'Play on Spotify: track, album, artist (top tracks) or playlist, by '
-      'query or URI; with neither, resumes paused music. Plays where music '
-      'already plays, else on this phone (starts Spotify); device only if '
-      'the user names one. If nothing is found, say so and only offer an '
-      'alternative; never play a different item silently.';
+      'Play on Spotify: track, album, artist or playlist, by query or URI; '
+      'none = resume. Plays where music already plays, else on this phone; '
+      'device only if the user names one. Nothing found: say so, never play '
+      'another item. "Sent, not confirmed" means exactly that, not playing.';
 
   @override
   Map<String, Object?> get inputSchema => const {
@@ -273,20 +272,34 @@ final class SpotifyPlayTool extends IntegrationTool
     );
     final where = start.isPhone ? '' : ' auf „${start.deviceName}“';
     final fell = start.fellBackFrom;
+    // Only checked playback may claim "ich spiele"; unchecked just says sent.
     final hint = fell == null
         ? ''
-        : ' Auf „$fell“ kam nichts an, ich spiele auf dem Handy.';
+        : start.confirmed
+        ? ' Auf „$fell“ kam nichts an, ich spiele auf dem Handy.'
+        : ' Auf „$fell“ kam nichts an, ich habe es ans Handy geschickt.';
+    final what = target == null ? null : '${target.label} (${target.uri})';
     final base =
         (target == null
             ? 'Wiedergabe fortgesetzt$where.'
-            : 'Spielt$where: ${target.label} (${target.uri}).') +
+            : 'Spielt$where: $what.') +
         hint;
+    // Not seen playing: never "Spielt", only what was sent.
+    final foreign = !start.confirmed && !start.isPhone;
+    final unconfirmed = !start.confirmed;
     return ToolOutcome.text(
       start.confirmed
           ? base
-          : '$base Gesendet, aber die Wiedergabe konnte nicht geprüft '
-                'werden.',
-      summary: target == null ? 'Weiter' : 'Spielt ${target.label}',
+          : foreign
+          ? 'Ich habe es an „${start.deviceName}“ geschickt, konnte es aber '
+                'nicht bestätigen.${what == null ? '' : ' Gesendet: $what.'}'
+          : '${target == null ? 'Fortsetzen gesendet.' : 'Gesendet: $what.'}'
+                '$hint Die Wiedergabe konnte nicht geprüft werden.',
+      summary: unconfirmed
+          ? 'Gesendet'
+          : target == null
+          ? 'Weiter'
+          : 'Spielt ${target.label}',
       // Fixed sentence only for checked playback on the phone; otherwise the
       // model words the result (other device, not checked) from the text.
       // A label is the uri or a server name; never read it aloud.

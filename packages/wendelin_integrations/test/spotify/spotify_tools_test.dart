@@ -329,7 +329,7 @@ void main() {
     );
 
     test(
-      'Fremdgerät spielend, aber nichts kommt an: Handy mit Hinweis',
+      'Fremdgerät spielend, aber nichts bestätigt: bleibt dort, ehrlicher Satz',
       () async {
         api
           ..knownDevices.add(tv)
@@ -340,20 +340,43 @@ void main() {
         expect(o.isError, isFalse);
         expect(
           o.text,
-          contains('Auf „Wohnzimmer“ kam nichts an, ich spiele auf dem Handy.'),
+          startsWith(
+            'Ich habe es an „Wohnzimmer“ geschickt, konnte es aber nicht '
+            'bestätigen. Gesendet: ',
+          ),
         );
-        expect(api.lastPlay!.deviceId, 'dev1');
-        expect(api.playing, isTrue);
+        expect(o.text, contains('(spotify:track:'));
+        expect(o.summary, 'Gesendet');
+        expect(o.text, isNot(contains('Spielt')));
+        expect(api.lastPlay!.deviceId, 'tv');
         expect(o.fixed, isNull);
       },
     );
+
+    test('Fremdgerät lehnt den Befehl ab (404): Handy mit Hinweis', () async {
+      api
+        ..knownDevices.add(tv)
+        ..activeDeviceId = 'tv'
+        ..playing = true
+        ..rejectingDeviceIds.add('tv');
+      final o = await call('spotify__play', {'query': 'bohemian'});
+      expect(o.isError, isFalse);
+      expect(
+        o.text,
+        contains('Auf „Wohnzimmer“ kam nichts an, ich spiele auf dem Handy.'),
+      );
+      expect(api.lastPlay!.deviceId, 'dev1');
+      expect(api.playing, isTrue);
+      expect(o.fixed, isNull);
+    });
 
     test('Ausweichen, Handy spielt auch nicht: Fehler statt Erfolg', () async {
       api
         ..knownDevices.add(tv)
         ..activeDeviceId = 'tv'
         ..playing = true
-        ..frozenDeviceIds.addAll(['tv', 'dev1']);
+        ..rejectingDeviceIds.add('tv')
+        ..frozenDeviceIds.add('dev1');
       final o = await call('spotify__play', {'query': 'bohemian'});
       expect(o.isError, isTrue);
       expect(o.text, isNot(contains('Spielt')));
@@ -390,9 +413,59 @@ void main() {
         );
         final o = await call('spotify__play', {'query': 'bohemian'});
         expect(o.isError, isFalse);
-        expect(o.text, contains('nicht geprüft'));
+        expect(o.text, contains('Gesendet:'));
+        expect(o.text, contains('nicht geprüft werden'));
+        expect(o.text, isNot(contains('Spielt')));
+        expect(o.summary, 'Gesendet');
         expect(launcher.wakes, 0);
         // Not spoken as „läuft“: the model words the unchecked result.
+        expect(o.fixed, isNull);
+      },
+    );
+
+    test(
+      'Ausweichen, Handy ungeprüft: ehrlich „geschickt“, nie „spiele“',
+      () async {
+        api
+          ..knownDevices.add(tv)
+          ..activeDeviceId = 'tv'
+          ..playing = true
+          ..rejectingDeviceIds.add('tv');
+        api.onPlay = () => api.failNext(
+          'playback',
+          const PortException(PortErrorKind.unavailable, 'Anfragelimit'),
+        );
+        final o = await call('spotify__play', {'query': 'bohemian'});
+        expect(o.isError, isFalse, reason: o.text);
+        expect(
+          o.text,
+          contains(
+            'Auf „Wohnzimmer“ kam nichts an, ich habe es ans Handy '
+            'geschickt.',
+          ),
+        );
+        expect(o.text, isNot(contains('ich spiele')));
+        expect(o.text, isNot(contains('Spielt')));
+        expect(o.summary, 'Gesendet');
+        expect(o.fixed, isNull);
+      },
+    );
+
+    test(
+      'Fortsetzen, Prüfung scheitert: „Fortsetzen gesendet“, kein „Spielt“',
+      () async {
+        playing();
+        api.playing = false;
+        api.onPlay = () => api.failNext(
+          'playback',
+          const PortException(PortErrorKind.unavailable, 'Anfragelimit'),
+        );
+        final o = await call('spotify__play');
+        expect(o.isError, isFalse);
+        expect(o.text, startsWith('Fortsetzen gesendet.'));
+        expect(o.text, contains('nicht geprüft werden'));
+        expect(o.text, isNot(contains('Spielt')));
+        expect(o.summary, 'Gesendet');
         expect(o.fixed, isNull);
       },
     );

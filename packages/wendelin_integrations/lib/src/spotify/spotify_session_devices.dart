@@ -124,8 +124,10 @@ extension _SpotifyDevices on SpotifySession {
   }
 
   /// Sends the command to the playing foreign device [target] and checks
-  /// it; `null` if nothing arrived there (the caller falls back to the
-  /// phone). Only dead-device errors count as "nothing arrived".
+  /// it; `null` only if the command fails with a dead-device error (the
+  /// caller falls back to the phone). An unconfirmed command (stalled, idle,
+  /// other device after the longer foreign window) stays on [target] with
+  /// `confirmed == false`: the cast device may still start late.
   Future<SpotifyStart?> _playOnActive(
     Future<void> Function(SpotifyAuth auth, String deviceId) op,
     SpotifyDevice target,
@@ -134,16 +136,13 @@ extension _SpotifyDevices on SpotifySession {
     try {
       await run((a) => op(a, target.id));
       final verdict = await _verifier.check(target, false);
-      if (verdict == SpotifyVerdict.unchecked ||
-          verdict == SpotifyVerdict.playing) {
-        return (
-          deviceId: target.id,
-          deviceName: target.name,
-          isPhone: false,
-          confirmed: verdict == SpotifyVerdict.playing,
-          fellBackFrom: fellBackFrom,
-        );
-      }
+      return (
+        deviceId: target.id,
+        deviceName: target.name,
+        isPhone: false,
+        confirmed: verdict == SpotifyVerdict.playing,
+        fellBackFrom: fellBackFrom,
+      );
     } on PortException catch (e) {
       if (!SpotifySession._deadDevice(e)) rethrow;
     }

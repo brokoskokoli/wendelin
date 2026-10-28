@@ -94,6 +94,11 @@ final class FakeSpotifyApi with FakeFailures implements SpotifyApi {
   /// (simulated time between two reads); 0 = never.
   int progressStepMs = 1000;
 
+  /// Scripted positions for the next state reads (consumed one per read of
+  /// an active device, then the normal progress resumes), e.g. a cast device
+  /// that reports the old position first, then 0, then grows late.
+  final List<int> progressScript = [];
+
   /// Like Spotify for restricted or private devices: the playback state
   /// carries the device name but `device.id` is null.
   bool playbackWithoutDeviceId = false;
@@ -232,6 +237,7 @@ final class FakeSpotifyApi with FakeFailures implements SpotifyApi {
     enter('playback');
     _check(auth);
     if (activeDeviceId == null) return null;
+    if (progressScript.isNotEmpty) positionMs = progressScript.removeAt(0);
     final progress = positionMs;
     if (playing && !stuckDeviceIds.contains(activeDeviceId)) {
       positionMs += progressStepMs;
