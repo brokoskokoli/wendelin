@@ -323,6 +323,9 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   }
 
   void _onStop() {
+    // The keyboard button cancels listening (tap) to type: that is no stop,
+    // the window stays open for the typing (`_typing` is set before cancel).
+    if (_typing) return;
     final entries = ref.read(agentControllerProvider).entries;
     setState(() => _hideBefore = entries.length);
     _idle.closeLater('stop', AssistantOverlayScreen.stopCloseDelay);

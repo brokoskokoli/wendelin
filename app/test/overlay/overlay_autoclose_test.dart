@@ -322,9 +322,10 @@ void main() {
     await tester.tap(find.byTooltip(AppLocalizationsDe().overlayTextInput));
     await _pump(tester, steps: 30);
     expect(phases.last, VoiceState.idle, reason: 'Zuhoeren wurde beendet');
-    // (The tap-cancel also closes by `stop` after the display time; that is
-    // existing behaviour of the keyboard button, not part of WP172.)
-    expect(closedByIdle(), isFalse);
+    // Well past stopCloseDelay: no closing at all (neither idle nor stop).
+    final closes = logs.where((l) => l.contains('overlay-close')).toList();
+    expect(closes, isEmpty, reason: 'Tastatur: das Overlay bleibt offen');
+    expect(platform.calls, isNot(contains('releaseHost')));
   });
 
   testWidgets('Rueckgaengig bei Sprachausgabe: das Fenster bleibt', (
