@@ -165,6 +165,82 @@ void main() {
       expect(r.isPhone, isTrue);
     });
 
+    test('Fremdgerät 5xx beim Befehl: Handy mit Hinweis', () async {
+      speakerPlays();
+      api.rejectingDeviceIds.add('spk');
+      api.rejectStatus = const PortException(
+        PortErrorKind.unavailable,
+        'Spotify: nicht erreichbar (HTTP 503)',
+      );
+      final r = await start();
+      expect(r.fellBackFrom, 'Wohnzimmer');
+      expect(r.isPhone, isTrue);
+      expect(api.lastPlay!.deviceId, 'dev1');
+    });
+
+    test('Prüfung nach dem Befehl 429: unbestätigt, kein Ausweichen', () async {
+      speakerPlays();
+      final r = await session.startPlayback((a, d) async {
+        await api.play(a, deviceId: d, uris: ['spotify:track:x']);
+        api.failNext('playback', spotifyRateLimited);
+      });
+      expect(r.confirmed, isFalse);
+      expect(r.isPhone, isFalse);
+      expect(r.fellBackFrom, isNull);
+      expect(api.lastPlay!.deviceId, 'spk');
+      expect(count('play'), 1);
+    });
+
+    test('Befehl auf dem Fremdgerät 429: Fehler, kein Ausweichen', () async {
+      speakerPlays();
+      api.rejectingDeviceIds.add('spk');
+      api.rejectStatus = spotifyRateLimited;
+      await expectLater(start(), throwsA(same(spotifyRateLimited)));
+      expect(count('play'), 1);
+    });
+
+    test('429 beim Vorab-Lesen: Fehler, der Chromecast bleibt', () async {
+      speakerPlays();
+      api.failNext('playback', spotifyRateLimited);
+      await expectLater(start(), throwsA(same(spotifyRateLimited)));
+      expect(count('play'), 0);
+      expect(launcher.wakes, 0);
+    });
+
+    for (final (label, setup) in <(String, void Function())>[
+      ('nichts aktiv', () => api.knownDevices.addAll([phone, speaker])),
+      (
+        'pausiert',
+        () => api
+          ..knownDevices.addAll([phone, speaker])
+          ..activeDeviceId = 'spk'
+          ..playing = false,
+      ),
+      (
+        'Handy selbst',
+        () => api
+          ..knownDevices.addAll([phone, speaker])
+          ..activeDeviceId = 'dev1'
+          ..playing = true,
+      ),
+    ]) {
+      test(
+        'Latenz ($label): ein Lesevorgang, kein Warten vor dem Befehl',
+        () async {
+          setup();
+          int? readsAtPlay;
+          List<Duration>? waitsAtPlay;
+          await session.startPlayback((a, d) async {
+            readsAtPlay = count('playback');
+            waitsAtPlay = [...waits];
+            await api.play(a, deviceId: d, uris: ['spotify:track:x']);
+          });
+          expect(readsAtPlay, 1);
+          expect(waitsAtPlay, isEmpty);
+        },
+      );
+    }
+
     test('benanntes Gerät: dort, auch wenn ein anderes spielt', () async {
       api.knownDevices.addAll([phone, speaker, desktop]);
       api
@@ -203,13 +279,20 @@ void main() {
       expect(r.isPhone, isTrue);
     });
 
-    test('Diagnose ohne Gerätenamen und IDs (auch beim Ausweichen)', () async {
-      speakerPlays();
-      api.frozenDeviceIds.add('spk');
-      await start();
-      final text = diag.map((e) => '${e.$1} ${e.$2}').join(' ');
-      expect(text, isNot(contains('Wohnzimmer')));
-      expect(text, isNot(contains('spk')));
-    });
+    for (final (label, setup, key) in <(String, void Function(), String)>[
+      ('Ausweichen', () => api.frozenDeviceIds.add('spk'), 'fallback'),
+      ('Stillstand', () => api.stuckDeviceIds.add('spk'), 'skip'),
+    ]) {
+      test('Diagnose ohne Gerätenamen und IDs ($label)', () async {
+        speakerPlays();
+        setup();
+        await start();
+        // The path under test really logged its line.
+        expect(diag.any((e) => e.$2.containsKey(key)), isTrue);
+        final text = diag.map((e) => '${e.$1} ${e.$2}').join(' ');
+        expect(text, isNot(contains('Wohnzimmer')));
+        expect(text, isNot(contains('spk')));
+      });
+    }
   });
 }

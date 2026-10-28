@@ -323,6 +323,7 @@ void main() {
           ),
           throwsA(same(spotifyNoDevice)),
         );
+        expect(waits, isEmpty);
       },
     );
 

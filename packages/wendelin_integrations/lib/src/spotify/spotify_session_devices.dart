@@ -70,7 +70,9 @@ extension _SpotifyDevices on SpotifySession {
   ///
   /// Spotify may report `is_playing` for a dead device, so the position must
   /// grow between two reads [SpotifyPlaybackVerifier.interval] apart
-  /// (`skip=stalled` otherwise). Read errors (except auth) mean `null`.
+  /// (`skip=stalled` otherwise). A 429 is rethrown: the phone would pull the
+  /// playback away from the foreign device and the command would fail anyway.
+  /// Other read errors (except auth) mean `null` (phone).
   Future<SpotifyDevice?> _playingElsewhere(
     List<SpotifyDevice> usable,
     String? phoneId,
@@ -95,13 +97,16 @@ extension _SpotifyDevices on SpotifySession {
   }
 
   /// The state if something plays, else `null` (also on read errors other
-  /// than auth, which are rethrown).
+  /// than auth and rate limit, which are rethrown).
   Future<SpotifyPlayback?> _readPlayback() async {
     try {
       final state = await run(api.playback);
       return state != null && state.isPlaying ? state : null;
     } on PortException catch (e) {
-      if (e.kind == PortErrorKind.permissionDenied) rethrow;
+      if (e.kind == PortErrorKind.permissionDenied ||
+          identical(e, spotifyRateLimited)) {
+        rethrow;
+      }
       return null;
     }
   }
