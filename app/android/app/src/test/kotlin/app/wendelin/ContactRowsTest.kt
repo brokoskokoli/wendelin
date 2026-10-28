@@ -211,7 +211,8 @@ class ContactRowsTest {
     @Test
     fun parseIdsAndDetailFields() {
         assertEquals(listOf(1L, 2L), ContactRows.parseIds(listOf("1", "2", "1")))
-        for (bad in listOf(null, emptyList(), listOf("x"), listOf("1", "")) ) {
+        assertEquals(listOf(1L), ContactRows.parseIds(List(ContactRows.MAX_IDS) { "1" }))
+        for (bad in listOf(null, emptyList(), listOf("x"), listOf("1", ""), List(ContactRows.MAX_IDS + 1) { "1" })) {
             try {
                 ContactRows.parseIds(bad)
                 throw AssertionError("accepted $bad")

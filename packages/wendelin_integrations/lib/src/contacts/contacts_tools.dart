@@ -160,10 +160,9 @@ final class ContactsNavigateTool extends IntegrationTool
   @override
   String get description =>
       'Navigate to a person from the address book ("navigate to Anna"). '
-      'You never see the address; the result is only a status: ok (done, '
-      'say nothing more), no_contact, no_address, app_unavailable or '
-      'choice_needed ("contacts"/"address_labels": ask the user, then call '
-      'again). "app" only if the user names one.';
+      'You never see the address; the result is only a status (ok: done, '
+      'say nothing more). On choice_needed ask the user, then call again '
+      'with "choice" or "address_label". "app" only if the user names one.';
 
   @override
   Map<String, Object?> get inputSchema => {
@@ -172,6 +171,12 @@ final class ContactsNavigateTool extends IntegrationTool
       'name': {
         'type': 'string',
         'description': 'Name or part of the name, e.g. "Anna Meier".',
+      },
+      'choice': {
+        'type': 'integer',
+        'description':
+            'Position (1 = first) in the "contacts" list of a choice_needed '
+            'answer; keep the same "name".',
       },
       'address_label': {
         'type': 'string',
@@ -211,19 +216,11 @@ final class ContactsNavigateTool extends IntegrationTool
 
     const fields = {ContactField.address};
     var matches = await finder.find(query, fields: fields);
-    if (matches.isEmpty) {
-      // A follow-up with a label from an earlier choice_needed
-      // („Anna Meier (Firma)“, „Anna Meier (2)“).
-      final m = _suffixed.firstMatch(query);
-      if (m != null) {
-        final base = await finder.find(m.group(1)!.trim(), fields: fields);
-        final key = foldForMatch(query);
-        final names = contactChoiceLabels(base);
-        matches = [
-          for (var i = 0; i < base.length; i++)
-            if (foldForMatch(names[i]) == key) base[i],
-        ];
-      }
+    // A follow-up to choice_needed: the position in that list (same query,
+    // same order), never parsed out of a name.
+    final choice = args.optInt('choice', min: 1, max: 100);
+    if (choice != null) {
+      matches = choice <= matches.length ? [matches[choice - 1]] : const [];
     }
     if (matches.isEmpty) return _status('no_contact', 'Kein Kontakt gefunden');
     if (matches.length > 1) {
@@ -276,8 +273,6 @@ final class ContactsNavigateTool extends IntegrationTool
       fixed: ConfirmationSentence('navigation.started', {'name': contact.name}),
     );
   }
-
-  static final _suffixed = RegExp(r'^(.+?)\s*\([^)]*\)\s*$');
 
   /// The index of the address meant by [wanted] among [labels]; `null` if
   /// the user has to choose (several addresses and no unique label match).
@@ -549,25 +544,39 @@ final class PhoneCallTool extends IntegrationTool
 }
 
 /// Makes repeated [labels] distinct („Privat“, „Privat“ becomes „Privat 1“,
-/// „Privat 2“); unique ones stay as they are.
+/// „Privat 2“); unique ones stay as they are and the numbered ones never
+/// collide with them („Privat“, „Privat“, „Privat 1“ → „Privat 2“,
+/// „Privat 3“, „Privat 1“).
 List<String> uniqueLabels(List<String> labels) {
   final count = <String, int>{};
   for (final l in labels) {
     count.update(foldForMatch(l), (n) => n + 1, ifAbsent: () => 1);
   }
-  final seen = <String, int>{};
+  final taken = {
+    for (final e in count.entries)
+      if (e.value == 1) e.key,
+  };
+  final next = <String, int>{};
   return [
     for (final l in labels)
-      if (count[foldForMatch(l)]! > 1)
-        '$l ${seen.update(foldForMatch(l), (n) => n + 1, ifAbsent: () => 1)}'
-      else
-        l,
+      if (count[foldForMatch(l)]! > 1) _numbered(l, next, taken) else l,
   ];
 }
 
+String _numbered(String l, Map<String, int> next, Set<String> taken) {
+  final key = foldForMatch(l);
+  var n = next[key] ?? 0;
+  String candidate;
+  do {
+    candidate = '$l ${++n}';
+  } while (!taken.add(foldForMatch(candidate)));
+  next[key] = n;
+  return candidate;
+}
+
 /// Names for a choice among [contacts]: equal display names get an index
-/// („Anna Meier (1)“, „Anna Meier (2)“), so the user can pick one in the
-/// follow-up call. Only the address is read, so nothing else can tell them
+/// („Anna Meier (1)“, „Anna Meier (2)“) for the user; the follow-up call
+/// names the position (`choice`), the label is never parsed. Only the address is read, so nothing else can tell them
 /// apart.
 List<String> contactChoiceLabels(List<ContactEntry> contacts) {
   final groups = <String, List<int>>{};

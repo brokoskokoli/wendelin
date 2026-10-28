@@ -237,14 +237,14 @@ void main() {
       },
     );
 
-    test('gleiche Namen: Index, Folgeaufruf wählt', () async {
+    test('gleiche Namen: Position, Folgeaufruf wählt', () async {
       book.contacts = const [
         ContactEntry(name: 'Jan Moll', addresses: [ContactAddress(_home)]),
         ContactEntry(name: 'Jan Moll', addresses: [ContactAddress(_work)]),
       ];
       final o = await run({'name': 'Jan Moll'});
       expect(json(o)['contacts'], ['Jan Moll (1)', 'Jan Moll (2)']);
-      final r = await run({'name': 'Jan Moll (2)'});
+      final r = await run({'name': 'Jan Moll', 'choice': 2});
       expect(json(r), {'status': 'ok'});
       expect(
         Uri.decodeComponent(launcher.launched.single.uri.toString()),
@@ -252,14 +252,52 @@ void main() {
       );
     });
 
-    test('unbekannter Zusatz in Klammern: kein Kontakt, kein Start', () async {
+    test('Kollision: Kontakt heißt selbst „Jan Moll (2)“', () async {
+      book.contacts = const [
+        ContactEntry(name: 'Jan Moll', addresses: [ContactAddress(_home)]),
+        ContactEntry(name: 'Jan Moll', addresses: [ContactAddress(_work)]),
+        ContactEntry(
+          name: 'Jan Moll (2)',
+          addresses: [ContactAddress('Drittweg 5, 11111 Dritt')],
+        ),
+      ];
+      final r = await run({'name': 'Jan Moll', 'choice': 2});
+      expect(json(r), {'status': 'ok'});
+      expect(
+        Uri.decodeComponent(launcher.launched.single.uri.toString()),
+        contains(_work),
+      );
+      launcher.launched.clear();
+      // The real contact with that name is found by its own name.
+      final own = await run({'name': 'Jan Moll (2)'});
+      expect(json(own), {'status': 'ok'});
+      expect(
+        Uri.decodeComponent(launcher.launched.single.uri.toString()),
+        contains('Drittweg'),
+      );
+    });
+
+    test('choice außerhalb der Liste: kein Kontakt, kein Start', () async {
       book.contacts = const [
         ContactEntry(name: 'Jan Moll', addresses: [ContactAddress(_home)]),
         ContactEntry(name: 'Jan Moll', addresses: [ContactAddress(_work)]),
       ];
-      final r = await run({'name': 'Jan Moll (7)'});
+      final r = await run({'name': 'Jan Moll', 'choice': 3});
       expect(json(r)['status'], 'no_contact');
       expect(launcher.launched, isEmpty);
+      final bad = await run({'name': 'Jan Moll', 'choice': 0});
+      expect(bad.isError, isTrue);
+      expect(launcher.launched, isEmpty);
+    });
+
+    test('Bezeichnungen bleiben eindeutig (auch gegen vorhandene)', () {
+      expect(uniqueLabels(['Privat', 'Privat', 'Privat 1']), [
+        'Privat 2',
+        'Privat 3',
+        'Privat 1',
+      ]);
+      final l = uniqueLabels(['A', 'A', 'A 1', 'A 2', 'B', 'B']);
+      expect(l.toSet(), hasLength(l.length));
     });
   });
 
