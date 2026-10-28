@@ -371,6 +371,9 @@ void main() {
       tileWidget(tester, 'Obsidian Desktop').status,
       IntegrationStatus.setupRequired,
     );
+    // A longer list (Waze, WP164 B): bring the switch on screen first.
+    await tester.ensureVisible(switchOf('Home Assistant'));
+    await tester.pump();
     await tester.tap(switchOf('Home Assistant'));
     await settle(tester);
     expect(

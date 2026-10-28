@@ -102,6 +102,9 @@ void main() {
 
     // Letzter Schritt (WP50 b): Aktivierungswort, überspringbar.
     await tester.scrollUntilVisible(find.text('Weiter'), 200);
+    // A longer list (Waze, WP164 B) leaves the button at the screen edge.
+    await tester.ensureVisible(find.text('Weiter'));
+    await tester.pump();
     await tester.tap(find.text('Weiter'));
     await settle(tester);
     expect(find.text('Aktivierungswort'), findsOneWidget);

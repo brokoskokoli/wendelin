@@ -150,6 +150,12 @@ void main() {
           ..setEnabled('two', enabled: true)
           ..unregister('one');
         expect(_names(_cat(r).activeSpecs()), ['nav__go']);
+        // The remaining integration now owns the tool: it can still be
+        // switched, and the switch survives until the last owner is gone.
+        r.setToolEnabled('nav__go', enabled: false);
+        expect(_cat(r).activeSpecs(), isEmpty);
+        r.setToolEnabled('nav__go', enabled: true);
+        expect(_names(_cat(r).activeSpecs()), ['nav__go']);
         r.unregister('two');
         expect(_cat(r).activeSpecs(), isEmpty);
         // Another tool with the same name is still refused.

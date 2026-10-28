@@ -8,6 +8,7 @@ import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/ui/settings/ha_device_sections.dart';
 import 'package:wendelin/ui/settings/ha_screen.dart';
 import 'package:wendelin/ui/settings/integration_detail_screen.dart';
+import 'package:wendelin_core/wendelin_core.dart' show Tool;
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_mcp/wendelin_mcp.dart';
 
@@ -284,8 +285,11 @@ void main() {
     // `mcp/mcp_level_test.dart` und `settings/http_level_test.dart`.
     expect(all, isNotEmpty);
     final names = <String>{};
+    final seen = <Tool>{};
     for (final i in all.values) {
       for (final t in i.tools) {
+        // One instance may serve two integrations (maps__navigate, Waze).
+        if (!seen.add(t)) continue;
         expect(names.add(t.name), isTrue, reason: 'doppelt: ${t.name}');
       }
     }
