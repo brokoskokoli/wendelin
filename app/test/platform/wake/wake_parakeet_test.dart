@@ -13,6 +13,8 @@ import 'package:wendelin/platform/wake/device_wake_parts.dart';
 import 'package:wendelin/platform/wake/wake_detector.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../recognizer/recognizer_host_test.dart' show FakeEngines;
+
 const _tokens =
     '<unk> 0\n<|pnc|> 1\n▁W 2\nend 3\nel 4\nin 5\ne 9\nn 10\nd 11\nl 12\n'
     'i 13\n<blk> 16\n';
@@ -321,12 +323,76 @@ void main() {
       ],
     );
 
-    test('Vorlagen-Weg: Whisper', () {
-      final parts = DeviceWakeParts(container(true));
-      expect(parts.verifier(), isA<LazyWhisperVerifier>());
+    // WP171: stage 2 is always verifier B; without enrolled sequences it
+    // hands the clip to the installed recognizer, in both detector paths.
+    for (final detector in WakeDetector.values) {
+      group('Stufe 2 im Pfad ${detector.name}', () {
+        test('nur Parakeet installiert: Kandidat wird bestätigt', () async {
+          final hw = install();
+          final backend = _Backend('Wendelin');
+          final engines = FakeEngines()..missing = true;
+          final parts = DeviceWakeParts(
+            container(true),
+            hotwordsDirectory: () async => hw,
+            parakeetStart: (_) async => backend,
+            engines: () async => engines,
+            useVerifierB: true,
+          );
+          final v = parts.verifier(detector: detector);
+          expect(await v.confirm(_tone(900)), isTrue);
+          expect(v.kind, 'parakeet');
+          expect(engines.checked, isEmpty, reason: 'Whisper nie gefragt');
+          await parts.dispose();
+        });
+
+        test('nur Whisper installiert: Kandidat wird bestätigt', () async {
+          final engines = FakeEngines(
+            transcripts: const [Transcript(text: 'Wendelin')],
+          );
+          final parts = DeviceWakeParts(
+            container(false),
+            hotwordsDirectory: () async => Directory('${dir.path}/hw'),
+            parakeetStart: (_) async => fail('Parakeet darf nicht starten'),
+            engines: () async => engines,
+            useVerifierB: true,
+          );
+          final v = parts.verifier(detector: detector);
+          expect(await v.confirm(_tone(900)), isTrue);
+          expect(v.kind, 'whisper');
+          await parts.dispose();
+        });
+
+        test('kein Modell: abgelehnt mit modelMissing', () async {
+          final engines = FakeEngines()..missing = true;
+          final parts = DeviceWakeParts(
+            container(false),
+            hotwordsDirectory: () async => Directory('${dir.path}/hw'),
+            parakeetStart: (_) async => fail('Parakeet darf nicht starten'),
+            engines: () async => engines,
+            useVerifierB: true,
+          );
+          final v = parts.verifier(detector: detector);
+          await expectLater(
+            v.confirm(_tone(900)),
+            throwsA(
+              isA<VoiceException>().having(
+                (e) => e.kind,
+                'kind',
+                VoiceErrorKind.modelMissing,
+              ),
+            ),
+          );
+          await parts.dispose();
+        });
+      });
+    }
+
+    test('Vorlagen-Weg wie Modell-Weg: Prüfer B (WP171)', () {
+      final parts = DeviceWakeParts(container(true), useVerifierB: true);
+      expect(parts.verifier(), isA<VerifierBWakeVerifier>());
       expect(
         parts.verifier(detector: WakeDetector.templates),
-        isA<LazyWhisperVerifier>(),
+        isA<VerifierBWakeVerifier>(),
       );
     });
 

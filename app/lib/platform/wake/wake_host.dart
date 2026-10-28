@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart'
+    show ValueListenable, ValueNotifier, visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
@@ -15,6 +16,14 @@ import 'wake_detector.dart';
 
 export '../channels.dart' show wakeEngineChannelName;
 
+/// Why stage 2 cannot decide (WP171). While it is set, every candidate is
+/// rejected (fail closed) and the wake word never opens the assistant.
+enum WakeStage2Gap {
+  /// No enrolled sequences for verifier B and no recognizer installed
+  /// (neither Parakeet nor Whisper): `wake-verify error=model_missing`.
+  modelMissing,
+}
+
 /// What the wake word host needs from the device (replaced in tests).
 abstract interface class WakeParts {
   /// Stage 1 for all learned voices; `null` if nothing is learned. WP129:
@@ -25,9 +34,9 @@ abstract interface class WakeParts {
     bool station = false,
   });
 
-  /// Stage 2; loads the recognizer when needed and frees it again. With the
-  /// classifier ([detector] `model`) Parakeet is preferred, Whisper is the
-  /// fallback; the template path always uses Whisper.
+  /// Stage 2 (WP171, both detectors): verifier B with the enrolled sequences;
+  /// if it cannot decide, the installed recognizer (Parakeet preferred, else
+  /// Whisper), loaded when needed and freed again.
   WakeVerifier verifier({WakeDetector detector = WakeDetector.templates});
 
   /// Frees everything the parts hold (Whisper).
@@ -82,6 +91,12 @@ final class WakeHost {
   Timer? _alive;
   Future<void> _ops = Future.value();
   bool _ending = false;
+
+  final _stage2Gap = ValueNotifier<WakeStage2Gap?>(null);
+
+  /// Reason why stage 2 could not decide on the last candidate, `null` if it
+  /// could (or no candidate yet). Teil 2 (WP171) reports it to the app.
+  ValueListenable<WakeStage2Gap?> get stage2Gap => _stage2Gap;
 
   /// Listens to the service and reports `ready`.
   Future<void> attach() async {
@@ -202,7 +217,10 @@ final class WakeHost {
       audio: audio,
       engine: _LoggingEngine(engine, _detector, verify: verify),
       verifier: verify
-          ? _verifier = _LoggingVerifier(parts.verifier(detector: _detector))
+          ? _verifier = _LoggingVerifier(
+              parts.verifier(detector: _detector),
+              onGap: (gap) => _stage2Gap.value = gap,
+            )
           : null,
       // Room noise before the word (WP73): `speechAfterWakeWord` measures
       // its threshold there. The overlay skips everything up to the end of
@@ -471,9 +489,13 @@ final class _LoggingEngine implements WakeWordEngine, ScoringWakeEngine {
 /// Logs the verdict of stage 2 (`ok`, `no`, or `skip` if it could not
 /// decide, which counts as not confirmed).
 final class _LoggingVerifier implements WakeEndAwareVerifier, VerdictDetail {
-  _LoggingVerifier(this.inner);
+  _LoggingVerifier(this.inner, {this.onGap});
 
   final WakeVerifier inner;
+
+  /// Called after every candidate: the reason stage 2 could not decide, or
+  /// `null` if it did.
+  final void Function(WakeStage2Gap? gap)? onGap;
 
   @override
   String get kind => inner.kind;
@@ -496,9 +518,16 @@ final class _LoggingVerifier implements WakeEndAwareVerifier, VerdictDetail {
           ? await i.confirmAt(pcm, endSample)
           : await i.confirm(pcm);
       voiceLog('wake-verify', {'result': ok ? 'ok' : 'no'});
+      onGap?.call(null);
       return ok;
     } on Object catch (e) {
-      voiceLog('wake-verify', {'result': 'skip', 'error': errorCode(e)});
+      final missing =
+          e is VoiceException && e.kind == VoiceErrorKind.modelMissing;
+      voiceLog('wake-verify', {
+        'result': 'skip',
+        'error': missing ? 'model_missing' : errorCode(e),
+      });
+      onGap?.call(missing ? WakeStage2Gap.modelMissing : null);
       return false;
     }
   }

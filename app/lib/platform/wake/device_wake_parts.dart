@@ -230,7 +230,10 @@ final class DeviceWakeParts implements WakeParts {
     this.hotwordsDirectory,
     this.parakeetStart = IsolateWhisperBackend.start,
     this.useVerifierB = !wakeVerifierBMuIsPlaceholder,
-  });
+    @visibleForTesting Future<RecognizerEngines> Function()? engines,
+  }) : _enginesFactory = engines;
+
+  final Future<RecognizerEngines> Function()? _enginesFactory;
 
   /// Whether stage 2 of the classifier path asks verifier B first (WP143).
   /// Off while `mu` is the placeholder (the thresholds mean nothing then).
@@ -302,17 +305,20 @@ final class DeviceWakeParts implements WakeParts {
     return sets;
   }
 
+  /// [detector] is not used: stage 2 is the same for both (WP171).
   @override
   WakeVerifier verifier({WakeDetector detector = WakeDetector.templates}) {
     final whisper = LazyWhisperVerifier(
-      engines: () async => _engines ??= DeviceRecognizerEngines(
-        models: await container.read(speechModelServiceProvider.future),
-        idleRelease: idleRelease,
-      ),
+      engines: () async => _engines ??=
+          await _enginesFactory?.call() ??
+          DeviceRecognizerEngines(
+            models: await container.read(speechModelServiceProvider.future),
+            idleRelease: idleRelease,
+          ),
     );
-    // Templates path and „Stopp“ stay on Whisper; the classifier's stage 2
-    // takes Parakeet when installed, else Whisper without a message.
-    if (detector != WakeDetector.model) return whisper;
+    // WP171: stage 2 is the same in both detector paths: verifier B decides;
+    // if it cannot, the installed recognizer does (Parakeet when installed,
+    // else Whisper), never Whisper alone.
     final parakeet = _parakeet ??= LazyParakeetVerifier(
       files: _parakeetFiles,
       idleRelease: idleRelease,

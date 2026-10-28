@@ -192,6 +192,36 @@ void main() {
     },
   );
 
+  test('kein Erkennungsmodell: abgelehnt, Log model_missing, Ursache gesetzt '
+      '(WP171)', () async {
+    await start(verify: true, extra: {'detector': 'templates'});
+    parts.verifyError = const VoiceException(
+      VoiceErrorKind.modelMissing,
+      'fehlt',
+    );
+    expect(host.stage2Gap.value, isNull);
+    await hear(FakeWakeWordEngine.markerFrame(1600));
+    for (var i = 0; i < 12; i++) {
+      await hear(Int16List(1600));
+    }
+    await until(() => logs.any((l) => l.contains('result=skip')));
+    expect(logs.last, contains('error=model_missing'));
+    expect(logs.last, isNot(contains('voiceexception')));
+    expect(calls(), isNot(contains('hit')));
+    expect(host.stage2Gap.value, WakeStage2Gap.modelMissing);
+    // A model arrives: the next candidate is decided, the cause is gone.
+    parts.verifyError = null;
+    for (var i = 0; i < 20; i++) {
+      await hear(Int16List(1600));
+    }
+    await hear(FakeWakeWordEngine.markerFrame(1600));
+    for (var i = 0; i < 12; i++) {
+      await hear(Int16List(1600));
+    }
+    await until(() => calls().contains('hit'));
+    expect(host.stage2Gap.value, isNull);
+  });
+
   test('ohne Nachprüfung: Treffer sofort, Log „skip“', () async {
     await start();
     await hear(FakeWakeWordEngine.markerFrame(1600));
@@ -654,24 +684,41 @@ void main() {
         expect(logs.single, contains('verifier=b'));
       });
 
-      test(
-        'Vorlagen-Weg und ausgeschaltetes B bleiben bei Whisper/Parakeet',
-        () async {
-          final (c, _) = await container([]);
-          expect(
-            DeviceWakeParts(
-              c,
-              useVerifierB: false,
-            ).verifier(detector: WakeDetector.model),
-            isA<PreferredWakeVerifier>(),
-            reason: 'B ausgeschaltet',
+      test('ausgeschaltetes B: nur das geladene Erkennungsmodell', () async {
+        final (c, _) = await container([]);
+        expect(
+          DeviceWakeParts(
+            c,
+            useVerifierB: false,
+          ).verifier(detector: WakeDetector.model),
+          isA<PreferredWakeVerifier>(),
+          reason: 'B ausgeschaltet',
+        );
+      });
+
+      for (final detector in WakeDetector.values) {
+        test('mit Folgen entscheidet B ohne Modell zu laden, Pfad '
+            '${detector.name} (WP171)', () async {
+          final f = Float32List.fromList(wakeVerifierBMu)..[0] += 1;
+          final (p, logs) = await parts([withSeq(f)]);
+          final engines = FakeEngines();
+          final q = DeviceWakeParts(
+            p.container,
+            useVerifierB: true,
+            engines: () async => engines,
           );
+          final v = q.verifier(detector: detector);
+          expect(v, isA<VerifierBWakeVerifier>());
           expect(
-            DeviceWakeParts(c, useVerifierB: true).verifier(),
-            isA<LazyWhisperVerifier>(),
+            await v.confirm(Int16List(48000)..fillRange(0, 48000, 900)),
+            isTrue,
           );
-        },
-      );
+          expect(v.kind, 'b');
+          expect(engines.checked, isEmpty);
+          expect(engines.sttModels, isEmpty);
+          expect(logs.single, contains('verifier=b'));
+        });
+      }
     });
 
     test('niemand eingelernt: keine Engine', () async {
