@@ -136,13 +136,66 @@ void main() {
         expect(api.lastPlay!.deviceId, 'spk');
         expect(launcher.wakes, 0);
         expect(diag.any((e) => e.$2['fallback'] == true), isFalse);
-        // The full foreign window was used (two waits before: pre-check).
+        // The full foreign window was used (one wait before: pre-check).
         expect(
           waits.where((w) => w == SpotifySession.verifyInterval).length,
-          greaterThanOrEqualTo(SpotifySession.foreignVerifyAttempts),
+          1 + SpotifySession.foreignVerifyAttempts,
         );
       },
     );
+
+    test('Fremdgerät-Fenster ist 10 s lang', () {
+      expect(
+        SpotifySession.verifyInterval * SpotifySession.foreignVerifyAttempts,
+        const Duration(seconds: 10),
+      );
+    });
+
+    test('Fremdgerät stalled (Position bleibt gleich): bleibt dort', () async {
+      speakerPlays();
+      final n = SpotifySession.foreignVerifyAttempts;
+      api.progressScript.addAll([
+        10000, 11000, // pre-check: growing
+        for (var i = 0; i < n; i++) 50000, // after the command: stuck
+      ]);
+      final r = await start();
+      expect(r.isPhone, isFalse);
+      expect(r.deviceId, 'spk');
+      expect(r.confirmed, isFalse);
+      expect(r.fellBackFrom, isNull);
+      expect(count('play'), 1);
+      expect(api.lastPlay!.deviceId, 'spk');
+      expect(launcher.wakes, 0);
+      expect(diag.any((e) => e.$2['fallback'] == true), isFalse);
+      final v = diag.lastWhere((e) => e.$1 == 'spotify-verify').$2;
+      expect(v['result'], 'stalled');
+      expect(v['attempts'], n);
+      // Progress history in whole seconds, no content.
+      expect(v['progress'], List.filled(n, '50').join(','));
+    });
+
+    test(
+      'Diagnose: Fortschrittsverlauf in Sekunden, „-“ ohne Spielen',
+      () async {
+        speakerPlays();
+        api.progressScript.addAll([10000, 11000, 83400, 0, 0, 1000]);
+        await start();
+        final v = diag.lastWhere((e) => e.$1 == 'spotify-verify').$2;
+        expect(v['result'], 'playing');
+        expect(v['progress'], '83,0,0,1');
+      },
+    );
+
+    test('Diagnose: Verlauf „-“, wenn nichts spielt', () async {
+      speakerPlays();
+      api.frozenDeviceIds.add('spk');
+      await start();
+      final v = diag.lastWhere((e) => e.$1 == 'spotify-verify').$2;
+      expect(
+        v['progress'],
+        List.filled(SpotifySession.foreignVerifyAttempts, '-').join(','),
+      );
+    });
 
     test('Cast: alter Fortschritt, dann 0, spät wachsend: bestätigt', () async {
       speakerPlays();
@@ -322,13 +375,29 @@ void main() {
       expect(diag.first.$2['target'], 'named');
     });
 
-    test('benanntes Gerät spielt nicht: Fehler, kein Ausweichen', () async {
+    test('benanntes Gerät spielt nicht: bleibt dort, unbestätigt', () async {
       api
         ..knownDevices.addAll([phone, speaker])
         ..frozenDeviceIds.add('spk');
+      final r = await start(name: 'wohnzimmer');
+      expect(r.deviceId, 'spk');
+      expect(r.isPhone, isFalse);
+      expect(r.confirmed, isFalse);
+      expect(count('play'), 1);
+      expect(launcher.wakes, 0);
+      expect(
+        waits.where((w) => w == SpotifySession.verifyInterval).length,
+        SpotifySession.foreignVerifyAttempts,
+      );
+    });
+
+    test('benanntes Gerät lehnt den Befehl ab (404): Fehler', () async {
+      api
+        ..knownDevices.addAll([phone, speaker])
+        ..rejectingDeviceIds.add('spk');
       await expectLater(
         start(name: 'wohnzimmer'),
-        throwsA(isA<PortException>()),
+        _port(PortErrorKind.notFound),
       );
       expect(count('play'), 1);
     });

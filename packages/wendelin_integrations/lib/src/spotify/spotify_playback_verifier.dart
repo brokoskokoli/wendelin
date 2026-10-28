@@ -62,6 +62,7 @@ final class SpotifyPlaybackVerifier {
       }
     }
     int? lastProgress;
+    final progress = <String>[];
     var otherApp = false;
     final limit = isPhone ? maxAttempts : foreignMaxAttempts;
     for (var i = 0; i < limit; i++) {
@@ -99,6 +100,7 @@ final class SpotifyPlaybackVerifier {
         result = SpotifyVerdict.unchecked;
         break;
       }
+      progress.add(_progressSecond(state));
       (result, lastProgress) = _classify(state, target, lastProgress);
       if (result == SpotifyVerdict.playing) break;
     }
@@ -111,8 +113,16 @@ final class SpotifyPlaybackVerifier {
       'result': result.label,
       'via': via,
       'attempts': attempts,
+      if (progress.isNotEmpty) 'progress': progress.join(','),
     });
     return result;
+  }
+
+  /// Progress of one read in whole seconds, `-` if nothing plays or the
+  /// position is missing (no titles, URIs or names).
+  static String _progressSecond(SpotifyPlayback? state) {
+    final p = state != null && state.isPlaying ? state.progressMs : null;
+    return p == null ? '-' : '${p ~/ 1000}';
   }
 
   /// Verdict for one read and the new base position. Equal or smaller

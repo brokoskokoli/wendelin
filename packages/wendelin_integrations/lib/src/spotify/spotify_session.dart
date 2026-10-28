@@ -258,6 +258,9 @@ final class SpotifySession {
         if (result == SpotifyVerdict.unchecked) return done(false);
       }
     }
+    // A named foreign device that was sent the command but not seen playing
+    // (cast devices report late): stay there, unconfirmed, no error.
+    if (result != SpotifyVerdict.playing && !isPhone) return done(false);
     if (result != SpotifyVerdict.playing) {
       // The phone rejected the command and could not be woken.
       if (rejection != null) throw rejection;

@@ -275,22 +275,24 @@ final class SpotifyPlayTool extends IntegrationTool
     final hint = fell == null
         ? ''
         : ' Auf „$fell“ kam nichts an, ich spiele auf dem Handy.';
+    final what = target == null ? null : '${target.label} (${target.uri})';
     final base =
         (target == null
             ? 'Wiedergabe fortgesetzt$where.'
-            : 'Spielt$where: ${target.label} (${target.uri}).') +
+            : 'Spielt$where: $what.') +
         hint;
-    // Sent to a foreign device but not seen playing: never "Spielt".
-    final unsure = !start.confirmed && !start.isPhone;
+    // Not seen playing: never "Spielt", only what was sent.
+    final foreign = !start.confirmed && !start.isPhone;
+    final unconfirmed = !start.confirmed;
     return ToolOutcome.text(
       start.confirmed
           ? base
-          : unsure
+          : foreign
           ? 'Ich habe es an „${start.deviceName}“ geschickt, konnte es aber '
-                'nicht bestätigen.'
-          : '$base Gesendet, aber die Wiedergabe konnte nicht geprüft '
-                'werden.',
-      summary: unsure
+                'nicht bestätigen.${what == null ? '' : ' Gesendet: $what.'}'
+          : '${target == null ? 'Fortsetzen gesendet.' : 'Gesendet: $what.'}'
+                '$hint Die Wiedergabe konnte nicht geprüft werden.',
+      summary: unconfirmed
           ? 'Gesendet'
           : target == null
           ? 'Weiter'

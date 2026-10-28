@@ -340,9 +340,13 @@ void main() {
         expect(o.isError, isFalse);
         expect(
           o.text,
-          'Ich habe es an „Wohnzimmer“ geschickt, konnte es aber nicht '
-          'bestätigen.',
+          startsWith(
+            'Ich habe es an „Wohnzimmer“ geschickt, konnte es aber nicht '
+            'bestätigen. Gesendet: ',
+          ),
         );
+        expect(o.text, contains('(spotify:track:'));
+        expect(o.summary, 'Gesendet');
         expect(o.text, isNot(contains('Spielt')));
         expect(api.lastPlay!.deviceId, 'tv');
         expect(o.fixed, isNull);
@@ -409,7 +413,10 @@ void main() {
         );
         final o = await call('spotify__play', {'query': 'bohemian'});
         expect(o.isError, isFalse);
-        expect(o.text, contains('nicht geprüft'));
+        expect(o.text, contains('Gesendet:'));
+        expect(o.text, contains('nicht geprüft werden'));
+        expect(o.text, isNot(contains('Spielt')));
+        expect(o.summary, 'Gesendet');
         expect(launcher.wakes, 0);
         // Not spoken as „läuft“: the model words the unchecked result.
         expect(o.fixed, isNull);
