@@ -205,8 +205,9 @@ void main() {
       await hear(Int16List(1600));
     }
     await until(() => logs.any((l) => l.contains('result=skip')));
-    expect(logs.last, contains('error=model_missing'));
-    expect(logs.last, isNot(contains('voiceexception')));
+    final skip = logs.lastWhere((l) => l.contains('result=skip'));
+    expect(skip, contains('error=model_missing'));
+    expect(skip, isNot(contains('voiceexception')));
     expect(calls(), isNot(contains('hit')));
     expect(host.stage2Gap.value, WakeStage2Gap.modelMissing);
     // A model arrives: the next candidate is decided, the cause is gone.
@@ -220,6 +221,72 @@ void main() {
     }
     await until(() => calls().contains('hit'));
     expect(host.stage2Gap.value, isNull);
+  });
+
+  group('Lücke vorab (WP171)', () {
+    List<Object?> gapCalls() => [
+      for (final (m, a) in toKotlin)
+        if (m == 'stage2Gap') (a! as Map)['reason'],
+    ];
+
+    test(
+      'ohne Kandidat gemeldet: Ursache, Kanal und Log; später gelöscht',
+      () async {
+        await start(
+          verify: true,
+          p: FakeParts()..gap = WakeStage2Gap.modelMissing,
+        );
+        expect(host.stage2Gap.value, WakeStage2Gap.modelMissing);
+        expect(gapCalls(), ['model_missing']);
+        expect(
+          logs.where((l) => l.contains('wake-gap')).single,
+          contains('reason=model_missing'),
+        );
+        // Same state again: no second message.
+        await fromKotlin('run', {'verify': true, 'detector': 'templates'});
+        expect(gapCalls(), ['model_missing']);
+        // The model arrived; a new run (other place) checks again and clears.
+        parts.gap = null;
+        await fromKotlin('run', {'verify': true, 'station': true});
+        await until(() => gapCalls().length == 2);
+        expect(gapCalls(), ['model_missing', null]);
+        expect(host.stage2Gap.value, isNull);
+        expect(logs.last, isNot(contains('model_missing')));
+      },
+    );
+
+    test(
+      'keine Lücke: keine Meldung; ohne Nachprüfung keine Prüfung',
+      () async {
+        await start(verify: true);
+        expect(gapCalls(), isEmpty);
+        expect(parts.gapChecks, 1);
+        await fromKotlin('run', {'verify': false});
+        await until(() => parts.engines == 2);
+        expect(parts.gapChecks, 1);
+        expect(gapCalls(), isEmpty);
+      },
+    );
+
+    test('Prüfung scheitert: nichts behauptet, Dienst läuft', () async {
+      await start(verify: true, p: FakeParts()..gapError = StateError('x'));
+      expect(host.stage2Gap.value, isNull);
+      expect(gapCalls(), isEmpty);
+    });
+
+    test('Kandidat ohne Modell meldet dieselbe Lücke an Kotlin', () async {
+      await start(verify: true, extra: {'detector': 'templates'});
+      parts.verifyError = const VoiceException(
+        VoiceErrorKind.modelMissing,
+        'fehlt',
+      );
+      await hear(FakeWakeWordEngine.markerFrame(1600));
+      for (var i = 0; i < 12; i++) {
+        await hear(Int16List(1600));
+      }
+      await until(() => gapCalls().isNotEmpty);
+      expect(gapCalls(), ['model_missing']);
+    });
   });
 
   test('ohne Nachprüfung: Treffer sofort, Log „skip“', () async {

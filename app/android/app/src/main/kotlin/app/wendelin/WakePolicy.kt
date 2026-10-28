@@ -259,6 +259,12 @@ object WakePolicy {
     fun failureReason(reported: String?): String =
         if (reported == "modelMissing") "modelMissing" else "engine-failed"
 
+    /**
+     * WP171: whether the Dart engine's `stage2Gap` [reason] means that stage 2 cannot decide (no
+     * recognition model). `null` (or anything unknown) clears the notice.
+     */
+    fun stage2GapActive(reason: String?): Boolean = reason == "model_missing"
+
     /** Whether a service that runs for [mode] has to stop when charging changes to [charging]. */
     fun stopsOnUnplug(mode: WakeMode, charging: Boolean): Boolean =
         mode == WakeMode.CHARGING && !charging

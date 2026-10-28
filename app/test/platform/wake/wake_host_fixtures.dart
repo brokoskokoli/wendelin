@@ -63,6 +63,19 @@ final class FakeParts implements WakeParts {
     );
   }
 
+  /// What the check before the start answers ([gapError]: it throws).
+  WakeStage2Gap? gap;
+  Object? gapError;
+  int gapChecks = 0;
+
+  @override
+  Future<WakeStage2Gap?> stage2Gap() async {
+    gapChecks++;
+    final e = gapError;
+    if (e != null) throw e;
+    return gap;
+  }
+
   @override
   Future<void> dispose() async => disposed++;
 }

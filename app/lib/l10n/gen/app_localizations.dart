@@ -9045,6 +9045,18 @@ abstract class AppLocalizations {
   /// **'Das Aktivierungswort wurde beendet ({reason}). Tippe, um es wieder einzuschalten.'**
   String wakeNotifEnded(String reason);
 
+  /// No description provided for @wakeNotifGapAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Modell laden'**
+  String get wakeNotifGapAction;
+
+  /// No description provided for @wakeNotifGapText.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktivierungswort kann nicht geprüft werden – Erkennungsmodell laden'**
+  String get wakeNotifGapText;
+
   /// No description provided for @wakeNotifListeningText.
   ///
   /// In de, this message translates to:

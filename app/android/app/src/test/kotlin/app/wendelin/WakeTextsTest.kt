@@ -50,6 +50,20 @@ class WakeTextsTest {
     }
 
     @Test
+    fun theStage2GapTextsComeFromTheAppOrGermanDefault() {
+        val de = WakeTexts { null }
+        assertEquals(
+            "Aktivierungswort kann nicht geprüft werden – Erkennungsmodell laden",
+            de.gapText,
+        )
+        assertEquals("Modell laden", de.gapAction)
+        val en = WakeTexts { mapOf("gapText" to "Cannot check", "gapAction" to "Load model")[it] }
+        assertEquals("Cannot check", en.gapText)
+        assertEquals("Load model", en.gapAction)
+        assertEquals(mapOf("gapText" to "x"), WakeTexts.sanitize(mapOf("gapText" to "x", "gapAction" to " ")))
+    }
+
+    @Test
     fun noGermanDefaultNamesPlainWendelinAsWakeWord() {
         for ((k, v) in WakeTexts.DEFAULTS) {
             assertFalse("$k: $v", Regex("„Wendelin“").containsMatchIn(v))

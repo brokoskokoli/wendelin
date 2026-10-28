@@ -3138,6 +3138,8 @@
       }
     }
   },
+  "wakeNotifGapAction": "Modell laden",
+  "wakeNotifGapText": "Aktivierungswort kann nicht geprüft werden – Erkennungsmodell laden",
   "wakeNotifListeningText": "Das Mikrofon ist an. Audio bleibt auf dem Gerät.",
   "wakeNotifListeningTitle": "Wendelin hört auf „Hey Wendelin“",
   "wakeNotifNoRole": "Wendelin muss der Assistent sein, damit das Aktivierungswort nach einem Neustart laufen kann.",

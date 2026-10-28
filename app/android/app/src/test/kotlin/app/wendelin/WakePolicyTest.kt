@@ -376,6 +376,14 @@ class WakePolicyTest {
     }
 
     @Test
+    fun onlyTheKnownReasonSwitchesTheStage2GapNoticeOn() {
+        assertTrue(WakePolicy.stage2GapActive("model_missing"))
+        assertFalse(WakePolicy.stage2GapActive(null))
+        assertFalse(WakePolicy.stage2GapActive("none"))
+        assertFalse(WakePolicy.stage2GapActive("voiceexception"))
+    }
+
+    @Test
     fun serviceMicWaitsWhileTheAppRecordsAndForTheQuietTimeAfter() {
         AppVoice.reset()
         assertEquals(0L, AppVoice.waitMs(1_000))

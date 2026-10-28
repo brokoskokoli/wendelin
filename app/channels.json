@@ -317,7 +317,8 @@
         "startMic": {"args": [], "returns": "none"},
         "stopMic": {"args": [], "returns": "none"},
         "hit": {"args": ["pcm", "end", "pos", "kw", "score"], "returns": "none"},
-        "failed": {"args": ["reason"], "returns": "none"}
+        "failed": {"args": ["reason"], "returns": "none"},
+        "stage2Gap": {"args": ["reason"], "returns": "none"}
       },
       "toDart": {
         "run": {"args": ["verify", "detector", "station", "dev"], "returns": "none"},

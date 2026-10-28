@@ -21,7 +21,12 @@ export '../channels.dart' show wakeEngineChannelName;
 enum WakeStage2Gap {
   /// No enrolled sequences for verifier B and no recognizer installed
   /// (neither Parakeet nor Whisper): `wake-verify error=model_missing`.
-  modelMissing,
+  modelMissing;
+
+  /// The reason as logged and sent to Kotlin.
+  String get logName => switch (this) {
+    modelMissing => 'model_missing',
+  };
 }
 
 /// What the wake word host needs from the device (replaced in tests).
@@ -38,6 +43,11 @@ abstract interface class WakeParts {
   /// if it cannot decide, the installed recognizer (Parakeet preferred, else
   /// Whisper), loaded when needed and freed again.
   WakeVerifier verifier({WakeDetector detector = WakeDetector.templates});
+
+  /// WP171: whether stage 2 cannot decide right now (a learned voice without
+  /// sequences for verifier B and neither Parakeet nor Whisper installed),
+  /// checked before any candidate. `null`: it can (or unknown).
+  Future<WakeStage2Gap?> stage2Gap();
 
   /// Frees everything the parts hold (Whisper).
   Future<void> dispose();
@@ -58,7 +68,8 @@ abstract interface class WakeParts {
 /// Calls from Kotlin: `run` (`{verify, detector, station, dev}`), `audio` (`{pcm}`), `audioError`
 /// (`{message}`), `conflict` (`{reason}`, `null` = free), `overlayClosed`,
 /// `shutdown`, `devMode` (`{on}`, WP148). Calls to Kotlin: `ready`, `startMic`, `stopMic`, `hit`
-/// (`{pcm, kw, score}`) and `failed` (`{reason}`).
+/// (`{pcm, kw, score}`), `failed` (`{reason}`) and `stage2Gap` (`{reason}`,
+/// `null` = stage 2 can decide, WP171).
 final class WakeHost {
   /// Creates the host.
   WakeHost({
@@ -95,8 +106,17 @@ final class WakeHost {
   final _stage2Gap = ValueNotifier<WakeStage2Gap?>(null);
 
   /// Reason why stage 2 could not decide on the last candidate, `null` if it
-  /// could (or no candidate yet). Teil 2 (WP171) reports it to the app.
+  /// could (or nothing known yet). Checked before the listener starts
+  /// ([WakeParts.stage2Gap]) and after every candidate; every change goes to
+  /// Kotlin (`stage2Gap`), which shows it in the service notification.
   ValueListenable<WakeStage2Gap?> get stage2Gap => _stage2Gap;
+
+  void _setGap(WakeStage2Gap? gap) {
+    if (_stage2Gap.value == gap) return;
+    _stage2Gap.value = gap;
+    voiceLog('wake-gap', {'reason': gap == null ? 'none' : gap.logName});
+    unawaited(_call('stage2Gap', {'reason': gap?.logName}));
+  }
 
   /// Listens to the service and reports `ready`.
   Future<void> attach() async {
@@ -205,6 +225,18 @@ final class WakeHost {
     required bool verify,
   }) async {
     final band = wakeBandFor(station: _station);
+    // Before the first candidate: without a model the notification must say
+    // so at once (the app may not be open).
+    WakeStage2Gap? gap;
+    if (verify) {
+      try {
+        gap = await parts.stage2Gap();
+      } on Object {
+        gap = null; // unknown: nothing is claimed
+      }
+    }
+    if (_ending) return;
+    _setGap(gap);
     devArchiveSetInfo('idle', {
       'mode': 'idle',
       'detector': _detector.name,
@@ -219,7 +251,7 @@ final class WakeHost {
       verifier: verify
           ? _verifier = _LoggingVerifier(
               parts.verifier(detector: _detector),
-              onGap: (gap) => _stage2Gap.value = gap,
+              onGap: _setGap,
             )
           : null,
       // Room noise before the word (WP73): `speechAfterWakeWord` measures

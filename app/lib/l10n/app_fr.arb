@@ -1789,6 +1789,8 @@
   "wakeModelsVerifyNeeds": "Pour la revérification, chargez le modèle vocal ({v}).",
   "wakeNotifChannelDesc": "Indique que Wendelin écoute « Hey Wendelin ».",
   "wakeNotifEnded": "Le mot d’activation s’est arrêté ({reason}). Touchez pour le réactiver.",
+  "wakeNotifGapAction": "Charger le modèle",
+  "wakeNotifGapText": "Le mot d’activation ne peut pas être vérifié – charger le modèle de reconnaissance",
   "wakeNotifListeningText": "Le micro est activé. L’audio reste sur l’appareil.",
   "wakeNotifListeningTitle": "Wendelin écoute « Hey Wendelin »",
   "wakeNotifNoRole": "Wendelin doit être l’assistant pour que le mot d’activation fonctionne après un redémarrage.",

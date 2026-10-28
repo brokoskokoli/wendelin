@@ -44,36 +44,55 @@ object WakeNotifications {
         }
     }
 
-    private fun openApp(context: Context): PendingIntent = PendingIntent.getActivity(
-        context,
-        0,
-        Intent(context, MainActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-    )
+    /** The app; with [target] it opens that page (own request code: the extras must not mix). */
+    private fun openApp(context: Context, target: String? = null): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        target?.let { intent.putExtra(NotifyChannel.EXTRA_OPEN, it) }
+        return PendingIntent.getActivity(
+            context,
+            if (target == null) 0 else 1,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
 
-    private fun builder(context: Context, title: String, text: String): Notification.Builder {
+    private fun builder(
+        context: Context,
+        title: String,
+        text: String,
+        target: String? = null,
+    ): Notification.Builder {
         ensureChannel(context)
         return Notification.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_wendelin)
             .setContentTitle(title)
             .setContentText(text)
-            .setContentIntent(openApp(context))
+            .setStyle(Notification.BigTextStyle().bigText(text))
+            .setContentIntent(openApp(context, target))
             .setOnlyAlertOnce(true)
     }
 
     private fun act(context: Context, label: String, pi: PendingIntent) =
         Notification.Action.Builder(null, label, pi).build()
 
-    /** Permanent notification while listening; [note] names a pause by a conflict. */
-    fun listening(context: Context, note: String? = null): Notification {
+    /**
+     * Permanent notification while listening; [note] names a pause by a conflict. [gap] (WP171):
+     * stage 2 cannot decide without a recognition model; the text says so and the button (and a
+     * tap) opens the wake word settings, where the model can be loaded.
+     */
+    fun listening(context: Context, note: String? = null, gap: Boolean = false): Notification {
         val texts = WakeTexts.load(context)
-        return builder(
+        val b = builder(
             context,
             texts.listeningTitle,
-            note ?: texts.listeningText,
-        )
-            .setOngoing(true)
+            if (gap) texts.gapText else note ?: texts.listeningText,
+            if (gap) NotifyChannel.OPEN_WAKE_SETTINGS else null,
+        ).setOngoing(true)
+        if (gap) {
+            b.addAction(act(context, texts.gapAction, openApp(context, NotifyChannel.OPEN_WAKE_SETTINGS)))
+        }
+        return b
             .addAction(act(context, texts.pause, action(context, WakeWordService.ACTION_PAUSE)))
             .addAction(act(context, texts.off, action(context, WakeWordService.ACTION_OFF)))
             .build()

@@ -5325,6 +5325,13 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get wakeNotifGapAction => 'Modell laden';
+
+  @override
+  String get wakeNotifGapText =>
+      'Aktivierungswort kann nicht geprüft werden – Erkennungsmodell laden';
+
+  @override
   String get wakeNotifListeningText =>
       'Das Mikrofon ist an. Audio bleibt auf dem Gerät.';
 

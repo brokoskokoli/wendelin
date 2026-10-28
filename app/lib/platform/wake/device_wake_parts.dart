@@ -256,6 +256,19 @@ final class DeviceWakeParts implements WakeParts {
   LazyParakeetVerifier? _parakeet;
   VerifierBWakeVerifier? _verifierB;
 
+  Future<RecognizerEngines> _newEngines() async =>
+      await _enginesFactory?.call() ??
+      DeviceRecognizerEngines(
+        models: await container.read(speechModelServiceProvider.future),
+        idleRelease: idleRelease,
+      );
+
+  LazyParakeetVerifier _newParakeet() => LazyParakeetVerifier(
+    files: _parakeetFiles,
+    idleRelease: idleRelease,
+    start: parakeetStart,
+  );
+
   Future<NemoFiles?> _parakeetFiles() async => wakeParakeetFiles(
     service: await container.read(speechModelServiceProvider.future),
     hotwordsDirectory: hotwordsDirectory != null
@@ -309,21 +322,12 @@ final class DeviceWakeParts implements WakeParts {
   @override
   WakeVerifier verifier({WakeDetector detector = WakeDetector.templates}) {
     final whisper = LazyWhisperVerifier(
-      engines: () async => _engines ??=
-          await _enginesFactory?.call() ??
-          DeviceRecognizerEngines(
-            models: await container.read(speechModelServiceProvider.future),
-            idleRelease: idleRelease,
-          ),
+      engines: () async => _engines ??= await _newEngines(),
     );
     // WP171: stage 2 is the same in both detector paths: verifier B decides;
     // if it cannot, the installed recognizer does (Parakeet when installed,
     // else Whisper), never Whisper alone.
-    final parakeet = _parakeet ??= LazyParakeetVerifier(
-      files: _parakeetFiles,
-      idleRelease: idleRelease,
-      start: parakeetStart,
-    );
+    final parakeet = _parakeet ??= _newParakeet();
     final recognizer = PreferredWakeVerifier(
       preferred: parakeet,
       fallback: whisper,
@@ -346,6 +350,25 @@ final class DeviceWakeParts implements WakeParts {
         'thr': threshold?.toStringAsFixed(4),
       }),
     );
+  }
+
+  /// Same rule as `wakeStage2GapProvider` in the settings (WP171): a learned
+  /// voice without sequences for verifier B (all voices if B is off) and
+  /// neither Parakeet nor Whisper installed.
+  @override
+  Future<WakeStage2Gap?> stage2Gap() async {
+    final sets = await _allTemplates();
+    final withoutB = sets.any((t) => !useVerifierB || !t.hasSequences);
+    if (!withoutB) return null;
+    if (await (_parakeet ??= _newParakeet()).isAvailable()) return null;
+    try {
+      await (_engines ??= await _newEngines()).checkInstalled('whisper-base');
+      return null;
+    } on VoiceException catch (e) {
+      return e.kind == VoiceErrorKind.modelMissing
+          ? WakeStage2Gap.modelMissing
+          : null;
+    }
   }
 
   @override

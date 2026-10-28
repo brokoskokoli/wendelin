@@ -5,12 +5,16 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/voice_settings_providers.dart';
+import 'package:wendelin/di/wake_providers.dart';
+import 'package:wendelin/voice/wake/wake_storage.dart';
+import 'package:wendelin_storage/testing.dart';
 import 'package:wendelin/platform/voice/nemo_sherpa.dart';
 import 'package:wendelin/platform/voice/whisper_registry.dart';
 import 'package:wendelin/platform/voice/whisper_sherpa.dart';
 import 'package:wendelin/platform/voice/whisper_stt.dart';
 import 'package:wendelin/platform/wake/device_wake_parts.dart';
 import 'package:wendelin/platform/wake/wake_detector.dart';
+import 'package:wendelin/platform/wake/wake_host.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../recognizer/recognizer_host_test.dart' show FakeEngines;
@@ -311,6 +315,98 @@ void main() {
       expect(await v.isAvailable(), isFalse);
       await expectLater(v.confirm(_tone(900)), throwsA(isA<VoiceException>()));
       await v.release();
+    });
+  });
+
+  // WP171: the check before the start (same rule as the notice in the
+  // settings): a voice without sequences and no recognizer installed.
+  group('DeviceWakeParts.stage2Gap', () {
+    WakeTemplates voice({bool sequences = false}) => WakeTemplates(
+      speakerId: 'a',
+      featureVersion: 'v',
+      threshold: 0.5,
+      embeddings: [
+        Float32List.fromList([1, 0]),
+      ],
+      sequences: [
+        if (sequences)
+          WakeTemplateSequence(
+            word: WakeTemplates.wordHw,
+            values: Float32List(192),
+          ),
+      ],
+    );
+
+    Future<DeviceWakeParts> parts({
+      required List<WakeTemplates> voices,
+      required bool parakeet,
+      required bool whisper,
+      bool b = true,
+    }) async {
+      final store = SecretWakeTemplateStore(InMemorySecretStore());
+      await store.saveSpeakers([
+        for (final t in voices) WakeSpeaker(id: t.speakerId, name: ''),
+      ]);
+      for (final t in voices) {
+        await store.save(t);
+      }
+      final hw = install();
+      final engines = FakeEngines()..missing = !whisper;
+      return DeviceWakeParts(
+        ProviderContainer(
+          overrides: [
+            speechModelServiceProvider.overrideWith(
+              (_) async => _Svc(dir, installed: parakeet),
+            ),
+            wakeStoreProvider.overrideWithValue(store),
+          ],
+        ),
+        hotwordsDirectory: () async => hw,
+        engines: () async => engines,
+        useVerifierB: b,
+      );
+    }
+
+    test('Stimme ohne Folgen, kein Modell: Lücke', () async {
+      final p = await parts(voices: [voice()], parakeet: false, whisper: false);
+      expect(await p.stage2Gap(), WakeStage2Gap.modelMissing);
+      await p.dispose();
+    });
+
+    test('nur Parakeet oder nur Whisper: keine Lücke', () async {
+      final a = await parts(voices: [voice()], parakeet: true, whisper: false);
+      expect(await a.stage2Gap(), isNull);
+      await a.dispose();
+      final w = await parts(voices: [voice()], parakeet: false, whisper: true);
+      expect(await w.stage2Gap(), isNull);
+      await w.dispose();
+    });
+
+    test('alle Stimmen mit Folgen: B entscheidet, keine Lücke', () async {
+      final p = await parts(
+        voices: [voice(sequences: true)],
+        parakeet: false,
+        whisper: false,
+      );
+      expect(await p.stage2Gap(), isNull);
+      await p.dispose();
+    });
+
+    test('B aus: Folgen zählen nicht, ohne Modell Lücke', () async {
+      final p = await parts(
+        voices: [voice(sequences: true)],
+        parakeet: false,
+        whisper: false,
+        b: false,
+      );
+      expect(await p.stage2Gap(), WakeStage2Gap.modelMissing);
+      await p.dispose();
+    });
+
+    test('keine Stimme eingelernt: keine Lücke', () async {
+      final p = await parts(voices: [], parakeet: false, whisper: false);
+      expect(await p.stage2Gap(), isNull);
+      await p.dispose();
     });
   });
 

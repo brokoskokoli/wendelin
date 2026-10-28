@@ -5302,6 +5302,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get wakeNotifGapAction => 'Load model';
+
+  @override
+  String get wakeNotifGapText =>
+      'Wake word cannot be checked – load the recognition model';
+
+  @override
   String get wakeNotifListeningText =>
       'The microphone is on. Audio stays on the device.';
 

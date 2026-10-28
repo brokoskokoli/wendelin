@@ -5355,6 +5355,13 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get wakeNotifGapAction => 'Charger le modèle';
+
+  @override
+  String get wakeNotifGapText =>
+      'Le mot d’activation ne peut pas être vérifié – charger le modèle de reconnaissance';
+
+  @override
   String get wakeNotifListeningText =>
       'Le micro est activé. L’audio reste sur l’appareil.';
 

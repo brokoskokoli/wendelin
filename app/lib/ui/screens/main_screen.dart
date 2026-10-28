@@ -21,7 +21,8 @@ import '../../di/providers.dart';
 import '../../di/routing.dart';
 import '../../di/voice_providers.dart';
 import '../../l10n/l10n.dart';
-import '../../platform/channel_notifier.dart' show attestationLogTarget;
+import '../../platform/channel_notifier.dart'
+    show attestationLogTarget, wakeWordSettingsTarget;
 import '../../voice/conversation_offer.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
@@ -171,7 +172,12 @@ class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
     final target = await ref
         .read(attestationNotifierProvider)
         .takeLaunchTarget();
-    if (!mounted || target != attestationLogTarget) return;
+    if (!mounted) return;
+    if (target == wakeWordSettingsTarget) {
+      unawaited(Navigator.of(context).pushNamed<void>(AppRoutes.wakeWord));
+      return;
+    }
+    if (target != attestationLogTarget) return;
     unawaited(
       Navigator.of(context).push<void>(
         MaterialPageRoute(builder: (_) => const AttestationLogScreen()),

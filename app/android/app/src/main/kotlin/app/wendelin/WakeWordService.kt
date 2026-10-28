@@ -35,6 +35,9 @@ class WakeWordService : Service() {
     private val hitFlow = WakeHitFlow(this, main, handoffCheck, ::stopMic) { engine?.send("overlayClosed", null) }
     private val overlapGuard = TimedGuard(main)
 
+    /** WP171: stage 2 cannot decide (no recognition model); the notification says so. */
+    private var stage2Gap = false
+
     /** WP149: while [overlapGuard] is armed the hit is taken with the capture kept open. */
     private val conflicts = WakeConflictReaction(overlapGuard, ::stopMic)
     private val micDeferral = WakeMicDeferral(main, hasMic = { mic != null }, startMic = ::startMic)
@@ -50,7 +53,7 @@ class WakeWordService : Service() {
         val action = intent?.action ?: ACTION_START
         val source = intent?.getStringExtra(EXTRA_SOURCE) ?: "?"
         // Whoever starts this service promises a notification within seconds.
-        if (!goForeground(WakeNotifications.listening(this))) {
+        if (!goForeground(WakeNotifications.listening(this, gap = stage2Gap))) {
             VoiceLog.i("wake-start result=fgs-denied source=$source")
             stopSelf()
             return START_NOT_STICKY
@@ -119,7 +122,7 @@ class WakeWordService : Service() {
         }.also { it.start() }
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "wendelin:wake").also { it.acquire() }
-        WakeNotifications.update(this, WakeNotifications.listening(this))
+        WakeNotifications.update(this, WakeNotifications.listening(this, gap = stage2Gap))
         VoiceLog.i("wake-start result=ok source=$source mode=${settings.mode.key}")
     }
 
@@ -133,6 +136,7 @@ class WakeWordService : Service() {
                 stopMic()
             }
             "hit" -> onHit(call)
+            "stage2Gap" -> onStage2Gap(call.argument<String>("reason"))
             "failed" -> {
                 val reported = call.argument<String>("reason")
                 VoiceLog.i("wake-failed reason=${reported ?: "?"}")
@@ -140,6 +144,16 @@ class WakeWordService : Service() {
                 end(WakePolicy.failureReason(reported))
             }
         }
+    }
+
+    /** The engine found out (or no longer finds) that stage 2 has no model: rebuild the notification. */
+    private fun onStage2Gap(reason: String?) {
+        val gap = WakePolicy.stage2GapActive(reason)
+        if (gap == stage2Gap) return
+        stage2Gap = gap
+        VoiceLog.i("wake-gap reason=${if (gap) reason else "none"}")
+        // Only while listening: a pause shows its own notification.
+        if (engine != null) WakeNotifications.update(this, WakeNotifications.listening(this, gap = gap))
     }
 
     private fun startMic() {
@@ -275,6 +289,7 @@ class WakeWordService : Service() {
         watcher?.stop()
         watcher = null
         conflicts.reset()
+        stage2Gap = false
         stopMic()
         // A hit that was being handed over dies with the service (else `capturing` stays set).
         WakeHandoff.clear()

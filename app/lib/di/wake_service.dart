@@ -165,5 +165,7 @@ Map<String, String> wakeNotificationTexts(AppLocalizations t) => {
   'reenableTitle': t.wakeNotifReenableTitle,
   'reenableAction': t.wakeNotifReenableAction,
   'noRole': t.wakeNotifNoRole,
+  'gapText': t.wakeNotifGapText,
+  'gapAction': t.wakeNotifGapAction,
   'ended': t.wakeNotifEnded('{reason}'),
 };
