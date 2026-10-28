@@ -20,7 +20,7 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 
 ## Arbeiten
 - Toolchain: Flutter 3.47 / Dart 3.13 (`/opt/homebrew/bin`), Android SDK unter `~/Library/Android/sdk`, AVD `Wendelin_AOSP_35` (AOSP-Image ohne Google Play, K7). Gerätetests: `tool/e2e_android.sh` (nur auf Emulatoren).
-- `flutter pub get` im Repo-Root (Pub-Workspace). Das Gate läuft mit `dart run tool/gate.dart [--no-app] [paket…]`. Lokal immer `--changed` (geänderte Pakete und ihre Abhängigen), auch vor dem Commit; das volle Gate läuft in CI (`.github/workflows/gate.yml`) vor dem Merge.
+- `flutter pub get` im Repo-Root (Pub-Workspace). Das Gate läuft mit `dart run tool/gate.dart [--no-app] [paket…]`. Lokal immer `--changed` (geänderte Pakete und ihre Abhängigen), auch vor dem Commit; das volle Gate läuft in CI (`.github/workflows/gate.yml`) und muss vor dem Merge grün sein. Dazu Branch `wp/*` pushen (`git push -u origin wp/<nr>-<slug>`, nie `main`) und im Hintergrund **einmal** `tool/ci_wait.sh <branch>` (kompakte Zusammenfassung, bei Rot die letzten Zeilen).
 - Gate-Ausgabe ist kompakt (Tabelle am Ende, bei Rot je roter Test Name, Datei:Zeile, Fehler); `--verbose` nur bei Bedarf.
 - Einzeltests mit `tool/t.sh <pfad…>` (dart/flutter automatisch, nur Fehlschläge, höchstens 80 Zeilen, `--name x` filtert). Kein rohes `dart test`/`flutter test`. App-Tests mit `--concurrency=2`; die volle App-Suite läuft lokal höchstens einmal vor dem Abschluss, sonst nur in CI.
 - Tests ohne Wanduhr-Asserts (Stopwatch, `DateTime.now`/`elapsed` in `expect`) und ohne `runAsync(Future.delayed)` als Wartezeit, stattdessen `pumpUntil`/`fakeAsync` (Check `check_flaky`, Bestand in `tool/flaky_allowlist.yaml`, nur abbauen).
@@ -31,13 +31,12 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 
 ## Parallelität, Emulator, Übergabe
 - Parallelität: bis zu **4** Paket-Sitzungen gleichzeitig, je Sitzung **1** Sub-Agent. Mehr Last nur mit Freigabe des Maintainers.
-- Emulator: Es gibt einen. Ist er belegt, wartest du nicht: Melde den Gerätetest als offen. Die Zuteilung übernimmt der Orchestrator.
+- Emulator: Es gibt einen; Regeln und Verhalten bei Belegung in `docs/agents/common.md` („Geräte“).
 - Kontextgrenze: nach etwa **60 Werkzeugaufrufen** bzw. rund **120k Tokens** übergibst du (Ablauf in `docs/agents/common.md`).
 
 ## Agenten und Tokenverbrauch
 - Lies gezielt: erst `grep -n`, dann den Ausschnitt mit `sed -n` oder Read mit Bereich. Ganze große Dateien liest du nicht.
 - Bestehende Dateien änderst du mit Edit. Komplett neu schreibst du nur neue Dateien.
-- Das volle Gate läuft in CI: Branch `wp/*` pushen (`git push -u origin wp/<nr>-<slug>`, nie `main`), dann im Hintergrund **einmal** `tool/ci_wait.sh <branch>` (kompakte Zusammenfassung, bei Rot die letzten Zeilen). Gemergt wird erst bei grünem CI und nach Review.
 - Abschlussberichte sind kurz, höchstens 10 Zeilen; Details gehören in `../james-wt/handoff/<wp>-<rolle>.md`. Belege nennst du als Datei:Zeile statt als langes Zitat.
 - Nachbesserungen und Re-Reviews übernimmt ein frischer Agent mit Befundliste und Diff, statt einen großen Kontext fortzusetzen.
 - Modelle: maßgeblich ist `model:` im Frontmatter der Projekt-Agenten in `.claude/agents/` (Coder und E2E sonnet, Reviewer opus).
@@ -46,5 +45,4 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 - Kurze Rollen-Briefings liegen in `docs/agents/` (`common.md` für alle, dazu `coder.md`, `reviewer.md`, `integrator.md`, `e2e.md`); sie sind zusätzlich als Projekt-Agenten unter `.claude/agents/` abgelegt.
 
 ## Git, Identität, Secrets
-- Öffentliches Repo: kein Name, keine Kontaktdaten und keine Anwesenheit des Maintainers, keine absoluten lokalen Pfade; „Maintainer“ schreiben (Regel und Prüfungen: `docs/agents/common.md`, „Öffentliches Repo“).
-- Identität, Trailer, öffentliches Repo und Secrets: nur in `docs/agents/common.md` („Identität“, „Secrets und Live-Tests“). Hooks in `tool/hooks/` und der CI-Schritt prüfen sie; niemals `--no-verify` oder Identitäts-Overrides.
+- Identität, Trailer, öffentliches Repo (kein Name, keine Anwesenheit des Maintainers, keine absoluten lokalen Pfade; „Maintainer“ schreiben) und Secrets: nur in `docs/agents/common.md` („Identität“, „Öffentliches Repo“, „Secrets und Live-Tests“). Hooks in `tool/hooks/` und der CI-Schritt prüfen sie; niemals `--no-verify` oder Identitäts-Overrides.
