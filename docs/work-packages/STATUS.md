@@ -33,6 +33,8 @@ Stand: 2026-10-28; läuft: WP169, WP170, WP171, WP172; Release v0.1.0 (2fd52524)
 | WP170 | Doku bereinigen: Widersprüche, Veraltetes, Doppelungen, Erledigtes löschen | in Arbeit | Auftrag Maintainer 2026-10-28; Entscheidungen im Paket |
 | WP171 | Weckwort: zweite Prüfung scheitert still ohne Whisper (Zweitgerät), robust machen | in Arbeit | Gerätetest Maintainer 2026-10-28 |
 | WP172 | Overlay schließt nach dem Zuhören ohne Antwort, Weckwort wieder bereit | in Arbeit | Wunsch Maintainer 2026-10-28 |
+| WP173 | Einstellungen umbauen: Routing unter Anbieter, „Erweiterte Einstellungen“, Sprache/Weckwort getrennt, Weckwort-Modell oben | geplant | Wunsch Maintainer 2026-10-28; Start nach WP171 |
+| WP174 | Einrichtungsassistent beim ersten Start (Anbieter, Sprache Pflicht; Weckwort, Integrationen, Personalisierung optional) | geplant | Wunsch Maintainer 2026-10-28; Start nach WP173 |
 
 ## Offen
 
