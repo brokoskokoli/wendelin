@@ -375,14 +375,10 @@ class WakeWordService : Service() {
             instance?.closeMicForHandoff()
         }
 
-        fun onHandoffTaken() {
-            instance?.handoffTaken()
-        }
+        fun onHandoffTaken() { instance?.handoffTaken() }
 
         /** WP146: taken with the capture kept open (the service records until [finishHandoff]). */
-        fun onHandoffKept() {
-            instance?.handoffKept()
-        }
+        fun onHandoffKept() { instance?.handoffKept() }
 
         /** WP146: the app's microphone is up; stops the service and returns the audio since the take. */
         fun finishHandoff(): WakeHandoff.Taken? = instance?.finishHandoff() ?: WakeHandoff.finish()
@@ -409,7 +405,10 @@ class WakeWordService : Service() {
 
         /** WP148: the developer mode changed; the running wake engine follows without a restart. */
         fun onDevMode(on: Boolean, clear: Boolean = false, archive: Boolean = false) {
-            instance?.let { s -> s.main.post { s.engine?.send("devMode", WakePolicy.devModeArgs(on, clear, archive)) } }
+            val s = instance ?: return
+            // WP155: switching off asks the engine to delete what it wrote (see WakeHost).
+            val args = if (clear) mapOf("on" to on, "clear" to true, "archive" to archive) else mapOf("on" to on)
+            s.main.post { s.engine?.send("devMode", args) }
         }
 
         /** WP171: the app changed what stage 2 needs (model, voice); the engine checks the gap again. */

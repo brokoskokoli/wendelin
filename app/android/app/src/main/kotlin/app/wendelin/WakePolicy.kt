@@ -266,10 +266,6 @@ object WakePolicy {
      */
     fun stage2GapActive(reason: String?): Boolean = reason == "model_missing" || reason == "no_sequences"
 
-    /** Arguments of the engine call `devMode`; WP155: switching off can ask the engine to delete what it wrote. */
-    fun devModeArgs(on: Boolean, clear: Boolean, archive: Boolean): Map<String, Any> =
-        if (clear) mapOf("on" to on, "clear" to true, "archive" to archive) else mapOf("on" to on)
-
     /** Whether a service that runs for [mode] has to stop when charging changes to [charging]. */
     fun stopsOnUnplug(mode: WakeMode, charging: Boolean): Boolean =
         mode == WakeMode.CHARGING && !charging
