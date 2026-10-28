@@ -426,5 +426,13 @@
         "type": "String"
       }
     }
-  }
+  },
+  "wakeNotifGapText": "Aktivierungswort kann nicht geprüft werden – Erkennungsmodell laden",
+  "wakeNotifGapAction": "Modell laden",
+  "wakeStage2GapNotice": "Die zweite Prüfung kann nicht entscheiden: Für „Hey Wendelin“ fehlt ein Erkennungsmodell, und die eingelernte Stimme hat noch keine Folgen für den Prüfer. Treffer werden deshalb verworfen. Lade das Erkennungsmodell oder lerne die Stimme neu ein.",
+  "wakeStage2GapLoad": "Erkennungsmodell laden",
+  "wakeNotifGapNoSeqText": "Aktivierungswort kann nicht sicher geprüft werden – bitte neu einlernen",
+  "wakeNotifGapNoSeqAction": "Neu einlernen",
+  "wakeStage2NoSeqNotice": "Die zweite Prüfung ist unsicher: Die eingelernte Stimme hat noch keine Folgen für den Prüfer, und es wird nur das Erkennungsmodell gefragt. Das kann echte Rufe verwerfen. Lerne das Aktivierungswort neu ein.",
+  "wakeStage2NoSeqEnroll": "Aktivierungswort neu einlernen"
 }

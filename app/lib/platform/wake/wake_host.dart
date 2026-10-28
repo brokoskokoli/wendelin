@@ -13,21 +13,10 @@ import '../../voice/voice_log.dart';
 import '../channels.dart';
 import 'service_audio_input.dart';
 import 'wake_detector.dart';
+import 'wake_stage2_gap.dart';
 
 export '../channels.dart' show wakeEngineChannelName;
-
-/// Why stage 2 cannot decide (WP171). While it is set, every candidate is
-/// rejected (fail closed) and the wake word never opens the assistant.
-enum WakeStage2Gap {
-  /// No enrolled sequences for verifier B and no recognizer installed
-  /// (neither Parakeet nor Whisper): `wake-verify error=model_missing`.
-  modelMissing;
-
-  /// The reason as logged and sent to Kotlin.
-  String get logName => switch (this) {
-    modelMissing => 'model_missing',
-  };
-}
+export 'wake_stage2_gap.dart';
 
 /// What the wake word host needs from the device (replaced in tests).
 abstract interface class WakeParts {
@@ -48,6 +37,9 @@ abstract interface class WakeParts {
   /// sequences for verifier B and neither Parakeet nor Whisper installed),
   /// checked before any candidate. `null`: it can (or unknown).
   Future<WakeStage2Gap?> stage2Gap();
+
+  /// WP171: loads and checks of the recognizer fallback, for `wake-alive`.
+  WakeFallbackStats get fallbackStats;
 
   /// Frees everything the parts hold (Whisper).
   Future<void> dispose();
@@ -118,6 +110,29 @@ final class WakeHost {
     unawaited(_call('stage2Gap', {'reason': gap?.logName}));
   }
 
+  /// Result of a candidate: a decision clears a missing model, but not
+  /// `no_sequences` (the recognizer decided because B could not; only
+  /// [_recheck] after enrolling clears that).
+  void _onVerdictGap(WakeStage2Gap? gap) {
+    if (gap == null && _stage2Gap.value == WakeStage2Gap.noSequences) return;
+    _setGap(gap);
+  }
+
+  /// The app installed or removed a recognition model or enrolled a voice:
+  /// asks [WakeParts.stage2Gap] again. Without a listener there is nothing
+  /// to tell (the check runs when it starts).
+  Future<void> _recheck() async {
+    if (_listener == null || !_verify || _ending) return;
+    WakeStage2Gap? gap;
+    try {
+      gap = await parts.stage2Gap();
+    } on Object {
+      return; // unknown: the notice stays as it is
+    }
+    if (_ending) return;
+    _setGap(gap);
+  }
+
   /// Listens to the service and reports `ready`.
   Future<void> attach() async {
     channel.setMethodCallHandler(_onCall);
@@ -169,6 +184,8 @@ final class WakeHost {
               ? _hold('conflict', reason)
               : _release('conflict'),
         );
+      case 'recheck':
+        await _serial(_recheck);
       case 'overlayClosed':
         await _serial(() => _release('overlay'));
       case 'shutdown':
@@ -251,7 +268,7 @@ final class WakeHost {
       verifier: verify
           ? _verifier = _LoggingVerifier(
               parts.verifier(detector: _detector),
-              onGap: _setGap,
+              onGap: _onVerdictGap,
             )
           : null,
       // Room noise before the word (WP73): `speechAfterWakeWord` measures
@@ -325,6 +342,7 @@ final class WakeHost {
 
   Future<void> _begin(WakeWordListener listener) async {
     _started = true;
+    parts.fallbackStats.reset();
     await listener.start();
     voiceLog('wake-listening', {
       'verify': _verify,
@@ -337,12 +355,26 @@ final class WakeHost {
   void _logAlive() {
     final stats = _listener?.stats;
     if (stats == null) return;
+    final fb = parts.fallbackStats;
+    String perHour(int n) =>
+        (stats.runtime.inSeconds < 60
+                ? 0.0
+                : n *
+                      Duration.microsecondsPerHour /
+                      stats.runtime.inMicroseconds)
+            .toStringAsFixed(1);
     voiceLog('wake-alive', {
       'cand': stats.candidates,
       'ok': stats.confirmed,
       'candPerH': stats.candidatesPerHour.toStringAsFixed(1),
       'okPerH': stats.confirmedPerHour.toStringAsFixed(1),
       'min': stats.runtime.inMinutes,
+      // WP171: what the recognizer fallback costs (loads stay far below
+      // checks while the model stays warm for `idleRelease`).
+      'fbLoads': fb.loads,
+      'fbChecks': fb.checks,
+      'fbLoadsPerH': perHour(fb.loads),
+      'fbChecksPerH': perHour(fb.checks),
     });
   }
 

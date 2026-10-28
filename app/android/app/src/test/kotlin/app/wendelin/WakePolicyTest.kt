@@ -378,6 +378,7 @@ class WakePolicyTest {
     @Test
     fun onlyTheKnownReasonSwitchesTheStage2GapNoticeOn() {
         assertTrue(WakePolicy.stage2GapActive("model_missing"))
+        assertTrue(WakePolicy.stage2GapActive("no_sequences"))
         assertFalse(WakePolicy.stage2GapActive(null))
         assertFalse(WakePolicy.stage2GapActive("none"))
         assertFalse(WakePolicy.stage2GapActive("voiceexception"))

@@ -57,6 +57,14 @@ class WakeTextsTest {
             de.gapText,
         )
         assertEquals("Modell laden", de.gapAction)
+        assertEquals(
+            "Aktivierungswort kann nicht sicher geprüft werden – bitte neu einlernen",
+            de.gapNoSeqText,
+        )
+        assertEquals("Neu einlernen", de.gapNoSeqAction)
+        val enSeq = WakeTexts { mapOf("gapNoSeqText" to "Re-enroll", "gapNoSeqAction" to "Enroll")[it] }
+        assertEquals("Re-enroll", enSeq.gapNoSeqText)
+        assertEquals("Enroll", enSeq.gapNoSeqAction)
         val en = WakeTexts { mapOf("gapText" to "Cannot check", "gapAction" to "Load model")[it] }
         assertEquals("Cannot check", en.gapText)
         assertEquals("Load model", en.gapAction)

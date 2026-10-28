@@ -35,8 +35,8 @@ class WakeWordService : Service() {
     private val hitFlow = WakeHitFlow(this, main, handoffCheck, ::stopMic) { engine?.send("overlayClosed", null) }
     private val overlapGuard = TimedGuard(main)
 
-    /** WP171: stage 2 cannot decide (no recognition model); the notification says so. */
-    private var stage2Gap = false
+    /** WP171: stage 2 cannot decide (reason as sent by the engine: no model, or no sequences); the notification says so. */
+    private var stage2Gap: String? = null
 
     /** WP149: while [overlapGuard] is armed the hit is taken with the capture kept open. */
     private val conflicts = WakeConflictReaction(overlapGuard, ::stopMic)
@@ -148,10 +148,10 @@ class WakeWordService : Service() {
 
     /** The engine found out (or no longer finds) that stage 2 has no model: rebuild the notification. */
     private fun onStage2Gap(reason: String?) {
-        val gap = WakePolicy.stage2GapActive(reason)
+        val gap = if (WakePolicy.stage2GapActive(reason)) reason else null
         if (gap == stage2Gap) return
         stage2Gap = gap
-        VoiceLog.i("wake-gap reason=${if (gap) reason else "none"}")
+        VoiceLog.i("wake-gap reason=${gap ?: "none"}")
         // Only while listening: a pause shows its own notification.
         if (engine != null) WakeNotifications.update(this, WakeNotifications.listening(this, gap = gap))
     }
@@ -289,7 +289,7 @@ class WakeWordService : Service() {
         watcher?.stop()
         watcher = null
         conflicts.reset()
-        stage2Gap = false
+        stage2Gap = null
         stopMic()
         // A hit that was being handed over dies with the service (else `capturing` stays set).
         WakeHandoff.clear()
@@ -425,6 +425,12 @@ class WakeWordService : Service() {
             // WP155: switching off asks the engine to delete what it wrote (see WakeHost).
             val args = if (clear) mapOf("on" to on, "clear" to true, "archive" to archive) else mapOf("on" to on)
             s.main.post { s.engine?.send("devMode", args) }
+        }
+
+        /** WP171: the app changed what stage 2 needs (model, enrolled voice); the engine checks the gap again. */
+        fun onRecheck() {
+            val s = instance ?: return
+            s.main.post { s.engine?.send("recheck", null) }
         }
 
         /** The assistant overlay was closed: the service listens again. */

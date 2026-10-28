@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/platform/wake/wake_stage2_gap.dart';
 import 'package:wendelin/ui/settings/wake/wake_models.dart';
+import 'package:wendelin/ui/settings/wake/wake_enroll_screen.dart';
 import 'package:wendelin/ui/settings/wake/wake_word_screen.dart';
 import 'package:wendelin/voice/wake/wake_storage.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
@@ -27,12 +29,22 @@ Future<(TestEnv, ProviderContainer)> pumpGap(
 }
 
 void main() {
-  final cases = <(String, bool, Set<String>, bool)>[
-    ('ohne Folgen, ohne Modell', false, {}, true),
-    ('mit Folgen, ohne Modell', true, {}, false),
-    ('ohne Folgen, nur Parakeet', false, {'parakeet-tdt-0.6b-v3'}, false),
-    ('ohne Folgen, nur Whisper', false, {'whisper-base'}, false),
-    ('mit Folgen, nur Parakeet', true, {'parakeet-tdt-0.6b-v3'}, false),
+  final cases = <(String, bool, Set<String>, WakeStage2Gap?)>[
+    ('ohne Folgen, ohne Modell', false, {}, WakeStage2Gap.modelMissing),
+    ('mit Folgen, ohne Modell', true, {}, null),
+    (
+      'ohne Folgen, nur Parakeet',
+      false,
+      {'parakeet-tdt-0.6b-v3'},
+      WakeStage2Gap.noSequences,
+    ),
+    (
+      'ohne Folgen, nur Whisper',
+      false,
+      {'whisper-base'},
+      WakeStage2Gap.noSequences,
+    ),
+    ('mit Folgen, nur Parakeet', true, {'parakeet-tdt-0.6b-v3'}, null),
   ];
   for (final (name, seq, models, gap) in cases) {
     testWidgets('Lücke Stufe 2: $name -> $gap', (tester) async {
@@ -40,20 +52,35 @@ void main() {
       expect(c.read(wakeStage2GapProvider), gap);
       expect(
         find.byKey(const ValueKey('wakeStage2Gap')),
-        gap ? findsOneWidget : findsNothing,
+        gap == WakeStage2Gap.modelMissing ? findsOneWidget : findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('wakeStage2NoSeq')),
+        gap == WakeStage2Gap.noSequences ? findsOneWidget : findsNothing,
       );
       expect(
         find.text('Erkennungsmodell laden'),
-        gap ? findsOneWidget : findsNothing,
+        gap == WakeStage2Gap.modelMissing ? findsOneWidget : findsNothing,
+      );
+      expect(
+        find.text('Aktivierungswort neu einlernen'),
+        gap == WakeStage2Gap.noSequences ? findsOneWidget : findsNothing,
       );
     });
   }
+
+  testWidgets('Knopf „neu einlernen“ öffnet das Einlernen', (tester) async {
+    await pumpGap(tester, sequences: false, models: {'whisper-base'});
+    await tester.tap(find.text('Aktivierungswort neu einlernen'));
+    await tester.pumpAndSettle();
+    expect(find.byType(WakeEnrollScreen), findsOneWidget);
+  });
 
   testWidgets('keine eingelernte Stimme: keine Lücke', (tester) async {
     final env = wakeEnv(installed: false);
     env.speechModels.installed.add('wake-features');
     final c = await pumpWake(tester, env, const WakeWordScreen());
-    expect(c.read(wakeStage2GapProvider), isFalse);
+    expect(c.read(wakeStage2GapProvider), isNull);
   });
 
   testWidgets('Knopf lädt Parakeet über die Modellverwaltung', (tester) async {
@@ -65,11 +92,18 @@ void main() {
   });
 
   test('Installationsstand noch nicht gelesen: kein Modell-Urteil', () {
-    expect(wakeStage2HasNoModel(const {}), isFalse);
+    expect(wakeStage2RecognizerInstalled(const {}), isNull);
     expect(
-      wakeStage2HasNoModel({
+      wakeStage2RecognizerInstalled({
         for (final m in SpeechModelCatalog.standard.models)
           m.id: const ModelState(ModelPhase.unknown),
+      }),
+      isNull,
+    );
+    expect(
+      wakeStage2RecognizerInstalled({
+        for (final m in SpeechModelCatalog.standard.models)
+          m.id: const ModelState(ModelPhase.absent),
       }),
       isFalse,
     );

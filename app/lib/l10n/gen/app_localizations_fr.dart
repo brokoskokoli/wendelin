@@ -5358,6 +5358,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get wakeNotifGapAction => 'Charger le modèle';
 
   @override
+  String get wakeNotifGapNoSeqAction => 'Réenregistrer';
+
+  @override
+  String get wakeNotifGapNoSeqText =>
+      'Le mot d\'activation ne peut pas être vérifié de façon fiable – à réenregistrer';
+
+  @override
   String get wakeNotifGapText =>
       'Le mot d’activation ne peut pas être vérifié – charger le modèle de reconnaissance';
 
@@ -5509,6 +5516,20 @@ class AppLocalizationsFr extends AppLocalizations {
       'Wendelin n’écoute que si la vérification confirme le mot d’activation. Elle couvre toute l’étape 2 : vérificateur B, Parakeet ou Whisper, selon ce qui est enregistré et chargé. Désactivez-la si elle est trop stricte pour votre voix ; il y aura alors plus de faux déclenchements.';
 
   @override
+  String get wakeStage2GapLoad => 'Télécharger le modèle de reconnaissance';
+
+  @override
+  String get wakeStage2GapNotice =>
+      'La seconde vérification ne peut pas trancher : il manque un modèle de reconnaissance pour « Hey Wendelin », et la voix apprise n’a pas encore de séquences pour le vérificateur. Les détections sont donc rejetées. Télécharge le modèle de reconnaissance ou entraîne la voix de nouveau.';
+
+  @override
+  String get wakeStage2NoSeqEnroll => 'Réenregistrer le mot d\'activation';
+
+  @override
+  String get wakeStage2NoSeqNotice =>
+      'La deuxième vérification est peu fiable : la voix enregistrée n\'a pas encore de séquences pour le vérificateur, seul le modèle de reconnaissance est consulté. De vrais appels peuvent être rejetés. Réenregistrez le mot d\'activation.';
+
+  @override
   String wakeTestAgo(String v, int inSeconds) {
     return '$v · $inSeconds s';
   }
@@ -5634,13 +5655,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get wakeWordRelearnForVerifier =>
       'Entraîner de nouveau pour le vérificateur.';
-
-  @override
-  String get wakeStage2GapNotice =>
-      'La seconde vérification ne peut pas trancher : il manque un modèle de reconnaissance pour « Hey Wendelin », et la voix apprise n’a pas encore de séquences pour le vérificateur. Les détections sont donc rejetées. Télécharge le modèle de reconnaissance ou entraîne la voix de nouveau.';
-
-  @override
-  String get wakeStage2GapLoad => 'Télécharger le modèle de reconnaissance';
 
   @override
   String get wakeWordRetrain => 'Entraîner de nouveau';

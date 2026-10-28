@@ -218,6 +218,23 @@ Future<NemoFiles?> wakeParakeetFiles({
   return NemoFiles.find(model, dir, hotwords: hotwords);
 }
 
+/// Counts the clips the recognizer fallback gets ([WakeFallbackStats.checks]).
+final class _CountingVerifier implements WakeVerifier {
+  _CountingVerifier(this.inner, this.stats);
+
+  final WakeVerifier inner;
+  final WakeFallbackStats stats;
+
+  @override
+  String get kind => inner.kind;
+
+  @override
+  Future<bool> confirm(Int16List pcm) {
+    stats.checks++;
+    return inner.confirm(pcm);
+  }
+}
+
 /// The wake word parts on the device: the feature chain and the templates
 /// of every learned speaker (`wakeStoreProvider`), Whisper through the
 /// recognizer engines. Works without database, so the service needs no
@@ -256,17 +273,27 @@ final class DeviceWakeParts implements WakeParts {
   LazyParakeetVerifier? _parakeet;
   VerifierBWakeVerifier? _verifierB;
 
+  @override
+  final fallbackStats = WakeFallbackStats();
+
   Future<RecognizerEngines> _newEngines() async =>
       await _enginesFactory?.call() ??
       DeviceRecognizerEngines(
         models: await container.read(speechModelServiceProvider.future),
         idleRelease: idleRelease,
+        startWhisper: (spec) {
+          fallbackStats.loads++;
+          return IsolateWhisperBackend.start(spec);
+        },
       );
 
   LazyParakeetVerifier _newParakeet() => LazyParakeetVerifier(
     files: _parakeetFiles,
     idleRelease: idleRelease,
-    start: parakeetStart,
+    start: (spec) {
+      fallbackStats.loads++;
+      return parakeetStart(spec);
+    },
   );
 
   Future<NemoFiles?> _parakeetFiles() async => wakeParakeetFiles(
@@ -328,10 +355,13 @@ final class DeviceWakeParts implements WakeParts {
     // if it cannot, the installed recognizer does (Parakeet when installed,
     // else Whisper), never Whisper alone.
     final parakeet = _parakeet ??= _newParakeet();
-    final recognizer = PreferredWakeVerifier(
-      preferred: parakeet,
-      fallback: whisper,
-      available: parakeet.isAvailable,
+    final recognizer = _CountingVerifier(
+      PreferredWakeVerifier(
+        preferred: parakeet,
+        fallback: whisper,
+        available: parakeet.isAvailable,
+      ),
+      fallbackStats,
     );
     // WP143: with enrolled sequences verifier B decides and neither Parakeet
     // nor Whisper is touched (they are only loaded inside [recognizer]);
@@ -352,22 +382,26 @@ final class DeviceWakeParts implements WakeParts {
     );
   }
 
-  /// Same rule as `wakeStage2GapProvider` in the settings (WP171): a learned
-  /// voice without sequences for verifier B (all voices if B is off) and
-  /// neither Parakeet nor Whisper installed.
+  /// The rule [wakeStage2GapOf], shared with the settings (WP171).
   @override
   Future<WakeStage2Gap?> stage2Gap() async {
     final sets = await _allTemplates();
-    final withoutB = sets.any((t) => !useVerifierB || !t.hasSequences);
-    if (!withoutB) return null;
-    if (await (_parakeet ??= _newParakeet()).isAvailable()) return null;
+    return wakeStage2GapOf(
+      anyVoice: sets.isNotEmpty,
+      anyWithoutSequences: sets.any((t) => !t.hasSequences),
+      verifierB: useVerifierB,
+      recognizerInstalled: await _recognizerInstalled(),
+    );
+  }
+
+  Future<bool> _recognizerInstalled() async {
+    if (await (_parakeet ??= _newParakeet()).isAvailable()) return true;
     try {
       await (_engines ??= await _newEngines()).checkInstalled('whisper-base');
-      return null;
+      return true;
     } on VoiceException catch (e) {
-      return e.kind == VoiceErrorKind.modelMissing
-          ? WakeStage2Gap.modelMissing
-          : null;
+      // Any other error: unknown, nothing is claimed (counts as installed).
+      return e.kind != VoiceErrorKind.modelMissing;
     }
   }
 

@@ -68,6 +68,11 @@ class WakeChannel(private val context: Context, messenger: BinaryMessenger) :
                 )
                 result.success(null)
             }
+            // WP171: a recognition model was installed or removed, or a voice enrolled: the engine checks stage 2 again.
+            "recheck" -> {
+                WakeWordService.onRecheck()
+                result.success(null)
+            }
             "status" -> {
                 val s = WakeSettingsStore.load(context)
                 result.success(

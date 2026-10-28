@@ -758,8 +758,8 @@ void main() {
             c,
             useVerifierB: false,
           ).verifier(detector: WakeDetector.model),
-          isA<PreferredWakeVerifier>(),
-          reason: 'B ausgeschaltet',
+          isNot(isA<VerifierBWakeVerifier>()),
+          reason: 'B ausgeschaltet: direkt das Erkennungsmodell',
         );
       });
 

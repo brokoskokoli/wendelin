@@ -9051,6 +9051,18 @@ abstract class AppLocalizations {
   /// **'Modell laden'**
   String get wakeNotifGapAction;
 
+  /// No description provided for @wakeNotifGapNoSeqAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Neu einlernen'**
+  String get wakeNotifGapNoSeqAction;
+
+  /// No description provided for @wakeNotifGapNoSeqText.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktivierungswort kann nicht sicher geprüft werden – bitte neu einlernen'**
+  String get wakeNotifGapNoSeqText;
+
   /// No description provided for @wakeNotifGapText.
   ///
   /// In de, this message translates to:
@@ -9309,6 +9321,30 @@ abstract class AppLocalizations {
   /// **'Wendelin hört nur zu, wenn die Nachprüfung das Aktivierungswort bestätigt. Sie umfasst die ganze Stufe 2: Prüfer B, Parakeet oder Whisper, je nachdem, was eingelernt und geladen ist. Schalte sie aus, wenn sie mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.'**
   String get wakeServiceSectionWhisperDetail;
 
+  /// No description provided for @wakeStage2GapLoad.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennungsmodell laden'**
+  String get wakeStage2GapLoad;
+
+  /// No description provided for @wakeStage2GapNotice.
+  ///
+  /// In de, this message translates to:
+  /// **'Die zweite Prüfung kann nicht entscheiden: Für „Hey Wendelin“ fehlt ein Erkennungsmodell, und die eingelernte Stimme hat noch keine Folgen für den Prüfer. Treffer werden deshalb verworfen. Lade das Erkennungsmodell oder lerne die Stimme neu ein.'**
+  String get wakeStage2GapNotice;
+
+  /// No description provided for @wakeStage2NoSeqEnroll.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktivierungswort neu einlernen'**
+  String get wakeStage2NoSeqEnroll;
+
+  /// No description provided for @wakeStage2NoSeqNotice.
+  ///
+  /// In de, this message translates to:
+  /// **'Die zweite Prüfung ist unsicher: Die eingelernte Stimme hat noch keine Folgen für den Prüfer, und es wird nur das Erkennungsmodell gefragt. Das kann echte Rufe verwerfen. Lerne das Aktivierungswort neu ein.'**
+  String get wakeStage2NoSeqNotice;
+
   /// No description provided for @wakeTestAgo.
   ///
   /// In de, this message translates to:
@@ -9518,18 +9554,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Neu einlernen für den Prüfer.'**
   String get wakeWordRelearnForVerifier;
-
-  /// No description provided for @wakeStage2GapNotice.
-  ///
-  /// In de, this message translates to:
-  /// **'Die zweite Prüfung kann nicht entscheiden: Für „Hey Wendelin“ fehlt ein Erkennungsmodell, und die eingelernte Stimme hat noch keine Folgen für den Prüfer. Treffer werden deshalb verworfen. Lade das Erkennungsmodell oder lerne die Stimme neu ein.'**
-  String get wakeStage2GapNotice;
-
-  /// No description provided for @wakeStage2GapLoad.
-  ///
-  /// In de, this message translates to:
-  /// **'Erkennungsmodell laden'**
-  String get wakeStage2GapLoad;
 
   /// No description provided for @wakeWordRetrain.
   ///

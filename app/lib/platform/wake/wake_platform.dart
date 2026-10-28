@@ -177,6 +177,17 @@ class WakePlatform {
     }
   }
 
+  /// WP171: a recognition model was installed or removed, or a voice was
+  /// enrolled or deleted: the running engine checks again whether stage 2
+  /// can decide (and corrects the service notification).
+  Future<void> recheckStage2() async {
+    try {
+      await _channel.invokeMethod<void>('recheck');
+    } on Object {
+      // Not on Android, or no engine: the check runs at the next start.
+    }
+  }
+
   /// Sets the wake word settings; Kotlin starts or stops the service.
   Future<void> configure({
     required bool enabled,

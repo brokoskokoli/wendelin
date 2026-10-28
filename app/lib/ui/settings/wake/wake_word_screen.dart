@@ -6,6 +6,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../../di/wake_providers.dart';
 import '../../../l10n/l10n.dart';
+import '../../../platform/wake/wake_stage2_gap.dart';
 import '../../../voice/wake/wake_enroller.dart';
 import '../../../voice/wake/wake_storage.dart';
 import '../../design/design.dart';
@@ -82,8 +83,14 @@ class WakeWordScreen extends ConsumerWidget {
               ? () => unawaited(_test(context, ref, speakers))
               : null,
         ),
-        const WakeStage2GapNotice(),
-        if (installed && !ref.watch(wakeStage2GapProvider))
+        WakeStage2GapNotice(
+          onEnroll: speakers.isEmpty
+              ? null
+              : () =>
+                    unawaited(_enroll(context, ref, speakers, speakers.first)),
+        ),
+        if (installed &&
+            ref.watch(wakeStage2GapProvider) != WakeStage2Gap.modelMissing)
           const WakeModelsNotice(optional: true),
         if (speakers.isNotEmpty)
           WideButton(

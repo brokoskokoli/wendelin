@@ -31,6 +31,8 @@ final class FakeParts implements WakeParts {
   final Object? openError;
   bool verdict;
   Object? verifyError;
+  @override
+  final fallbackStats = WakeFallbackStats();
   int disposed = 0;
   int engines = 0;
   WakeDetector? lastDetector;

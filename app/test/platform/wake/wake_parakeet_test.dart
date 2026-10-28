@@ -321,21 +321,22 @@ void main() {
   // WP171: the check before the start (same rule as the notice in the
   // settings): a voice without sequences and no recognizer installed.
   group('DeviceWakeParts.stage2Gap', () {
-    WakeTemplates voice({bool sequences = false}) => WakeTemplates(
-      speakerId: 'a',
-      featureVersion: 'v',
-      threshold: 0.5,
-      embeddings: [
-        Float32List.fromList([1, 0]),
-      ],
-      sequences: [
-        if (sequences)
-          WakeTemplateSequence(
-            word: WakeTemplates.wordHw,
-            values: Float32List(192),
-          ),
-      ],
-    );
+    WakeTemplates voice({bool sequences = false, String id = 'a'}) =>
+        WakeTemplates(
+          speakerId: id,
+          featureVersion: 'v',
+          threshold: 0.5,
+          embeddings: [
+            Float32List.fromList([1, 0]),
+          ],
+          sequences: [
+            if (sequences)
+              WakeTemplateSequence(
+                word: WakeTemplates.wordHw,
+                values: Float32List(192),
+              ),
+          ],
+        );
 
     Future<DeviceWakeParts> parts({
       required List<WakeTemplates> voices,
@@ -373,13 +374,48 @@ void main() {
       await p.dispose();
     });
 
-    test('nur Parakeet oder nur Whisper: keine Lücke', () async {
-      final a = await parts(voices: [voice()], parakeet: true, whisper: false);
-      expect(await a.stage2Gap(), isNull);
-      await a.dispose();
-      final w = await parts(voices: [voice()], parakeet: false, whisper: true);
-      expect(await w.stage2Gap(), isNull);
-      await w.dispose();
+    test(
+      'Stimme ohne Folgen, nur Parakeet oder nur Whisper: neu einlernen',
+      () async {
+        final a = await parts(
+          voices: [voice()],
+          parakeet: true,
+          whisper: false,
+        );
+        expect(await a.stage2Gap(), WakeStage2Gap.noSequences);
+        await a.dispose();
+        final w = await parts(
+          voices: [voice()],
+          parakeet: false,
+          whisper: true,
+        );
+        expect(await w.stage2Gap(), WakeStage2Gap.noSequences);
+        await w.dispose();
+      },
+    );
+
+    test('zwei Stimmen, eine ohne Folgen, Modell da: neu einlernen', () async {
+      final p = await parts(
+        voices: [
+          voice(sequences: true),
+          voice(id: 'b'),
+        ],
+        parakeet: true,
+        whisper: false,
+      );
+      expect(await p.stage2Gap(), WakeStage2Gap.noSequences);
+      await p.dispose();
+    });
+
+    test('B aus, Modell da: keine Lücke (Neueinlernen hilft nicht)', () async {
+      final p = await parts(
+        voices: [voice()],
+        parakeet: true,
+        whisper: false,
+        b: false,
+      );
+      expect(await p.stage2Gap(), isNull);
+      await p.dispose();
     });
 
     test('alle Stimmen mit Folgen: B entscheidet, keine Lücke', () async {

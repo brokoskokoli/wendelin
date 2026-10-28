@@ -81,16 +81,21 @@ object WakeNotifications {
      * stage 2 cannot decide without a recognition model; the text says so and the button (and a
      * tap) opens the wake word settings, where the model can be loaded.
      */
-    fun listening(context: Context, note: String? = null, gap: Boolean = false): Notification {
+    fun listening(context: Context, note: String? = null, gap: String? = null): Notification {
         val texts = WakeTexts.load(context)
         val b = builder(
             context,
             texts.listeningTitle,
-            if (gap) texts.gapText else note ?: texts.listeningText,
-            if (gap) NotifyChannel.OPEN_WAKE_SETTINGS else null,
+            when {
+                gap == null -> note ?: texts.listeningText
+                gap == "no_sequences" -> texts.gapNoSeqText
+                else -> texts.gapText
+            },
+            if (gap != null) NotifyChannel.OPEN_WAKE_SETTINGS else null,
         ).setOngoing(true)
-        if (gap) {
-            b.addAction(act(context, texts.gapAction, openApp(context, NotifyChannel.OPEN_WAKE_SETTINGS)))
+        if (gap != null) {
+            val label = if (gap == "no_sequences") texts.gapNoSeqAction else texts.gapAction
+            b.addAction(act(context, label, openApp(context, NotifyChannel.OPEN_WAKE_SETTINGS)))
         }
         return b
             .addAction(act(context, texts.pause, action(context, WakeWordService.ACTION_PAUSE)))

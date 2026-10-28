@@ -7,6 +7,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../../../di/voice_providers.dart';
 import '../../../di/wake_providers.dart';
 import '../../../l10n/l10n.dart';
+import '../../../platform/wake/wake_stage2_gap.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 
@@ -34,69 +35,68 @@ final wakeVerifyMissingProvider = Provider<List<SpeechModel>>((ref) {
   return [if (m != null && states[m.id]?.phase != ModelPhase.installed) m];
 });
 
-/// Recognizers stage 2 can fall back on (Parakeet preferred, then Whisper).
-final _stage2Models = [
-  SpeechModelCatalog.parakeetV3,
-  SpeechModelCatalog.whisperSmall,
-  SpeechModelCatalog.whisperBase,
-];
-
-/// Whether the install [states] are read and none of the stage 2
-/// recognizers (Parakeet, Whisper) is installed. False while the states
-/// are not read yet (no flash of the notice at start).
-@visibleForTesting
-bool wakeStage2HasNoModel(Map<String, ModelState> states) =>
-    _stage2Models.every((m) {
-      final phase = states[m.id]?.phase;
-      return phase != null &&
-          phase != ModelPhase.unknown &&
-          phase != ModelPhase.installed;
-    });
-
-/// WP171: stage 2 cannot decide. At least one learned voice has no
-/// sequences for verifier B (so B passes) and neither Parakeet nor Whisper
-/// is installed (so the fallback has no model either); every candidate
-/// would be dropped. False while the install states are not read yet
-/// (no flash of the notice at start).
-final wakeStage2GapProvider = Provider<bool>((ref) {
+/// WP171: why stage 2 cannot decide (rule: [wakeStage2GapOf], the same as in
+/// the engine). A learned voice without sequences for verifier B and no
+/// recognizer installed: `modelMissing`; with a recognizer: `noSequences`
+/// (only the recognizer decides, enroll again). `null` while the install
+/// states are not read yet (no flash of the notice at start).
+final wakeStage2GapProvider = Provider<WakeStage2Gap?>((ref) {
   final speakers = ref.watch(wakeSpeakersProvider).value ?? const [];
-  final noSequences = speakers.any((s) {
-    final t = ref.watch(wakeTemplatesProvider(s.id)).value;
-    return t != null && !t.hasSequences;
-  });
-  if (!noSequences) return false;
-  return wakeStage2HasNoModel(ref.watch(modelStatesProvider));
+  final sets = <WakeTemplates>[
+    for (final s in speakers) ?ref.watch(wakeTemplatesProvider(s.id)).value,
+  ].where((t) => t.embeddings.isNotEmpty).toList();
+  final installed = wakeStage2RecognizerInstalled(
+    ref.watch(modelStatesProvider),
+  );
+  if (installed == null) return null;
+  return wakeStage2GapOf(
+    anyVoice: sets.isNotEmpty,
+    anyWithoutSequences: sets.any((t) => !t.hasSequences),
+    verifierB: !wakeVerifierBMuIsPlaceholder,
+    recognizerInstalled: installed,
+  );
 });
 
-/// WP171: notice „Erkennungsmodell laden“ while [wakeStage2GapProvider] is
-/// true. The button downloads Parakeet through the model management
-/// (`ModelStatesNotifier.download`, no further conditions there).
+/// WP171: notice for [wakeStage2GapProvider]. Missing model: button
+/// downloads Parakeet through the model management; missing sequences: the
+/// button enrolls the wake word again ([onEnroll]).
 class WakeStage2GapNotice extends ConsumerWidget {
-  /// Creates the notice.
-  const WakeStage2GapNotice({super.key});
+  /// Creates the notice; [onEnroll] starts the enrollment again.
+  const WakeStage2GapNotice({super.key, this.onEnroll});
+
+  /// Starts enrolling again (hint `noSequences`).
+  final VoidCallback? onEnroll;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!ref.watch(wakeStage2GapProvider)) return const SizedBox.shrink();
+    final gap = ref.watch(wakeStage2GapProvider);
+    if (gap == null) return const SizedBox.shrink();
     final id = SpeechModelCatalog.parakeetV3.id;
     final phase = ref.watch(modelStatesProvider.select((s) => s[id]?.phase));
     final loading =
         phase == ModelPhase.downloading || phase == ModelPhase.unpacking;
+    final l = context.l10n;
+    final missing = gap == WakeStage2Gap.modelMissing;
     return Column(
-      key: const ValueKey('wakeStage2Gap'),
+      key: ValueKey(missing ? 'wakeStage2Gap' : 'wakeStage2NoSeq'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: WSpace.s,
       children: [
-        Text(context.l10n.wakeStage2GapNotice, style: WText.caption),
+        Text(
+          missing ? l.wakeStage2GapNotice : l.wakeStage2NoSeqNotice,
+          style: WText.caption,
+        ),
         WideButton(
-          loading
-              ? context.l10n.voiceDownloadLoading
-              : context.l10n.wakeStage2GapLoad,
-          onPressed: loading
-              ? null
-              : () => unawaited(
-                  ref.read(modelStatesProvider.notifier).download(id),
-                ),
+          missing
+              ? (loading ? l.voiceDownloadLoading : l.wakeStage2GapLoad)
+              : l.wakeStage2NoSeqEnroll,
+          onPressed: missing
+              ? (loading
+                    ? null
+                    : () => unawaited(
+                        ref.read(modelStatesProvider.notifier).download(id),
+                      ))
+              : onEnroll,
         ),
       ],
     );

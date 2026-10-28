@@ -25,6 +25,8 @@ class WakeTexts(private val stored: (String) -> String?) {
     val noRole get() = t("noRole")
     val gapText get() = t("gapText")
     val gapAction get() = t("gapAction")
+    val gapNoSeqText get() = t("gapNoSeqText")
+    val gapNoSeqAction get() = t("gapNoSeqAction")
 
     fun pausedText(time: String) = t("pausedText").replace("{time}", time)
 
@@ -50,6 +52,8 @@ class WakeTexts(private val stored: (String) -> String?) {
             "noRole" to "Wendelin muss der Assistent sein, damit das Aktivierungswort nach einem Neustart laufen kann.",
             "gapText" to "Aktivierungswort kann nicht geprüft werden – Erkennungsmodell laden",
             "gapAction" to "Modell laden",
+            "gapNoSeqText" to "Aktivierungswort kann nicht sicher geprüft werden – bitte neu einlernen",
+            "gapNoSeqAction" to "Neu einlernen",
             "ended" to "Das Aktivierungswort wurde beendet ({reason}). Tippe, um es wieder einzuschalten.",
         )
 

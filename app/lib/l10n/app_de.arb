@@ -3139,6 +3139,8 @@
     }
   },
   "wakeNotifGapAction": "Modell laden",
+  "wakeNotifGapNoSeqAction": "Neu einlernen",
+  "wakeNotifGapNoSeqText": "Aktivierungswort kann nicht sicher geprüft werden – bitte neu einlernen",
   "wakeNotifGapText": "Aktivierungswort kann nicht geprüft werden – Erkennungsmodell laden",
   "wakeNotifListeningText": "Das Mikrofon ist an. Audio bleibt auf dem Gerät.",
   "wakeNotifListeningTitle": "Wendelin hört auf „Hey Wendelin“",
@@ -3196,6 +3198,10 @@
   "wakeServiceSectionWhen": "Wann zuhören?",
   "wakeServiceSectionWhisper": "Nachprüfung (Stufe 2)",
   "wakeServiceSectionWhisperDetail": "Wendelin hört nur zu, wenn die Nachprüfung das Aktivierungswort bestätigt. Sie umfasst die ganze Stufe 2: Prüfer B, Parakeet oder Whisper, je nachdem, was eingelernt und geladen ist. Schalte sie aus, wenn sie mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.",
+  "wakeStage2GapLoad": "Erkennungsmodell laden",
+  "wakeStage2GapNotice": "Die zweite Prüfung kann nicht entscheiden: Für „Hey Wendelin“ fehlt ein Erkennungsmodell, und die eingelernte Stimme hat noch keine Folgen für den Prüfer. Treffer werden deshalb verworfen. Lade das Erkennungsmodell oder lerne die Stimme neu ein.",
+  "wakeStage2NoSeqEnroll": "Aktivierungswort neu einlernen",
+  "wakeStage2NoSeqNotice": "Die zweite Prüfung ist unsicher: Die eingelernte Stimme hat noch keine Folgen für den Prüfer, und es wird nur das Erkennungsmodell gefragt. Das kann echte Rufe verwerfen. Lerne das Aktivierungswort neu ein.",
   "wakeTestAgo": "{v} · {inSeconds} s",
   "@wakeTestAgo": {
     "placeholders": {
@@ -3299,8 +3305,6 @@
     }
   },
   "wakeWordRelearnForVerifier": "Neu einlernen für den Prüfer.",
-  "wakeStage2GapNotice": "Die zweite Prüfung kann nicht entscheiden: Für „Hey Wendelin“ fehlt ein Erkennungsmodell, und die eingelernte Stimme hat noch keine Folgen für den Prüfer. Treffer werden deshalb verworfen. Lade das Erkennungsmodell oder lerne die Stimme neu ein.",
-  "wakeStage2GapLoad": "Erkennungsmodell laden",
   "wakeWordRetrain": "Neu einlernen",
   "wakeWordTemplatesFew": "Nur {count} brauchbare Aufnahmen übrig. Bitte neu einlernen.",
   "@wakeWordTemplatesFew": {

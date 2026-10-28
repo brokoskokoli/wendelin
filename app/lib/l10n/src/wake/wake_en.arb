@@ -206,5 +206,13 @@
   "wakeNotifReenableTitle": "Wake word is off",
   "wakeNotifReenableAction": "Turn back on",
   "wakeNotifNoRole": "Wendelin must be the assistant for the wake word to run after a restart.",
-  "wakeNotifEnded": "The wake word has ended ({reason}). Tap to turn it back on."
+  "wakeNotifEnded": "The wake word has ended ({reason}). Tap to turn it back on.",
+  "wakeNotifGapText": "Wake word cannot be checked – load the recognition model",
+  "wakeNotifGapAction": "Load model",
+  "wakeStage2GapNotice": "The second check cannot decide: “Hey Wendelin” has no recognition model, and the learned voice has no sequences for the checker yet. Hits are therefore dropped. Download the recognition model or train the voice again.",
+  "wakeStage2GapLoad": "Download recognition model",
+  "wakeNotifGapNoSeqText": "Wake word cannot be checked reliably – please enroll it again",
+  "wakeNotifGapNoSeqAction": "Enroll again",
+  "wakeStage2NoSeqNotice": "The second check is unreliable: the enrolled voice has no sequences for the checker yet, so only the recognition model is asked. That can drop real calls. Enroll the wake word again.",
+  "wakeStage2NoSeqEnroll": "Enroll wake word again"
 }
