@@ -144,7 +144,6 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   // up on a locked device.
   bool _locked = true;
   bool _lockKnown = false;
-  // _typed: the exchange was typed and stays open until the next trigger.
   bool _typing = false, _typed = false, _closing = false;
   late final IdleCloser _idle = IdleCloser(
     ref: ref,
@@ -155,6 +154,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     unlocking: () => _unlockWatch.busy,
     close: (by) => unawaited(_close(by)),
     stopCloseDelay: () => AssistantOverlayScreen.stopCloseDelay,
+    onListening: () => _typed = false, // typed exchange: hold ends
   );
   // The keyguard transition is not „leaving“ the overlay and not a tap
   // (WP114, K85): while the unlock runs and shortly after, lifecycle
@@ -271,7 +271,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     if (!mounted || _closing) return;
     ref.read(lockedModeProvider.notifier).set(locked);
     _idle.cancelClose();
-    setState(() => _typing = _typed = _discardedNotice = false);
+    setState(() => _typing = _discardedNotice = false);
     final voice = ref.read(voiceControllerProvider);
     if (voice.active) {
       await _idle.retrigger(() => _voice.cancel(VoiceCancelReason.retrigger));

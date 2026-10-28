@@ -40,6 +40,7 @@ class IdleCloser {
     required this.unlocking,
     required this.close,
     required this.stopCloseDelay,
+    required this.onListening,
   });
 
   final WidgetRef ref;
@@ -50,6 +51,10 @@ class IdleCloser {
   final bool Function() unlocking;
   final void Function(String by) close;
   final Duration Function() stopCloseDelay;
+
+  /// Spoken listening (or an answer to a request) begins, however it was
+  /// started (trigger, mic tap, unlock).
+  final void Function() onListening;
 
   // Listening ended because of our own retrigger (not the end of a request):
   // no automatic close.
@@ -102,6 +107,7 @@ class IdleCloser {
       (was, now) {
         if (now) {
           cancelClose(); // listening again: no pending stop/error close
+          onListening();
         }
         // Decide after the other reactions of the same moment (stop word,
         // unlock offer) set their blockers: idle is reported before them.

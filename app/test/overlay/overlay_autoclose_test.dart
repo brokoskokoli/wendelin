@@ -439,6 +439,60 @@ void main() {
     expect(platform.calls, isNot(contains('releaseHost')));
   });
 
+  // A typed exchange (stays open), then spoken ones: every spoken way in
+  // (mic tap, trigger) re-arms the automatic close.
+  group('getippt, dann gesprochen', () {
+    Future<void> typedExchange(WidgetTester t) async {
+      await t.tap(find.byTooltip(AppLocalizationsDe().overlayTextInput));
+      await t.pump();
+      await t.enterText(find.byType(TextField), 'Wie spät ist es?');
+      await t.testTextInput.receiveAction(TextInputAction.send);
+      await _pump(t, steps: 30);
+      expect(llm.requests, hasLength(1), reason: 'getippte Anfrage lief');
+      expect(logs.any((l) => l.contains('overlay-close')), isFalse);
+    }
+
+    for (final viaMic in [true, false]) {
+      testWidgets('${viaMic ? 'Mikro-Tipp' : 'Trigger'}, Antwort: schliesst '
+          'by=idle', (tester) async {
+        llm = FakeLlmProvider([
+          ScriptedTurn.text('Es ist 8 Uhr 12.'),
+          ScriptedTurn.text('Es ist 8 Uhr 13.'),
+        ]);
+        await open(tester, autoStart: false);
+        await typedExchange(tester);
+        if (viaMic) {
+          await tester.tap(find.byType(MicButton));
+        } else {
+          platform.trigger();
+        }
+        await _pump(tester);
+        expect(llm.requests, hasLength(2), reason: 'gesprochene Anfrage');
+        expect(phases, contains(VoiceState.speaking));
+        expect(closedByIdle(), isTrue);
+        expect(platform.calls.where((x) => x == 'releaseHost'), hasLength(1));
+      });
+    }
+
+    testWidgets('Mikro-Tipp, Gespraechsmodus, Stille: schliesst by=idle', (
+      tester,
+    ) async {
+      await open(
+        tester,
+        autoStart: false,
+        conversation: true,
+        script: const [Transcript(text: '')],
+      );
+      await typedExchange(tester);
+      await tester.tap(find.byType(MicButton));
+      await _pump(tester, steps: 600, ms: 500);
+      expect(phases, contains(VoiceState.listening));
+      expect(llm.requests, hasLength(1), reason: 'nur die getippte');
+      expect(closedByIdle(), isTrue);
+      expect(platform.calls, contains('releaseHost'));
+    });
+  });
+
   testWidgets('Overlay waehrend „Zurueckgenommen.“ entfernt: kein Fehler', (
     tester,
   ) async {
