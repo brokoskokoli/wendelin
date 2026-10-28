@@ -67,22 +67,35 @@ final class WakeFallbackStats {
   }
 }
 
-/// Recognizers stage 2 can fall back on (Parakeet preferred, then Whisper).
-final _stage2Models = [
-  SpeechModelCatalog.parakeetV3,
+/// Whisper fallbacks of stage 2; like the engine
+/// (`DeviceRecognizerEngines.checkInstalled`) they count only together with
+/// the Silero VAD.
+final _stage2Whisper = [
   SpeechModelCatalog.whisperSmall,
   SpeechModelCatalog.whisperBase,
 ];
 
-/// Whether one of the stage 2 recognizers is installed according to the
-/// install [states]; `null` while they are not read yet (and none is
-/// installed), so nothing is claimed at start.
+/// Whether stage 2 has a recognizer according to the install [states]:
+/// Parakeet (needs only its own files, `wakeParakeetFiles`) or Whisper
+/// small/base *with* Silero VAD; `null` while the states are not read yet
+/// (and nothing is installed), so nothing is claimed at start.
 bool? wakeStage2RecognizerInstalled(Map<String, ModelState> states) {
-  var read = true;
-  for (final m in _stage2Models) {
-    final phase = states[m.id]?.phase;
-    if (phase == ModelPhase.installed) return true;
-    if (phase == null || phase == ModelPhase.unknown) read = false;
+  ModelPhase? phase(SpeechModel m) => states[m.id]?.phase;
+  bool unread(SpeechModel m) {
+    final p = phase(m);
+    return p == null || p == ModelPhase.unknown;
   }
+
+  if (phase(SpeechModelCatalog.parakeetV3) == ModelPhase.installed) {
+    return true;
+  }
+  final vad = SpeechModelCatalog.sileroVad;
+  final vadInstalled = phase(vad) == ModelPhase.installed;
+  var read = !unread(SpeechModelCatalog.parakeetV3);
+  for (final m in _stage2Whisper) {
+    if (phase(m) == ModelPhase.installed && vadInstalled) return true;
+    if (unread(m)) read = false;
+  }
+  if (unread(vad)) read = false;
   return read ? false : null;
 }

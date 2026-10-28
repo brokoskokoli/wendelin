@@ -15,6 +15,7 @@ import 'package:wendelin/platform/wake/wake_detector.dart';
 import 'package:wendelin/platform/wake/wake_host.dart';
 import 'package:wendelin/voice/wake/wake_storage.dart';
 import 'package:wendelin_storage/testing.dart';
+import 'package:wendelin_voice/fakes.dart' show FakeSpeechModelService;
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../recognizer/recognizer_host_test.dart' show FakeEngines;
@@ -558,6 +559,53 @@ void main() {
         expect(starts, 2);
         expect(parts.fallbackStats.loads, 2);
         expect(parts.fallbackStats.checks, 3);
+      });
+    });
+
+    test('Whisper-Rückfall bleibt warm: ein Laden je Haltezeit (WP171)', () {
+      fakeAsync((async) {
+        var starts = 0;
+        late _Backend backend;
+        final parts = DeviceWakeParts(
+          ProviderContainer(
+            overrides: [
+              speechModelServiceProvider.overrideWith(
+                (_) async =>
+                    FakeSpeechModelService()
+                      ..installed.addAll({'whisper-base', 'silero-vad'}),
+              ),
+            ],
+          ),
+          hotwordsDirectory: () async => Directory('${dir.path}/hw'),
+          parakeetStart: (_) async => fail('Parakeet darf nicht starten'),
+          whisperStart: (_) async {
+            starts++;
+            return backend = _Backend('Wendelin');
+          },
+          idleRelease: const Duration(seconds: 60),
+          useVerifierB: false,
+        );
+        final v = parts.verifier();
+        void check() {
+          v.confirm(_tone(900));
+          async.flushMicrotasks();
+        }
+
+        check();
+        async.elapse(const Duration(seconds: 50));
+        check(); // second candidate inside idleRelease: still loaded
+        expect(starts, 1);
+        expect(backend.disposed, isFalse);
+        expect(parts.fallbackStats.loads, 1);
+        expect(parts.fallbackStats.checks, 2);
+        async.elapse(const Duration(seconds: 59));
+        expect(backend.disposed, isFalse);
+        async.elapse(const Duration(seconds: 2));
+        async.flushMicrotasks();
+        expect(backend.disposed, isTrue);
+        check(); // after idleRelease: loaded anew
+        expect(starts, 2);
+        expect(parts.fallbackStats.loads, 2);
       });
     });
 

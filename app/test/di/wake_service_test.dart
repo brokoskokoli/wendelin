@@ -100,11 +100,16 @@ void main() {
       await open();
       models.installed.add(SpeechModelCatalog.whisperBase.id);
       await c.read(modelStatesProvider.notifier).refresh();
+      // Whisper without Silero VAD is no recognizer for the engine: no change.
+      expect(platform.rechecks, 0);
+      models.installed.add(SpeechModelCatalog.sileroVad.id);
+      await c.read(modelStatesProvider.notifier).refresh();
       expect(platform.rechecks, 1);
       // Same answer ("a recognizer is installed"): nothing new to check.
       await c.read(modelStatesProvider.notifier).refresh();
       expect(platform.rechecks, 1);
-      models.installed.remove(SpeechModelCatalog.whisperBase.id);
+      // Deleting the VAD takes Whisper away as well.
+      models.installed.remove(SpeechModelCatalog.sileroVad.id);
       await c.read(modelStatesProvider.notifier).refresh();
       expect(platform.rechecks, 2);
     });

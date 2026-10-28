@@ -248,7 +248,11 @@ final class DeviceWakeParts implements WakeParts {
     this.parakeetStart = IsolateWhisperBackend.start,
     this.useVerifierB = !wakeVerifierBMuIsPlaceholder,
     @visibleForTesting Future<RecognizerEngines> Function()? engines,
+    @visibleForTesting this.whisperStart = IsolateWhisperBackend.start,
   }) : _enginesFactory = engines;
+
+  /// Starts the Whisper backend of the fallback (tests replace it).
+  final Future<WhisperBackend> Function(SttSpec files) whisperStart;
 
   final Future<RecognizerEngines> Function()? _enginesFactory;
 
@@ -283,7 +287,7 @@ final class DeviceWakeParts implements WakeParts {
         idleRelease: idleRelease,
         startWhisper: (spec) {
           fallbackStats.loads++;
-          return IsolateWhisperBackend.start(spec);
+          return whisperStart(spec);
         },
       );
 

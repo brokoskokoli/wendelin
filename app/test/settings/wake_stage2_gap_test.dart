@@ -39,10 +39,16 @@ void main() {
       WakeStage2Gap.noSequences,
     ),
     (
-      'ohne Folgen, nur Whisper',
+      'ohne Folgen, Whisper mit VAD',
+      false,
+      {'whisper-base', 'silero-vad'},
+      WakeStage2Gap.noSequences,
+    ),
+    (
+      'ohne Folgen, nur Whisper ohne VAD',
       false,
       {'whisper-base'},
-      WakeStage2Gap.noSequences,
+      WakeStage2Gap.modelMissing,
     ),
     ('mit Folgen, nur Parakeet', true, {'parakeet-tdt-0.6b-v3'}, null),
   ];
@@ -70,7 +76,11 @@ void main() {
   }
 
   testWidgets('Knopf „neu einlernen“ öffnet das Einlernen', (tester) async {
-    await pumpGap(tester, sequences: false, models: {'whisper-base'});
+    await pumpGap(
+      tester,
+      sequences: false,
+      models: {'whisper-base', 'silero-vad'},
+    );
     await tester.tap(find.text('Aktivierungswort neu einlernen'));
     await tester.pumpAndSettle();
     expect(find.byType(WakeEnrollScreen), findsOneWidget);
@@ -79,7 +89,11 @@ void main() {
   testWidgets('Knopf „neu einlernen“ führt zur Stimme ohne Folgen, nicht zur '
       'ersten', (tester) async {
     final env = wakeEnv(installed: false);
-    env.speechModels.installed.addAll(['wake-features', 'whisper-base']);
+    env.speechModels.installed.addAll([
+      'wake-features',
+      'whisper-base',
+      'silero-vad',
+    ]);
     final store = SecretWakeTemplateStore(env.secrets);
     await store.save(templates('a', count: 9, sequences: true));
     await store.save(templates('b', count: 9));
@@ -154,6 +168,25 @@ void main() {
           m.id: const ModelState(ModelPhase.absent),
       }),
       isFalse,
+    );
+  });
+
+  test('Whisper zählt nur mit Silero-VAD (wie die Engine)', () {
+    Map<String, ModelState> states(Set<String> on) => {
+      for (final m in SpeechModelCatalog.standard.models)
+        m.id: ModelState(
+          on.contains(m.id) ? ModelPhase.installed : ModelPhase.absent,
+        ),
+    };
+    expect(wakeStage2RecognizerInstalled(states({'whisper-small'})), isFalse);
+    expect(
+      wakeStage2RecognizerInstalled(states({'whisper-small', 'silero-vad'})),
+      isTrue,
+    );
+    expect(wakeStage2RecognizerInstalled(states({'silero-vad'})), isFalse);
+    expect(
+      wakeStage2RecognizerInstalled(states({'parakeet-tdt-0.6b-v3'})),
+      isTrue,
     );
   });
 }
