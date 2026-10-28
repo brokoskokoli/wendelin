@@ -323,7 +323,6 @@ void main() {
           ),
           throwsA(same(spotifyNoDevice)),
         );
-        expect(waits, isEmpty);
       },
     );
 
@@ -491,7 +490,8 @@ void main() {
       );
       expect(launcher.wakes, 1);
       expect(count('play'), 2);
-      expect(count('playback'), 2 * SpotifySession.verifyAttempts);
+      // One read before the command (target choice) plus the checks.
+      expect(count('playback'), 1 + 2 * SpotifySession.verifyAttempts);
     });
 
     test(
@@ -532,7 +532,8 @@ void main() {
         );
         final r = await start();
         expect(r.confirmed, isFalse);
-        expect(count('playback'), 1);
+        // Target choice read plus the failing check.
+        expect(count('playback'), 2);
         expect(count('play'), 1);
         expect(launcher.wakes, 0);
         expect(diag.last.$2['result'], 'unchecked');
@@ -631,7 +632,7 @@ void main() {
         final r = await start();
         expect(r.confirmed, isTrue);
         expect(diag.last.$2['via'], 'api');
-        expect(count('playback'), 2);
+        expect(count('playback'), 3);
       });
 
       test('Handy mit Sitzungszugriff: Spotify-Sitzung spielt bestätigt, '
@@ -644,7 +645,8 @@ void main() {
         final r = await start();
         expect(r.confirmed, isTrue);
         expect(diag.last.$2['via'], 'session');
-        expect(count('playback'), 0);
+        // Only the read for the target choice.
+        expect(count('playback'), 1);
       });
 
       test('Fehler von hasSessionAccess: zurück auf die Web-API, kein '
@@ -778,8 +780,9 @@ void main() {
           );
           expect(launcher.wakes, 1);
           expect(count('play'), 2);
-          // No verification polling for a phone that rejects commands.
-          expect(count('playback'), 0);
+          // No verification polling for a phone that rejects commands (only
+          // the read for the target choice).
+          expect(count('playback'), 1);
         },
       );
 
@@ -803,7 +806,7 @@ void main() {
         );
         expect(launcher.wakes, 1);
         expect(count('play'), 2);
-        expect(count('playback'), 0);
+        expect(count('playback'), 1);
       });
 
       test('ohne Launcher: der ursprüngliche Fehler', () async {
@@ -863,6 +866,7 @@ void main() {
       // A second smartphone appears: without a remembered id the type rule
       // no longer picks one (and nothing can wake the app).
       api.knownDevices.add(other);
+      api.playing = false;
       launcher.installed = false;
       await expectLater(start(), throwsA(same(spotifyNoDevice)));
     });

@@ -35,7 +35,8 @@ const _deviceProp = {
   'type': 'string',
   'description':
       'Name of another Spotify device (e.g. "Wohnzimmer"), ONLY if the user '
-      'explicitly names it. Default: this phone.',
+      'explicitly names it. Default: where music already plays, else this '
+      'phone.',
 };
 
 const _uriProp = {
@@ -231,10 +232,10 @@ final class SpotifyPlayTool extends IntegrationTool
   @override
   String get description =>
       'Play on Spotify: track, album, artist (top tracks) or playlist, by '
-      'query or URI; with neither, resumes paused music. Plays on this phone '
-      '(starts Spotify if needed); set device only if the user names another. '
-      'If nothing is found, say so and only offer an alternative; never play '
-      'a different item silently.';
+      'query or URI; with neither, resumes paused music. Plays where music '
+      'already plays, else on this phone (starts Spotify); device only if '
+      'the user names one. If nothing is found, say so and only offer an '
+      'alternative; never play a different item silently.';
 
   @override
   Map<String, Object?> get inputSchema => const {
@@ -271,9 +272,15 @@ final class SpotifyPlayTool extends IntegrationTool
       deviceName: args.optString('device'),
     );
     final where = start.isPhone ? '' : ' auf „${start.deviceName}“';
-    final base = target == null
-        ? 'Wiedergabe fortgesetzt$where.'
-        : 'Spielt$where: ${target.label} (${target.uri}).';
+    final fell = start.fellBackFrom;
+    final hint = fell == null
+        ? ''
+        : ' Auf „$fell“ kam nichts an, ich spiele auf dem Handy.';
+    final base =
+        (target == null
+            ? 'Wiedergabe fortgesetzt$where.'
+            : 'Spielt$where: ${target.label} (${target.uri}).') +
+        hint;
     return ToolOutcome.text(
       start.confirmed
           ? base
@@ -283,7 +290,7 @@ final class SpotifyPlayTool extends IntegrationTool
       // Fixed sentence only for checked playback on the phone; otherwise the
       // model words the result (other device, not checked) from the text.
       // A label is the uri or a server name; never read it aloud.
-      fixed: start.confirmed && start.isPhone
+      fixed: start.confirmed && start.isPhone && fell == null
           ? const ConfirmationSentence('media.play')
           : null,
       undo: UndoAction(
