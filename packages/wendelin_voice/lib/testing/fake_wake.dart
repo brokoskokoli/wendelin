@@ -11,7 +11,8 @@ import '../src/wake/wake_word_engine.dart';
 /// [WakeWordEngine] with a script: a hit is reported when a frame starts
 /// with the marker sample value [marker] (a frame filled by [markerFrame]),
 /// or when [hitAtFrame] says so. Passes `wakeWordEngineContract`.
-final class FakeWakeWordEngine implements WakeWordEngine, ScoringWakeEngine {
+final class FakeWakeWordEngine
+    implements WakeWordEngine, ShadowScoringWakeEngine {
   /// Creates the fake. [hitAtFrame]: zero-based frame indexes that produce a
   /// hit (counted since the last [reset]).
   FakeWakeWordEngine({
@@ -21,13 +22,26 @@ final class FakeWakeWordEngine implements WakeWordEngine, ScoringWakeEngine {
     this.direct = false,
     this.holdMs,
     this.scoreAtFrame = const {},
+    this.windowAtFrame = const {},
+    this.primaryModel = true,
   });
 
   /// WP155: classifier score reported per frame index (to `scoreSink`).
   final Map<int, double> scoreAtFrame;
 
+  /// WP171: both recognizers' view per frame index (to `windowSink`):
+  /// classifier score and template margin (the similarity is `0.6 + margin`,
+  /// the threshold `0.6`). Frames without an entry score 0 and no margin.
+  final Map<int, ({double? model, double? margin})> windowAtFrame;
+
+  /// WP171: which recognizer the fake claims to decide.
+  final bool primaryModel;
+
   @override
   void Function(int endSample, double score)? scoreSink;
+
+  @override
+  void Function(WakeWindowScores window)? windowSink;
 
   /// `WakeWordHit.holdMs` of every hit (WP141).
   final int? holdMs;
@@ -80,8 +94,19 @@ final class FakeWakeWordEngine implements WakeWordEngine, ScoringWakeEngine {
     final index = _frames++;
     _samples += frame.length;
     // With a script every frame is a window (unscripted ones score 0).
-    if (scoreAtFrame.isNotEmpty) {
-      scoreSink?.call(_samples, scoreAtFrame[index] ?? 0);
+    if (scoreAtFrame.isNotEmpty || windowAtFrame.isNotEmpty) {
+      final w = windowAtFrame[index];
+      final model = w != null ? w.model : (scoreAtFrame[index] ?? 0);
+      scoreSink?.call(_samples, model ?? 0);
+      final margin = w?.margin;
+      windowSink?.call((
+        endSample: _samples,
+        model: model,
+        similarity: margin == null ? null : 0.6 + margin,
+        threshold: margin == null ? null : 0.6,
+        margin: margin,
+        primaryModel: primaryModel,
+      ));
     }
     final hit =
         hitAtFrame.contains(index) ||
