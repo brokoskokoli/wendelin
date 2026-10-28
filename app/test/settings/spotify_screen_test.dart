@@ -97,6 +97,14 @@ void main() {
     );
     await settle(tester);
     expectSecret(tester, key);
+    final group = tester.widget<AutofillGroup>(
+      find.ancestor(of: find.byKey(key), matching: find.byType(AutofillGroup)),
+    );
+    expect(
+      group.onDisposeAction,
+      AutofillContextAction.cancel,
+      reason: 'Commit nur bei erfolgreicher Anmeldung',
+    );
 
     await tester.enterText(find.byKey(key), 'zu-kurz');
     await tester.tap(find.text('Bei Spotify anmelden'));
