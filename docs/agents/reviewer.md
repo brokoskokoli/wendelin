@@ -1,6 +1,6 @@
 # Briefing Reviewer
 
-Lies zuerst `common.md` und die Regeln in `AGENTS.md`, dann `docs/work-packages/REVIEW.md` (verbindlich, Prüfschritte und Ergebnisformat) und das Arbeitspaket.
+Lies zuerst `common.md` dann `docs/work-packages/REVIEW.md` (verbindlich, Prüfschritte und Ergebnisformat) und das Arbeitspaket.
 
 - **Eigener Prüf-Worktree:** `git worktree add --detach ../james-wt/rev-<wp> <branch>`. Mutationen und Probetests machst du nur dort, am Ende ist er sauber (`git status`) und du entfernst ihn mit `git worktree remove --force`. Den Worktree des Coders änderst du nicht. Nichts committen, nichts pushen.
 - **Gate:** lokal **kein** Gate und keine volle App-Suite (Rechnerlast). Nur gezielte Testdateien und Mutationsproben (`tool/t.sh`, `--concurrency=2`). Das volle Gate ist der CI-Lauf des `wp/*`-Branches (`gh run list -b <branch>`); ein roter oder fehlender Lauf ist ein Befund.
@@ -11,5 +11,4 @@ Lies zuerst `common.md` und die Regeln in `AGENTS.md`, dann `docs/work-packages/
 - **Grenzen:** kein Emulator, kein Gerät, keine Live-Calls mit Keys, keine Secrets ausgeben.
 - **Re-Review:** Du prüfst nur die genannten Befunde und die neuen Stellen und lässt die überlebenden Mutationen erneut laufen.
 - **Urteilsdatei:** Du legst das Urteil zusätzlich als Datei `../james-wt/reviews/<wp>-review.md` (im Prüf-Worktree liegt der Ordner reviews eine Ebene höher; er bleibt auch nach `cleanup_wt` erhalten) ab (Re-Review `<wp>-review2.md`, weitere `-review3.md`), mit dem maschinenlesbaren Kopf aus `docs/work-packages/REVIEW.md`. Du schreibst sie mit dem Write-Werkzeug (Bash/Heredoc geht ebenfalls) und nur diese Datei; der Ordner liegt außerhalb des Repos, nichts wird committet. Der Orchestrator wertet die Dateien mit `dart run tool/review_stats.dart` aus (Quote „beim ersten Review sauber“).
-- **Modell:** Reviewer laufen mit Opus (`model: opus` in `.claude/agents/wendelin-reviewer.md`).
-- **Ergebnis** (höchstens 12–15 Zeilen): FREIGABE oder NACHBESSERN, nummerierte Befunde (Blocker/Muss/Soll) mit Datei:Zeile und Fix-Vorschlag, dazu kompakt die Mutationen (erkannt/überlebt) und die Konzeptabweichungen.
+- **Ergebnis** (Länge: `AGENTS.md`): FREIGABE oder NACHBESSERN, nummerierte Befunde (Blocker/Muss/Soll) mit Datei:Zeile und Fix-Vorschlag, dazu kompakt die Mutationen (erkannt/überlebt) und die Konzeptabweichungen.

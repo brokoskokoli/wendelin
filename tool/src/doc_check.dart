@@ -13,11 +13,17 @@ const checkedDocs = [
   'CLAUDE.md',
   'docs/ARCHITECTURE.md',
   'docs/ENGINEERING.md',
+  'docs/RELEASE.md',
+  'PROJECT.md',
+  'docs/work-packages/README.md',
   'docs/work-packages/REVIEW.md',
   'packages/wendelin_core/README.md',
   'packages/wendelin_providers/README.md',
   'packages/wendelin_tools/README.md',
   'packages/wendelin_agent/README.md',
+  'packages/wendelin_mcp/README.md',
+  'packages/wendelin_storage/README.md',
+  'packages/wendelin_voice/README.md',
 ];
 
 /// Ergebnis von [checkDocs].

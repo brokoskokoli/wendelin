@@ -66,7 +66,7 @@ Empfehlung zusätzlich: Tags `v*` per Tag-Schutzregel (Settings → Rules) auf d
 ## 5. Release per Tag
 
 1. `version:` in `app/pubspec.yaml` anheben (`0.6.0+7`; der Teil nach `+` ist der `versionCode` und muss bei jedem Release steigen), auf main mergen, Gate abwarten.
-2. `git tag v0.6.0 && git push origin v0.6.0`. Der Tag ohne `-` ist ein reguläres Release und nur erlaubt, wenn der Commit auf `main` liegt; mit `-` (z. B. `v0.6.0-rc.1`) ist es eine Vorabversion, die auch von einem Branch kommen darf (Probe).
+2. `git tag v0.6.0 && git push origin v0.6.0`. Der Tag ohne `-` ist ein reguläres Release und nur erlaubt, wenn der Commit auf `main` liegt; mit `-` (z. B. `v0.6.0-rc1`) ist es eine Vorabversion, die auch von einem Branch kommen darf (Probe).
 3. Der Workflow bricht ab (rot, mit Meldung ohne Werte), wenn: Secrets fehlen, die Tag-Basisversion nicht der pubspec-Version entspricht, das Gate für den Commit nicht grün war, ein echtes Release nicht von `main` kommt, `check_apk.sh` rot ist oder das APK-Zertifikat nicht das des Keystores ist (z. B. Debug-Schlüssel).
 4. Ergebnis: Release mit `wendelin-<version>.apk` und `SHA256SUMS`, Notizen aus den Merges auf main seit dem letzten echten Release-Tag.
 
@@ -74,12 +74,16 @@ Probeläufe: Actions → release → Run workflow (nur auf `main`; nur Build und
 
 ## 6. Lokal mit demselben Schlüssel signieren
 
-`app/android/key.properties` (gitignored) nach dem Muster `app/android/key.properties.example` anlegen (`storeFile` absolut, `storePassword`, `keyAlias`, `keyPassword`) oder die vier Umgebungsvariablen `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` setzen. Dann `cd app && flutter build apk --release`.
+`key.properties` in `app/android/` (gitignored) nach dem Muster `app/android/key.properties.example` anlegen (`storeFile` absolut, `storePassword`, `keyAlias`, `keyPassword`) oder die vier Umgebungsvariablen `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` setzen. Dann `cd app && flutter build apk --release`.
 
 - Ohne beides warnt der Build und nimmt den Debug-Schlüssel (nur für lokale Tests, nie weitergeben).
 - Unvollständige Angaben oder eine fehlende Keystore-Datei brechen immer ab.
 - `WENDELIN_REQUIRE_RELEASE_SIGNING=1` bricht auch ab, wenn gar nichts gesetzt ist (so baut der Workflow; absichtlich nicht `CI=true`, weil das Gate-Job `apk` ohne Schlüssel baut).
 - Prüfen: `apksigner verify --print-certs app/build/app/outputs/flutter-apk/app-release.apk` zeigt den Release-Fingerabdruck.
+
+### Release-Kandidaten
+
+Ein Release-Kandidat heißt `v<pubspec-version>-rcN` (z. B. `v0.6.0-rc1`, ohne Punkt vor `N`). Der Project Supervisor baut ihn lokal nach diesem Abschnitt (Release-Schlüssel, `cd app && flutter build apk --release`) auf einem grünen `main`-Stand und legt APK und `VERSION.txt` (Commit-SHA, Version) im Testordner des Maintainers ab. Ein Git-Tag mit diesem Namen entsteht nur, wenn der Release-Workflow (Abschnitt 5) die Vorabversion bauen soll; ein lokaler Kandidat braucht keinen Tag.
 
 ## 7. Umstieg vom Debug-Schlüssel auf dem Handy
 
