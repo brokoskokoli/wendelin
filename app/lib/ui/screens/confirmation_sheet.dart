@@ -90,7 +90,7 @@ class ConfirmationSheet extends StatelessWidget {
                   spacing: WSpace.l18,
                   children: [
                     if (quote != null && quote.isNotEmpty)
-                      Text('„$quote“', style: WText.quote),
+                      Text(context.l10n.quotedText(quote), style: WText.quote),
                     card,
                     hint.widget(context.l10n, outgoing: outgoing?.kind),
                   ],

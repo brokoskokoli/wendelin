@@ -35,10 +35,7 @@ final String? _skip = _dir == null ? 'only via tool/make_screenshots.sh' : null;
 
 const _dpr = 3.0;
 
-TestEnv _env({
-  Set<String>? enabled,
-  bool onboardingDone = true,
-}) => TestEnv(
+TestEnv _env({Set<String>? enabled, bool onboardingDone = true}) => TestEnv(
   providerConfig: onboardingDone
       ? scripted(
           FakeLlmProvider(const []),
@@ -49,6 +46,9 @@ TestEnv _env({
       : null,
   startup: StartupSettings(
     uiLanguage: 'en',
+    // The app defaults speech to German on every fresh install
+    // (StartupSettings.language), so the shot picks English explicitly.
+    language: 'en',
     onboardingDone: onboardingDone,
     enabledIntegrations:
         enabled ?? const {'calendar', 'memory', 'web', 'alarms', 'clipboard'},
@@ -56,10 +56,18 @@ TestEnv _env({
   storedProfiles: !onboardingDone,
 );
 
-Future<void> _show(WidgetTester tester, TestEnv env, Widget home) async {
-  setView(tester, screenSize, dpr: _dpr);
+Future<void> _show(
+  WidgetTester tester,
+  TestEnv env,
+  Widget home, {
+  Size? size,
+}) async {
+  setView(tester, size ?? screenSize, dpr: _dpr);
   await tester.pumpWidget(
-    RepaintBoundary(key: goldenKey, child: env.app(home: home)),
+    RepaintBoundary(
+      key: goldenKey,
+      child: env.app(home: home),
+    ),
   );
   await settle(tester);
 }
@@ -141,7 +149,10 @@ void main() {
           ConversationState(
             entries: [
               SessionStartEntry('s', testNow),
-              const UserEntry('u', 'Delete the dentist appointment on Thursday.'),
+              const UserEntry(
+                'u',
+                'Delete the dentist appointment on Thursday.',
+              ),
               const ToolEntry(
                 'c1',
                 toolName: 'calendar__delete_event',
@@ -167,16 +178,21 @@ void main() {
   });
 
   testWidgets('settings', skip: _skip != null, (tester) async {
-    await _show(tester, _env(), const SettingsScreen());
+    // Shorter view: ends below the last menu card, so the "Development"
+    // section (demo mode) is not cut off at the bottom.
+    await _show(
+      tester,
+      _env(),
+      const SettingsScreen(),
+      size: Size(screenSize.width, 748),
+    );
     await _save(tester, 'settings');
   });
 
   testWidgets('onboarding', skip: _skip != null, (tester) async {
     final env = _env(onboardingDone: false);
     setView(tester, screenSize, dpr: _dpr);
-    await tester.pumpWidget(
-      RepaintBoundary(key: goldenKey, child: env.app()),
-    );
+    await tester.pumpWidget(RepaintBoundary(key: goldenKey, child: env.app()));
     await settle(tester);
     expect(find.byType(OnboardingScreen), findsOneWidget);
     await _save(tester, 'onboarding');
