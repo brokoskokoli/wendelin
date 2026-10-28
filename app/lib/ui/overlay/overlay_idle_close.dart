@@ -71,14 +71,25 @@ class IdleCloser {
   void dispose() => cancelClose();
 
   /// Runs [cancel] (our own cancel at a retrigger or undo) without closing.
-  Future<void> retrigger(Future<void> Function() cancel) async {
+  /// With [thenRecheck] it decides once [cancel] is completely done (undo:
+  /// the spoken confirmation is over), as the end of listening would.
+  Future<void> retrigger(
+    Future<void> Function() cancel, {
+    bool thenRecheck = false,
+  }) async {
     _retriggering = true;
     try {
       await cancel();
     } finally {
       _retriggering = false;
     }
+    if (thenRecheck) recheck();
   }
+
+  /// An undo (cancels output, speaks the confirmation): no close meanwhile,
+  /// afterwards it decides like at the end of listening.
+  Future<void> afterUndo(Future<Object?> Function() undo) =>
+      retrigger(() async => undo(), thenRecheck: true);
 
   /// Call from `build`. Not `active`: `preparing` ends before the phase turns
   /// to listening, that gap is no end of listening (closing there kills the

@@ -637,8 +637,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   /// and speaks it if the request came by voice (B9). Returns the text, or
   /// `null` if the undo failed.
   Future<String?> undo(String callId) async {
-    if (_voiceRun || state.phase != VoiceState.idle)
-      await cancel(VoiceCancelReason.undo);
+    if (_voiceRun || state.phase != VoiceState.idle) await cancel(.undo);
     final tts = _promptTts;
     _promptTts = null;
     if (tts != null) await tts.stop();

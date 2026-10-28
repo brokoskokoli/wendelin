@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/conversation_state.dart';
+import 'package:wendelin/di/agent_providers.dart' show undoManagerProvider;
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart';
@@ -377,7 +378,37 @@ void main() {
     expect(platform.calls, isNot(contains('releaseHost')));
   });
 
-  testWidgets('Rueckgaengig bei Sprachausgabe: das Fenster bleibt', (
+  // Undo during the answer: the output ends, „Zurückgenommen.“ is spoken
+  // (window stays open meanwhile), then nothing is left: closes by idle.
+  testWidgets('Rueckgaengig bei Sprachausgabe: offen bis „Zurueckgenommen.“ '
+      'gesprochen, dann idle', (tester) async {
+    final c = await open(tester, speak: const Duration(seconds: 3));
+    for (var i = 0; i < 200 && phases.lastOrNull != VoiceState.speaking; i++) {
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    expect(phases.last, VoiceState.speaking, reason: 'echte Sprachausgabe');
+    c.read(agentControllerProvider.notifier).seed(overlaySample());
+    c
+        .read(undoManagerProvider)
+        .register('c1', UndoAction(label: 'x', run: () async {}));
+    await tester.pump();
+    await tester.tap(find.textContaining('Rückgängig'));
+    // The answer ended, the confirmation is spoken (3 s): still open.
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Abgebrochen.'), findsNothing);
+    expect(logs.any((l) => l.contains('overlay-close')), isFalse);
+    expect(platform.calls, isNot(contains('releaseHost')));
+    await tester.pump(AssistantOverlayScreen.stopCloseDelay);
+    expect(logs.any((l) => l.contains('overlay-close')), isFalse);
+    // Spoken: closes by idle, no stop.
+    await _pump(tester, steps: 60);
+    expect(find.text('Abgebrochen.'), findsNothing);
+    expect(closedByIdle(), isTrue);
+    expect(closedBy('stop'), isFalse);
+    expect(platform.calls.where((x) => x == 'releaseHost'), hasLength(1));
+  });
+
+  testWidgets('Rueckgaengig schlaegt fehl: kein Stopp, Schliessen ueber idle', (
     tester,
   ) async {
     final c = await open(tester, speak: const Duration(seconds: 3));
@@ -385,22 +416,15 @@ void main() {
       await tester.pump(const Duration(milliseconds: 10));
     }
     expect(phases.last, VoiceState.speaking, reason: 'echte Sprachausgabe');
-    // An undoable entry (the answer itself is not undoable).
+    // Seeded only: the undo manager knows no offer, agent.undo is false.
     c.read(agentControllerProvider.notifier).seed(overlaySample());
     await tester.pump();
-    // The undo cancels the running output itself (idle inside `undo`).
     await tester.tap(find.textContaining('Rückgängig'));
-    await _pump(tester, steps: 10);
-    expect(phases.last, VoiceState.idle, reason: 'die Ausgabe wurde beendet');
-    expect(logs.any((l) => l.contains('overlay-close')), isFalse);
-    expect(platform.calls, isNot(contains('releaseHost')));
-    // Past stopCloseDelay: undo is no stop (no „Abgebrochen.“, no by=stop;
-    // the window stays open by design (the
-    // undo runs inside `IdleCloser.retrigger`, the user just acted).
     await _pump(tester, steps: 30);
     expect(find.text('Abgebrochen.'), findsNothing);
-    expect(logs.any((l) => l.contains('overlay-close')), isFalse);
-    expect(platform.calls, isNot(contains('releaseHost')));
+    expect(closedBy('stop'), isFalse);
+    expect(closedByIdle(), isTrue);
+    expect(platform.calls.where((x) => x == 'releaseHost'), hasLength(1));
   });
 
   testWidgets('Hintergrund waehrend der Antwort: kein Stopp, Schliessen ueber '

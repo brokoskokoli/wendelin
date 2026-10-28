@@ -148,7 +148,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   bool _closing = false;
   late final IdleCloser _idle = IdleCloser(
     ref: ref,
-    enabled: () => AssistantOverlayScreen.closeWhenIdle,
+    enabled: () => mounted && AssistantOverlayScreen.closeWhenIdle,
     typing: () => _typing,
     closing: () => _closing,
     locked: () => _locked,
@@ -468,7 +468,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     onMic: () => _onMic(voice, conversation),
     onClose: () => unawaited(_close('tap')),
     onKeyboard: _toggleKeyboard,
-    onUndo: (id) => unawaited(_idle.retrigger(() async => _voice.undo(id))),
+    onUndo: (id) => unawaited(_idle.afterUndo(() => _voice.undo(id))),
     typing: _typing ? _typingField() : null,
   );
 
