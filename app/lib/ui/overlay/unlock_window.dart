@@ -50,6 +50,23 @@ final class UnlockWatch {
   Timer? _grace;
   Completer<void>? _resumed;
 
+  bool _offered = false;
+
+  /// An unlock is offered, runs or its grace period is open: the overlay
+  /// must not close itself meanwhile.
+  bool get busy => _offered || window.active || window.open;
+
+  /// Runs [offer] (the offer after a refusal) and counts as [busy] meanwhile;
+  /// set synchronously, before the spoken hint ended.
+  Future<void> offering(Future<void> Function() offer) async {
+    _offered = true;
+    try {
+      await offer();
+    } finally {
+      _offered = false;
+    }
+  }
+
   /// Not on screen (home, screen off).
   bool get outOfSight {
     final s = WidgetsBinding.instance.lifecycleState;

@@ -38,9 +38,8 @@ class IdleCloser {
     required this.closing,
     required this.locked,
     required this.unlocking,
-    required this.stopping,
     required this.close,
-    required this.closeSoon,
+    required this.stopCloseDelay,
   });
 
   final WidgetRef ref;
@@ -49,18 +48,28 @@ class IdleCloser {
   final bool Function() closing;
   final bool Function() locked;
   final bool Function() unlocking;
-
-  /// A stop or final message is still shown (its own timer closes later).
-  final bool Function() stopping;
-  final void Function() close;
-
-  /// Closes after the short display time (used when an error is shown).
-  final void Function() closeSoon;
+  final void Function(String by) close;
+  final Duration Function() stopCloseDelay;
 
   // Listening ended because of our own retrigger (not the end of a request)
   // or because the user tapped the microphone off: no automatic close.
   bool _retriggering = false;
   bool _micCancelled = false;
+
+  // A stop or error message is shown; this timer closes after it.
+  Timer? _closeTimer;
+
+  /// Closes after [delay] (the stop or error message stays visible meanwhile).
+  void closeLater(String by, Duration delay) {
+    cancelClose();
+    _closeTimer = Timer(delay, () => close(by));
+  }
+
+  /// Drops a pending delayed close.
+  void cancelClose() => _closeTimer?.cancel();
+
+  /// Disposes the timer.
+  void dispose() => cancelClose();
 
   /// The user tapped the microphone off.
   void micCancelled() => _micCancelled = true;
@@ -96,15 +105,15 @@ class IdleCloser {
     if (!enabled() || typing() || _micCancelled) {
       return;
     }
-    if (closing() || _retriggering || stopping()) return;
+    if (closing() || _retriggering || (_closeTimer?.isActive ?? false)) return;
     if (!nothingLeftToDo(ref, locked: locked(), unlocking: unlocking())) {
       return;
     }
     // An error stays visible briefly, like the stop message.
     if (ref.read(voiceControllerProvider).error != null) {
-      closeSoon();
+      closeLater('idle-error', stopCloseDelay());
     } else {
-      close();
+      close('idle');
     }
   }
 }

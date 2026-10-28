@@ -146,21 +146,15 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   bool _lockKnown = false;
   bool _typing = false;
   bool _closing = false;
-  // An unlock offer is pending (set synchronously with the refusal).
-  bool _unlockOffered = false;
   late final IdleCloser _idle = IdleCloser(
     ref: ref,
     enabled: () => AssistantOverlayScreen.closeWhenIdle,
     typing: () => _typing,
     closing: () => _closing,
     locked: () => _locked,
-    unlocking: () =>
-        _unlockOffered ||
-        _unlockWatch.window.active ||
-        _unlockWatch.window.open,
-    stopping: () => _closeTimer?.isActive ?? false,
-    close: () => unawaited(_close('idle')),
-    closeSoon: () => _closeLater('idle-error'),
+    unlocking: () => _unlockWatch.busy,
+    close: (by) => unawaited(_close(by)),
+    stopCloseDelay: () => AssistantOverlayScreen.stopCloseDelay,
   );
   // The keyguard transition is not „leaving“ the overlay and not a tap
   // (WP114, K85): while the unlock runs and shortly after, lifecycle
@@ -172,7 +166,6 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   // exchange that was cancelled and are not shown; the overlay closes
   // after [stopCloseDelay] if the setting says so.
   int _hideBefore = 0;
-  Timer? _closeTimer;
   late final AppLifecycleListener _lifecycle;
 
   @override
@@ -231,7 +224,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
 
   @override
   void dispose() {
-    _closeTimer?.cancel();
+    _idle.dispose();
     _unlockWatch.dispose();
     _lifecycle.dispose();
     unawaited(_sub.cancel());
@@ -277,7 +270,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     final locked = await _checkLock();
     if (!mounted || _closing) return;
     ref.read(lockedModeProvider.notifier).set(locked);
-    _closeTimer?.cancel();
+    _idle.cancelClose();
     setState(() {
       _typing = false;
       _discardedNotice = false;
@@ -332,26 +325,16 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   void _onStop() {
     final entries = ref.read(agentControllerProvider).entries;
     setState(() => _hideBefore = entries.length);
-    _closeLater('stop');
-  }
-
-  void _closeLater(String by) {
-    _closeTimer?.cancel();
-    _closeTimer = Timer(AssistantOverlayScreen.stopCloseDelay, () {
-      if (mounted) unawaited(_close(by));
-    });
+    _idle.closeLater('stop', AssistantOverlayScreen.stopCloseDelay);
   }
 
   // A request was refused while locked: after the spoken hint the system
   // unlock opens (the utterance itself is dropped).
   Future<void> _offerUnlock() async {
-    _unlockOffered = true;
-    try {
+    await _unlockWatch.offering(() async {
       await _voice.whenIdle;
       if (mounted && _locked && !_closing) await _unlock();
-    } finally {
-      _unlockOffered = false;
-    }
+    });
   }
 
   Future<void> _unlock() async {
