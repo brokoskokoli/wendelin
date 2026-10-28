@@ -49,6 +49,7 @@ final class _De extends ConfirmationLanguage {
     'media.previous': 'Ich habe zum vorherigen Titel zurückgeschaltet.',
     'memory.saved': 'Ich habe es mir gemerkt.',
     'note.appended': 'Der Text steht jetzt in der Notiz „{note}“.',
+    'navigation.started': 'Navigation zu {name} gestartet.',
     'note.created': 'Die Notiz „{note}“ ist angelegt.',
     'sms.sent': 'Die SMS an {name} wurde gesendet.',
     'station.started': 'Der Stationsmodus ist an.',

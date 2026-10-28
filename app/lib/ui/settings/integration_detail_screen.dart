@@ -13,6 +13,7 @@ import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import '../routes.dart';
 import 'ha_kind_section.dart';
+import 'navigation_app_section.dart';
 import 'security_level_picker.dart';
 import 'settings_page.dart';
 import 'settings_routes.dart';
@@ -68,6 +69,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
         ),
         InfoBox(context.l10n.integrationDetailTapTool),
         if (id == 'ha') const HaKindLevelSection(),
+        if (id == 'maps' || id == 'waze') const NavigationAppSection(),
         _sensitiveCard(context, integration, prefs, update),
         if (integration.sensitive) const SensitiveLevelSection(),
       ],

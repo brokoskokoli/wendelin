@@ -1,18 +1,23 @@
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../maps/navigation_apps.dart';
 import 'contacts_ports.dart';
 import 'contacts_tools.dart';
 
-/// Contacts, SMS and phone calls: `contacts__find`, `sms__compose`,
-/// `phone__call`.
+/// Contacts, SMS and phone calls: `contacts__find`, `contacts__navigate`,
+/// `sms__compose`, `phone__call`.
 ///
 /// Sending and calling are `external`: Wendelin shows a preview with name
 /// and number and does it only after a tap or a clear spoken yes.
 final class ContactsIntegration implements Integration {
   /// Creates the integration. [edits] receives the texts the user changed in
   /// the preview (shared with the UI).
-  ContactsIntegration(this.contacts, this.phone, {SmsDraftEdits? edits})
-    : edits = edits ?? SmsDraftEdits();
+  ContactsIntegration(
+    this.contacts,
+    this.phone, {
+    SmsDraftEdits? edits,
+    this.navigation,
+  }) : edits = edits ?? SmsDraftEdits();
 
   /// Id of the permission setup step.
   static const permissionStep = 'contacts_permission';
@@ -25,6 +30,10 @@ final class ContactsIntegration implements Integration {
 
   /// Texts changed in the preview.
   final SmsDraftEdits edits;
+
+  /// Navigation start for `contacts__navigate`; `null` = no such tool
+  /// (no map launcher).
+  final NavigationStarter? navigation;
 
   @override
   String get id => 'contacts';
@@ -64,5 +73,7 @@ final class ContactsIntegration implements Integration {
     ContactsFindTool(ContactsFinder(contacts)),
     SmsComposeTool(ContactsFinder(contacts), phone, edits),
     PhoneCallTool(ContactsFinder(contacts), phone),
+    if (navigation case final starter?)
+      ContactsNavigateTool(ContactsFinder(contacts), starter),
   ]);
 }

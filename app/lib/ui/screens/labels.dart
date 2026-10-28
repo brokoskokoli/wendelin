@@ -32,7 +32,7 @@ WIconData integrationIcon(String integrationId) => switch (integrationId) {
   'spotify' => WIcons.music,
   'media' => WIcons.music,
   'contacts' => WIcons.phone,
-  'location' || 'maps' => WIcons.globe,
+  'location' || 'maps' || 'waze' => WIcons.globe,
   'ha' => WIcons.home,
   _ => WIcons.task,
 };

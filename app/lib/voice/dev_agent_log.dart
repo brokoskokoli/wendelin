@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
@@ -59,7 +61,7 @@ final class DevAgentTrace {
         devLog('tool-call', {'n': n, 'tool': call.name, 'args': args});
       case ToolCallFinished(:final call, :final outcome, :final duration):
         final n = _rounds.length;
-        final result = _resultText(outcome);
+        final result = _logResult(call.name, outcome);
         final status = outcome.isError ? 'error' : 'ok';
         if (n > 0) _rounds[n - 1] = '${_rounds[n - 1]} -> $status $result';
         devLog('tool-result', {
@@ -99,6 +101,25 @@ final class DevAgentTrace {
     final text = _text.toString().trim();
     _text.clear();
     if (text.isNotEmpty) devLog('model-text', {'text': text});
+  }
+
+  /// The result as logged. Address book content (names, numbers, mail
+  /// addresses, postal addresses, birthdays, organizations) never reaches the
+  /// log, not even in developer mode: `contacts__find` is reduced to its
+  /// structure (count, `choice_needed`). Errors carry no contact data.
+  static String _logResult(String tool, ToolOutcome o) {
+    final text = _resultText(o);
+    if (tool != 'contacts__find' || o.isError) return text;
+    try {
+      final json = jsonDecode(text);
+      if (json is Map && json['matches'] is List) {
+        return 'contacts masked: matches=${(json['matches'] as List).length} '
+            'choice_needed=${json['choice_needed']}';
+      }
+    } on FormatException {
+      // Falls through to the full mask.
+    }
+    return 'contacts masked';
   }
 
   static String _resultText(ToolOutcome o) =>

@@ -37,13 +37,16 @@ object LocationPick {
     }
 
     private const val GOOGLE_MAPS = "com.google.android.apps.maps"
+    private const val WAZE = "com.waze"
 
     /**
      * Whether the launcher may start this intent: only map schemes (`geo:`, `google.navigation:`,
-     * Google Maps web links) and only the Google Maps package or none, so a tool argument cannot
-     * open arbitrary apps or links.
+     * Google Maps web links, Waze links `https://waze.com/ul`) and only the matching package or
+     * none, so a tool argument cannot open arbitrary apps or links. A Waze link needs the Waze
+     * package, a Google Maps link and `google.navigation:` the Google Maps package or none.
      */
     fun isAllowedLaunch(scheme: String?, host: String?, path: String?, pkg: String?): Boolean {
+        if (scheme == "https" && host == "waze.com") return path == "/ul" && pkg == WAZE
         if (pkg != null && pkg != GOOGLE_MAPS) return false
         return when (scheme) {
             "geo", "google.navigation" -> true

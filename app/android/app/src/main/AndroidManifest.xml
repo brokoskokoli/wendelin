@@ -201,13 +201,14 @@
         </intent>
         <!-- Apps of integrations (WP25, app detection): only these packages are visible to
              PackageManager, no QUERY_ALL_PACKAGES. Bring! (shopping list fallback), Obsidian
-             (open notes), Spotify (later), Audible (media__open_audible), Google Maps (maps integration, WP86). Keep in step with KnownApps in
+             (open notes), Spotify (later), Audible (media__open_audible), Google Maps (maps integration, WP86), Waze (WP164). Keep in step with KnownApps in
              lib/di/app_requirements.dart. -->
         <package android:name="ch.publisheria.bring"/>
         <package android:name="md.obsidian"/>
         <package android:name="com.spotify.music"/>
         <package android:name="com.audible.application"/>
         <package android:name="com.google.android.apps.maps"/>
+        <package android:name="com.waze"/>
         <!-- Speech recognizers: name of the service Android gives other apps (B12, only read). -->
         <intent>
             <action android:name="android.speech.RecognitionService"/>

@@ -9,8 +9,8 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.ContactsContract
-import android.provider.ContactsContract.CommonDataKinds.Email
 import android.provider.ContactsContract.CommonDataKinds.Phone
+import android.provider.ContactsContract.CommonDataKinds.StructuredPostal
 import android.telephony.SmsManager
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
@@ -55,7 +55,29 @@ class ContactsChannel(private val activity: Activity, messenger: BinaryMessenger
             "hasPermission" -> result.success(has(Manifest.permission.READ_CONTACTS))
             "requestPermission" -> requestPermission(result)
             "canSendSms" -> result.success(has(Manifest.permission.SEND_SMS))
-            "all" -> io.execute { reply(result) { readAll() } }
+            "all" -> {
+                val args = ChannelArgs.of(call.arguments)
+                val fields = try {
+                    ContactRows.parseFields(args.stringList("fields"))
+                } catch (e: ArgumentException) {
+                    result.error("bad_args", e.message, null)
+                    return
+                }
+                io.execute { reply(result) { readAll(fields) } }
+            }
+            "details" -> {
+                val args = ChannelArgs.of(call.arguments)
+                val ids: List<Long>
+                val fields: Set<ContactRows.Kind>
+                try {
+                    ids = ContactRows.parseIds(args.stringList("ids"))
+                    fields = ContactRows.parseDetailFields(args.stringList("fields"))
+                } catch (e: ArgumentException) {
+                    result.error("bad_args", e.message, null)
+                    return
+                }
+                io.execute { reply(result) { readDetails(ids, fields) } }
+            }
             "sendSms" -> {
                 val args = ChannelArgs.of(call.arguments)
                 io.execute {
@@ -117,36 +139,62 @@ class ContactsChannel(private val activity: Activity, messenger: BinaryMessenger
         activity.requestPermissions(missing.toTypedArray(), PERMISSION_REQUEST)
     }
 
-    private fun readAll(): List<Map<String, Any>> {
+    /**
+     * The search index: phone and mail rows are always read (they decide which contacts exist, as
+     * before); for requested address, birthday or organization only the presence is queried (no
+     * content column), so the content itself is read later, for the hits only ([readDetails]).
+     */
+    private fun readAll(fields: Set<ContactRows.Kind>): List<Map<String, Any>> {
         if (!has(Manifest.permission.READ_CONTACTS)) throw PermissionException("READ_CONTACTS")
-        val rows = mutableListOf<ContactRows.Row>()
-        val projection = arrayOf(
-            ContactsContract.Data.CONTACT_ID,
-            ContactsContract.Data.DISPLAY_NAME,
-            ContactsContract.Data.MIMETYPE,
-            ContactsContract.Data.DATA1,
-            ContactsContract.Data.DATA2,
-            ContactsContract.Data.DATA3,
+        val data = query(
+            ContactRows.DATA_PROJECTION,
+            ContactRows.selection(ContactRows.DEFAULT_FIELDS),
         )
-        val selection = "${ContactsContract.Data.MIMETYPE} IN (?, ?)"
+        val extras = fields.filter { it in ContactRows.EXTRA_FIELDS }.toSet()
+        val presence = if (extras.isEmpty()) {
+            emptyList()
+        } else {
+            query(ContactRows.PRESENCE_PROJECTION, ContactRows.selection(extras, nonEmpty = true))
+        }
+        return ContactRows.index(data, presence, fields)
+    }
+
+    /** Address, birthday and organization of the contacts [ids] (the hits of a search) only. */
+    private fun readDetails(ids: List<Long>, fields: Set<ContactRows.Kind>): List<Map<String, Any>> {
+        if (!has(Manifest.permission.READ_CONTACTS)) throw PermissionException("READ_CONTACTS")
+        val rows = query(ContactRows.DATA_PROJECTION, ContactRows.selection(fields, ids))
+        return ContactRows.merge(rows, fields, withId = true)
+    }
+
+    /** Runs one query on the data table; presence projections yield rows with [ContactRows.PRESENT]. */
+    private fun query(projection: Array<String>, where: Pair<String, Array<String>>): List<ContactRows.Row> {
+        val rows = mutableListOf<ContactRows.Row>()
+        val withData = projection.size > ContactRows.PRESENCE_PROJECTION.size
         activity.contentResolver.query(
             ContactsContract.Data.CONTENT_URI,
             projection,
-            selection,
-            arrayOf(Phone.CONTENT_ITEM_TYPE, Email.CONTENT_ITEM_TYPE),
+            where.first,
+            where.second,
             "${ContactsContract.Data.DISPLAY_NAME} COLLATE NOCASE",
         )?.use { c ->
             while (c.moveToNext()) {
-                val isPhone = c.getString(2) == Phone.CONTENT_ITEM_TYPE
-                val label = if (isPhone) {
-                    Phone.getTypeLabel(activity.resources, c.getInt(4), c.getString(5)).toString()
-                } else {
-                    null
+                val mime = c.getString(2)
+                val kind = ContactRows.Kind.values().firstOrNull { it.mime == mime } ?: continue
+                if (!withData) {
+                    rows.add(ContactRows.Row(c.getLong(0), c.getString(1), kind, ContactRows.PRESENT, null))
+                    continue
                 }
-                rows.add(ContactRows.Row(c.getLong(0), c.getString(1), isPhone, c.getString(3), label))
+                val label = when (kind) {
+                    ContactRows.Kind.PHONE ->
+                        Phone.getTypeLabel(activity.resources, c.getInt(4), c.getString(5)).toString()
+                    ContactRows.Kind.ADDRESS ->
+                        StructuredPostal.getTypeLabel(activity.resources, c.getInt(4), c.getString(5)).toString()
+                    else -> null
+                }
+                rows.add(ContactRows.Row(c.getLong(0), c.getString(1), kind, c.getString(3), label))
             }
         }
-        return ContactRows.merge(rows)
+        return rows
     }
 
     private fun sendSms(number: String, text: String) {

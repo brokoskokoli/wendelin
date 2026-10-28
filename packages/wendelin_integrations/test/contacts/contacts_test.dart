@@ -136,6 +136,219 @@ void main() {
     });
   });
 
+  group('toJsonFor: Feldfilter (WP164)', () {
+    // Ein Port, der mehr liefert als angefragt (wie der Kanal): nur toJsonFor
+    // schützt dann das Modell.
+    const full = ContactEntry(
+      name: 'Vera Test',
+      phones: [ContactPhone('0170 9')],
+      emails: ['v@example.org'],
+      addresses: [ContactAddress('Musterstraße 1, 12345 Musterstadt')],
+      birthday: '1985-03-14',
+      organization: 'Beispiel GmbH',
+    );
+    const keys = {
+      ContactField.phone: 'phones',
+      ContactField.email: 'emails',
+      ContactField.address: 'addresses',
+      ContactField.birthday: 'birthday',
+      ContactField.organization: 'organization',
+    };
+
+    for (final f in keys.keys) {
+      test('nur ${f.name}: genau dieses Feld und der Name', () {
+        expect(full.toJsonFor({f}).keys.toSet(), {'name', keys[f]});
+      });
+    }
+
+    test('leere Menge: nur der Name', () {
+      expect(full.toJsonFor(const {}).keys.toSet(), {'name'});
+    });
+
+    test('find: Port liefert alles, Modell sieht nur das Angefragte', () async {
+      final tool = ContactsFindTool(ContactsFinder(_FullPort(full)));
+      final o = await tool.execute({
+        'query': 'Vera',
+        'fields': ['birthday'],
+      }, ctx());
+      final text = o.text;
+      for (final leak in ['0170', 'example.org', 'Musterstra', 'Beispiel']) {
+        expect(text, isNot(contains(leak)));
+      }
+      expect(text, contains('1985-03-14'));
+    });
+  });
+
+  group('Kontaktsuche mit fields (WP164)', () {
+    setUp(() {
+      book.contacts = const [
+        ContactEntry(
+          name: 'Anna Meier',
+          phones: [ContactPhone('+49 170 1234567', label: 'Mobil')],
+          emails: ['anna@example.org'],
+          addresses: [
+            ContactAddress(
+              'Musterstraße 1, 12345 Musterstadt',
+              label: 'Privat',
+            ),
+          ],
+          birthday: '1985-03-14',
+          organization: 'Muster GmbH',
+        ),
+        ContactEntry(
+          name: 'Ben Weber',
+          phones: [ContactPhone('0172 333')],
+          addresses: [
+            ContactAddress(
+              'Beispielweg 2, 54321 Beispielstadt',
+              label: 'Privat',
+            ),
+            ContactAddress(
+              'Werkstraße 3, 54321 Beispielstadt',
+              label: 'Arbeit',
+            ),
+          ],
+        ),
+      ];
+    });
+    Future<Map<String, Object?>> find(String q, [Object? fields]) async {
+      final o = await tool('contacts__find')
+          .execute({'query': q, 'fields': ?fields}, ctx());
+      expect(o.isError, isFalse, reason: o.text);
+      return json(o);
+    }
+
+    Map<Object?, Object?> only(Map<String, Object?> r) =>
+        (r['matches']! as List).single! as Map<Object?, Object?>;
+
+    test('ohne fields wie bisher: nur Name, Telefon, Mail', () async {
+      final m = only(await find('Anna'));
+      expect(m.keys, unorderedEquals(['name', 'phones', 'emails']));
+      expect(book.requested.single, defaultContactFields);
+    });
+
+    test('address: genau Name und Adressen, nichts sonst', () async {
+      final r = await find('Anna', ['address']);
+      final m = only(r);
+      expect(m.keys, unorderedEquals(['name', 'addresses']));
+      expect(m['addresses'], [
+        {'address': 'Musterstraße 1, 12345 Musterstadt', 'label': 'Privat'},
+      ]);
+      expect(r['choice_needed'], isFalse);
+      expect(book.requested.single, {ContactField.address});
+    });
+
+    test('birthday und organization: genau diese Felder', () async {
+      final m = only(await find('Anna', ['birthday', 'organization']));
+      expect(m.keys, unorderedEquals(['name', 'birthday', 'organization']));
+      expect(m['birthday'], '1985-03-14');
+      expect(m['organization'], 'Muster GmbH');
+    });
+
+    test(
+      'Zusatzfelder nur für die Treffer, nicht für das ganze Adressbuch',
+      () async {
+        await find('Anna', ['address', 'birthday']);
+        expect(book.detailed, hasLength(1));
+        expect(book.detailed.single.names, ['Anna Meier']);
+        expect(book.detailed.single.fields, {
+          ContactField.address,
+          ContactField.birthday,
+        });
+      },
+    );
+
+    test('ohne Zusatzfelder oder ohne Treffer keine Detailabfrage', () async {
+      await find('Anna');
+      await find('Anna', ['phone', 'email']);
+      await find('Niemand', ['address']);
+      expect(book.detailed, isEmpty);
+    });
+
+    test(
+      'Kontakt nur mit Adresse bleibt mit fields:[address] auffindbar',
+      () async {
+        book.contacts = const [
+          ContactEntry(
+            name: 'Clara Nur',
+            addresses: [ContactAddress('Weg 9, 11111 Ort', label: 'Privat')],
+          ),
+        ];
+        final m = only(await find('Clara', ['address']));
+        expect(m['addresses'], [
+          {'address': 'Weg 9, 11111 Ort', 'label': 'Privat'},
+        ]);
+      },
+    );
+
+    test('die Kontakt-Kennung erreicht das Modell nie', () async {
+      final o = await tool('contacts__find').execute({
+        'query': 'Anna',
+        'fields': ['address'],
+      }, ctx());
+      expect(o.text, isNot(contains('"ref"')));
+      expect(o.text, isNot(contains('"id"')));
+      expect(
+        book.contacts.first.toJsonFor(ContactField.values.toSet()),
+        isNot(contains('ref')),
+      );
+    });
+
+    test('Feld ohne Wert: Liste leer, Skalar fehlt', () async {
+      final m = only(await find('Ben', ['address', 'birthday']));
+      expect(m.keys, unorderedEquals(['name', 'addresses']));
+      final none = only(await find('Anna', ['email', 'address']));
+      expect(none['emails'], ['anna@example.org']);
+    });
+
+    test('mehrere Adressen eines Treffers: choice_needed', () async {
+      final r = await find('Ben', ['address']);
+      expect(r['choice_needed'], isTrue);
+      expect(r['hint'], contains('address'));
+      expect((only(r)['addresses']! as List), hasLength(2));
+    });
+
+    test(
+      'mehrere Adressen, aber nur Telefon angefragt: keine Rückfrage',
+      () async {
+        final r = await find('Ben', ['phone']);
+        expect(r['choice_needed'], isFalse);
+      },
+    );
+
+    for (final bad in <Object>[
+      ['note'],
+      ['address', 'Phone'],
+      <String>[],
+      'address',
+      [1],
+    ]) {
+      test('fail-closed: fields $bad wird abgelehnt', () async {
+        final o = await tool('contacts__find')
+            .execute({'query': 'Anna', 'fields': bad}, ctx());
+        expect(o.isError, isTrue);
+        expect(book.requested, isEmpty, reason: 'Adressbuch nicht angefasst');
+        if (bad is List && bad.isNotEmpty && bad.first is String) {
+          expect(o.text, contains('phone, email, address, birthday'));
+        }
+      });
+    }
+
+    test('Schema: enum ohne Notizen, Beschreibung nennt Navigation', () {
+      final t = tool('contacts__find');
+      final f = (t.inputSchema['properties']! as Map)['fields']! as Map;
+      expect((f['items']! as Map)['enum'], [
+        'phone',
+        'email',
+        'address',
+        'birthday',
+        'organization',
+      ]);
+      expect(t.description, contains('contacts__navigate'));
+      expect(t.inputSchema['required'], ['query']);
+    });
+  });
+
   group('sms__compose', () {
     test(
       'Bestätigungstext nennt Name aus dem Adressbuch, nicht vom Modell',
@@ -331,4 +544,25 @@ void main() {
       expect(o.fixed, isNull);
     });
   });
+}
+
+/// Ignores `fields` and always returns the full entry (like a channel that
+/// reads more than asked).
+final class _FullPort implements ContactsPort {
+  _FullPort(this.entry);
+  final ContactEntry entry;
+
+  @override
+  Future<bool> hasPermission() async => true;
+
+  @override
+  Future<List<ContactEntry>> all({
+    Set<ContactField> fields = defaultContactFields,
+  }) async => [entry];
+
+  @override
+  Future<List<ContactEntry>> details(
+    List<ContactEntry> hits,
+    Set<ContactField> fields,
+  ) async => hits;
 }

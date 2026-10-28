@@ -2934,6 +2934,16 @@ class AppLocalizationsDe extends AppLocalizations {
       'Damit Wendelin sagen kann, was läuft, und im Hörbuch oder Podcast spulen kann, braucht es den „Benachrichtigungszugriff“. Android öffnet gleich die Seite dazu: Wendelin in der Liste wählen und einschalten (sperrt Android die Freigabe, erklärt Wendelin danach, wie du sie erlaubst). Wendelin liest keine Benachrichtigungen, nur die Medienwiedergabe. Pause, Weiter und Zurück gehen auch ohne.';
 
   @override
+  String get navigationAppDefault => 'Standard (Google Maps, sonst Waze)';
+
+  @override
+  String get navigationAppHelp =>
+      'Welche App „Navigiere zu …“ öffnet. Nennst du im Befehl eine App („mit Waze“), gilt sie. Ist die gewählte App nicht eingeschaltet oder nicht installiert, meldet Wendelin das, statt eine andere zu öffnen.';
+
+  @override
+  String get navigationAppTitle => 'Navigations-App';
+
+  @override
   String get obsIndexBuilding => 'Index wird aufgebaut …';
 
   @override

@@ -5020,6 +5020,24 @@ abstract class AppLocalizations {
   /// **'Damit Wendelin sagen kann, was läuft, und im Hörbuch oder Podcast spulen kann, braucht es den „Benachrichtigungszugriff“. Android öffnet gleich die Seite dazu: Wendelin in der Liste wählen und einschalten (sperrt Android die Freigabe, erklärt Wendelin danach, wie du sie erlaubst). Wendelin liest keine Benachrichtigungen, nur die Medienwiedergabe. Pause, Weiter und Zurück gehen auch ohne.'**
   String get integrationsMediaRationale;
 
+  /// No description provided for @navigationAppDefault.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard (Google Maps, sonst Waze)'**
+  String get navigationAppDefault;
+
+  /// No description provided for @navigationAppHelp.
+  ///
+  /// In de, this message translates to:
+  /// **'Welche App „Navigiere zu …“ öffnet. Nennst du im Befehl eine App („mit Waze“), gilt sie. Ist die gewählte App nicht eingeschaltet oder nicht installiert, meldet Wendelin das, statt eine andere zu öffnen.'**
+  String get navigationAppHelp;
+
+  /// No description provided for @navigationAppTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Navigations-App'**
+  String get navigationAppTitle;
+
   /// No description provided for @obsIndexBuilding.
   ///
   /// In de, this message translates to:

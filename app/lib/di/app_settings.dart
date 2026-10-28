@@ -179,6 +179,10 @@ abstract final class AppSettings {
     defaultValue: const ObsidianPrefs(),
   );
 
+  /// Navigation app of `maps__navigate` (WP164 B): `google_maps`, `waze`;
+  /// unset = default (Google Maps if usable, else Waze).
+  static final navigationApp = SettingKey.string('navigation.app');
+
   /// Station mode: screen mode, quiet hours, hidden areas (WP99).
   static final station = SettingKey<StationPrefs>(
     'station.prefs',

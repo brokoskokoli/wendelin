@@ -77,6 +77,8 @@ void main() {
     await tester.tap(find.text('Ja, weiter zuhören'));
     await settle(tester);
     await tester.scrollUntilVisible(find.text('Weiter'), 200);
+    await tester.ensureVisible(find.text('Weiter'));
+    await tester.pump();
     await tester.tap(find.text('Weiter'));
     await settle(tester);
     expect(find.byType(OnboardingScreen), findsOneWidget);

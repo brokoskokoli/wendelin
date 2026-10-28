@@ -5,6 +5,9 @@ import 'location_port.dart';
 /// Android package of Google Maps.
 const googleMapsPackage = 'com.google.android.apps.maps';
 
+/// Android package of Waze.
+const wazePackage = 'com.waze';
+
 /// How to get to a destination.
 enum TravelMode {
   /// By car.
@@ -67,6 +70,15 @@ abstract final class MapsIntents {
       package: googleMapsPackage,
     );
   }
+
+  /// Navigation to [destination] in Waze: `https://waze.com/ul?q=…&navigate=yes`
+  /// (Waze knows no mode: it always guides by car). Only Waze may handle it.
+  static MapsLaunch navigateWaze(String destination) => MapsLaunch(
+    Uri.parse(
+      'https://waze.com/ul?q=${Uri.encodeComponent(destination)}&navigate=yes',
+    ),
+    package: wazePackage,
+  );
 
   /// Search for [query] on the map (place, category, address).
   static MapsLaunch search(String query, {required bool googleMaps}) {

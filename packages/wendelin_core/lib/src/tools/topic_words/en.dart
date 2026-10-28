@@ -69,6 +69,7 @@ const topicWordsEn = <String, List<String>>{
     'route', 'navigate', 'navigation', 'map', 'directions', //
     'how do i get', 'drive to', 'distance', 'google maps', 'how far',
     'travel time',
+    'waze',
   ],
   'media': [
     'pause', 'resume playback', 'volume', 'louder', 'quieter', //
@@ -111,6 +112,12 @@ const topicWordsEn = <String, List<String>>{
     'to do',
     'remind', //
     'project',
+  ],
+  'waze': [
+    'route', 'navigate', 'navigation', 'map', 'directions', //
+    'how do i get', 'drive to', 'distance', 'google maps', 'how far',
+    'travel time',
+    'waze',
   ],
   'weather': [
     'weather', 'rain', 'temperature', 'forecast', 'snow', 'sunny', //

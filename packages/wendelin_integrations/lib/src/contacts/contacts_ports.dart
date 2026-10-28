@@ -18,6 +18,56 @@ final class ContactPhone {
   };
 }
 
+/// A postal address of a [ContactEntry].
+final class ContactAddress {
+  /// Creates an address with its [label] (`Privat`, `Arbeit`, …; may be
+  /// empty).
+  const ContactAddress(this.address, {this.label = ''});
+
+  /// The formatted address as stored in the address book.
+  final String address;
+
+  /// Kind of the address as the user named it.
+  final String label;
+
+  /// JSON form for the model.
+  Map<String, Object?> toJson() => {
+    'address': address,
+    if (label.isNotEmpty) 'label': label,
+  };
+}
+
+/// A piece of a contact `contacts__find` may be asked for (`fields`). Notes
+/// are deliberately not part of it.
+enum ContactField {
+  /// Phone numbers.
+  phone,
+
+  /// Mail addresses.
+  email,
+
+  /// Postal addresses.
+  address,
+
+  /// Birthday.
+  birthday,
+
+  /// Company or organization.
+  organization;
+
+  /// Parses the wire name, `null` if unknown.
+  static ContactField? byName(String name) {
+    for (final f in values) {
+      if (f.name == name) return f;
+    }
+    return null;
+  }
+}
+
+/// What is read without a `fields` request: phone numbers and mail
+/// addresses.
+const defaultContactFields = {ContactField.phone, ContactField.email};
+
 /// A person in the address book.
 final class ContactEntry {
   /// Creates an entry.
@@ -25,7 +75,15 @@ final class ContactEntry {
     required this.name,
     this.phones = const [],
     this.emails = const [],
+    this.addresses = const [],
+    this.birthday,
+    this.organization,
+    this.ref,
   });
+
+  /// Opaque handle of the port for [ContactsPort.details] (the platform's
+  /// contact id). Never part of any JSON form: it does not reach the model.
+  final String? ref;
 
   /// Display name.
   final String name;
@@ -36,11 +94,49 @@ final class ContactEntry {
   /// Mail addresses.
   final List<String> emails;
 
-  /// JSON form for the model.
+  /// Postal addresses.
+  final List<ContactAddress> addresses;
+
+  /// Birthday as stored (`1985-03-14`, or `--03-14` without a year).
+  final String? birthday;
+
+  /// Company or organization.
+  final String? organization;
+
+  /// This entry with [addresses], [birthday] and [organization] taken from
+  /// [other] (the details of the same contact).
+  ContactEntry withDetails(ContactEntry other) => ContactEntry(
+    name: name,
+    phones: phones,
+    emails: emails,
+    addresses: other.addresses,
+    birthday: other.birthday,
+    organization: other.organization,
+    ref: ref,
+  );
+
+  /// JSON form for the model without a `fields` request: phones and mail
+  /// addresses only.
   Map<String, Object?> toJson() => {
     'name': name,
     'phones': [for (final p in phones) p.toJson()],
     if (emails.isNotEmpty) 'emails': emails,
+  };
+
+  /// JSON form with exactly the requested [fields] (plus the name). Lists
+  /// the model asked for are present even if empty, so "none stored" is
+  /// visible; birthday and organization are left out when missing.
+  Map<String, Object?> toJsonFor(Set<ContactField> fields) => {
+    'name': name,
+    if (fields.contains(ContactField.phone))
+      'phones': [for (final p in phones) p.toJson()],
+    if (fields.contains(ContactField.email)) 'emails': emails,
+    if (fields.contains(ContactField.address))
+      'addresses': [for (final a in addresses) a.toJson()],
+    if (fields.contains(ContactField.birthday) && birthday != null)
+      'birthday': birthday,
+    if (fields.contains(ContactField.organization) && organization != null)
+      'organization': organization,
   };
 }
 
@@ -52,9 +148,24 @@ abstract interface class ContactsPort {
   /// Whether reading contacts is allowed.
   Future<bool> hasPermission();
 
-  /// All contacts that have a phone number or a mail address (matching is
-  /// done by [ContactsFinder], so it is the same on every platform).
-  Future<List<ContactEntry>> all();
+  /// The search index: all contacts that have a phone number or a mail
+  /// address, or data of the requested extra [fields] (matching is done by
+  /// [ContactsFinder], so it is the same on every platform). Only phone
+  /// numbers and mail addresses are filled in (if requested); address,
+  /// birthday and organization are not read here, see [details].
+  Future<List<ContactEntry>> all({
+    Set<ContactField> fields = defaultContactFields,
+  });
+
+  /// Reads address, birthday and organization (as far as in [fields]) of
+  /// the contacts [hits] only, so that data beyond phone and mail is never
+  /// loaded for the whole address book. Returns the hits in order, with the
+  /// extras filled in; a hit the platform no longer knows comes back
+  /// unchanged. Entries without [ContactEntry.ref] are returned as they are.
+  Future<List<ContactEntry>> details(
+    List<ContactEntry> hits,
+    Set<ContactField> fields,
+  );
 }
 
 /// How [PhonePort.call] started the call.
@@ -171,7 +282,11 @@ final class ContactsFinder {
   /// Contacts matching [query] (folded: case, umlauts and punctuation
   /// ignored). Every word of the query must start a word of the name. An exact full-name match wins over partial matches, so
   /// „Anna“ finds only „Anna“ when she exists, not „Anna Meier“ as well.
-  Future<List<ContactEntry>> find(String query, {int limit = 8}) async {
+  Future<List<ContactEntry>> find(
+    String query, {
+    int limit = 8,
+    Set<ContactField> fields = defaultContactFields,
+  }) async {
     final q = foldForMatch(query);
     if (q.isEmpty) return const [];
     final words = q.split(' ');
@@ -182,13 +297,16 @@ final class ContactsFinder {
 
     final matches = <ContactEntry>[];
     final exact = <ContactEntry>[];
-    for (final c in await port.all()) {
+    for (final c in await port.all(fields: fields)) {
       final name = foldForMatch(c.name);
       if (name == q) exact.add(c);
       if (hits(name)) matches.add(c);
     }
-    final result = exact.isNotEmpty ? exact : matches;
-    return result.take(limit).toList();
+    final result = (exact.isNotEmpty ? exact : matches).take(limit).toList();
+    // Data beyond phone and mail is read for the hits only.
+    final extras = fields.difference(defaultContactFields);
+    if (result.isEmpty || extras.isEmpty) return result;
+    return port.details(result, extras);
   }
 
   /// The contact that owns [number], if any.

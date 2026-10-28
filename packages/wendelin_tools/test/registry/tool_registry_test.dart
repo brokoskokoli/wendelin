@@ -27,6 +27,35 @@ FakeIntegration _integration(
   platforms: platforms,
 );
 
+/// A tool that is only offered while [on] is true (WP164 C).
+final class _ConditionalTool implements Tool, ConditionalTool {
+  bool on = true;
+
+  @override
+  String get name => 'cond__go';
+
+  @override
+  String get description => 'x';
+
+  @override
+  Map<String, Object?> get inputSchema => const {'type': 'object'};
+
+  @override
+  RiskLevel get risk => RiskLevel.read;
+
+  @override
+  Future<ToolOutcome> execute(
+    Map<String, Object?> args,
+    ToolContext ctx,
+  ) async => ToolOutcome.text('ok');
+
+  @override
+  String describeForConfirmation(Map<String, Object?> args) => 'x';
+
+  @override
+  bool get offered => on;
+}
+
 final class _ThrowingIntegration implements Integration {
   final _inner = FakeIntegration(id: 'boom', tools: const []);
 
@@ -125,6 +154,74 @@ void main() {
         throwsArgumentError,
       );
       expect([for (final i in r.integrations) i.id], ['b']);
+    });
+
+    test(
+      'geteilte Tool-Instanz: einmal angeboten, solange einer aktiv',
+      () async {
+        final r = ToolRegistry();
+        final shared = FakeTool(name: 'nav__go');
+        await r.registerIntegration(
+          FakeIntegration(id: 'one', tools: [shared]),
+          enabled: true,
+        );
+        await r.registerIntegration(
+          FakeIntegration(id: 'two', tools: [shared]),
+          enabled: true,
+        );
+        expect(_names(_cat(r).activeSpecs()), ['nav__go']);
+        r.setEnabled('one', enabled: false);
+        expect(_names(_cat(r).activeSpecs()), ['nav__go']);
+        expect(_cat(r).lookup('nav__go'), same(shared));
+        r.setEnabled('two', enabled: false);
+        expect(_cat(r).activeSpecs(), isEmpty);
+        r
+          ..setEnabled('two', enabled: true)
+          ..unregister('one');
+        expect(_names(_cat(r).activeSpecs()), ['nav__go']);
+        // The remaining integration now owns the tool: it can still be
+        // switched, and the switch survives until the last owner is gone.
+        r.setToolEnabled('nav__go', enabled: false);
+        expect(_cat(r).activeSpecs(), isEmpty);
+        r.setToolEnabled('nav__go', enabled: true);
+        expect(_names(_cat(r).activeSpecs()), ['nav__go']);
+        r.unregister('two');
+        expect(_cat(r).activeSpecs(), isEmpty);
+        // Another tool with the same name is still refused.
+        await r.registerIntegration(
+          FakeIntegration(id: 'one', tools: [shared]),
+        );
+        await expectLater(
+          r.registerIntegration(
+            FakeIntegration(
+              id: 'x',
+              tools: [FakeTool(name: 'nav__go')],
+            ),
+          ),
+          throwsArgumentError,
+        );
+      },
+    );
+
+    test('ConditionalTool: nur angeboten, solange offered', () async {
+      final r = ToolRegistry();
+      final tool = _ConditionalTool();
+      await r.registerIntegration(
+        FakeIntegration(
+          id: 'one',
+          tools: [
+            tool,
+            FakeTool(name: 'plain__x'),
+          ],
+        ),
+        enabled: true,
+      );
+      expect(_names(_cat(r).activeSpecs()), ['cond__go', 'plain__x']);
+      tool.on = false;
+      expect(_names(_cat(r).activeSpecs()), ['plain__x']);
+      expect(_cat(r).lookup('cond__go'), isNull);
+      tool.on = true;
+      expect(_cat(r).lookup('cond__go'), same(tool));
     });
 
     test('lehnt den reservierten Namen tools__search ab', () async {

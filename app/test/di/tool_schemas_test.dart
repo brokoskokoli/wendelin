@@ -10,19 +10,26 @@ import '../support/all_integrations.dart';
 /// sending tools are `sms__` and `phone__`, matching the spoken verbs).
 const _extraPrefixes = <String, List<String>>{
   'contacts': ['sms__', 'phone__'],
+  // Waze serves only the navigation tool of maps (WP164 B).
+  'waze': ['maps__'],
 };
 
 void main() {
   // All integrations of the real registry (built from fakes by TestEnv): a
   // new integration is covered without touching this test. The container is
-  // built inside the first test (needs the test zone).
+  // built inside the test (needs the test zone) and per test: a tool may read
+  // its container lazily (maps__navigate: schema enum), which a disposed
+  // container of an earlier test no longer allows.
   Map<String, Integration>? cache;
+  setUp(() => cache = null);
   Map<String, Integration> all() => cache ??= allBuiltInIntegrations();
 
   List<Tool> allTools() => [for (final i in all().values) ...i.tools];
 
   test('Tool-Namen sind eindeutig, jede Integration hat Tools', () {
-    final tools = allTools();
+    // One instance may serve several integrations (maps__navigate for Google
+    // Maps and Waze, WP164 B); different tools of one name are a clash.
+    final tools = allTools().toSet().toList();
     expect(tools.map((t) => t.name).toSet(), hasLength(tools.length));
     for (final i in all().values) {
       expect(i.tools, isNotEmpty, reason: i.id);

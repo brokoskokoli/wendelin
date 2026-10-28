@@ -5,6 +5,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../common/base_tool.dart';
 import '../common/port_exception.dart';
 import '../common/tool_args.dart';
+import '../maps/navigation_apps.dart';
 import 'contacts_ports.dart';
 
 /// Longest SMS text accepted (several SMS parts).
@@ -27,11 +28,11 @@ final class ContactsFindTool extends IntegrationTool
 
   @override
   String get description =>
-      'Look up a person in the address book by name. Returns matches with '
-      'phone numbers and mail addresses. If "choice_needed" is true there '
-      'is more than one match or number: ask the user which one is meant '
-      'and never guess. Use the exact "number" from this result for '
-      'sms__compose and phone__call.';
+      'Look up a person in the address book by name. Returns phones and mail '
+      'addresses, or only the "fields" you ask for ("address" only if the '
+      'user wants to know it; to navigate use contacts__navigate). If '
+      '"choice_needed" is true, ask which one is meant, never guess. Use the '
+      'exact "number" for sms__compose.';
 
   @override
   Map<String, Object?> get inputSchema => const {
@@ -40,6 +41,17 @@ final class ContactsFindTool extends IntegrationTool
       'query': {
         'type': 'string',
         'description': 'Name or part of the name, e.g. "Anna" or "Anna Meier".',
+      },
+      'fields': {
+        'type': 'array',
+        'items': {
+          'type': 'string',
+          'enum': ['phone', 'email', 'address', 'birthday', 'organization'],
+        },
+        'minItems': 1,
+        'description':
+            'Data to return, only what is needed. Default: phone and email. '
+            'Empty list = none stored.',
       },
     },
     'required': ['query'],
@@ -51,22 +63,35 @@ final class ContactsFindTool extends IntegrationTool
   @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final query = args.requireString('query');
-    final matches = await finder.find(query);
+    final fields = _requestedFields(args);
+    final matches = await finder.find(
+      query,
+      fields: fields ?? defaultContactFields,
+    );
     if (matches.isEmpty) {
       return ToolOutcome.text(
         jsonEncode({'matches': <Object>[], 'choice_needed': false}),
         summary: 'Kein Kontakt gefunden',
       );
     }
-    final choice = matches.length > 1 || matches.single.phones.length > 1;
+    final shown = fields ?? defaultContactFields;
+    final choice =
+        matches.length > 1 ||
+        (shown.contains(ContactField.phone) &&
+            matches.first.phones.length > 1) ||
+        (shown.contains(ContactField.address) &&
+            matches.first.addresses.length > 1);
     return jsonOutcome(
       {
-        'matches': [for (final m in matches) m.toJson()],
+        'matches': [
+          for (final m in matches)
+            fields == null ? m.toJson() : m.toJsonFor(fields),
+        ],
         'choice_needed': choice,
         if (choice)
           'hint':
-              'Ask the user which contact or number is meant before '
-              'writing or calling.',
+              'Ask the user which contact, number or address is meant '
+              'before writing, calling or navigating.',
       },
       summary: matches.length == 1
           ? 'Kontakt ${matches.single.name}'
@@ -74,11 +99,221 @@ final class ContactsFindTool extends IntegrationTool
     );
   }
 
+  /// The `fields` argument; `null` if absent. Unknown names and an empty
+  /// list are refused (nothing is ignored silently).
+  static Set<ContactField>? _requestedFields(ToolArgs args) {
+    final raw = args.optStringList('fields');
+    if (raw == null) return null;
+    const allowed = 'phone, email, address, birthday, organization';
+    if (raw.isEmpty) {
+      throw const InvalidArgumentsException(
+        '„fields“ darf nicht leer sein. Erlaubt: $allowed',
+      );
+    }
+    final fields = <ContactField>{};
+    for (final name in raw) {
+      final f = ContactField.byName(name);
+      if (f == null) {
+        throw InvalidArgumentsException(
+          'Unbekanntes Feld „$name“ in „fields“. Erlaubt: $allowed',
+        );
+      }
+      fields.add(f);
+    }
+    return fields;
+  }
+
   @override
   String describe(ToolArgs args) => 'Kontakt suchen';
 
   @override
   String get fallbackDescription => 'Kontakt suchen';
+}
+
+/// `contacts__navigate` (write): looks up a contact and starts navigation to
+/// its postal address in one step (WP164 C). The address never goes to the
+/// model: it only gets a status (`ok`, `no_contact`, `no_address`,
+/// `choice_needed` with contact names or address labels,
+/// `app_unavailable`). The address is not in a result, summary, error,
+/// confirmation text or audit entry either. The navigation app is chosen
+/// like for `maps__navigate` ([NavigationStarter]).
+final class ContactsNavigateTool extends IntegrationTool
+    implements
+        AuditArgumentsRedactor,
+        ConditionalTool,
+        FixedConfirmationTool,
+        NoNetworkTarget,
+        TrustedContentSource,
+        WorksOnlyUnlocked {
+  /// Creates the tool.
+  const ContactsNavigateTool(this.finder, this.starter);
+
+  /// Name search.
+  final ContactsFinder finder;
+
+  /// App choice and launch, shared with `maps__navigate`.
+  final NavigationStarter starter;
+
+  @override
+  String get name => 'contacts__navigate';
+
+  @override
+  String get description =>
+      'Navigate to a person from the address book ("navigate to Anna"). '
+      'You never see the address; the result is only a status (ok: done, '
+      'say nothing more). On choice_needed ask the user, then call again '
+      'with "choice" or "address_label". "app" only if the user names one.';
+
+  @override
+  Map<String, Object?> get inputSchema => {
+    'type': 'object',
+    'properties': <String, Object?>{
+      'name': {
+        'type': 'string',
+        'description': 'Name or part of the name, e.g. "Anna Meier".',
+      },
+      'choice': {
+        'type': 'integer',
+        'description':
+            'Position (1 = first) in the "contacts" list of a choice_needed '
+            'answer; keep the same "name".',
+      },
+      'address_label': {
+        'type': 'string',
+        'description':
+            'Which address if the contact has several, e.g. "Privat" or '
+            '"Arbeit" (as listed in a choice_needed answer).',
+      },
+      'app': {
+        'type': 'string',
+        if (starter.apps.active.isNotEmpty)
+          'enum': [
+            for (final a in NavigationApp.values)
+              if (starter.apps.active.contains(a)) a.id,
+          ],
+        'description': 'Navigation app; default: the one set in the settings.',
+      },
+    },
+    'required': <String>['name'],
+  };
+
+  @override
+  RiskLevel get risk => RiskLevel.write;
+
+  /// Without any usable navigation app the tool stays out of the catalog.
+  @override
+  bool get offered => starter.apps.active.isNotEmpty;
+
+  @override
+  Set<String> get confirmationKeys => const {'navigation.started'};
+
+  @override
+  Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
+    final query = args.requireString('name').trim();
+    if (query.isEmpty) throw const InvalidArgumentsException('„name“ fehlt');
+    final label = args.optString('address_label')?.trim();
+    final requestedApp = args.optString('app');
+
+    const fields = {ContactField.address};
+    var matches = await finder.find(query, fields: fields);
+    // A follow-up to choice_needed: the position in that list (same query,
+    // same order), never parsed out of a name.
+    final choice = args.optInt('choice', min: 1, max: 100);
+    if (choice != null) {
+      matches = choice <= matches.length ? [matches[choice - 1]] : const [];
+    }
+    if (matches.isEmpty) return _status('no_contact', 'Kein Kontakt gefunden');
+    if (matches.length > 1) {
+      return _status(
+        'choice_needed',
+        'Mehrere Kontakte',
+        extra: {'contacts': contactChoiceLabels(matches)},
+      );
+    }
+    final contact = matches.single;
+    final addresses = [
+      for (final a in contact.addresses)
+        if (_oneLine(a.address).isNotEmpty) a,
+    ];
+    if (addresses.isEmpty) {
+      return _status('no_address', 'Keine Adresse für ${contact.name}');
+    }
+    final labels = uniqueLabels([
+      for (var i = 0; i < addresses.length; i++)
+        // Unlabeled addresses are told apart as „Adresse 1“, „Adresse 2“.
+        addresses[i].label.trim().isNotEmpty
+            ? addresses[i].label.trim()
+            : 'Adresse ${i + 1}',
+    ]);
+    final index = _pick(labels, label);
+    if (index == null) {
+      return _status(
+        'choice_needed',
+        'Adresse wählen',
+        extra: {'address_labels': labels},
+      );
+    }
+    final destination = _oneLine(addresses[index].address);
+    if (destination.length > 200) {
+      return _status('no_address', 'Keine nutzbare Adresse');
+    }
+    final (:app, :unavailable) = await starter.resolve(requestedApp);
+    if (app == null) {
+      return _status('app_unavailable', unavailable!.summary);
+    }
+    try {
+      await starter.launch(app, destination);
+    } on PortException {
+      // The message could name the target: only the status goes out.
+      return _status('app_unavailable', 'Navigations-App nicht verfügbar');
+    }
+    return ToolOutcome.text(
+      jsonEncode({'status': 'ok'}),
+      summary: 'Navigation zu ${contact.name} gestartet',
+      fixed: ConfirmationSentence('navigation.started', {'name': contact.name}),
+    );
+  }
+
+  /// The index of the address meant by [wanted] among [labels]; `null` if
+  /// the user has to choose (several addresses and no unique label match).
+  static int? _pick(List<String> labels, String? wanted) {
+    if (wanted == null || wanted.isEmpty) {
+      return labels.length == 1 ? 0 : null;
+    }
+    final key = foldForMatch(wanted);
+    final hits = [
+      for (var i = 0; i < labels.length; i++)
+        if (foldForMatch(labels[i]) == key) i,
+    ];
+    return hits.length == 1 ? hits.single : null;
+  }
+
+  /// A formatted address on one line (the address book stores line breaks).
+  static String _oneLine(String address) =>
+      address.trim().replaceAll(RegExp(r'\s*[\r\n]+\s*'), ', ');
+
+  ToolOutcome _status(
+    String status,
+    String summary, {
+    Map<String, Object?> extra = const {},
+  }) => ToolOutcome.text(
+    jsonEncode({'status': status, ...extra}),
+    summary: summary,
+  );
+
+  @override
+  Future<String> redactedArguments(
+    Map<String, Object?> args,
+    ToolContext ctx,
+  ) async => jsonEncode({'contact': ToolArgs(args).optString('name') ?? ''});
+
+  // The audit log stores confirmation texts: no address in it.
+  @override
+  String describe(ToolArgs args) =>
+      'Navigation zu ${args.requireString('name')} starten';
+
+  @override
+  String get fallbackDescription => 'Navigation zu einem Kontakt starten';
 }
 
 /// The recipient as shown to the user: the name of the contact who owns
@@ -306,4 +541,54 @@ final class PhoneCallTool extends IntegrationTool
 
   @override
   String get fallbackDescription => 'Anrufen';
+}
+
+/// Makes repeated [labels] distinct („Privat“, „Privat“ becomes „Privat 1“,
+/// „Privat 2“); unique ones stay as they are and the numbered ones never
+/// collide with them („Privat“, „Privat“, „Privat 1“ → „Privat 2“,
+/// „Privat 3“, „Privat 1“).
+List<String> uniqueLabels(List<String> labels) {
+  final count = <String, int>{};
+  for (final l in labels) {
+    count.update(foldForMatch(l), (n) => n + 1, ifAbsent: () => 1);
+  }
+  final taken = {
+    for (final e in count.entries)
+      if (e.value == 1) e.key,
+  };
+  final next = <String, int>{};
+  return [
+    for (final l in labels)
+      if (count[foldForMatch(l)]! > 1) _numbered(l, next, taken) else l,
+  ];
+}
+
+String _numbered(String l, Map<String, int> next, Set<String> taken) {
+  final key = foldForMatch(l);
+  var n = next[key] ?? 0;
+  String candidate;
+  do {
+    candidate = '$l ${++n}';
+  } while (!taken.add(foldForMatch(candidate)));
+  next[key] = n;
+  return candidate;
+}
+
+/// Names for a choice among [contacts]: equal display names get an index
+/// („Anna Meier (1)“, „Anna Meier (2)“) for the user; the follow-up call
+/// names the position (`choice`), the label is never parsed. Only the address is read, so nothing else can tell them
+/// apart.
+List<String> contactChoiceLabels(List<ContactEntry> contacts) {
+  final groups = <String, List<int>>{};
+  for (var i = 0; i < contacts.length; i++) {
+    groups.putIfAbsent(foldForMatch(contacts[i].name), () => []).add(i);
+  }
+  final out = [for (final c in contacts) c.name];
+  for (final idx in groups.values) {
+    if (idx.length < 2) continue;
+    for (var k = 0; k < idx.length; k++) {
+      out[idx[k]] = '${contacts[idx[k]].name} (${k + 1})';
+    }
+  }
+  return out;
 }

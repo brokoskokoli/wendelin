@@ -18,6 +18,7 @@ Aus `app/lib/di/integrations/registry.dart` (Reihenfolge der Anzeige). Nicht abl
 | `media` | `app/lib/di/integrations/media_spec.dart` | `packages/wendelin_integrations/lib/src/media/` | [media.md](../integrations/media.md) |
 | `location` | `app/lib/di/integrations/location_spec.dart` | `packages/wendelin_integrations/lib/src/location/` | [location.md](../integrations/location.md) |
 | `maps` | `app/lib/di/integrations/maps_spec.dart` | `packages/wendelin_integrations/lib/src/maps/` | [maps.md](../integrations/maps.md) |
+| `waze` | `app/lib/di/integrations/waze_spec.dart` | – | – |
 | `ha` | `app/lib/di/integrations/ha_spec.dart` | – | – |
 | `spotify` | `app/lib/di/integrations/spotify_spec.dart` | `packages/wendelin_integrations/lib/src/spotify/` | – |
 | `weather` | `app/lib/di/integrations/weather_spec.dart` | `packages/wendelin_integrations/lib/src/weather/` | – |

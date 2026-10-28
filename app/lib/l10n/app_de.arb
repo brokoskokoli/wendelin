@@ -1709,6 +1709,9 @@
   "toolTlsEncrypted": "Tools Ende-zu-Ende-verschlüsselt",
   "toolTlsHint": "Tool-Aufrufe sind über die geprüfte Verbindung bis in die Enklave geschützt, aber nicht zusätzlich verschlüsselt.",
   "integrationsMediaRationale": "Damit Wendelin sagen kann, was läuft, und im Hörbuch oder Podcast spulen kann, braucht es den „Benachrichtigungszugriff“. Android öffnet gleich die Seite dazu: Wendelin in der Liste wählen und einschalten (sperrt Android die Freigabe, erklärt Wendelin danach, wie du sie erlaubst). Wendelin liest keine Benachrichtigungen, nur die Medienwiedergabe. Pause, Weiter und Zurück gehen auch ohne.",
+  "navigationAppDefault": "Standard (Google Maps, sonst Waze)",
+  "navigationAppHelp": "Welche App „Navigiere zu …“ öffnet. Nennst du im Befehl eine App („mit Waze“), gilt sie. Ist die gewählte App nicht eingeschaltet oder nicht installiert, meldet Wendelin das, statt eine andere zu öffnen.",
+  "navigationAppTitle": "Navigations-App",
   "obsIndexBuilding": "Index wird aufgebaut …",
   "obsIndexBuildingProgress": "Index wird aufgebaut: {indexed} Notizen, noch {pending}",
   "@obsIndexBuildingProgress": {

@@ -53,6 +53,7 @@ const topicWordsDe = <String, List<String>>{
     'route', 'navigier', 'navigation', 'karte', 'wegbeschreibung', //
     'wie komme ich', 'weg nach', 'fahr nach', 'anfahrt', 'entfernung',
     'google maps', 'wie weit', 'fahrzeit',
+    'waze',
   ],
   'media': [
     'pause', 'weiter abspielen', 'lauter', 'leiser', 'nachster titel', //
@@ -83,6 +84,12 @@ const topicWordsDe = <String, List<String>>{
   'todoist': [
     'todoist', 'aufgabe', 'faellig', 'uberfaellig', 'todo', 'to do', //
     'erledigen', 'erinner', 'projekt',
+  ],
+  'waze': [
+    'route', 'navigier', 'navigation', 'karte', 'wegbeschreibung', //
+    'wie komme ich', 'weg nach', 'fahr nach', 'anfahrt', 'entfernung',
+    'google maps', 'wie weit', 'fahrzeit',
+    'waze',
   ],
   'weather': [
     'wetter', 'regen', 'temperatur', 'vorhersage', 'schnee', 'sonne', //

@@ -1,5 +1,6 @@
 {
   "contacts__find": true,
   "sms__compose": true,
-  "phone__call": true
+  "phone__call": true,
+  "contacts__navigate": true
 }

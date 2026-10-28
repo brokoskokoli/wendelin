@@ -28,6 +28,7 @@ final class StartupSettings {
     this.obsidian = const ObsidianPrefs(),
     this.secureScreen = false,
     this.haFastPath = true,
+    this.navigationApp,
     this.station = const StationPrefs(),
   });
 
@@ -80,6 +81,9 @@ final class StartupSettings {
   /// Simple Home Assistant commands without a model (WP135 D).
   final bool haFastPath;
 
+  /// Chosen navigation app (`NavigationApp.id`), `null` = default (WP164 B).
+  final String? navigationApp;
+
   /// Station mode settings (WP99).
   final StationPrefs station;
 
@@ -115,6 +119,7 @@ final class StartupSettings {
           await settings.get(AppSettings.obsidian) ?? const ObsidianPrefs(),
       secureScreen: await settings.get(AppSettings.secureScreen) ?? false,
       haFastPath: await settings.get(AppSettings.haFastPath) ?? true,
+      navigationApp: await settings.get(AppSettings.navigationApp),
       station: await settings.get(AppSettings.station) ?? const StationPrefs(),
     );
   }

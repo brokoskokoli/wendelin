@@ -23,8 +23,10 @@ final class _FakeContactsChannel {
       case 'canSendSms':
         return smsPermission;
       case 'all':
+        // The index: no address, birthday or organization.
         return [
           {
+            'id': '11',
             'name': 'Anna Meier',
             'phones': [
               {'number': '+49 170 1234567', 'label': 'Mobil'},
@@ -32,7 +34,25 @@ final class _FakeContactsChannel {
             ],
             'emails': ['anna@example.org'],
           },
-          {'name': 'Ben'},
+          {'id': '12', 'name': 'Ben'},
+        ];
+      case 'details':
+        final ids = (call.arguments as Map)['ids'] as List;
+        return [
+          if (ids.contains('11'))
+            {
+              'id': '11',
+              'name': 'Anna Meier',
+              'addresses': [
+                {
+                  'address': 'Musterstraße 1, 12345 Musterstadt',
+                  'label': 'Privat',
+                },
+                {'address': 'Beispielweg 2, 54321 Beispielstadt'},
+              ],
+              'birthday': '1985-03-14',
+              'organization': 'Muster GmbH',
+            },
         ];
       case 'sendSms':
       case 'call':
@@ -68,6 +88,69 @@ void main() {
     expect(all.first.phones.last.label, isEmpty);
     expect(all.first.emails, ['anna@example.org']);
     expect(all.last.phones, isEmpty);
+  });
+
+  test('all(): ohne Angabe fragt der Kanal Telefon und Mail', () async {
+    await port.all();
+    final args = platform.calls.single.arguments as Map<Object?, Object?>;
+    expect(args['fields'], unorderedEquals(['phone', 'email']));
+  });
+
+  test('all(fields): Feldnamen gehen an den Kanal, Zusatzdaten kommen erst '
+      'mit details, nur für die Treffer', () async {
+    const fields = {
+      ContactField.address,
+      ContactField.birthday,
+      ContactField.organization,
+    };
+    final all = await port.all(fields: fields);
+    final args = platform.calls.single.arguments as Map<Object?, Object?>;
+    expect(
+      args['fields'],
+      unorderedEquals(['address', 'birthday', 'organization']),
+    );
+    expect(all.first.addresses, isEmpty, reason: 'Index ohne Zusatzdaten');
+    expect(all.first.ref, '11');
+
+    final done = await port.details([all.first], fields);
+    final call = platform.calls.last;
+    expect(call.method, 'details');
+    final dargs = call.arguments as Map<Object?, Object?>;
+    expect(dargs['ids'], ['11'], reason: 'nur die Treffer');
+    expect(
+      dargs['fields'],
+      unorderedEquals(['address', 'birthday', 'organization']),
+    );
+    final anna = done.single;
+    expect(anna.name, 'Anna Meier');
+    expect(anna.phones.map((p) => p.number), [
+      '+49 170 1234567',
+      '030 222',
+    ], reason: 'Index-Daten bleiben');
+    expect(anna.addresses.map((a) => a.address), [
+      'Musterstraße 1, 12345 Musterstadt',
+      'Beispielweg 2, 54321 Beispielstadt',
+    ]);
+    expect(anna.addresses.map((a) => a.label), ['Privat', '']);
+    expect(anna.birthday, '1985-03-14');
+    expect(anna.organization, 'Muster GmbH');
+  });
+
+  test('details: unbekannter Treffer bleibt unverändert, ohne ref kein '
+      'Kanalaufruf', () async {
+    final all = await port.all();
+    platform.calls.clear();
+    final ben = await port.details([all.last], {ContactField.address});
+    expect(ben.single.addresses, isEmpty);
+    expect(ben.single.name, 'Ben');
+    expect(
+      await port.details(
+        const [ContactEntry(name: 'X')],
+        {ContactField.address},
+      ),
+      hasLength(1),
+    );
+    expect(platform.calls.map((c) => c.method), ['details']);
   });
 
   test('Berechtigungen', () async {

@@ -16,6 +16,7 @@ import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_voice/fakes.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
@@ -276,5 +277,74 @@ void main() {
     expect(c.read(lockedArmedCallProvider), isNull);
     expect(c.read(lockedPendingProvider), isNull);
     expect(llm.requests, hasLength(2), reason: 'Rückfall: Modelllauf als Text');
+  });
+
+  group('contacts__navigate (WP164 C)', () {
+    const home = 'Musterstraße 1, 12345 Musterstadt';
+    const call = ToolCallBlock(
+      id: '1',
+      name: 'contacts__navigate',
+      argumentsJson: '{"name":"Anna Meier"}',
+    );
+
+    TestEnv contactsEnv() {
+      llm = FakeLlmProvider([
+        ScriptedTurn.toolCalls([call]),
+        ScriptedTurn.text('Los geht es.'),
+      ]);
+      final env = TestEnv(
+        providerConfig: scripted(llm),
+        startup: const StartupSettings(
+          enabledIntegrations: {'contacts', 'maps'},
+          toolPrefs: ToolPrefs(levels: {'contacts__navigate': 'a'}),
+        ),
+      );
+      env.contacts.contacts = const [
+        ContactEntry(
+          name: 'Anna Meier',
+          phones: [ContactPhone('0170 1')],
+          addresses: [ContactAddress(home, label: 'Privat')],
+        ),
+      ];
+      return env;
+    }
+
+    testWidgets('gesperrt: zurückgestellt, nichts gestartet, keine Adresse', (
+      tester,
+    ) async {
+      final env = contactsEnv();
+      final c = await run(
+        tester,
+        env,
+        said: 'Navigiere zu Anna Meier',
+        gate: Completer<bool>(),
+      );
+      expect(env.mapsLauncher.launched, isEmpty);
+      expect(env.contacts.requested, isEmpty, reason: 'Adressbuch unberührt');
+      expect(tts.spoken.join(' '), 'Zum Navigieren bitte entsperren.');
+      expect(c.read(lockedPendingProvider)?.call?.name, 'contacts__navigate');
+      expect(c.read(lockedExchangeProvider)?.answer, isNot(contains('Muster')));
+      platform.unlockGate!.complete(false);
+      await tester.pump();
+    });
+
+    testWidgets('nach dem Entsperren genau einmal, Adresse nur im Launcher', (
+      tester,
+    ) async {
+      final env = contactsEnv();
+      await run(
+        tester,
+        env,
+        said: 'Navigiere zu Anna Meier',
+        unlockSucceeds: true,
+      );
+      expect(env.mapsLauncher.launched, hasLength(1));
+      expect(
+        Uri.decodeComponent(env.mapsLauncher.launched.single.uri.toString()),
+        contains(home),
+      );
+      expect(llm.requests, hasLength(1), reason: 'kein Modelllauf danach');
+      expect(tts.spoken.join(' '), isNot(contains('Muster')));
+    });
   });
 }

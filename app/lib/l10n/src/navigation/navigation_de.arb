@@ -1,0 +1,5 @@
+{
+  "navigationAppDefault": "Standard (Google Maps, sonst Waze)",
+  "navigationAppHelp": "Welche App „Navigiere zu …“ öffnet. Nennst du im Befehl eine App („mit Waze“), gilt sie. Ist die gewählte App nicht eingeschaltet oder nicht installiert, meldet Wendelin das, statt eine andere zu öffnen.",
+  "navigationAppTitle": "Navigations-App"
+}
