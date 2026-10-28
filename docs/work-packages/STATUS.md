@@ -6,7 +6,7 @@ Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) 
 
 Parallelität: bis zu 4 Paket-Sitzungen, je 1 Sub-Agent (AGENTS.md); Standard 2, solange der Maintainer am Rechner ist.
 
-Stand: 2026-10-28; läuft: WP169, WP170, WP172; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
+Stand: 2026-10-28; läuft: WP169, WP170, WP172, WP173; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
 
 ## Meilensteine
 
@@ -33,7 +33,7 @@ Stand: 2026-10-28; läuft: WP169, WP170, WP172; Release v0.1.0 (2fd52524); der n
 | WP170 | Doku bereinigen: Widersprüche, Veraltetes, Doppelungen, Erledigtes löschen | in Arbeit | Auftrag Maintainer 2026-10-28; Entscheidungen im Paket |
 | WP171 | Weckwort: Stufe 2 immer Prüfer B, Rückfall auf installiertes Modell, Hinweis statt stillem Verwerfen | gemergt 8d2d699d | K138/K139 offen. Gerätetest `docs/testing/m5/wp171.md` (Benachrichtigungs-Tipp, Akku/fbLoads, Schatten-Fälle); Akku-Messung nur bei Auffälligkeit; `wake_align_test.dart:428` flaky unter Last; Overlay `start-failed reason=no-models` im E2E-Aufbau klären |
 | WP172 | Overlay schließt nach dem Zuhören ohne Antwort, Weckwort wieder bereit | in Arbeit | Wunsch Maintainer 2026-10-28 |
-| WP173 | Einstellungen umbauen: Routing unter Anbieter, „Erweiterte Einstellungen“, Sprache/Weckwort getrennt, Weckwort-Modell oben | geplant | Wunsch Maintainer 2026-10-28; Start nach WP171 |
+| WP173 | Einstellungen umbauen: Routing unter Anbieter, „Erweiterte Einstellungen“, Sprache/Weckwort getrennt, Weckwort-Modell oben | in Arbeit | Wunsch Maintainer 2026-10-28 |
 | WP174 | Einrichtungsassistent beim ersten Start (Anbieter, Sprache Pflicht; Weckwort, Integrationen, Personalisierung optional) | geplant | Wunsch Maintainer 2026-10-28; Start nach WP173 |
 
 ## Offen
