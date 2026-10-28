@@ -422,7 +422,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   /// spoken or typed. Nothing keeps running unseen.
   Future<void> suspend() async {
     final running = ref.read(agentControllerProvider).running;
-    await cancel();
+    await cancel(VoiceCancelReason.suspend);
     if (running && ref.mounted) _agent.cancel();
   }
 
@@ -637,8 +637,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
   /// and speaks it if the request came by voice (B9). Returns the text, or
   /// `null` if the undo failed.
   Future<String?> undo(String callId) async {
-    // Any voice activity ends first (sentence gap, spoken confirmation).
-    if (_voiceRun || state.phase != VoiceState.idle) await cancel();
+    if (_voiceRun || state.phase != VoiceState.idle)
+      await cancel(VoiceCancelReason.undo);
     final tts = _promptTts;
     _promptTts = null;
     if (tts != null) await tts.stop();

@@ -3,6 +3,7 @@
 // again) and stays open while the user interacts or waits for an answer.
 import 'dart:async';
 
+import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
@@ -393,6 +394,30 @@ void main() {
     expect(phases.last, VoiceState.idle, reason: 'die Ausgabe wurde beendet');
     expect(logs.any((l) => l.contains('overlay-close')), isFalse);
     expect(platform.calls, isNot(contains('releaseHost')));
+    // Past stopCloseDelay: undo is no stop (no „Abgebrochen.“, no by=stop;
+    // the window stays open by design (the
+    // undo runs inside `IdleCloser.retrigger`, the user just acted).
+    await _pump(tester, steps: 30);
+    expect(find.text('Abgebrochen.'), findsNothing);
+    expect(logs.any((l) => l.contains('overlay-close')), isFalse);
+    expect(platform.calls, isNot(contains('releaseHost')));
+  });
+
+  testWidgets('Hintergrund waehrend der Antwort: kein Stopp, Schliessen ueber '
+      'idle', (tester) async {
+    await open(tester, speak: const Duration(seconds: 3));
+    for (var i = 0; i < 200 && phases.lastOrNull != VoiceState.speaking; i++) {
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    expect(phases.last, VoiceState.speaking, reason: 'echte Sprachausgabe');
+    tester.binding
+      ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+      ..handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    await _pump(tester, steps: 30);
+    expect(phases.last, VoiceState.idle, reason: 'suspend beendet die Ausgabe');
+    expect(find.text('Abgebrochen.'), findsNothing);
+    expect(closedBy('stop'), isFalse, reason: 'Hintergrund ist kein Stopp');
+    expect(closedByIdle(), isTrue);
   });
 
   testWidgets('Erkennungsfehler: Meldung bleibt kurz sichtbar, dann zu', (
