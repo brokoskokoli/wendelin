@@ -2,6 +2,7 @@ package app.wendelin
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -65,6 +66,13 @@ class WakeTextsTest {
         val enSeq = WakeTexts { mapOf("gapNoSeqText" to "Re-enroll", "gapNoSeqAction" to "Enroll")[it] }
         assertEquals("Re-enroll", enSeq.gapNoSeqText)
         assertEquals("Enroll", enSeq.gapNoSeqAction)
+        // The notification picks text and button by the reason (WP171).
+        val all = WakeTexts { null }
+        assertEquals(all.gapNoSeqText, all.gapTextFor("no_sequences"))
+        assertEquals(all.gapNoSeqAction, all.gapActionFor("no_sequences"))
+        assertEquals(all.gapText, all.gapTextFor("model_missing"))
+        assertEquals(all.gapAction, all.gapActionFor("model_missing"))
+        assertNotEquals(all.gapText, all.gapNoSeqText)
         val en = WakeTexts { mapOf("gapText" to "Cannot check", "gapAction" to "Load model")[it] }
         assertEquals("Cannot check", en.gapText)
         assertEquals("Load model", en.gapAction)

@@ -84,10 +84,18 @@ class WakeWordScreen extends ConsumerWidget {
               : null,
         ),
         WakeStage2GapNotice(
+          // The voice that lacks the sequences, not just the first one.
           onEnroll: speakers.isEmpty
               ? null
-              : () =>
-                    unawaited(_enroll(context, ref, speakers, speakers.first)),
+              : () => unawaited(
+                  _enroll(
+                    context,
+                    ref,
+                    speakers,
+                    ref.read(wakeSpeakerWithoutSequencesProvider) ??
+                        speakers.first,
+                  ),
+                ),
         ),
         if (installed &&
             ref.watch(wakeStage2GapProvider) != WakeStage2Gap.modelMissing)

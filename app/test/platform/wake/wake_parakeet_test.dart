@@ -519,6 +519,48 @@ void main() {
       });
     }
 
+    test('Rückfall bleibt warm: ein Laden je Haltezeit (fakeAsync, WP171)', () {
+      final hw = install();
+      fakeAsync((async) {
+        var starts = 0;
+        final backend = _Backend('Wendelin');
+        final parts = DeviceWakeParts(
+          container(true),
+          hotwordsDirectory: () async => hw,
+          parakeetStart: (_) async {
+            starts++;
+            return backend;
+          },
+          idleRelease: const Duration(seconds: 60),
+          engines: () async => FakeEngines()..missing = true,
+          useVerifierB: false,
+        );
+        final v = parts.verifier();
+        void check() {
+          v.confirm(_tone(900));
+          async.flushMicrotasks();
+        }
+
+        check();
+        async.elapse(const Duration(seconds: 50));
+        check(); // second candidate inside idleRelease: still loaded
+        expect(starts, 1);
+        expect(backend.disposed, isFalse);
+        expect(parts.fallbackStats.loads, 1);
+        expect(parts.fallbackStats.checks, 2);
+        // The timer restarts at the last check: 59 s later still loaded.
+        async.elapse(const Duration(seconds: 59));
+        expect(backend.disposed, isFalse);
+        async.elapse(const Duration(seconds: 2));
+        async.flushMicrotasks();
+        expect(backend.disposed, isTrue);
+        check(); // new candidate after idleRelease: second load
+        expect(starts, 2);
+        expect(parts.fallbackStats.loads, 2);
+        expect(parts.fallbackStats.checks, 3);
+      });
+    });
+
     test('Vorlagen-Weg wie Modell-Weg: Prüfer B (WP171)', () {
       final parts = DeviceWakeParts(container(true), useVerifierB: true);
       expect(parts.verifier(), isA<VerifierBWakeVerifier>());

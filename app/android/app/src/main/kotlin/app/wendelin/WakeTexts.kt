@@ -28,6 +28,12 @@ class WakeTexts(private val stored: (String) -> String?) {
     val gapNoSeqText get() = t("gapNoSeqText")
     val gapNoSeqAction get() = t("gapNoSeqAction")
 
+    /** Notification text for the stage 2 [gap] reason (`no_sequences`: enroll again; else model). */
+    fun gapTextFor(gap: String): String = if (gap == "no_sequences") gapNoSeqText else gapText
+
+    /** Button label for the stage 2 [gap] reason. */
+    fun gapActionFor(gap: String): String = if (gap == "no_sequences") gapNoSeqAction else gapAction
+
     fun pausedText(time: String) = t("pausedText").replace("{time}", time)
 
     fun ended(reason: String) = t("ended").replace("{reason}", reason)

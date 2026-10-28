@@ -274,6 +274,72 @@ void main() {
       expect(gapCalls(), isEmpty);
     });
 
+    test('recheck (Modell geladen, neu eingelernt): Lücke wechselt und '
+        'verschwindet, jede Änderung geht an Kotlin', () async {
+      await start(
+        verify: true,
+        p: FakeParts()..gap = WakeStage2Gap.modelMissing,
+      );
+      expect(gapCalls(), ['model_missing']);
+      parts.gap = WakeStage2Gap.noSequences;
+      await fromKotlin('recheck');
+      expect(host.stage2Gap.value, WakeStage2Gap.noSequences);
+      expect(gapCalls(), ['model_missing', 'no_sequences']);
+      await fromKotlin('recheck'); // unchanged: no second message
+      expect(gapCalls(), hasLength(2));
+      parts.gap = null;
+      await fromKotlin('recheck');
+      expect(host.stage2Gap.value, isNull);
+      expect(gapCalls(), ['model_missing', 'no_sequences', null]);
+    });
+
+    test('recheck: ohne Nachprüfung oder ohne Listener nichts; Fehler lässt '
+        'den Hinweis stehen', () async {
+      // verify off: the check is not even asked.
+      await start(p: FakeParts()..gap = WakeStage2Gap.noSequences);
+      await fromKotlin('recheck');
+      expect(parts.gapChecks, 0);
+      expect(gapCalls(), isEmpty);
+      await fromKotlin('shutdown');
+      // No listener (never started): nothing to tell either.
+      final idle = FakeParts()..gap = WakeStage2Gap.noSequences;
+      parts = idle;
+      host = WakeHost(parts: idle, audio: ServiceAudioInput(channel));
+      await host.attach();
+      await fromKotlin('recheck');
+      expect(idle.gapChecks, 0);
+      await fromKotlin('shutdown');
+      // A failing check keeps what was shown.
+      await start(
+        verify: true,
+        p: FakeParts()..gap = WakeStage2Gap.noSequences,
+      );
+      parts.gapError = StateError('x');
+      parts.gap = null;
+      await fromKotlin('recheck');
+      expect(host.stage2Gap.value, WakeStage2Gap.noSequences);
+    });
+
+    test('entschiedener Kandidat: no_sequences bleibt, model_missing geht '
+        '(WP171)', () async {
+      await start(
+        verify: true,
+        p: FakeParts()..gap = WakeStage2Gap.noSequences,
+        extra: {'detector': 'templates'},
+      );
+      await hear(FakeWakeWordEngine.markerFrame(1600));
+      for (var i = 0; i < 12; i++) {
+        await hear(Int16List(1600));
+      }
+      await until(() => calls().contains('hit'));
+      expect(
+        host.stage2Gap.value,
+        WakeStage2Gap.noSequences,
+        reason: 'the recognizer decided because B could not',
+      );
+      expect(gapCalls(), ['no_sequences']);
+    });
+
     test('Kandidat ohne Modell meldet dieselbe Lücke an Kotlin', () async {
       await start(verify: true, extra: {'detector': 'templates'});
       parts.verifyError = const VoiceException(
@@ -562,12 +628,26 @@ void main() {
       audio: audio,
       aliveEvery: const Duration(milliseconds: 20),
     );
+    parts.fallbackStats
+      ..loads = 2
+      ..checks = 5;
     await host.attach();
     await fromKotlin('run', {'verify': false});
     await until(() => logs.any((l) => l.contains('wake-alive')));
+    // The run starts counting anew: the fake's stale counters are reset.
     expect(
       logs.firstWhere((l) => l.contains('wake-alive')),
-      matches(r'wake-alive engine=wake cand=0 ok=0 candPerH=0.0 okPerH=0.0'),
+      matches(
+        r'wake-alive engine=wake cand=0 ok=0 candPerH=0.0 okPerH=0.0 '
+        r'min=0 fbLoads=0 fbChecks=0 fbLoadsPerH=0.0 fbChecksPerH=0.0',
+      ),
+    );
+    // Later lines carry the live counters (rates stay 0 in the first minute).
+    parts.fallbackStats
+      ..loads = 1
+      ..checks = 3;
+    await until(
+      () => logs.any((l) => l.contains('fbLoads=1 fbChecks=3 fbLoadsPerH=0.0')),
     );
   });
 

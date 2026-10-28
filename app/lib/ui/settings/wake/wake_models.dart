@@ -8,6 +8,7 @@ import '../../../di/voice_providers.dart';
 import '../../../di/wake_providers.dart';
 import '../../../l10n/l10n.dart';
 import '../../../platform/wake/wake_stage2_gap.dart';
+import '../../../voice/wake/wake_storage.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 
@@ -35,16 +36,32 @@ final wakeVerifyMissingProvider = Provider<List<SpeechModel>>((ref) {
   return [if (m != null && states[m.id]?.phase != ModelPhase.installed) m];
 });
 
+/// The learned voices with embeddings and their templates.
+final _wakeVoicesProvider = Provider<List<(WakeSpeaker, WakeTemplates)>>((ref) {
+  final speakers = ref.watch(wakeSpeakersProvider).value ?? const [];
+  return [
+    for (final s in speakers)
+      if (ref.watch(wakeTemplatesProvider(s.id)).value case final t?)
+        if (t.embeddings.isNotEmpty) (s, t),
+  ];
+});
+
+/// WP171: the voice that needs enrolling again for verifier B (the first
+/// one without sequences), `null` if every voice has them.
+final wakeSpeakerWithoutSequencesProvider = Provider<WakeSpeaker?>((ref) {
+  for (final (s, t) in ref.watch(_wakeVoicesProvider)) {
+    if (!t.hasSequences) return s;
+  }
+  return null;
+});
+
 /// WP171: why stage 2 cannot decide (rule: [wakeStage2GapOf], the same as in
 /// the engine). A learned voice without sequences for verifier B and no
 /// recognizer installed: `modelMissing`; with a recognizer: `noSequences`
 /// (only the recognizer decides, enroll again). `null` while the install
 /// states are not read yet (no flash of the notice at start).
 final wakeStage2GapProvider = Provider<WakeStage2Gap?>((ref) {
-  final speakers = ref.watch(wakeSpeakersProvider).value ?? const [];
-  final sets = <WakeTemplates>[
-    for (final s in speakers) ?ref.watch(wakeTemplatesProvider(s.id)).value,
-  ].where((t) => t.embeddings.isNotEmpty).toList();
+  final sets = ref.watch(_wakeVoicesProvider).map((v) => v.$2).toList();
   final installed = wakeStage2RecognizerInstalled(
     ref.watch(modelStatesProvider),
   );

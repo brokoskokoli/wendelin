@@ -88,13 +88,12 @@ object WakeNotifications {
             texts.listeningTitle,
             when {
                 gap == null -> note ?: texts.listeningText
-                gap == "no_sequences" -> texts.gapNoSeqText
-                else -> texts.gapText
+                else -> texts.gapTextFor(gap)
             },
             if (gap != null) NotifyChannel.OPEN_WAKE_SETTINGS else null,
         ).setOngoing(true)
         if (gap != null) {
-            val label = if (gap == "no_sequences") texts.gapNoSeqAction else texts.gapAction
+            val label = texts.gapActionFor(gap)
             b.addAction(act(context, label, openApp(context, NotifyChannel.OPEN_WAKE_SETTINGS)))
         }
         return b

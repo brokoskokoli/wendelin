@@ -76,6 +76,54 @@ void main() {
     expect(find.byType(WakeEnrollScreen), findsOneWidget);
   });
 
+  testWidgets('Knopf „neu einlernen“ führt zur Stimme ohne Folgen, nicht zur '
+      'ersten', (tester) async {
+    final env = wakeEnv(installed: false);
+    env.speechModels.installed.addAll(['wake-features', 'whisper-base']);
+    final store = SecretWakeTemplateStore(env.secrets);
+    await store.save(templates('a', count: 9, sequences: true));
+    await store.save(templates('b', count: 9));
+    await store.saveSpeakers(const [
+      WakeSpeaker(id: 'a', name: 'Anna'),
+      WakeSpeaker(id: 'b', name: 'Bert'),
+    ]);
+    final c = await pumpWake(tester, env, const WakeWordScreen());
+    expect(c.read(wakeSpeakerWithoutSequencesProvider)?.id, 'b');
+    await tester.tap(find.text('Aktivierungswort neu einlernen'));
+    await tester.pumpAndSettle();
+    final screen = tester.widget<WakeEnrollScreen>(
+      find.byType(WakeEnrollScreen),
+    );
+    expect(screen.speakerId, 'b');
+    expect(screen.name, 'Bert');
+  });
+
+  test('Regel wakeStage2GapOf: Matrix, Modell fehlt geht vor', () {
+    WakeStage2Gap? gap(bool voice, bool noSeq, bool b, bool installed) =>
+        wakeStage2GapOf(
+          anyVoice: voice,
+          anyWithoutSequences: noSeq,
+          verifierB: b,
+          recognizerInstalled: installed,
+        );
+    // No voice: nothing to check.
+    expect(gap(false, false, true, false), isNull);
+    expect(gap(false, false, false, false), isNull);
+    // B on, all voices with sequences: B decides.
+    expect(gap(true, false, true, false), isNull);
+    // B on, a voice without sequences: model missing before no_sequences.
+    expect(gap(true, true, true, false), WakeStage2Gap.modelMissing);
+    expect(gap(true, true, true, true), WakeStage2Gap.noSequences);
+    // B off: the recognizer decides alone; only its absence is a gap, and
+    // enrolling again would not help.
+    expect(gap(true, true, false, false), WakeStage2Gap.modelMissing);
+    expect(gap(true, false, false, false), WakeStage2Gap.modelMissing);
+    expect(gap(true, true, false, true), isNull);
+    expect(gap(true, false, false, true), isNull);
+    expect(WakeStage2Gap.noSequences.logName, 'no_sequences');
+    expect(WakeStage2Gap.modelMissing.logName, 'model_missing');
+  });
+
   testWidgets('keine eingelernte Stimme: keine Lücke', (tester) async {
     final env = wakeEnv(installed: false);
     env.speechModels.installed.add('wake-features');
