@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Website icon source: the app mark (app/assets/logo/wendelin-mark-on-dark.svg, same paths) on the
+     app's ink colour with rounded corners. Rendered by tool/make_website_images.sh. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#101214"/>
+  <g transform="translate(86 86) scale(3.4)">
+    <path d="M 60 88 C 38 92, 20 72, 22 48 C 24 22, 52 8, 72 20 C 88 30, 86 56, 66 61 C 54 64, 45 55, 51 47" fill="none" stroke="#EDEBE6" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="58" cy="44" r="6" fill="#5B7BFF"/>
+  </g>
+</svg>

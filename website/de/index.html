@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wendelin – Sprachassistent für Android mit lokaler Sprache</title>
+<meta name="description" content="Wendelin ist ein freier Sprachassistent für Android. Weckwort, Spracherkennung und Sprachausgabe laufen auf dem Handy; das Sprachmodell wählst du selbst.">
+<link rel="canonical" href="https://brokoskokoli.github.io/wendelin/de/">
+<link rel="alternate" hreflang="en" href="https://brokoskokoli.github.io/wendelin/">
+<link rel="alternate" hreflang="de" href="https://brokoskokoli.github.io/wendelin/de/">
+<link rel="alternate" hreflang="x-default" href="https://brokoskokoli.github.io/wendelin/">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f4f2ed" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101214" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Wendelin">
+<meta property="og:locale" content="de_DE">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="Wendelin – Sprachassistent für Android mit lokaler Sprache">
+<meta property="og:description" content="Ein persönlicher Sprachassistent für Android. Weckwort, Spracherkennung und Sprachausgabe laufen lokal, das Sprachmodell wählst du selbst. Frei und quelloffen.">
+<meta property="og:url" content="https://brokoskokoli.github.io/wendelin/de/">
+<meta property="og:image" content="https://brokoskokoli.github.io/wendelin/images/social-preview.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="Wendelin-Logo mit dem Slogan: ein persönlicher Sprachassistent für Android">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Wendelin – Sprachassistent für Android mit lokaler Sprache">
+<meta name="twitter:description" content="Ein persönlicher Sprachassistent für Android. Weckwort, Spracherkennung und Sprachausgabe laufen lokal, das Sprachmodell wählst du selbst. Frei und quelloffen.">
+<meta name="twitter:image" content="https://brokoskokoli.github.io/wendelin/images/social-preview.png">
+<meta name="twitter:image:alt" content="Wendelin-Logo mit dem Slogan: ein persönlicher Sprachassistent für Android">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Wendelin",
+  "inLanguage": "de",
+  "operatingSystem": "Android 10 oder neuer",
+  "applicationCategory": "UtilitiesApplication",
+  "softwareVersion": "0.1.0",
+  "description": "Freier, quelloffener Sprachassistent für Android: Weckwort, Spracherkennung und Sprachausgabe laufen auf dem Gerät, das Sprachmodell wählst du selbst.",
+  "url": "https://brokoskokoli.github.io/wendelin/de/",
+  "downloadUrl": "https://github.com/brokoskokoli/wendelin/releases/latest",
+  "installUrl": "https://github.com/brokoskokoli/wendelin/releases/latest",
+  "screenshot": "https://brokoskokoli.github.io/wendelin/images/shot-conversation.webp",
+  "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+  "isAccessibleForFree": true,
+  "author": { "@type": "Person", "name": "brokoskokoli", "url": "https://github.com/brokoskokoli" },
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
+}
+</script>
+
+<style>
+  :root {
+    --bg: #f4f2ed; --bg-alt: #ffffff; --text: #15171a; --muted: #565b62; --border: #dedbd3;
+    --accent: #3355e8; --accent-2: #15171a; --accent-text: #ffffff; --shadow: 0 24px 60px rgba(16, 18, 20, .18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101214; --bg-alt: #1a1d21; --text: #edebe6; --muted: #a3a8ae; --border: #2e333a;
+      --accent: #8fa4ff; --accent-2: #edebe6; --accent-text: #101214; --shadow: 0 24px 60px rgba(0, 0, 0, .55);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 17px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--text); }
+  .brand img { width: 32px; height: 32px; border-radius: 8px; }
+  nav a { margin-left: 20px; color: var(--muted); font-size: 15px; }
+  code { font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--bg-alt); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; overflow-wrap: anywhere; }
+  footer { color: var(--muted); font-size: 14px; text-align: center; padding: 56px 0 40px; }
+  .hero { text-align: center; padding: 40px 0 16px; }
+  .hero img.icon { width: 112px; height: 112px; border-radius: 26px; }
+  h1 { font-size: clamp(36px, 6vw, 56px); line-height: 1.1; margin: 14px 0 12px; letter-spacing: -.02em; }
+  .tagline { font-size: clamp(22px, 3.4vw, 30px); font-weight: 650; line-height: 1.25; margin: 0 auto 14px; max-width: 760px; letter-spacing: -.01em; }
+  .tagline span { background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .subtitle { font-size: clamp(17px, 2.2vw, 20px); color: var(--muted); max-width: 720px; margin: 0 auto 28px; }
+  .buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn { display: inline-block; padding: 12px 22px; border-radius: 12px; font-weight: 600; border: 1px solid var(--border); color: var(--text); background: var(--bg-alt); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .btn:hover { text-decoration: none; filter: brightness(1.06); }
+  .meta { color: var(--muted); font-size: 14px; margin-top: 12px; }
+  section { padding: 64px 0 8px; }
+  h2 { font-size: clamp(26px, 3.6vw, 34px); letter-spacing: -.01em; margin: 0 0 12px; text-align: center; }
+  .lead { text-align: center; color: var(--muted); max-width: 720px; margin: 0 auto 28px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 16px; }
+  .card { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .card .ico { font-size: 26px; line-height: 1; margin-bottom: 10px; }
+  .card h3 { margin: 0 0 6px; font-size: 18px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 20px; align-items: start; }
+  .gallery figure { margin: 0; text-align: center; }
+  .gallery a { display: block; max-width: 300px; margin: 0 auto; border-radius: 18px; box-shadow: var(--shadow); }
+  .shot { display: block; width: 100%; height: auto; border-radius: 18px; }
+  .gallery figcaption { color: var(--muted); font-size: 15px; margin: 12px 12px 0; }
+  .gallery figcaption b { color: var(--text); font-weight: 600; }
+  .install ol, .steps ol { padding-left: 22px; max-width: 820px; margin: 0 auto; }
+  .install li, .steps li { margin: 8px 0; }
+  .install p { max-width: 820px; margin: 14px auto; }
+  .faq { max-width: 820px; margin: 0 auto; }
+  .faq details { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; margin: 10px 0; }
+  .faq summary { cursor: pointer; font-weight: 600; }
+  .faq details p { color: var(--muted); margin: 10px 0 0; }
+  @media (max-width: 760px) {
+    nav a:not(.gh):not(.lang) { display: none; }
+    nav a { margin-left: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="./"><img src="../favicon.png" alt="" width="32" height="32">Wendelin</a>
+    <nav>
+      <a href="#why">Warum</a>
+      <a href="#features">Funktionen</a>
+      <a href="#screenshots">Screenshots</a>
+      <a href="#install">Installation</a>
+      <a href="#faq">FAQ</a>
+      <a class="gh" href="https://github.com/brokoskokoli/wendelin">GitHub</a>
+      <a class="lang" href="../" hreflang="en" lang="en">English</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <img class="icon" src="../images/icon.png" alt="Wendelin" width="112" height="112">
+      <h1>Wendelin</h1>
+      <p class="tagline">Deine Stimme bleibt auf dem Handy. <span>Das Sprachmodell wählst du.</span></p>
+      <p class="subtitle">Wendelin ist ein persönlicher Sprachassistent für Android. Weckwort, Spracherkennung und Sprachausgabe laufen lokal, und nur Text geht an ein Sprachmodell deiner Wahl, mit deinem eigenen API-Schlüssel.</p>
+      <div class="buttons">
+        <a class="btn primary" href="https://github.com/brokoskokoli/wendelin/releases/latest">Für Android laden</a>
+        <a class="btn" href="https://github.com/brokoskokoli/wendelin">Auf GitHub ansehen</a>
+      </div>
+      <p class="meta">Android 10 oder neuer · Frei und quelloffen (GPL-3.0-or-later) · Deutsch, Englisch, Französisch</p>
+    </div>
+
+    <section id="why">
+      <h2>Warum Wendelin?</h2>
+      <p class="lead">Die meisten Sprachassistenten schicken deine Stimme in die Cloud eines anderen und sprechen nur mit den Diensten, die der Hersteller ausgesucht hat. Wendelin dreht das um: Es wird der Standard-Assistent deines Handys, versteht dich auf dem Gerät, und nur Text geht an ein Sprachmodell deiner Wahl (mit deinem eigenen API-Schlüssel, ohne Wendelin-Server). Bei Anbietern mit vertraulicher Ausführung (TEE) prüft Wendelin die Attestierung selbst, bevor es etwas schickt. Es läuft ohne Google Play Services und damit auch auf AOSP-basierten Systemen.</p>
+    </section>
+
+    <section id="features">
+      <h2>Was Wendelin kann</h2>
+      <p class="lead">Alles ist freiwillig: Jede Integration bleibt aus, bis du sie einschaltest.</p>
+      <div class="grid">
+        <div class="card"><div class="ico" aria-hidden="true">🎙️</div><h3>Sprechen statt tippen</h3><p>Wendelin wird als Standard-Assistent eingerichtet und startet per Seitentaste, Assistenten-Geste oder mit „Hey Wendelin“. Im Gesprächsmodus hört es nach der Antwort weiter zu, und du kannst es mit dem Weckwort unterbrechen.</p></div>
+        <div class="card"><div class="ico" aria-hidden="true">📱</div><h3>Sprache bleibt auf dem Gerät</h3><p>Weckwort, Spracherkennung (Whisper, Parakeet) und Sprachausgabe laufen lokal. Audio verlässt das Handy nicht.</p></div>
+        <div class="card"><div class="ico" aria-hidden="true">🧠</div><h3>Sprachmodell nach Wahl</h3><p>Claude, OpenAI, Mistral, OpenRouter, Ollama oder ein eigener Endpunkt, mit deinem eigenen API-Schlüssel. Kein Wendelin-Server dazwischen.</p></div>
+        <div class="card"><div class="ico" aria-hidden="true">✅</div><h3>Geprüfte vertrauliche Anbieter</h3><p>Bei Anbietern mit vertraulicher Ausführung (Phala, NEAR AI, Tinfoil) prüft Wendelin die Attestierung, auf Wunsch auch den GPU-Nachweis, bevor es Daten schickt.</p></div>
+        <div class="card"><div class="ico" aria-hidden="true">🧩</div><h3>Integrationen für den Alltag</h3><p>Home Assistant, Spotify, Mediensteuerung, Kontakte, Anrufe und SMS, Navigation, Kalender, Wecker und Timer, Aufgaben (Todoist, Google Tasks), Wetter, Einkaufslisten (Bring!), Obsidian-Notizen sowie eigene MCP- und HTTP-Werkzeuge.</p></div>
+        <div class="card"><div class="ico" aria-hidden="true">🛡️</div><h3>Sicherheit in Stufen</h3><p>Jedes Werkzeug bekommt eine Stufe von A bis D. Sie legt fest, was bei gesperrtem Handy erlaubt ist. Riskante Aktionen fragen immer nach, Änderungen lassen sich kurz rückgängig machen.</p></div>
+        <div class="card"><div class="ico" aria-hidden="true">🔒</div><h3>Gesperrt nützlich</h3><p>Bei gesperrtem Handy zeigt das Fenster die Anfrage und die Antwort, aber keinen Verlauf. Kontakte gibt Wendelin nur feldweise heraus, Adressen für die Navigation bleiben auf dem Gerät.</p></div>
+        <div class="card"><div class="ico" aria-hidden="true">📜</div><h3>Prüfprotokoll auf dem Gerät</h3><p>Jede Anfrage, jeder Werkzeugaufruf und jedes Attestierungsergebnis steht lokal im Protokoll und lässt sich exportieren oder löschen.</p></div>
+      </div>
+    </section>
+
+    <section id="screenshots">
+      <h2>So sieht es aus</h2>
+      <p class="lead">Bildschirme der aktuellen Version (englische Oberfläche, erfundene Beispielinhalte). Antippen für die große Ansicht.</p>
+      <div class="gallery">
+        <figure>
+          <a href="../images/shot-conversation.webp"><img class="shot" src="../images/shot-conversation.webp" width="780" height="1688" loading="lazy" decoding="async" alt="Gespräch mit Werkzeugaufrufen"></a>
+          <figcaption><b>Gespräch.</b> Eine gesprochene Anfrage, die ausgelösten Werkzeugaufrufe und die Antwort.</figcaption>
+        </figure>
+        <figure>
+          <a href="../images/shot-confirmation.webp"><img class="shot" src="../images/shot-confirmation.webp" width="780" height="1688" loading="lazy" decoding="async" alt="Bestätigung für eine riskante Aktion"></a>
+          <figcaption><b>Bestätigung.</b> Riskante Aktionen fragen immer nach.</figcaption>
+        </figure>
+        <figure>
+          <a href="../images/shot-settings.webp"><img class="shot" src="../images/shot-settings.webp" width="780" height="1496" loading="lazy" decoding="async" alt="Einstellungen, Übersicht"></a>
+          <figcaption><b>Einstellungen.</b> Anbieter, Integrationen, Sicherheit und Datenschutz an einem Ort.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="install" class="install">
+      <h2>Installation</h2>
+      <p>Voraussetzung: Android 10 oder neuer. Google Play Services werden nicht gebraucht.</p>
+      <ol>
+        <li><code>wendelin-&lt;version&gt;.apk</code> und <code>SHA256SUMS</code> aus der <a href="https://github.com/brokoskokoli/wendelin/releases/latest">neuesten Version</a> laden und die APK installieren (Installation aus dieser Quelle erlauben, wenn Android danach fragt).</li>
+        <li>Prüfen (empfohlen): Vergleiche die Prüfsumme mit <code>SHA256SUMS</code> und das Signaturzertifikat mit dem Fingerabdruck aus den Versionshinweisen und der <a href="https://github.com/brokoskokoli/wendelin/blob/main/README.de.md#installation">README</a>.</li>
+        <li>Android 13 und neuer: Bei einer APK von außerhalb eines Stores sperrt Android zuerst den Zugriff auf SMS und Benachrichtigungen. Wähle in den App-Infos (Menü mit drei Punkten) <b>Eingeschränkte Einstellungen zulassen</b>; Wendelin zeigt diese Schritte, wenn sie nötig sind.</li>
+      </ol>
+    </section>
+
+    <section id="start" class="steps">
+      <h2>Erste Schritte</h2>
+      <ol>
+        <li>Wendelin öffnen und dem Onboarding folgen. Mikrofonberechtigung erteilen; die Sprachmodelle werden in der App geladen.</li>
+        <li>Einen Anbieter einrichten (Einstellungen &gt; Anbieter): Vorlage wählen, API-Schlüssel eintragen, Verbindungstest ausführen.</li>
+        <li>Wendelin zum Standard-Assistenten machen und „Hey Wendelin“ einschalten, wenn du freihändig sprechen willst.</li>
+        <li>Die gewünschten Integrationen einschalten und die Berechtigungen erteilen, nach denen sie fragen. Dann sag zum Beispiel: „Hey Wendelin, stell einen Timer auf zehn Minuten.“</li>
+      </ol>
+    </section>
+
+    <section id="faq">
+      <h2>FAQ</h2>
+      <div class="faq">
+        <details><summary>Ist Wendelin kostenlos?</summary><p>Ja. Es ist quelloffen unter der GPL-3.0-or-later, ohne Werbung, ohne Abo und ohne Konto. Ein Sprachmodell-Anbieter, den du wählst, kann für seine eigene API Gebühren verlangen.</p></details>
+        <details><summary>Verlässt meine Stimme das Handy?</summary><p>Nein. Weckwort, Spracherkennung und Sprachausgabe laufen mit den lokalen Engines auf dem Gerät. Nur das Transkript, der System-Prompt, ausgewählte Gedächtnis-Einträge sowie Werkzeugbeschreibungen und -ergebnisse gehen an den Sprachmodell-Anbieter, den du gewählt hast.</p></details>
+        <details><summary>Verbindet sich Wendelin mit dem Internet?</summary><p>Nur für das, was du einrichtest: deinen Sprachmodell-Anbieter, die Integrationen, die du einschaltest, die Prüfstellen vertraulicher Anbieter und den einmaligen Download der Sprachmodelle. Es gibt keine Analyse, keine Telemetrie und keinen Wendelin-Server. Jede Verbindung steht in der <a href="privacy.html">Datenschutzerklärung</a>.</p></details>
+        <details><summary>Welche Systeme werden unterstützt?</summary><p>Android 10 oder neuer. Google Play Services werden nicht gebraucht, daher laufen auch AOSP-basierte Systeme. iOS wird nicht unterstützt.</p></details>
+        <details><summary>Welche Sprachen gibt es?</summary><p>Die Oberfläche gibt es auf Deutsch, Englisch und Französisch.</p></details>
+        <details><summary>Wie kann ich helfen?</summary><p>Fehler melden, Ideen vorschlagen oder übersetzen: siehe <a href="https://github.com/brokoskokoli/wendelin/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a> (Englisch).</p></details>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Wendelin ist freie Software unter der <a href="https://github.com/brokoskokoli/wendelin/blob/main/LICENSE">GNU General Public License v3.0 oder neuer</a>. © 2026 Wendelin contributors ·
+    <a href="https://github.com/brokoskokoli/wendelin">Quellcode</a> ·
+    <a href="privacy.html">Datenschutz</a> ·
+    <a href="https://github.com/brokoskokoli/wendelin/issues">Fehler melden</a>
+  </footer>
+</div>
+</body>
+</html>
