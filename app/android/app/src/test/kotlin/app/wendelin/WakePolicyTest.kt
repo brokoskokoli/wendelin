@@ -442,4 +442,13 @@ class WakePolicyTest {
         WakeHandoff.clear()
         assertNull(WakeHandoff.finish())
     }
+
+    @Test
+    fun devModeArgsAskToClearOnlyWhenSwitchingOffWithClear() {
+        assertEquals(mapOf<String, Any>("on" to true), WakePolicy.devModeArgs(on = true, clear = false, archive = true))
+        assertEquals(
+            mapOf<String, Any>("on" to false, "clear" to true, "archive" to false),
+            WakePolicy.devModeArgs(on = false, clear = true, archive = false),
+        )
+    }
 }

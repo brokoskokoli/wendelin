@@ -172,17 +172,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
     final target = await ref
         .read(attestationNotifierProvider)
         .takeLaunchTarget();
-    if (!mounted) return;
-    if (target == wakeWordSettingsTarget) {
-      unawaited(Navigator.of(context).pushNamed<void>(AppRoutes.wakeWord));
-      return;
-    }
-    if (target != attestationLogTarget) return;
-    unawaited(
-      Navigator.of(context).push<void>(
-        MaterialPageRoute(builder: (_) => const AttestationLogScreen()),
-      ),
-    );
+    if (mounted) _openLaunchTarget(Navigator.of(context), target);
   }
 
   /// „Neu prüfen“ on a red answer: checks the provider that gave this answer
@@ -458,5 +448,19 @@ class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
     if (identical(ref.read(agentControllerProvider).pending, question)) {
       _controller.answer(approved: approved ?? false);
     }
+  }
+}
+
+/// Opens the screen a notification asked for: the wake word settings (service
+/// notification, WP171) or the Prüfprotokoll (failed GPU check).
+void _openLaunchTarget(NavigatorState navigator, Object? target) {
+  if (target == wakeWordSettingsTarget) {
+    unawaited(navigator.pushNamed<void>(AppRoutes.wakeWord));
+  } else if (target == attestationLogTarget) {
+    unawaited(
+      navigator.push<void>(
+        MaterialPageRoute(builder: (_) => const AttestationLogScreen()),
+      ),
+    );
   }
 }

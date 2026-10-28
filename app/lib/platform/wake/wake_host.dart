@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart'
-    show ValueListenable, ValueNotifier, visibleForTesting;
+    show ValueListenable, visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
@@ -13,6 +13,7 @@ import '../../voice/voice_log.dart';
 import '../channels.dart';
 import 'service_audio_input.dart';
 import 'wake_detector.dart';
+import 'wake_gap_tracker.dart';
 import 'wake_stage2_gap.dart';
 
 export '../channels.dart' show wakeEngineChannelName;
@@ -95,43 +96,14 @@ final class WakeHost {
   Future<void> _ops = Future.value();
   bool _ending = false;
 
-  final _stage2Gap = ValueNotifier<WakeStage2Gap?>(null);
+  late final _gaps = WakeGapTracker(
+    check: () => parts.stage2Gap(),
+    send: (reason) => _call('stage2Gap', {'reason': reason}),
+  );
 
-  /// Reason why stage 2 could not decide on the last candidate, `null` if it
-  /// could (or nothing known yet). Checked before the listener starts
-  /// ([WakeParts.stage2Gap]) and after every candidate; every change goes to
-  /// Kotlin (`stage2Gap`), which shows it in the service notification.
-  ValueListenable<WakeStage2Gap?> get stage2Gap => _stage2Gap;
-
-  void _setGap(WakeStage2Gap? gap) {
-    if (_stage2Gap.value == gap) return;
-    _stage2Gap.value = gap;
-    voiceLog('wake-gap', {'reason': gap == null ? 'none' : gap.logName});
-    unawaited(_call('stage2Gap', {'reason': gap?.logName}));
-  }
-
-  /// Result of a candidate: a decision clears a missing model, but not
-  /// `no_sequences` (the recognizer decided because B could not; only
-  /// [_recheck] after enrolling clears that).
-  void _onVerdictGap(WakeStage2Gap? gap) {
-    if (gap == null && _stage2Gap.value == WakeStage2Gap.noSequences) return;
-    _setGap(gap);
-  }
-
-  /// The app installed or removed a recognition model or enrolled a voice:
-  /// asks [WakeParts.stage2Gap] again. Without a listener there is nothing
-  /// to tell (the check runs when it starts).
-  Future<void> _recheck() async {
-    if (_listener == null || !_verify || _ending) return;
-    WakeStage2Gap? gap;
-    try {
-      gap = await parts.stage2Gap();
-    } on Object {
-      return; // unknown: the notice stays as it is
-    }
-    if (_ending) return;
-    _setGap(gap);
-  }
+  /// Why stage 2 could not decide on the last candidate (WP171), see
+  /// [WakeGapTracker.gap].
+  ValueListenable<WakeStage2Gap?> get stage2Gap => _gaps.gap;
 
   /// Listens to the service and reports `ready`.
   Future<void> attach() async {
@@ -185,7 +157,12 @@ final class WakeHost {
               : _release('conflict'),
         );
       case 'recheck':
-        await _serial(_recheck);
+        await _serial(
+          () => _gaps.recheck(
+            active: _listener != null && _verify,
+            ending: () => _ending,
+          ),
+        );
       case 'overlayClosed':
         await _serial(() => _release('overlay'));
       case 'shutdown':
@@ -242,18 +219,8 @@ final class WakeHost {
     required bool verify,
   }) async {
     final band = wakeBandFor(station: _station);
-    // Before the first candidate: without a model the notification must say
-    // so at once (the app may not be open).
-    WakeStage2Gap? gap;
-    if (verify) {
-      try {
-        gap = await parts.stage2Gap();
-      } on Object {
-        gap = null; // unknown: nothing is claimed
-      }
-    }
+    await _gaps.checkAtStart(verify: verify, ending: () => _ending);
     if (_ending) return;
-    _setGap(gap);
     devArchiveSetInfo('idle', {
       'mode': 'idle',
       'detector': _detector.name,
@@ -268,7 +235,7 @@ final class WakeHost {
       verifier: verify
           ? _verifier = _LoggingVerifier(
               parts.verifier(detector: _detector),
-              onGap: _onVerdictGap,
+              onGap: _gaps.onVerdict,
             )
           : null,
       // Room noise before the word (WP73): `speechAfterWakeWord` measures
