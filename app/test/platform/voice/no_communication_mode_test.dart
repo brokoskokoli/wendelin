@@ -131,6 +131,7 @@ void main() {
         for (final m in playerCalls)
           if (m.method == 'setAudioContext') m.arguments as Map,
       ];
+      expect(contexts, isNotEmpty, reason: 'the player got an audio context');
       for (final ctx in contexts) {
         expect(
           ctx['usageType'],

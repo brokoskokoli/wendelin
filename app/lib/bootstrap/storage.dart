@@ -8,6 +8,17 @@ import '../di/startup.dart';
 import '../di/stop_word_migration.dart';
 import '../platform/secure_secret_store.dart';
 
+/// The start migrations of the stored settings (each never throws and is
+/// idempotent). Called by [openAppStorage] at every start.
+Future<void> runSettingsMigrations(
+  WendelinStorage storage,
+  SecretStore secrets,
+) async {
+  await migrateGlobalGpuCheck(storage.settings, storage.providerProfiles);
+  await migrateRemovedStopWord(storage.settings, secrets);
+  await migrateRemovedSpeechCommunication(storage.settings);
+}
+
 /// Opens the app database (shared with the other engine of the process)
 /// and reads the start settings.
 Future<(WendelinStorage, StartupSettings)> openAppStorage() async {
@@ -19,9 +30,7 @@ Future<(WendelinStorage, StartupSettings)> openAppStorage() async {
       native: const DriftNativeOptions(shareAcrossIsolates: true),
     ),
   );
-  await migrateGlobalGpuCheck(storage.settings, storage.providerProfiles);
-  await migrateRemovedStopWord(storage.settings, SecureSecretStore());
-  await migrateRemovedSpeechCommunication(storage.settings);
+  await runSettingsMigrations(storage, SecureSecretStore());
   final startup = await StartupSettings.load(storage.settings, [
     for (final s in builtInIntegrationSpecs) s.id,
   ]);
