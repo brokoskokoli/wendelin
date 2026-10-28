@@ -93,7 +93,10 @@ class IdleCloser {
         (v) => v.phase != VoiceState.idle || v.awaitingAnswer,
       ),
       (was, now) {
-        if (now) _micCancelled = false;
+        if (now) {
+          _micCancelled = false;
+          cancelClose(); // listening again: no pending stop/error close
+        }
         // Decide after the other reactions of the same moment (stop word,
         // unlock offer) set their blockers: idle is reported before them.
         if (was == true && !now) scheduleMicrotask(_onListeningEnded);

@@ -35,6 +35,10 @@ enum VoiceCancelReason {
   /// A new trigger replaced the running request.
   retrigger,
 
+  /// The user switched to the keyboard: listening ends quietly, no stop
+  /// semantics (no stop count, no „Abgebrochen“ hint).
+  keyboard,
+
   /// The pipeline was disposed.
   disposed,
 

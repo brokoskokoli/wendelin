@@ -271,10 +271,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     if (!mounted || _closing) return;
     ref.read(lockedModeProvider.notifier).set(locked);
     _idle.cancelClose();
-    setState(() {
-      _typing = false;
-      _discardedNotice = false;
-    });
+    setState(() => _typing = _discardedNotice = false);
     final voice = ref.read(voiceControllerProvider);
     if (voice.active) {
       await _idle.retrigger(() => _voice.cancel(VoiceCancelReason.retrigger));
@@ -323,7 +320,6 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   }
 
   void _onStop() {
-    if (_typing) return; // keyboard cancel (tap) to type: stays open
     final n = ref.read(agentControllerProvider).entries.length;
     setState(() => _hideBefore = n);
     _idle.closeLater('stop', AssistantOverlayScreen.stopCloseDelay);
@@ -398,7 +394,10 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   void _toggleKeyboard() {
     // Typing first: the end of listening must not close the overlay.
     setState(() => _typing = !_typing);
-    if (ref.read(voiceControllerProvider).active) unawaited(_voice.cancel());
+    if (_typing) _idle.cancelClose(); // a stop/error timer must not close
+    if (ref.read(voiceControllerProvider).active) {
+      unawaited(_voice.cancel(VoiceCancelReason.keyboard));
+    }
   }
 
   void _send(String text) {

@@ -366,4 +366,104 @@ void main() {
     expect(closedBy('idle-error'), isTrue);
     expect(platform.calls, contains('releaseHost'));
   });
+  // A stop or error message arms a delayed close; later activity of the user
+  // (trigger, microphone, keyboard) must cancel it (review round 2, no. 3/4).
+  group('Schliess-Timer nach Stopp/Fehler wird abgebrochen', () {
+    final messages = <String, VoiceUiState>{
+      'Fehler': const VoiceUiState(error: 'Erkennung fehlgeschlagen'),
+      'Stopp': const VoiceUiState(stopCount: 1),
+    };
+    for (final m in messages.entries) {
+      // Arms the timer: listening ended with the message.
+      Future<ProviderContainer> arm(WidgetTester tester) async {
+        final c = await open(tester, autoStart: false);
+        final v = c.read(voiceControllerProvider.notifier)
+          ..seed(const VoiceUiState(phase: VoiceState.listening));
+        await tester.pump();
+        v.seed(m.value);
+        await tester.pump();
+        await tester.pump();
+        return c;
+      }
+
+      Future<void> afterDelay(WidgetTester tester) async {
+        await tester.pump(
+          AssistantOverlayScreen.stopCloseDelay +
+              const Duration(milliseconds: 50),
+        );
+        await _pump(tester, steps: 5);
+      }
+
+      testWidgets('${m.key}: Trigger bricht den Timer ab', (tester) async {
+        await arm(tester);
+        platform.trigger();
+        await tester.pump();
+        await afterDelay(tester);
+        // The new request may end by itself (idle), but never by the timer.
+        expect(closedBy(m.key == 'Stopp' ? 'stop' : 'idle-error'), isFalse);
+      });
+
+      testWidgets('${m.key}: neues Zuhoeren (Mikro-Tipp) schliesst nicht', (
+        tester,
+      ) async {
+        final c = await arm(tester);
+        c
+            .read(voiceControllerProvider.notifier)
+            .seed(const VoiceUiState(phase: VoiceState.listening));
+        await tester.pump();
+        await afterDelay(tester);
+        expect(logs.any((l) => l.contains('overlay-close')), isFalse);
+      });
+
+      testWidgets('${m.key}: Tastatur oeffnen schliesst nicht', (tester) async {
+        await arm(tester);
+        await tester.tap(find.byTooltip(AppLocalizationsDe().overlayTextInput));
+        await tester.pump();
+        await afterDelay(tester);
+        expect(logs.any((l) => l.contains('overlay-close')), isFalse);
+      });
+    }
+  });
+
+  testWidgets('Stopp-Meldung, Zuhoeren laeuft weiter: Trigger bricht den '
+      'Timer ab', (tester) async {
+    final c = await open(tester, autoStart: false);
+    // Stop message while the phase stays active: no listening edge later.
+    final v = c.read(voiceControllerProvider.notifier)
+      ..seed(const VoiceUiState(phase: VoiceState.listening));
+    await tester.pump();
+    v.seed(const VoiceUiState(phase: VoiceState.listening, stopCount: 1));
+    await tester.pump();
+    platform.trigger();
+    await _pump(tester, steps: 3);
+    await tester.pump(
+      AssistantOverlayScreen.stopCloseDelay + const Duration(milliseconds: 50),
+    );
+    await _pump(tester, steps: 5);
+    expect(closedBy('stop'), isFalse);
+  });
+
+  testWidgets('Tastaturwechsel: kein „Abgebrochen.“, kein Stopp-Zaehler, '
+      'ein echtes Stoppwort danach schliesst', (tester) async {
+    final c = await open(tester);
+    for (var i = 0; i < 100 && !phases.contains(VoiceState.listening); i++) {
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    await tester.tap(find.byTooltip(AppLocalizationsDe().overlayTextInput));
+    await _pump(tester, steps: 30);
+    expect(phases.last, VoiceState.idle);
+    expect(c.read(voiceControllerProvider).stopCount, 0);
+    expect(find.text('Abgebrochen.'), findsNothing);
+    expect(logs.any((l) => l.contains('overlay-close')), isFalse);
+    // A real stop word with the keyboard open acts as usual.
+    c
+        .read(voiceControllerProvider.notifier)
+        .seed(const VoiceUiState(stopCount: 1));
+    await tester.pump();
+    await tester.pump(
+      AssistantOverlayScreen.stopCloseDelay + const Duration(milliseconds: 50),
+    );
+    await _pump(tester, steps: 5);
+    expect(closedBy('stop'), isTrue);
+  });
 }
