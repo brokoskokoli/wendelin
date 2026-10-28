@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete, solange der Maintainer am Rechner ist (
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: keins; Test-APK v0.1.0-rc11 (ded48a2c); als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP166; Test-APK v0.1.0-rc11 (ded48a2c); als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -112,6 +112,7 @@ Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: keins; Tes
 | WP163 | Gesperrt: Anfrage und Antwort im Overlay, Entsperren-Knopf oben, kein pauschaler Sperrtext; Teil B: Aktionen wie Navigation nach dem Entsperren ausführen | gemergt 8375fb0e | K131 offen. Werkzeuge „wirkt nur entsperrt“: maps__navigate, maps__search_place, location__navigate_to, media__open_audible, obsidian__open_note, phone__call, station__start. Folgepunkte: Gerätetest `docs/testing/m5/wp163.md` (echte Route nach Entsperren, Abbruch/60 s, Telefon-App, Satz hör-/sichtbar); Spotify gesperrt ohne aktives Gerät prüfen; Backlog: Einträge gesperrter Läufe erscheinen nach dem Entsperren im Transkript (seit WP154), Tool-Call-Ids gesperrter Läufe können mit offener Unterhaltung kollidieren (eindeutige Ids); Tastaturknopf gesperrt optisch nicht als deaktiviert erkennbar; E2E endet im Testgerüst rot („SemanticsHandle active“) |
 | WP164 | Kontakte: Felder gezielt abfragen, Navigation zu Kontakt in einem Schritt, Waze-Integration | gemergt f132ff77 | K133 offen. Folgepunkte: Gerätetest `docs/testing/m5/wp164.md` (Waze installiert, navigiert q= direkt?, Navigation zu Kontakt mit Maps und Waze); Soll: zweiter Sortierschlüssel CONTACT_ID (ContactsChannel.kt:178), doppelte Anzeige-Bezeichnungen bei Teilsuche (contacts_tools.dart:586), gleiche Namen nur per Index unterscheidbar |
 | WP165 | Kommunikationsmodus raus: Schalter „Antwort als Gesprächston“ und zugehöriger Code entfernen, früherer Modus | gemergt 95b13cd3 | Ursache: mit Schalter an lief die Antwort als USAGE_VOICE_COMMUNICATION/MODE_IN_COMMUNICATION (Anruf-Stream, eigene Lautstärke), aus Code belegt. K132 offen (nimmt K88/K93 zurück). Bleiben: Prüfer B und Echo-Filter (WP151), MODIFY_AUDIO_SETTINGS, Aufnahme VOICE_COMMUNICATION+AEC (Entscheidung Maintainer 2026-10-28). Folgepunkte: Gerätetest `docs/testing/m5/wp165.md` (Lautstärke gleichbleibend, Stopp/Weckwort-Unterbrechen 10× ohne Gesprächston, Bluetooth, Update mit altem Schalter an); Soll: E2E-Messung „während Antwort 2“ auf laufende Wiedergabe warten lassen |
+| WP166 | Spotify: läuft schon etwas, dort weiterspielen statt aufs Handy wechseln | in Arbeit | Gerätetest Maintainer rc11 2026-10-28 (Chromecast lief, Befehl wechselte aufs Handy); korrigiert K129 |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
