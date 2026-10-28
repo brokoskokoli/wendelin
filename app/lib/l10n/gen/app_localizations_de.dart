@@ -5599,6 +5599,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get wakeWordRelearnForVerifier => 'Neu einlernen für den Prüfer.';
 
   @override
+  String get wakeStage2GapNotice =>
+      'Die zweite Prüfung kann nicht entscheiden: Für „Hey Wendelin“ fehlt ein Erkennungsmodell, und die eingelernte Stimme hat noch keine Folgen für den Prüfer. Treffer werden deshalb verworfen. Lade das Erkennungsmodell oder lerne die Stimme neu ein.';
+
+  @override
+  String get wakeStage2GapLoad => 'Erkennungsmodell laden';
+
+  @override
   String get wakeWordRetrain => 'Neu einlernen';
 
   @override

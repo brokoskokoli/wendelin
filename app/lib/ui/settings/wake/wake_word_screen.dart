@@ -82,7 +82,9 @@ class WakeWordScreen extends ConsumerWidget {
               ? () => unawaited(_test(context, ref, speakers))
               : null,
         ),
-        if (installed) const WakeModelsNotice(optional: true),
+        const WakeStage2GapNotice(),
+        if (installed && !ref.watch(wakeStage2GapProvider))
+          const WakeModelsNotice(optional: true),
         if (speakers.isNotEmpty)
           WideButton(
             context.l10n.wakeWordDeleteAll,

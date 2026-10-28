@@ -3297,6 +3297,8 @@
     }
   },
   "wakeWordRelearnForVerifier": "Neu einlernen für den Prüfer.",
+  "wakeStage2GapNotice": "Die zweite Prüfung kann nicht entscheiden: Für „Hey Wendelin“ fehlt ein Erkennungsmodell, und die eingelernte Stimme hat noch keine Folgen für den Prüfer. Treffer werden deshalb verworfen. Lade das Erkennungsmodell oder lerne die Stimme neu ein.",
+  "wakeStage2GapLoad": "Erkennungsmodell laden",
   "wakeWordRetrain": "Neu einlernen",
   "wakeWordTemplatesFew": "Nur {count} brauchbare Aufnahmen übrig. Bitte neu einlernen.",
   "@wakeWordTemplatesFew": {

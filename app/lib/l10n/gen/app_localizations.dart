@@ -9507,6 +9507,18 @@ abstract class AppLocalizations {
   /// **'Neu einlernen für den Prüfer.'**
   String get wakeWordRelearnForVerifier;
 
+  /// No description provided for @wakeStage2GapNotice.
+  ///
+  /// In de, this message translates to:
+  /// **'Die zweite Prüfung kann nicht entscheiden: Für „Hey Wendelin“ fehlt ein Erkennungsmodell, und die eingelernte Stimme hat noch keine Folgen für den Prüfer. Treffer werden deshalb verworfen. Lade das Erkennungsmodell oder lerne die Stimme neu ein.'**
+  String get wakeStage2GapNotice;
+
+  /// No description provided for @wakeStage2GapLoad.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennungsmodell laden'**
+  String get wakeStage2GapLoad;
+
   /// No description provided for @wakeWordRetrain.
   ///
   /// In de, this message translates to:

@@ -5571,6 +5571,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wakeWordRelearnForVerifier => 'Train again for the checker.';
 
   @override
+  String get wakeStage2GapNotice =>
+      'The second check cannot decide: “Hey Wendelin” has no recognition model, and the learned voice has no sequences for the checker yet. Hits are therefore dropped. Download the recognition model or train the voice again.';
+
+  @override
+  String get wakeStage2GapLoad => 'Download recognition model';
+
+  @override
   String get wakeWordRetrain => 'Train again';
 
   @override

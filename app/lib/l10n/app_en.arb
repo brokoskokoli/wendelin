@@ -1876,6 +1876,8 @@
   "wakeWordPerson": "Person {number}",
   "wakeWordRecordingsThreshold": "{length} recordings · threshold {v}",
   "wakeWordRelearnForVerifier": "Train again for the checker.",
+  "wakeStage2GapNotice": "The second check cannot decide: “Hey Wendelin” has no recognition model, and the learned voice has no sequences for the checker yet. Hits are therefore dropped. Download the recognition model or train the voice again.",
+  "wakeStage2GapLoad": "Download recognition model",
   "wakeWordRetrain": "Train again",
   "wakeWordTemplatesFew": "Only {count} usable recordings left. Please train again.",
   "wakeWordTemplatesMissing": "Templates missing. Please train again.",

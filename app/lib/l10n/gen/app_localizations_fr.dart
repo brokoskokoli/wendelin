@@ -5629,6 +5629,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Entraîner de nouveau pour le vérificateur.';
 
   @override
+  String get wakeStage2GapNotice =>
+      'La seconde vérification ne peut pas trancher : il manque un modèle de reconnaissance pour « Hey Wendelin », et la voix apprise n’a pas encore de séquences pour le vérificateur. Les détections sont donc rejetées. Télécharge le modèle de reconnaissance ou entraîne la voix de nouveau.';
+
+  @override
+  String get wakeStage2GapLoad => 'Télécharger le modèle de reconnaissance';
+
+  @override
   String get wakeWordRetrain => 'Entraîner de nouveau';
 
   @override

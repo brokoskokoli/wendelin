@@ -34,6 +34,75 @@ final wakeVerifyMissingProvider = Provider<List<SpeechModel>>((ref) {
   return [if (m != null && states[m.id]?.phase != ModelPhase.installed) m];
 });
 
+/// Recognizers stage 2 can fall back on (Parakeet preferred, then Whisper).
+final _stage2Models = [
+  SpeechModelCatalog.parakeetV3,
+  SpeechModelCatalog.whisperSmall,
+  SpeechModelCatalog.whisperBase,
+];
+
+/// Whether the install [states] are read and none of the stage 2
+/// recognizers (Parakeet, Whisper) is installed. False while the states
+/// are not read yet (no flash of the notice at start).
+@visibleForTesting
+bool wakeStage2HasNoModel(Map<String, ModelState> states) =>
+    _stage2Models.every((m) {
+      final phase = states[m.id]?.phase;
+      return phase != null &&
+          phase != ModelPhase.unknown &&
+          phase != ModelPhase.installed;
+    });
+
+/// WP171: stage 2 cannot decide. At least one learned voice has no
+/// sequences for verifier B (so B passes) and neither Parakeet nor Whisper
+/// is installed (so the fallback has no model either); every candidate
+/// would be dropped. False while the install states are not read yet
+/// (no flash of the notice at start).
+final wakeStage2GapProvider = Provider<bool>((ref) {
+  final speakers = ref.watch(wakeSpeakersProvider).value ?? const [];
+  final noSequences = speakers.any((s) {
+    final t = ref.watch(wakeTemplatesProvider(s.id)).value;
+    return t != null && !t.hasSequences;
+  });
+  if (!noSequences) return false;
+  return wakeStage2HasNoModel(ref.watch(modelStatesProvider));
+});
+
+/// WP171: notice „Erkennungsmodell laden“ while [wakeStage2GapProvider] is
+/// true. The button downloads Parakeet through the model management
+/// (`ModelStatesNotifier.download`, no further conditions there).
+class WakeStage2GapNotice extends ConsumerWidget {
+  /// Creates the notice.
+  const WakeStage2GapNotice({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!ref.watch(wakeStage2GapProvider)) return const SizedBox.shrink();
+    final id = SpeechModelCatalog.parakeetV3.id;
+    final phase = ref.watch(modelStatesProvider.select((s) => s[id]?.phase));
+    final loading =
+        phase == ModelPhase.downloading || phase == ModelPhase.unpacking;
+    return Column(
+      key: const ValueKey('wakeStage2Gap'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: WSpace.s,
+      children: [
+        Text(context.l10n.wakeStage2GapNotice, style: WText.caption),
+        WideButton(
+          loading
+              ? context.l10n.voiceDownloadLoading
+              : context.l10n.wakeStage2GapLoad,
+          onPressed: loading
+              ? null
+              : () => unawaited(
+                  ref.read(modelStatesProvider.notifier).download(id),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Notice with „Sprachmodell laden“ while [wakeMissingModelsProvider] is
 /// not empty; nothing otherwise. Replaces the cryptic error the start of
 /// enrolling, calibrating or trying out would give without the models.

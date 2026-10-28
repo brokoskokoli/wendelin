@@ -1876,6 +1876,8 @@
   "wakeWordPerson": "Personne {number}",
   "wakeWordRecordingsThreshold": "{length} enregistrements · seuil {v}",
   "wakeWordRelearnForVerifier": "Entraîner de nouveau pour le vérificateur.",
+  "wakeStage2GapNotice": "La seconde vérification ne peut pas trancher : il manque un modèle de reconnaissance pour « Hey Wendelin », et la voix apprise n’a pas encore de séquences pour le vérificateur. Les détections sont donc rejetées. Télécharge le modèle de reconnaissance ou entraîne la voix de nouveau.",
+  "wakeStage2GapLoad": "Télécharger le modèle de reconnaissance",
   "wakeWordRetrain": "Entraîner de nouveau",
   "wakeWordTemplatesFew": "Seulement {count} enregistrements utilisables. Veuillez entraîner de nouveau.",
   "wakeWordTemplatesMissing": "Modèles manquants. Veuillez entraîner de nouveau.",
