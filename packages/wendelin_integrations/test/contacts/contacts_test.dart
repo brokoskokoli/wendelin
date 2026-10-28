@@ -136,6 +136,127 @@ void main() {
     });
   });
 
+  group('Kontaktsuche mit fields (WP164)', () {
+    setUp(() {
+      book.contacts = const [
+        ContactEntry(
+          name: 'Anna Meier',
+          phones: [ContactPhone('+49 170 1234567', label: 'Mobil')],
+          emails: ['anna@example.org'],
+          addresses: [
+            ContactAddress(
+              'Musterstraße 1, 12345 Musterstadt',
+              label: 'Privat',
+            ),
+          ],
+          birthday: '1985-03-14',
+          organization: 'Muster GmbH',
+        ),
+        ContactEntry(
+          name: 'Ben Weber',
+          phones: [ContactPhone('0172 333')],
+          addresses: [
+            ContactAddress(
+              'Beispielweg 2, 54321 Beispielstadt',
+              label: 'Privat',
+            ),
+            ContactAddress(
+              'Werkstraße 3, 54321 Beispielstadt',
+              label: 'Arbeit',
+            ),
+          ],
+        ),
+      ];
+    });
+    Future<Map<String, Object?>> find(String q, [Object? fields]) async {
+      final o = await tool('contacts__find')
+          .execute({'query': q, 'fields': ?fields}, ctx());
+      expect(o.isError, isFalse, reason: o.text);
+      return json(o);
+    }
+
+    Map<Object?, Object?> only(Map<String, Object?> r) =>
+        (r['matches']! as List).single! as Map<Object?, Object?>;
+
+    test('ohne fields wie bisher: nur Name, Telefon, Mail', () async {
+      final m = only(await find('Anna'));
+      expect(m.keys, unorderedEquals(['name', 'phones', 'emails']));
+      expect(book.requested.single, defaultContactFields);
+    });
+
+    test('address: genau Name und Adressen, nichts sonst', () async {
+      final r = await find('Anna', ['address']);
+      final m = only(r);
+      expect(m.keys, unorderedEquals(['name', 'addresses']));
+      expect(m['addresses'], [
+        {'address': 'Musterstraße 1, 12345 Musterstadt', 'label': 'Privat'},
+      ]);
+      expect(r['choice_needed'], isFalse);
+      expect(book.requested.single, {ContactField.address});
+    });
+
+    test('birthday und organization: genau diese Felder', () async {
+      final m = only(await find('Anna', ['birthday', 'organization']));
+      expect(m.keys, unorderedEquals(['name', 'birthday', 'organization']));
+      expect(m['birthday'], '1985-03-14');
+      expect(m['organization'], 'Muster GmbH');
+    });
+
+    test('Feld ohne Wert: Liste leer, Skalar fehlt', () async {
+      final m = only(await find('Ben', ['address', 'birthday']));
+      expect(m.keys, unorderedEquals(['name', 'addresses']));
+      final none = only(await find('Anna', ['email', 'address']));
+      expect(none['emails'], ['anna@example.org']);
+    });
+
+    test('mehrere Adressen eines Treffers: choice_needed', () async {
+      final r = await find('Ben', ['address']);
+      expect(r['choice_needed'], isTrue);
+      expect(r['hint'], contains('address'));
+      expect((only(r)['addresses']! as List), hasLength(2));
+    });
+
+    test(
+      'mehrere Adressen, aber nur Telefon angefragt: keine Rückfrage',
+      () async {
+        final r = await find('Ben', ['phone']);
+        expect(r['choice_needed'], isFalse);
+      },
+    );
+
+    for (final bad in <Object>[
+      ['note'],
+      ['address', 'Phone'],
+      <String>[],
+      'address',
+      [1],
+    ]) {
+      test('fail-closed: fields $bad wird abgelehnt', () async {
+        final o = await tool('contacts__find')
+            .execute({'query': 'Anna', 'fields': bad}, ctx());
+        expect(o.isError, isTrue);
+        expect(book.requested, isEmpty, reason: 'Adressbuch nicht angefasst');
+        if (bad is List && bad.isNotEmpty && bad.first is String) {
+          expect(o.text, contains('phone, email, address, birthday'));
+        }
+      });
+    }
+
+    test('Schema: enum ohne Notizen, Beschreibung nennt Navigation', () {
+      final t = tool('contacts__find');
+      final f = (t.inputSchema['properties']! as Map)['fields']! as Map;
+      expect((f['items']! as Map)['enum'], [
+        'phone',
+        'email',
+        'address',
+        'birthday',
+        'organization',
+      ]);
+      expect(t.description, contains('maps__navigate'));
+      expect(t.inputSchema['required'], ['query']);
+    });
+  });
+
   group('sms__compose', () {
     test(
       'Bestätigungstext nennt Name aus dem Adressbuch, nicht vom Modell',

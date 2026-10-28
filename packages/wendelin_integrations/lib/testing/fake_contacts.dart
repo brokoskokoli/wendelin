@@ -14,19 +14,40 @@ final class FakeContactsPort with FakeFailures implements ContactsPort {
   /// Whether reading is allowed.
   bool permission;
 
+  /// The `fields` of every [all] call, in order.
+  final List<Set<ContactField>> requested = [];
+
   @override
   Future<bool> hasPermission() async => permission;
 
   @override
-  Future<List<ContactEntry>> all() async {
+  Future<List<ContactEntry>> all({
+    Set<ContactField> fields = defaultContactFields,
+  }) async {
     enter('all');
+    requested.add(fields);
     if (!permission) {
       throw const PortException(
         PortErrorKind.permissionDenied,
         'Kein Zugriff auf die Kontakte.',
       );
     }
-    return contacts;
+    // Like the real port: only the requested fields are filled in.
+    return [
+      for (final c in contacts)
+        ContactEntry(
+          name: c.name,
+          phones: fields.contains(ContactField.phone) ? c.phones : const [],
+          emails: fields.contains(ContactField.email) ? c.emails : const [],
+          addresses: fields.contains(ContactField.address)
+              ? c.addresses
+              : const [],
+          birthday: fields.contains(ContactField.birthday) ? c.birthday : null,
+          organization: fields.contains(ContactField.organization)
+              ? c.organization
+              : null,
+        ),
+    ];
   }
 }
 

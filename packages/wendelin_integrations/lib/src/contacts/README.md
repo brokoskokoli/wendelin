@@ -2,7 +2,7 @@
 
 | Tool | Risiko | Zweck |
 | --- | --- | --- |
-| `contacts__find` | read | Name suchen: Nummern und Mailadressen; mehrdeutige Treffer als Auswahl |
+| `contacts__find` | read | Name suchen: Nummern und Mailadressen; optional `fields` (phone, email, address, birthday, organization, keine Notizen); mehrdeutige Treffer, Nummern oder Adressen als Auswahl |
 | `sms__compose` | external | SMS mit Vorschau in der App senden |
 | `phone__call` | external | Anruf mit Vorschau starten |
 
@@ -12,7 +12,9 @@ Die Integration ist **sensibel** (`sensitive`): Kontaktdaten gehen nur an TEE-An
 
 **Audit**: Tool, Empfängername und Ergebnis, nie der Nachrichtentext (`ToolExecutor`, Test `audit_redaction_test.dart`).
 
-**Ports**: `ContactsPort` (`hasPermission`, `all`), `PhonePort` (`canSendSms`, `sendSms`, `call` → `CallPlacement.direct` oder `.dialer`). Fehler als `PortException`. Fakes `FakeContactsPort`, `FakePhonePort`.
+**`fields` (WP164)**: Ohne `fields` genau Telefon und Mail wie bisher. Mit `fields` enthält das Ergebnis nur die angefragten Felder (Listen auch leer, Geburtstag und Firma nur wenn gespeichert); unbekannte oder leere Werte lehnt das Tool mit der Liste der erlaubten Felder ab (fail-closed). Der Kanal liest Postadresse, Geburtstag (Event-Typ Geburtstag) und Firma nur, wenn angefragt; Telefon- und Mailzeilen bestimmen weiter, welche Kontakte es gibt, werden aber nur herausgegeben, wenn angefragt. Für „Navigiere zu X“ fragt das Modell `address` und gibt die Adresse an `maps__navigate`.
+
+**Ports**: `ContactsPort` (`hasPermission`, `all({fields})`), `PhonePort` (`canSendSms`, `sendSms`, `call` → `CallPlacement.direct` oder `.dialer`). Fehler als `PortException`. Fakes `FakeContactsPort`, `FakePhonePort`.
 
 **Kotlin**: `ContactsChannel` (`ContactsContract`, `SmsManager`, `ACTION_CALL`/`ACTION_DIAL`), Zeilenaufbereitung in `ContactRows`.
 

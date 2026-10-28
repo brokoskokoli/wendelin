@@ -31,6 +31,15 @@ final class _FakeContactsChannel {
               {'number': '030 222'},
             ],
             'emails': ['anna@example.org'],
+            'addresses': [
+              {
+                'address': 'Musterstraße 1, 12345 Musterstadt',
+                'label': 'Privat',
+              },
+              {'address': 'Beispielweg 2, 54321 Beispielstadt'},
+            ],
+            'birthday': '1985-03-14',
+            'organization': 'Muster GmbH',
           },
           {'name': 'Ben'},
         ];
@@ -68,6 +77,38 @@ void main() {
     expect(all.first.phones.last.label, isEmpty);
     expect(all.first.emails, ['anna@example.org']);
     expect(all.last.phones, isEmpty);
+  });
+
+  test('all(): ohne Angabe fragt der Kanal Telefon und Mail', () async {
+    await port.all();
+    final args = platform.calls.single.arguments as Map<Object?, Object?>;
+    expect(args['fields'], unorderedEquals(['phone', 'email']));
+  });
+
+  test('all(fields): Feldnamen gehen an den Kanal, Adresse, Geburtstag und '
+      'Firma kommen zurück', () async {
+    final all = await port.all(
+      fields: {
+        ContactField.address,
+        ContactField.birthday,
+        ContactField.organization,
+      },
+    );
+    final args = platform.calls.single.arguments as Map<Object?, Object?>;
+    expect(
+      args['fields'],
+      unorderedEquals(['address', 'birthday', 'organization']),
+    );
+    final anna = all.first;
+    expect(anna.addresses.map((a) => a.address), [
+      'Musterstraße 1, 12345 Musterstadt',
+      'Beispielweg 2, 54321 Beispielstadt',
+    ]);
+    expect(anna.addresses.map((a) => a.label), ['Privat', '']);
+    expect(anna.birthday, '1985-03-14');
+    expect(anna.organization, 'Muster GmbH');
+    expect(all.last.addresses, isEmpty);
+    expect(all.last.birthday, isNull);
   });
 
   test('Berechtigungen', () async {

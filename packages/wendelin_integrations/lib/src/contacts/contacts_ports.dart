@@ -18,6 +18,56 @@ final class ContactPhone {
   };
 }
 
+/// A postal address of a [ContactEntry].
+final class ContactAddress {
+  /// Creates an address with its [label] (`Privat`, `Arbeit`, …; may be
+  /// empty).
+  const ContactAddress(this.address, {this.label = ''});
+
+  /// The formatted address as stored in the address book.
+  final String address;
+
+  /// Kind of the address as the user named it.
+  final String label;
+
+  /// JSON form for the model.
+  Map<String, Object?> toJson() => {
+    'address': address,
+    if (label.isNotEmpty) 'label': label,
+  };
+}
+
+/// A piece of a contact `contacts__find` may be asked for (`fields`). Notes
+/// are deliberately not part of it.
+enum ContactField {
+  /// Phone numbers.
+  phone,
+
+  /// Mail addresses.
+  email,
+
+  /// Postal addresses.
+  address,
+
+  /// Birthday.
+  birthday,
+
+  /// Company or organization.
+  organization;
+
+  /// Parses the wire name, `null` if unknown.
+  static ContactField? byName(String name) {
+    for (final f in values) {
+      if (f.name == name) return f;
+    }
+    return null;
+  }
+}
+
+/// What is read without a `fields` request: phone numbers and mail
+/// addresses.
+const defaultContactFields = {ContactField.phone, ContactField.email};
+
 /// A person in the address book.
 final class ContactEntry {
   /// Creates an entry.
@@ -25,6 +75,9 @@ final class ContactEntry {
     required this.name,
     this.phones = const [],
     this.emails = const [],
+    this.addresses = const [],
+    this.birthday,
+    this.organization,
   });
 
   /// Display name.
@@ -36,11 +89,37 @@ final class ContactEntry {
   /// Mail addresses.
   final List<String> emails;
 
-  /// JSON form for the model.
+  /// Postal addresses.
+  final List<ContactAddress> addresses;
+
+  /// Birthday as stored (`1985-03-14`, or `--03-14` without a year).
+  final String? birthday;
+
+  /// Company or organization.
+  final String? organization;
+
+  /// JSON form for the model without a `fields` request: phones and mail
+  /// addresses only.
   Map<String, Object?> toJson() => {
     'name': name,
     'phones': [for (final p in phones) p.toJson()],
     if (emails.isNotEmpty) 'emails': emails,
+  };
+
+  /// JSON form with exactly the requested [fields] (plus the name). Lists
+  /// the model asked for are present even if empty, so "none stored" is
+  /// visible; birthday and organization are left out when missing.
+  Map<String, Object?> toJsonFor(Set<ContactField> fields) => {
+    'name': name,
+    if (fields.contains(ContactField.phone))
+      'phones': [for (final p in phones) p.toJson()],
+    if (fields.contains(ContactField.email)) 'emails': emails,
+    if (fields.contains(ContactField.address))
+      'addresses': [for (final a in addresses) a.toJson()],
+    if (fields.contains(ContactField.birthday) && birthday != null)
+      'birthday': birthday,
+    if (fields.contains(ContactField.organization) && organization != null)
+      'organization': organization,
   };
 }
 
@@ -53,8 +132,12 @@ abstract interface class ContactsPort {
   Future<bool> hasPermission();
 
   /// All contacts that have a phone number or a mail address (matching is
-  /// done by [ContactsFinder], so it is the same on every platform).
-  Future<List<ContactEntry>> all();
+  /// done by [ContactsFinder], so it is the same on every platform), with
+  /// only the requested [fields] filled in. Data beyond phone and mail is
+  /// read from the address book only when asked for here.
+  Future<List<ContactEntry>> all({
+    Set<ContactField> fields = defaultContactFields,
+  });
 }
 
 /// How [PhonePort.call] started the call.
@@ -171,7 +254,11 @@ final class ContactsFinder {
   /// Contacts matching [query] (folded: case, umlauts and punctuation
   /// ignored). Every word of the query must start a word of the name. An exact full-name match wins over partial matches, so
   /// „Anna“ finds only „Anna“ when she exists, not „Anna Meier“ as well.
-  Future<List<ContactEntry>> find(String query, {int limit = 8}) async {
+  Future<List<ContactEntry>> find(
+    String query, {
+    int limit = 8,
+    Set<ContactField> fields = defaultContactFields,
+  }) async {
     final q = foldForMatch(query);
     if (q.isEmpty) return const [];
     final words = q.split(' ');
@@ -182,7 +269,7 @@ final class ContactsFinder {
 
     final matches = <ContactEntry>[];
     final exact = <ContactEntry>[];
-    for (final c in await port.all()) {
+    for (final c in await port.all(fields: fields)) {
       final name = foldForMatch(c.name);
       if (name == q) exact.add(c);
       if (hits(name)) matches.add(c);

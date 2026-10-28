@@ -10,7 +10,10 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.ContactsContract
 import android.provider.ContactsContract.CommonDataKinds.Email
+import android.provider.ContactsContract.CommonDataKinds.Event
+import android.provider.ContactsContract.CommonDataKinds.Organization
 import android.provider.ContactsContract.CommonDataKinds.Phone
+import android.provider.ContactsContract.CommonDataKinds.StructuredPostal
 import android.telephony.SmsManager
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
@@ -55,7 +58,16 @@ class ContactsChannel(private val activity: Activity, messenger: BinaryMessenger
             "hasPermission" -> result.success(has(Manifest.permission.READ_CONTACTS))
             "requestPermission" -> requestPermission(result)
             "canSendSms" -> result.success(has(Manifest.permission.SEND_SMS))
-            "all" -> io.execute { reply(result) { readAll() } }
+            "all" -> {
+                val args = ChannelArgs.of(call.arguments)
+                val fields = try {
+                    ContactRows.parseFields(args.stringList("fields"))
+                } catch (e: ArgumentException) {
+                    result.error("bad_args", e.message, null)
+                    return
+                }
+                io.execute { reply(result) { readAll(fields) } }
+            }
             "sendSms" -> {
                 val args = ChannelArgs.of(call.arguments)
                 io.execute {
@@ -117,7 +129,12 @@ class ContactsChannel(private val activity: Activity, messenger: BinaryMessenger
         activity.requestPermissions(missing.toTypedArray(), PERMISSION_REQUEST)
     }
 
-    private fun readAll(): List<Map<String, Any>> {
+    /**
+     * Phone and mail rows are always read (they decide which contacts exist, as before); postal
+     * address, birthday and organization rows only when [fields] asks for them. [ContactRows.merge]
+     * hands out the requested fields only.
+     */
+    private fun readAll(fields: Set<ContactRows.Kind>): List<Map<String, Any>> {
         if (!has(Manifest.permission.READ_CONTACTS)) throw PermissionException("READ_CONTACTS")
         val rows = mutableListOf<ContactRows.Row>()
         val projection = arrayOf(
@@ -128,25 +145,44 @@ class ContactsChannel(private val activity: Activity, messenger: BinaryMessenger
             ContactsContract.Data.DATA2,
             ContactsContract.Data.DATA3,
         )
-        val selection = "${ContactsContract.Data.MIMETYPE} IN (?, ?)"
+        val types = mutableListOf(Phone.CONTENT_ITEM_TYPE, Email.CONTENT_ITEM_TYPE)
+        if (ContactRows.Kind.ADDRESS in fields) types.add(StructuredPostal.CONTENT_ITEM_TYPE)
+        if (ContactRows.Kind.ORGANIZATION in fields) types.add(Organization.CONTENT_ITEM_TYPE)
+        var selection = "${ContactsContract.Data.MIMETYPE} IN (${types.joinToString(",") { "?" }})"
+        val selectionArgs = types.toMutableList()
+        if (ContactRows.Kind.BIRTHDAY in fields) {
+            selection += " OR (${ContactsContract.Data.MIMETYPE} = ? AND ${ContactsContract.Data.DATA2} = ?)"
+            selectionArgs.add(Event.CONTENT_ITEM_TYPE)
+            selectionArgs.add(Event.TYPE_BIRTHDAY.toString())
+        }
         activity.contentResolver.query(
             ContactsContract.Data.CONTENT_URI,
             projection,
             selection,
-            arrayOf(Phone.CONTENT_ITEM_TYPE, Email.CONTENT_ITEM_TYPE),
+            selectionArgs.toTypedArray(),
             "${ContactsContract.Data.DISPLAY_NAME} COLLATE NOCASE",
         )?.use { c ->
             while (c.moveToNext()) {
-                val isPhone = c.getString(2) == Phone.CONTENT_ITEM_TYPE
-                val label = if (isPhone) {
-                    Phone.getTypeLabel(activity.resources, c.getInt(4), c.getString(5)).toString()
-                } else {
-                    null
+                val mime = c.getString(2)
+                val kind = when (mime) {
+                    Phone.CONTENT_ITEM_TYPE -> ContactRows.Kind.PHONE
+                    Email.CONTENT_ITEM_TYPE -> ContactRows.Kind.EMAIL
+                    StructuredPostal.CONTENT_ITEM_TYPE -> ContactRows.Kind.ADDRESS
+                    Event.CONTENT_ITEM_TYPE -> ContactRows.Kind.BIRTHDAY
+                    Organization.CONTENT_ITEM_TYPE -> ContactRows.Kind.ORGANIZATION
+                    else -> continue
                 }
-                rows.add(ContactRows.Row(c.getLong(0), c.getString(1), isPhone, c.getString(3), label))
+                val label = when (kind) {
+                    ContactRows.Kind.PHONE ->
+                        Phone.getTypeLabel(activity.resources, c.getInt(4), c.getString(5)).toString()
+                    ContactRows.Kind.ADDRESS ->
+                        StructuredPostal.getTypeLabel(activity.resources, c.getInt(4), c.getString(5)).toString()
+                    else -> null
+                }
+                rows.add(ContactRows.Row(c.getLong(0), c.getString(1), kind, c.getString(3), label))
             }
         }
-        return ContactRows.merge(rows)
+        return ContactRows.merge(rows, fields)
     }
 
     private fun sendSms(number: String, text: String) {

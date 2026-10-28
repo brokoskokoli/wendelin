@@ -27,11 +27,11 @@ final class ContactsFindTool extends IntegrationTool
 
   @override
   String get description =>
-      'Look up a person in the address book by name. Returns matches with '
-      'phone numbers and mail addresses. If "choice_needed" is true there '
-      'is more than one match or number: ask the user which one is meant '
-      'and never guess. Use the exact "number" from this result for '
-      'sms__compose and phone__call.';
+      'Look up a person in the address book by name. Returns phones and mail '
+      'addresses, or only the "fields" you ask for. To navigate to '
+      'a person request ["address"] and pass the "address" to '
+      'maps__navigate. If "choice_needed" is true, ask the user which one '
+      'is meant, never guess. Use the exact "number" for sms__compose.';
 
   @override
   Map<String, Object?> get inputSchema => const {
@@ -40,6 +40,17 @@ final class ContactsFindTool extends IntegrationTool
       'query': {
         'type': 'string',
         'description': 'Name or part of the name, e.g. "Anna" or "Anna Meier".',
+      },
+      'fields': {
+        'type': 'array',
+        'items': {
+          'type': 'string',
+          'enum': ['phone', 'email', 'address', 'birthday', 'organization'],
+        },
+        'minItems': 1,
+        'description':
+            'Data to return, only what is needed. Default: phone and email. '
+            'Empty list = none stored.',
       },
     },
     'required': ['query'],
@@ -51,27 +62,64 @@ final class ContactsFindTool extends IntegrationTool
   @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final query = args.requireString('query');
-    final matches = await finder.find(query);
+    final fields = _requestedFields(args);
+    final matches = await finder.find(
+      query,
+      fields: fields ?? defaultContactFields,
+    );
     if (matches.isEmpty) {
       return ToolOutcome.text(
         jsonEncode({'matches': <Object>[], 'choice_needed': false}),
         summary: 'Kein Kontakt gefunden',
       );
     }
-    final choice = matches.length > 1 || matches.single.phones.length > 1;
+    final shown = fields ?? defaultContactFields;
+    final choice =
+        matches.length > 1 ||
+        (shown.contains(ContactField.phone) &&
+            matches.first.phones.length > 1) ||
+        (shown.contains(ContactField.address) &&
+            matches.first.addresses.length > 1);
     return jsonOutcome(
       {
-        'matches': [for (final m in matches) m.toJson()],
+        'matches': [
+          for (final m in matches)
+            fields == null ? m.toJson() : m.toJsonFor(fields),
+        ],
         'choice_needed': choice,
         if (choice)
           'hint':
-              'Ask the user which contact or number is meant before '
-              'writing or calling.',
+              'Ask the user which contact, number or address is meant '
+              'before writing, calling or navigating.',
       },
       summary: matches.length == 1
           ? 'Kontakt ${matches.single.name}'
           : '${matches.length} Kontakte',
     );
+  }
+
+  /// The `fields` argument; `null` if absent. Unknown names and an empty
+  /// list are refused (nothing is ignored silently).
+  static Set<ContactField>? _requestedFields(ToolArgs args) {
+    final raw = args.optStringList('fields');
+    if (raw == null) return null;
+    const allowed = 'phone, email, address, birthday, organization';
+    if (raw.isEmpty) {
+      throw const InvalidArgumentsException(
+        '„fields“ darf nicht leer sein. Erlaubt: $allowed',
+      );
+    }
+    final fields = <ContactField>{};
+    for (final name in raw) {
+      final f = ContactField.byName(name);
+      if (f == null) {
+        throw InvalidArgumentsException(
+          'Unbekanntes Feld „$name“ in „fields“. Erlaubt: $allowed',
+        );
+      }
+      fields.add(f);
+    }
+    return fields;
   }
 
   @override
