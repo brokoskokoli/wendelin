@@ -5012,14 +5012,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Allow it in the Android settings under Apps → Wendelin.';
 
   @override
-  String get speechCommunicationHelp =>
-      'The answer plays like a call through the speaker, so “Hey Wendelin” is recognized more reliably. Side effects: the call volume applies, the sound is thinner, and Bluetooth devices may switch playback. With headphones the output stays there. Applies from the next answer.';
-
-  @override
-  String get speechCommunicationTitle =>
-      'Answer as call audio (better echo cancellation)';
-
-  @override
   String get wakeCalibrateCancelled => 'Cancelled. Nothing was changed.';
 
   @override

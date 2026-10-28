@@ -35,14 +35,6 @@ abstract final class AppSettings {
   /// names) in the recognizer as text (`0.5`, `1.0` default, `1.5`).
   static final hotwordsBonus = SettingKey.string('debug.hotwordsBonus');
 
-  /// WP118 (K88, „Erweitert“): speak the answer in the call path
-  /// (`MODE_IN_COMMUNICATION`, `USAGE_VOICE_COMMUNICATION`) for a better echo
-  /// cancellation; off by default.
-  static final speechCommunication = SettingKey.boolean(
-    'voice.speechCommunication',
-    defaultValue: false,
-  );
-
   /// Show reasoning text of the model in the conversation (off by default).
   static final showThinking = SettingKey.boolean(
     'chat.showThinking',
@@ -95,6 +87,13 @@ abstract final class AppSettings {
   /// mode belongs to each TEE profile (`options.gpuCheck`); this key is only
   /// read once by `migrateGlobalGpuCheck` and then removed.
   static final legacyGpuCheck = SettingKey.string('tee.gpuCheck');
+
+  /// Removed setting „Antwort als Gesprächston“ (WP118, removed WP165);
+  /// only deleted at start by `migrateRemovedSpeechCommunication`.
+  static final legacySpeechCommunication = SettingKey.boolean(
+    'voice.speechCommunication',
+    defaultValue: false,
+  );
 
   /// Pin of the attested TEE provider [profileId] (JSON of `AttestationPin`).
   static SettingKey<Map<String, Object?>> attestationPin(String profileId) =>

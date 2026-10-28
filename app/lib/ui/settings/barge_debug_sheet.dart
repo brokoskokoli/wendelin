@@ -59,7 +59,6 @@ class BargeDebugSheet extends ConsumerStatefulWidget {
 class _State extends ConsumerState<BargeDebugSheet> {
   SpeechCapture _source = SpeechCapture.communication;
   String _margin = bargeMarginChoices.first;
-  bool _communication = false;
   String _bonus = hotwordsBonusChoices.first;
 
   @override
@@ -72,12 +71,10 @@ class _State extends ConsumerState<BargeDebugSheet> {
     final s = ref.read(storageProvider).settings;
     final source = await s.get(AppSettings.bargeSource);
     final margin = await s.get(AppSettings.bargeMargin);
-    final comm = await s.get(AppSettings.speechCommunication);
     final bonus = await s.get(AppSettings.hotwordsBonus);
     if (!mounted) return;
     setState(() {
       if (hotwordsBonusChoices.contains(bonus)) _bonus = bonus!;
-      _communication = comm ?? false;
       _source = SpeechCapture.parse(source);
       if (bargeMarginChoices.contains(margin)) _margin = margin!;
     });
@@ -128,15 +125,6 @@ class _State extends ConsumerState<BargeDebugSheet> {
     ),
     Text(context.l10n.hotwordsBonusHelp, style: WText.detail),
   ];
-
-  Future<void> _setCommunication(bool value) async {
-    await ref
-        .read(storageProvider)
-        .settings
-        .set(AppSettings.speechCommunication, value);
-    if (!mounted) return;
-    setState(() => _communication = value);
-  }
 
   Future<void> _reset() =>
       _set(SpeechCapture.communication, bargeMarginChoices.first);
@@ -202,13 +190,6 @@ class _State extends ConsumerState<BargeDebugSheet> {
           ),
           // WP148: only in developer mode; a stored value stays in effect.
           if (ref.watch(developerModeProvider)) ..._bonusSection(context),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(context.l10n.speechCommunicationTitle),
-            subtitle: Text(context.l10n.speechCommunicationHelp),
-            value: _communication,
-            onChanged: _setCommunication,
-          ),
         ],
       ),
     ),

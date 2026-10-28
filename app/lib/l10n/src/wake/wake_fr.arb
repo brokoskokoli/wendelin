@@ -19,8 +19,6 @@
   "micNotNow": "Pas maintenant",
   "micOnlyText": "Sans microphone, seul le texte fonctionne. {v}",
   "micSettingsHint": "Autorisez-le dans les paramètres Android sous Applications → Wendelin.",
-  "speechCommunicationHelp": "La réponse est jouée comme un appel par le haut-parleur, pour mieux reconnaître « Hey Wendelin ». Effets secondaires : le volume d’appel s’applique, le son est plus mince et les appareils Bluetooth peuvent changer la lecture. Avec un casque, la sortie y reste. S’applique à partir de la prochaine réponse.",
-  "speechCommunicationTitle": "Réponse en mode appel (meilleure suppression d’écho)",
   "wakeCalibrateCancelled": "Annulé. Rien n’a été modifié.",
   "wakeCalibrateDone": "Calibré.",
   "wakeCalibrateFailed": "Échec : {error}",

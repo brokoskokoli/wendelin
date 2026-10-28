@@ -3,6 +3,7 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../di/gpu_check_migration.dart';
 import '../di/integration_specs.dart';
+import '../di/speech_communication_migration.dart';
 import '../di/startup.dart';
 import '../di/stop_word_migration.dart';
 import '../platform/secure_secret_store.dart';
@@ -20,6 +21,7 @@ Future<(WendelinStorage, StartupSettings)> openAppStorage() async {
   );
   await migrateGlobalGpuCheck(storage.settings, storage.providerProfiles);
   await migrateRemovedStopWord(storage.settings, SecureSecretStore());
+  await migrateRemovedSpeechCommunication(storage.settings);
   final startup = await StartupSettings.load(storage.settings, [
     for (final s in builtInIntegrationSpecs) s.id,
   ]);

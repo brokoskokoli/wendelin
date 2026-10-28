@@ -8,11 +8,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/platform/channel_audio_focus_port.dart';
 import 'package:wendelin/platform/voice/ducking_tts.dart';
 import 'package:wendelin/platform/voice/sherpa_tts.dart';
+import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../support/test_env.dart';
@@ -96,7 +96,10 @@ void main() {
       );
       final c = env.container();
       addTearDown(c.dispose);
-      await env.storage.settings.set(AppSettings.speechCommunication, true);
+      await env.storage.settings.set(
+        SettingKey.boolean('voice.speechCommunication'),
+        true,
+      );
 
       final real = Provider<TextToSpeech>(
         (ref) => createSherpaTts(ref, installed: () async => const [_voice]),

@@ -5065,14 +5065,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Autorisez-le dans les paramètres Android sous Applications → Wendelin.';
 
   @override
-  String get speechCommunicationHelp =>
-      'La réponse est jouée comme un appel par le haut-parleur, pour mieux reconnaître « Hey Wendelin ». Effets secondaires : le volume d’appel s’applique, le son est plus mince et les appareils Bluetooth peuvent changer la lecture. Avec un casque, la sortie y reste. S’applique à partir de la prochaine réponse.';
-
-  @override
-  String get speechCommunicationTitle =>
-      'Réponse en mode appel (meilleure suppression d’écho)';
-
-  @override
   String get wakeCalibrateCancelled => 'Annulé. Rien n’a été modifié.';
 
   @override
