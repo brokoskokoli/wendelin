@@ -64,24 +64,9 @@ final audioFocusPortProvider = Provider<AudioFocusPort>(
   (ref) => ChannelAudioFocusPort(),
 );
 
-/// The call path for the spoken answer (WP118, K88).
-final speechRoutePortProvider = Provider<SpeechRoutePort>(
-  (ref) => ChannelSpeechRoutePort(),
-);
-
 /// Holds the ducking focus for a whole spoken answer (WP90).
 final speechFocusProvider = Provider<SpeechFocus>((ref) {
-  final focus = SpeechFocus(
-    ref.watch(audioFocusPortProvider),
-    route: ref.watch(speechRoutePortProvider),
-    // WP118: setting „Antwort als Gesprächston“ (off by default).
-    communication: () async =>
-        await ref
-            .read(storageProvider)
-            .settings
-            .get(AppSettings.speechCommunication) ??
-        false,
-  );
+  final focus = SpeechFocus(ref.watch(audioFocusPortProvider));
   ref.onDispose(focus.drop);
   return focus;
 });
@@ -90,11 +75,9 @@ final speechFocusProvider = Provider<SpeechFocus>((ref) {
 final audioInputProvider = Provider<AudioInput>(
   (ref) => RecordAudioInput(
     ref.watch(microphoneProvider),
-    // WP146: the follow-up recording opens after the call path of the
-    // answer is given back; `mic-start` logs AudioManager.mode (always: the
-    // channel answers `null` where there is none, e.g. in tests).
-    () => ref.read(speechFocusProvider).settle(),
-    () => ChannelSpeechRoutePort().audioMode(),
+    // `mic-start` logs AudioManager.mode (always: the channel answers `null`
+    // where there is none, e.g. in tests).
+    () => ChannelAudioMode().read(),
     // WP146: a second recorder, so the barge-in recording can go on until
     // the follow-up recording has its first frame.
     () => RecordPcmRecorder(
@@ -396,9 +379,7 @@ TextToSpeech createSherpaTts(
           await ref.read(speechModelServiceProvider.future),
           ref.read(speechModelCatalogProvider),
         );
-  final own = playback == null
-      ? AudioplayersPlayback(null, () => ref.read(speechFocusProvider).routed)
-      : null;
+  final own = playback == null ? AudioplayersPlayback() : null;
   if (own != null) onDisposeTracked(ref, own.dispose);
   final out = playback ?? own!;
   return SherpaTextToSpeech(

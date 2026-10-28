@@ -7,7 +7,6 @@ Alle `abstract interface class` mit Namensendung `Port`, `Api`, `Secrets` oder `
 | Port | Paket | Datei | Implementierer | Fakes |
 | --- | --- | --- | --- | --- |
 | `AudioFocusPort` | `app` | `app/lib/platform/channel_audio_focus_port.dart` | `ChannelAudioFocusPort` (`app/lib/platform/channel_audio_focus_port.dart`) | – |
-| `SpeechRoutePort` | `app` | `app/lib/platform/channel_audio_focus_port.dart` | `ChannelSpeechRoutePort` (`app/lib/platform/channel_audio_focus_port.dart`) | – |
 | `AlarmPort` | `wendelin_integrations` | `packages/wendelin_integrations/lib/src/alarms/alarms.dart` | `AndroidAlarmPort` (`app/lib/platform/android_alarm_port.dart`) | `FakeAlarmPort` (`packages/wendelin_integrations/lib/testing/fake_alarm_port.dart`) |
 | `AppPresencePort` | `wendelin_integrations` | `packages/wendelin_integrations/lib/src/common/app_presence.dart` | `ChannelAppPresencePort` (`app/lib/platform/channel_app_presence_port.dart`) | `FakeAppPresencePort` (`packages/wendelin_integrations/lib/testing/fake_app_presence_port.dart`) |
 | `BringApi` | `wendelin_integrations` | `packages/wendelin_integrations/lib/src/bring/bring_api.dart` | `HttpBringApi` (`packages/wendelin_integrations/lib/src/bring/http_bring_api.dart`) | `FakeBringApi` (`packages/wendelin_integrations/lib/testing/fake_bring_api.dart`) |

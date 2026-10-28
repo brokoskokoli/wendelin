@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 
-import '../../voice/voice_log.dart';
 import 'pcm.dart';
 import 'sherpa_tts.dart';
 
@@ -15,14 +14,7 @@ import 'sherpa_tts.dart';
 /// (`DuckingTextToSpeech`).
 final class AudioplayersPlayback implements AudioPlayback {
   /// Creates the playback; [player] is created lazily.
-  ///
-  /// WP118: while [communication] is true (the answer runs in the call path)
-  /// the player uses `USAGE_VOICE_COMMUNICATION`.
-  AudioplayersPlayback([AudioPlayer? player, this.communication])
-    : _given = player;
-
-  /// Whether the answer plays in the call path right now (read per [play]).
-  final bool Function()? communication;
+  AudioplayersPlayback([AudioPlayer? player]) : _given = player;
 
   final AudioPlayer? _given;
   late final AudioPlayer _player = _given ?? AudioPlayer();
@@ -37,22 +29,7 @@ final class AudioplayersPlayback implements AudioPlayback {
     ),
   );
 
-  /// The same with the usage of a call (WP118, K88): the echo canceller of
-  /// the call path then knows this playback.
-  ///
-  /// `audioMode` must be `inCommunication`: audioplayers_android sets
-  /// `audioManager.mode = context.audioMode` whenever the context changes
-  /// (`WrappedPlayer.kt:159-171`, default `MODE_NORMAL`) and would otherwise
-  /// undo the call mode of `SpeechRoute`.
-  static final AudioContext communicationContext = AudioContext(
-    android: const AudioContextAndroid(
-      contentType: AndroidContentType.speech,
-      usageType: AndroidUsageType.voiceCommunication,
-      audioMode: AndroidAudioMode.inCommunication,
-      audioFocus: AndroidAudioFocus.gainTransientMayDuck,
-    ),
-  );
-  bool? _contextComm;
+  bool _contextSet = false;
   Completer<void>? _done;
   StreamSubscription<void>? _complete;
 
@@ -71,16 +48,10 @@ final class AudioplayersPlayback implements AudioPlayback {
     try {
       // A stop (or a newer play) during the awaits ends this play: the
       // player must not start afterwards, and a second stop would do nothing.
-      var comm = communication?.call() ?? false;
-      while (_contextComm != comm) {
-        await _player.setAudioContext(comm ? communicationContext : context);
-        _contextComm = comm;
-        voiceLog('speech-route', {
-          'usage': comm ? 'voice_communication' : 'assistant',
-        });
+      if (!_contextSet) {
+        await _player.setAudioContext(context);
+        _contextSet = true;
         if (!identical(_done, done)) return;
-        // The switch may have flipped meanwhile: follow it.
-        comm = communication?.call() ?? false;
       }
       await _player.play(BytesSource(wav.encode(), mimeType: 'audio/wav'));
     } on Object {

@@ -103,58 +103,25 @@ final class ChannelAudioFocusPort implements AudioFocusPort {
   }
 }
 
-/// The call path for the spoken answer (WP118, K88; Kotlin `SpeechRoute`):
-/// audio mode `MODE_IN_COMMUNICATION` and the output on the speaker unless a
-/// headset or Bluetooth device is active.
-abstract interface class SpeechRoutePort {
-  /// Switches to the call path; returns the output (`speaker`, `external`),
-  /// `null` if that failed. Asking twice is fine.
-  Future<String?> enter();
-
-  /// Restores the audio state from before [enter] (no effect if not entered).
-  Future<void> leave();
-}
-
-/// [SpeechRoutePort] over the audio focus channel. Errors and a missing
-/// platform side are swallowed: the answer is spoken in the normal path then.
-final class ChannelSpeechRoutePort implements SpeechRoutePort {
-  /// Creates the port; [channel] is injectable for tests.
-  ChannelSpeechRoutePort({
+/// Diagnosis over the audio focus channel: `AudioManager.mode` right now (the
+/// `mic-start` log line shows that the audio mode stays normal).
+final class ChannelAudioMode {
+  /// Creates the reader; [channel] is injectable for tests.
+  ChannelAudioMode({
     this._channel = const MethodChannel(audioFocusChannelName),
   });
 
   final MethodChannel _channel;
 
-  @override
-  Future<String?> enter() async {
-    try {
-      return await _channel.invokeMethod<String>('enterCommunication');
-    } on PlatformException {
-      return null;
-    } on MissingPluginException {
-      return null;
-    }
-  }
-
-  /// `AudioManager.mode` right now (device tests), `null` if unknown.
-  Future<int?> audioMode() async {
+  /// `AudioManager.mode` right now, `null` if unknown (no platform side,
+  /// tests, other platforms).
+  Future<int?> read() async {
     try {
       return await _channel.invokeMethod<int>('audioMode');
     } on PlatformException {
       return null;
     } on MissingPluginException {
       return null;
-    }
-  }
-
-  @override
-  Future<void> leave() async {
-    try {
-      await _channel.invokeMethod<void>('leaveCommunication');
-    } on PlatformException {
-      // Nothing to restore.
-    } on MissingPluginException {
-      // No platform side (tests, other platforms).
     }
   }
 }

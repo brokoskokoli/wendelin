@@ -237,24 +237,19 @@ final class RecordAudioInput
     implements ProfiledAudioInput, DetachableAudioInput {
   /// Creates the input.
   ///
-  /// [beforeStart] runs before every recording opens the microphone (WP146:
-  /// the spoken answer gives the call path back first, see
-  /// `SpeechFocus.settle`); [audioMode] reads `AudioManager.mode` for the
+  /// [audioMode] reads `AudioManager.mode` for the
   /// `mic-start` log line; [spare] makes the second recorder for [detach].
   RecordAudioInput([
     PcmRecorder? recorder,
-    Future<void> Function()? beforeStart,
     Future<int?> Function()? audioMode,
     PcmRecorder Function()? spare,
   ]) : _recorder = recorder ?? RecordPcmRecorder(),
-       _beforeStart = beforeStart,
        _audioMode = audioMode,
        _makeSpare = spare;
 
   PcmRecorder _recorder;
   PcmRecorder? _spare;
   final PcmRecorder Function()? _makeSpare;
-  final Future<void> Function()? _beforeStart;
   final Future<int?> Function()? _audioMode;
   _Take? _take;
   _Take? _detached;
@@ -335,9 +330,6 @@ final class RecordAudioInput
   Future<void> _begin(_Take take) async {
     await _stopping;
     try {
-      // The follow-up recording must not start in the call path of the
-      // answer (WP146).
-      await _beforeStart?.call();
       if (!await take.recorder.hasPermission(request: false)) {
         throw const VoiceException(
           VoiceErrorKind.permissionDenied,

@@ -183,8 +183,6 @@
       "toKotlin": {
         "acquire": {"args": ["kind"], "returns": "value"},
         "release": {"args": ["kind"], "returns": "none"},
-        "enterCommunication": {"args": [], "returns": "value"},
-        "leaveCommunication": {"args": [], "returns": "none"},
         "audioMode": {"args": [], "returns": "value"}
       },
       "toDart": {

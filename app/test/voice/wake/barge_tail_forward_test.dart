@@ -18,7 +18,6 @@ void main() {
     final input = RecordAudioInput(
       FakePcmRecorder(),
       null,
-      null,
       FakePcmRecorder.new,
     );
     final metered = MeteredAudioInput(input, BargeMeter(threshold: 0.7));
@@ -62,7 +61,7 @@ void main() {
       final events = <bool>[];
       final recorder = FakePcmRecorder();
       final lazy = LazyWakeBargeInDetector(
-        audio: RecordAudioInput(recorder, null, null, FakePcmRecorder.new),
+        audio: RecordAudioInput(recorder, null, FakePcmRecorder.new),
         templates: () async => [
           WakeTemplates(
             speakerId: 'a',
@@ -112,7 +111,7 @@ void main() {
     'Lazy: nach Zeitüberschreitung des Vorlaufs startet start() neu',
     (tester) async {
       final recorder = FakePcmRecorder();
-      final input = RecordAudioInput(recorder, null, null, FakePcmRecorder.new);
+      final input = RecordAudioInput(recorder, null, FakePcmRecorder.new);
       final lazy = LazyWakeBargeInDetector(
         audio: input,
         tailMax: const Duration(milliseconds: 40),

@@ -169,7 +169,7 @@ void main() {
     setUp(() {
       first = FakePcmRecorder();
       second = FakePcmRecorder();
-      input = RecordAudioInput(first, null, null, () => second);
+      input = RecordAudioInput(first, null, () => second);
     });
 
     Future<void> pause() =>

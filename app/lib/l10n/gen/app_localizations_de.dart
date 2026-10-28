@@ -5038,14 +5038,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'In den Android-Einstellungen unter Apps → Wendelin erlauben.';
 
   @override
-  String get speechCommunicationHelp =>
-      'Die Antwort läuft wie ein Anruf über den Lautsprecher, damit „Hey Wendelin“ sicherer erkannt wird. Nebenwirkungen: Es gilt die Anruf-Lautstärke, der Klang ist dünner, und mit Bluetooth-Geräten kann die Wiedergabe umschalten. Mit Kopfhörern bleibt die Ausgabe dort. Gilt ab der nächsten Antwort.';
-
-  @override
-  String get speechCommunicationTitle =>
-      'Antwort als Gesprächston (bessere Echo-Unterdrückung)';
-
-  @override
   String get wakeCalibrateCancelled => 'Abgebrochen. Es wurde nichts geändert.';
 
   @override
