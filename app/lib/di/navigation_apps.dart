@@ -1,4 +1,8 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
+
+import 'preferences.dart';
+import 'providers.dart';
 
 /// Integration id of a navigation app (WP164 B).
 String navigationIntegrationId(NavigationApp app) => switch (app) {
@@ -49,3 +53,14 @@ final class AppNavigationApps implements NavigationApps {
   Future<bool> isInstalled(NavigationApp app) =>
       presence.isInstalled(app.package);
 }
+
+/// The navigation apps as the app sees them now, for `maps__navigate` and
+/// `contacts__navigate` (WP164 C). In demo mode all apps count as on.
+AppNavigationApps appNavigationApps(Ref ref) => AppNavigationApps(
+  enabledIntegrations: () => ref.read(demoModeProvider)
+      ? {for (final a in NavigationApp.values) navigationIntegrationId(a)}
+      : ref.read(enabledIntegrationsProvider),
+  knownInstalled: (package) => ref.read(installedAppsProvider)[package],
+  preference: () => ref.read(navigationAppProvider),
+  presence: ref.read(platformPortsProvider).apps,
+);

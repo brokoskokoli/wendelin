@@ -318,7 +318,10 @@ final class ToolRegistry {
                 level.isAtLeast(minimum)))
           for (final tool in entry.tools)
             // A tool shared by several integrations is listed once.
-            if (!_disabledTools.contains(tool.name) && seen.add(tool.name))
+            if (!_disabledTools.contains(tool.name) &&
+                (tool is! ConditionalTool ||
+                    (tool as ConditionalTool).offered) &&
+                seen.add(tool.name))
               (integration: entry.integration, tool: tool),
     ];
     return out..sort((a, b) => a.tool.name.compareTo(b.tool.name));

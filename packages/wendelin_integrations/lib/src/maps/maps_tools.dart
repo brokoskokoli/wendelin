@@ -58,55 +58,20 @@ final class MapsNavigateTool extends IntegrationTool
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final destination = requireDestination(args);
     final mode = readMode(args);
-    final requested = args.optString('app');
-    final NavigationApp? chosen;
-    if (requested != null) {
-      chosen =
-          NavigationApp.parse(requested) ??
-          (throw const InvalidArgumentsException(
-            '„app“ muss google_maps oder waze sein',
-          ));
-    } else {
-      final active = apps.active;
-      chosen =
-          apps.preferred ??
-          (active.contains(NavigationApp.googleMaps)
-              ? NavigationApp.googleMaps
-              : active.contains(NavigationApp.waze)
-              ? NavigationApp.waze
-              : null);
-    }
-    // Fail closed: the chosen app or nothing, never the other one.
-    if (chosen == null || !apps.active.contains(chosen)) {
+    final starter = NavigationStarter(launcher, apps);
+    final (:app, :unavailable) = await starter.resolve(
+      args.optString('app'),
+      mode: mode,
+    );
+    if (app == null) {
       return ToolOutcome.error(
-        '${chosen?.label ?? 'Keine Navigations-App'} ist nicht eingerichtet '
-        'oder nicht installiert.',
-        summary: 'Navigations-App nicht verfügbar',
+        unavailable!.message,
+        summary: unavailable.summary,
       );
     }
-    if (!await apps.isInstalled(chosen)) {
-      return ToolOutcome.error(
-        '${chosen.label} ist nicht installiert.',
-        summary: 'Navigations-App nicht verfügbar',
-      );
-    }
-    if (chosen == NavigationApp.waze && mode != TravelMode.driving) {
-      return ToolOutcome.error(
-        'Waze navigiert nur mit dem Auto; für diese Fortbewegungsart eine '
-        'andere App wählen.',
-        summary: 'Waze: nur Auto',
-      );
-    }
-    await launcher.launch(switch (chosen) {
-      NavigationApp.waze => MapsIntents.navigateWaze(destination),
-      NavigationApp.googleMaps => MapsIntents.navigate(
-        destination,
-        mode: mode,
-        googleMaps: true,
-      ),
-    });
+    await starter.launch(app, destination, mode: mode);
     return ToolOutcome.text(
-      '${chosen.label} ist geöffnet.',
+      '${app.label} ist geöffnet.',
       summary: 'Navigation gestartet',
     );
   }

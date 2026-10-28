@@ -5,6 +5,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../common/base_tool.dart';
 import '../common/port_exception.dart';
 import '../common/tool_args.dart';
+import '../maps/navigation_apps.dart';
 import 'contacts_ports.dart';
 
 /// Longest SMS text accepted (several SMS parts).
@@ -28,10 +29,10 @@ final class ContactsFindTool extends IntegrationTool
   @override
   String get description =>
       'Look up a person in the address book by name. Returns phones and mail '
-      'addresses, or only the "fields" you ask for. To navigate to '
-      'a person request ["address"] and pass the "address" to '
-      'maps__navigate. If "choice_needed" is true, ask the user which one '
-      'is meant, never guess. Use the exact "number" for sms__compose.';
+      'addresses, or only the "fields" you ask for ("address" only if the '
+      'user wants to know it; to navigate use contacts__navigate). If '
+      '"choice_needed" is true, ask which one is meant, never guess. Use the '
+      'exact "number" for sms__compose.';
 
   @override
   Map<String, Object?> get inputSchema => const {
@@ -127,6 +128,185 @@ final class ContactsFindTool extends IntegrationTool
 
   @override
   String get fallbackDescription => 'Kontakt suchen';
+}
+
+/// `contacts__navigate` (write): looks up a contact and starts navigation to
+/// its postal address in one step (WP164 C). The address never goes to the
+/// model: it only gets a status (`ok`, `no_contact`, `no_address`,
+/// `choice_needed` with contact names or address labels,
+/// `app_unavailable`). The address is not in a result, summary, error,
+/// confirmation text or audit entry either. The navigation app is chosen
+/// like for `maps__navigate` ([NavigationStarter]).
+final class ContactsNavigateTool extends IntegrationTool
+    implements
+        AuditArgumentsRedactor,
+        ConditionalTool,
+        FixedConfirmationTool,
+        NoNetworkTarget,
+        TrustedContentSource,
+        WorksOnlyUnlocked {
+  /// Creates the tool.
+  const ContactsNavigateTool(this.finder, this.starter);
+
+  /// Name search.
+  final ContactsFinder finder;
+
+  /// App choice and launch, shared with `maps__navigate`.
+  final NavigationStarter starter;
+
+  @override
+  String get name => 'contacts__navigate';
+
+  @override
+  String get description =>
+      'Navigate to a person from the address book ("navigate to Anna"). '
+      'You never see the address; the result is only a status: ok (done, '
+      'say nothing more), no_contact, no_address, app_unavailable or '
+      'choice_needed ("contacts"/"address_labels": ask the user, then call '
+      'again). "app" only if the user names one.';
+
+  @override
+  Map<String, Object?> get inputSchema => {
+    'type': 'object',
+    'properties': <String, Object?>{
+      'name': {
+        'type': 'string',
+        'description': 'Name or part of the name, e.g. "Anna Meier".',
+      },
+      'address_label': {
+        'type': 'string',
+        'description':
+            'Which address if the contact has several, e.g. "Privat" or '
+            '"Arbeit" (as listed in a choice_needed answer).',
+      },
+      'app': {
+        'type': 'string',
+        if (starter.apps.active.isNotEmpty)
+          'enum': [
+            for (final a in NavigationApp.values)
+              if (starter.apps.active.contains(a)) a.id,
+          ],
+        'description': 'Navigation app; default: the one set in the settings.',
+      },
+    },
+    'required': <String>['name'],
+  };
+
+  @override
+  RiskLevel get risk => RiskLevel.write;
+
+  /// Without any usable navigation app the tool stays out of the catalog.
+  @override
+  bool get offered => starter.apps.active.isNotEmpty;
+
+  @override
+  Set<String> get confirmationKeys => const {'navigation.started'};
+
+  @override
+  Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
+    final query = args.requireString('name').trim();
+    if (query.isEmpty) throw const InvalidArgumentsException('„name“ fehlt');
+    final label = args.optString('address_label')?.trim();
+    final requestedApp = args.optString('app');
+
+    final matches = await finder.find(
+      query,
+      fields: const {ContactField.address},
+    );
+    if (matches.isEmpty) return _status('no_contact', 'Kein Kontakt gefunden');
+    if (matches.length > 1) {
+      return _status(
+        'choice_needed',
+        'Mehrere Kontakte',
+        extra: {
+          'contacts': [for (final m in matches) m.name],
+        },
+      );
+    }
+    final contact = matches.single;
+    final addresses = [
+      for (final a in contact.addresses)
+        if (_oneLine(a.address).isNotEmpty) a,
+    ];
+    if (addresses.isEmpty) {
+      return _status('no_address', 'Keine Adresse für ${contact.name}');
+    }
+    final labels = [
+      for (var i = 0; i < addresses.length; i++)
+        // Unlabeled addresses are told apart as „Adresse 1“, „Adresse 2“.
+        addresses[i].label.trim().isNotEmpty
+            ? addresses[i].label.trim()
+            : 'Adresse ${i + 1}',
+    ];
+    final index = _pick(labels, label);
+    if (index == null) {
+      return _status(
+        'choice_needed',
+        'Adresse wählen',
+        extra: {'address_labels': labels},
+      );
+    }
+    final destination = _oneLine(addresses[index].address);
+    if (destination.length > 200) {
+      return _status('no_address', 'Keine nutzbare Adresse');
+    }
+    final (:app, :unavailable) = await starter.resolve(requestedApp);
+    if (app == null) {
+      return _status('app_unavailable', unavailable!.summary);
+    }
+    try {
+      await starter.launch(app, destination);
+    } on PortException {
+      // The message could name the target: only the status goes out.
+      return _status('app_unavailable', 'Navigations-App nicht verfügbar');
+    }
+    return ToolOutcome.text(
+      jsonEncode({'status': 'ok'}),
+      summary: 'Navigation zu ${contact.name} gestartet',
+      fixed: ConfirmationSentence('navigation.started', {'name': contact.name}),
+    );
+  }
+
+  /// The index of the address meant by [wanted] among [labels]; `null` if
+  /// the user has to choose (several addresses and no unique label match).
+  static int? _pick(List<String> labels, String? wanted) {
+    if (wanted == null || wanted.isEmpty) {
+      return labels.length == 1 ? 0 : null;
+    }
+    final key = foldForMatch(wanted);
+    final hits = [
+      for (var i = 0; i < labels.length; i++)
+        if (foldForMatch(labels[i]) == key) i,
+    ];
+    return hits.length == 1 ? hits.single : null;
+  }
+
+  /// A formatted address on one line (the address book stores line breaks).
+  static String _oneLine(String address) =>
+      address.trim().replaceAll(RegExp(r'\s*[\r\n]+\s*'), ', ');
+
+  ToolOutcome _status(
+    String status,
+    String summary, {
+    Map<String, Object?> extra = const {},
+  }) => ToolOutcome.text(
+    jsonEncode({'status': status, ...extra}),
+    summary: summary,
+  );
+
+  @override
+  Future<String> redactedArguments(
+    Map<String, Object?> args,
+    ToolContext ctx,
+  ) async => jsonEncode({'contact': ToolArgs(args).optString('name') ?? ''});
+
+  // The audit log stores confirmation texts: no address in it.
+  @override
+  String describe(ToolArgs args) =>
+      'Navigation zu ${args.requireString('name')} starten';
+
+  @override
+  String get fallbackDescription => 'Navigation zu einem Kontakt starten';
 }
 
 /// The recipient as shown to the user: the name of the contact who owns

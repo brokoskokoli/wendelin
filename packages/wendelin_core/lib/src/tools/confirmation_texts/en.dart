@@ -58,6 +58,7 @@ final class _En extends ConfirmationLanguage {
     'media.previous': 'I went back to the previous track.',
     'memory.saved': 'I have made a note of it.',
     'note.appended': 'The text is now in the note “{note}”.',
+    'navigation.started': 'Navigation to {name} started.',
     'note.created': 'The note “{note}” has been created.',
     'sms.sent': 'The text message to {name} has been sent.',
     'station.started': 'Station mode is on.',

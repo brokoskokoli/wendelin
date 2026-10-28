@@ -252,7 +252,7 @@ void main() {
         'birthday',
         'organization',
       ]);
-      expect(t.description, contains('maps__navigate'));
+      expect(t.description, contains('contacts__navigate'));
       expect(t.inputSchema['required'], ['query']);
     });
   });

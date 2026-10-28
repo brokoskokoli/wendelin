@@ -97,6 +97,15 @@ abstract interface class Tool {
   String describeForConfirmation(Map<String, Object?> args);
 }
 
+/// Optional capability of a [Tool] (WP164 C): the tool depends on more than
+/// its integration being on (e.g. `contacts__navigate` also needs a
+/// navigation app). The registry offers it to the model only while
+/// [offered] is true; read on every request.
+abstract interface class ConditionalTool {
+  /// Whether the tool may be offered now.
+  bool get offered;
+}
+
 /// Optional capability of a [Tool]: builds the confirmation text
 /// asynchronously with the [ToolContext], e.g. to look up the title and time
 /// of the event that will be deleted. Runtimes call it through

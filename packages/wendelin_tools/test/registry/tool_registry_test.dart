@@ -27,6 +27,35 @@ FakeIntegration _integration(
   platforms: platforms,
 );
 
+/// A tool that is only offered while [on] is true (WP164 C).
+final class _ConditionalTool implements Tool, ConditionalTool {
+  bool on = true;
+
+  @override
+  String get name => 'cond__go';
+
+  @override
+  String get description => 'x';
+
+  @override
+  Map<String, Object?> get inputSchema => const {'type': 'object'};
+
+  @override
+  RiskLevel get risk => RiskLevel.read;
+
+  @override
+  Future<ToolOutcome> execute(
+    Map<String, Object?> args,
+    ToolContext ctx,
+  ) async => ToolOutcome.text('ok');
+
+  @override
+  String describeForConfirmation(Map<String, Object?> args) => 'x';
+
+  @override
+  bool get offered => on;
+}
+
 final class _ThrowingIntegration implements Integration {
   final _inner = FakeIntegration(id: 'boom', tools: const []);
 
@@ -173,6 +202,27 @@ void main() {
         );
       },
     );
+
+    test('ConditionalTool: nur angeboten, solange offered', () async {
+      final r = ToolRegistry();
+      final tool = _ConditionalTool();
+      await r.registerIntegration(
+        FakeIntegration(
+          id: 'one',
+          tools: [
+            tool,
+            FakeTool(name: 'plain__x'),
+          ],
+        ),
+        enabled: true,
+      );
+      expect(_names(_cat(r).activeSpecs()), ['cond__go', 'plain__x']);
+      tool.on = false;
+      expect(_names(_cat(r).activeSpecs()), ['plain__x']);
+      expect(_cat(r).lookup('cond__go'), isNull);
+      tool.on = true;
+      expect(_cat(r).lookup('cond__go'), same(tool));
+    });
 
     test('lehnt den reservierten Namen tools__search ab', () async {
       final r = ToolRegistry();

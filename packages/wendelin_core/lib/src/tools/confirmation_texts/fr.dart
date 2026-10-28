@@ -69,6 +69,7 @@ final class _Fr extends ConfirmationLanguage {
     'media.previous': 'Je suis revenu au titre précédent.',
     'memory.saved': 'Je l’ai noté.',
     'note.appended': 'Le texte figure maintenant dans la note « {note} ».',
+    'navigation.started': 'Navigation vers {name} lancée.',
     'note.created': 'La note « {note} » est créée.',
     'sms.sent': 'Le SMS à {name} a été envoyé.',
     'station.started': 'Le mode station est activé.',

@@ -211,7 +211,11 @@ final deferredCallRunnerProvider = Provider<DeferredCallRunner>((ref) {
 /// The tools of the executor mark `WorksOnlyUnlocked` that start a
 /// navigation: the held-back sentence then says „Zum Navigieren“, otherwise
 /// the generic one (WP163 B).
-const lockedNavigationTools = {'maps__navigate', 'location__navigate_to'};
+const lockedNavigationTools = {
+  'maps__navigate',
+  'location__navigate_to',
+  'contacts__navigate',
+};
 
 /// Drops everything the lock screen keeps in memory (overlay closes): the
 /// waiting request, the armed call and the shown exchange.

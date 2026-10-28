@@ -45,6 +45,7 @@ void main() {
       {
         'maps__navigate',
         'maps__search_place',
+        'contacts__navigate',
         'location__navigate_to',
         'media__open_audible',
         'obsidian__open_note',

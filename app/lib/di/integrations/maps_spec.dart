@@ -2,7 +2,6 @@ import 'package:wendelin_integrations/maps.dart';
 
 import '../app_requirements.dart';
 import '../navigation_apps.dart';
-import '../preferences.dart';
 import '../providers.dart';
 import 'integration_spec.dart';
 
@@ -18,17 +17,7 @@ final mapsSpec = IntegrationSpec(
     final ports = ref.watch(platformPortsProvider);
     final launcher = ports.mapsLauncher;
     if (launcher == null) return null;
-    return MapsNavigateTool(
-      launcher,
-      AppNavigationApps(
-        enabledIntegrations: () => ref.read(demoModeProvider)
-            ? {for (final a in NavigationApp.values) navigationIntegrationId(a)}
-            : ref.read(enabledIntegrationsProvider),
-        knownInstalled: (package) => ref.read(installedAppsProvider)[package],
-        preference: () => ref.read(navigationAppProvider),
-        presence: ports.apps,
-      ),
-    );
+    return MapsNavigateTool(launcher, appNavigationApps(ref));
   },
   isSupported: (d) => d.extra<MapsNavigateTool>('maps') != null,
   requiredApp: KnownApps.googleMaps,
