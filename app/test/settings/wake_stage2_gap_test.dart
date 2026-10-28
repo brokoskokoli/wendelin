@@ -189,4 +189,20 @@ void main() {
       isTrue,
     );
   });
+
+  test('Whisper installiert, VAD-Stand ungelesen: kein Urteil (null)', () {
+    // Ohne gelesenen VAD-Stand ist offen, ob Whisper zählt; „false“ würde
+    // fälschlich eine Lücke melden, solange nur der Stand fehlt.
+    final states = {
+      for (final m in SpeechModelCatalog.standard.models)
+        m.id: const ModelState(ModelPhase.absent),
+      'whisper-small': const ModelState(ModelPhase.installed),
+      'silero-vad': const ModelState(ModelPhase.unknown),
+    };
+    expect(wakeStage2RecognizerInstalled(states), isNull);
+    expect(
+      wakeStage2RecognizerInstalled({...states}..remove('silero-vad')),
+      isNull,
+    );
+  });
 }
