@@ -205,6 +205,64 @@ void main() {
     },
   );
 
+  group('Auswahl ohne Schleife', () {
+    test(
+      'gleiche Adress-Bezeichnungen werden nummeriert und sind wählbar',
+      () async {
+        book.contacts = const [
+          ContactEntry(
+            name: 'Hanna Voss',
+            addresses: [
+              ContactAddress(_home, label: 'Privat'),
+              ContactAddress(_work, label: 'Privat'),
+              ContactAddress('Nebenweg 9', label: 'Arbeit'),
+            ],
+          ),
+        ];
+        final o = await run({'name': 'Hanna Voss'});
+        expect(json(o), {
+          'status': 'choice_needed',
+          'address_labels': ['Privat 1', 'Privat 2', 'Arbeit'],
+        });
+        expectNoAddress(o);
+        final r = await run({
+          'name': 'Hanna Voss',
+          'address_label': 'Privat 2',
+        });
+        expect(json(r), {'status': 'ok'});
+        expect(
+          Uri.decodeComponent(launcher.launched.single.uri.toString()),
+          contains(_work),
+        );
+      },
+    );
+
+    test('gleiche Namen: Index, Folgeaufruf wählt', () async {
+      book.contacts = const [
+        ContactEntry(name: 'Jan Moll', addresses: [ContactAddress(_home)]),
+        ContactEntry(name: 'Jan Moll', addresses: [ContactAddress(_work)]),
+      ];
+      final o = await run({'name': 'Jan Moll'});
+      expect(json(o)['contacts'], ['Jan Moll (1)', 'Jan Moll (2)']);
+      final r = await run({'name': 'Jan Moll (2)'});
+      expect(json(r), {'status': 'ok'});
+      expect(
+        Uri.decodeComponent(launcher.launched.single.uri.toString()),
+        contains(_work),
+      );
+    });
+
+    test('unbekannter Zusatz in Klammern: kein Kontakt, kein Start', () async {
+      book.contacts = const [
+        ContactEntry(name: 'Jan Moll', addresses: [ContactAddress(_home)]),
+        ContactEntry(name: 'Jan Moll', addresses: [ContactAddress(_work)]),
+      ];
+      final r = await run({'name': 'Jan Moll (7)'});
+      expect(json(r)['status'], 'no_contact');
+      expect(launcher.launched, isEmpty);
+    });
+  });
+
   test('unbekanntes address_label: erneut Auswahl, kein Start', () async {
     final o = await run({'name': 'Ben Weber', 'address_label': 'Urlaub'});
     expect(json(o)['status'], 'choice_needed');

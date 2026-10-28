@@ -136,6 +136,49 @@ void main() {
     });
   });
 
+  group('toJsonFor: Feldfilter (WP164)', () {
+    // Ein Port, der mehr liefert als angefragt (wie der Kanal): nur toJsonFor
+    // schützt dann das Modell.
+    const full = ContactEntry(
+      name: 'Vera Test',
+      phones: [ContactPhone('0170 9')],
+      emails: ['v@example.org'],
+      addresses: [ContactAddress('Musterstraße 1, 12345 Musterstadt')],
+      birthday: '1985-03-14',
+      organization: 'Beispiel GmbH',
+    );
+    const keys = {
+      ContactField.phone: 'phones',
+      ContactField.email: 'emails',
+      ContactField.address: 'addresses',
+      ContactField.birthday: 'birthday',
+      ContactField.organization: 'organization',
+    };
+
+    for (final f in keys.keys) {
+      test('nur ${f.name}: genau dieses Feld und der Name', () {
+        expect(full.toJsonFor({f}).keys.toSet(), {'name', keys[f]});
+      });
+    }
+
+    test('leere Menge: nur der Name', () {
+      expect(full.toJsonFor(const {}).keys.toSet(), {'name'});
+    });
+
+    test('find: Port liefert alles, Modell sieht nur das Angefragte', () async {
+      final tool = ContactsFindTool(ContactsFinder(_FullPort(full)));
+      final o = await tool.execute({
+        'query': 'Vera',
+        'fields': ['birthday'],
+      }, ctx());
+      final text = o.text;
+      for (final leak in ['0170', 'example.org', 'Musterstra', 'Beispiel']) {
+        expect(text, isNot(contains(leak)));
+      }
+      expect(text, contains('1985-03-14'));
+    });
+  });
+
   group('Kontaktsuche mit fields (WP164)', () {
     setUp(() {
       book.contacts = const [
@@ -452,4 +495,19 @@ void main() {
       expect(o.fixed, isNull);
     });
   });
+}
+
+/// Ignores `fields` and always returns the full entry (like a channel that
+/// reads more than asked).
+final class _FullPort implements ContactsPort {
+  _FullPort(this.entry);
+  final ContactEntry entry;
+
+  @override
+  Future<bool> hasPermission() async => true;
+
+  @override
+  Future<List<ContactEntry>> all({
+    Set<ContactField> fields = defaultContactFields,
+  }) async => [entry];
 }

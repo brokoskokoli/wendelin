@@ -7,8 +7,8 @@ import 'package:wendelin/voice/latency_trace.dart';
 import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
-ToolCallBlock _call(int i, [String args = '{"name":"Licht"}']) =>
-    ToolCallBlock(id: 'c$i', name: 'ha_call_$i', argumentsJson: args);
+ToolCallBlock _call(int i, [String args = '{"name":"Licht"}', String? tool]) =>
+    ToolCallBlock(id: 'c$i', name: tool ?? 'ha_call_$i', argumentsJson: args);
 
 /// One tool round: call, result.
 void _round(
@@ -17,11 +17,12 @@ void _round(
   String args = '{"name":"Licht"}',
   String result = 'ok',
   bool error = false,
+  String? tool,
 }) {
-  t.event(ToolCallStarted(_call(i, args)));
+  t.event(ToolCallStarted(_call(i, args, tool)));
   t.event(
     ToolCallFinished(
-      call: _call(i, args),
+      call: _call(i, args, tool),
       outcome: error ? ToolOutcome.error(result) : ToolOutcome.text(result),
       duration: const Duration(milliseconds: 40),
     ),
@@ -266,6 +267,63 @@ void main() {
       lines.clear();
       t.event(const AgentFailed(error: AgentErrorKind.provider, message: 'x'));
       expect(lines.single, contains('rounds=0'));
+    });
+
+    test('contacts__find: keine Kontaktdaten im Log, nur Struktur', () {
+      devLogEnabled = true;
+      final t = DevAgentTrace();
+      _round(
+        t,
+        1,
+        tool: 'contacts__find',
+        args: '{"query":"Vera","fields":["address"]}',
+        result:
+            '{"matches":[{"name":"Vera Test","phones":[{"number":"0170 9"}],'
+            '"emails":["v@example.org"],"addresses":[{"address":'
+            '"Musterstraße 1, 12345 Musterstadt"}],"birthday":"1985-03-14",'
+            '"organization":"Beispiel GmbH"}],"choice_needed":false}',
+      );
+      // Auch die Zusammenfassung der Runden bei Abbruch.
+      t.event(
+        const AgentFailed(
+          error: AgentErrorKind.repeatedToolError,
+          message: 'x',
+          tool: 'contacts__find',
+          detail: 'd',
+          repeats: 3,
+        ),
+      );
+      final all = lines.join('\n');
+      for (final leak in [
+        'Vera Test',
+        '0170',
+        'example.org',
+        'Musterstra',
+        '1985',
+        'Beispiel',
+      ]) {
+        expect(all, isNot(contains(leak)));
+      }
+      expect(all, contains('matches=1'));
+      expect(all, contains('choice_needed=false'));
+      expect(all, contains('Vera'), reason: 'die Suchanfrage bleibt sichtbar');
+    });
+
+    test('contacts__find: unlesbares Ergebnis wird ganz maskiert', () {
+      devLogEnabled = true;
+      _round(DevAgentTrace(), 1, tool: 'contacts__find', result: 'Anna 0170');
+      expect(lines.join('\n'), isNot(contains('0170')));
+    });
+
+    test('andere Werkzeuge bleiben unverändert sichtbar', () {
+      devLogEnabled = true;
+      _round(
+        DevAgentTrace(),
+        1,
+        tool: 'contacts__navigate',
+        result: '{"status":"ok"}',
+      );
+      expect(lines.join('\n'), contains('status'));
     });
 
     test('Passwort in Argumenten und Ergebnis wird geschwärzt', () {

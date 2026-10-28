@@ -209,18 +209,28 @@ final class ContactsNavigateTool extends IntegrationTool
     final label = args.optString('address_label')?.trim();
     final requestedApp = args.optString('app');
 
-    final matches = await finder.find(
-      query,
-      fields: const {ContactField.address},
-    );
+    const fields = {ContactField.address};
+    var matches = await finder.find(query, fields: fields);
+    if (matches.isEmpty) {
+      // A follow-up with a label from an earlier choice_needed
+      // („Anna Meier (Firma)“, „Anna Meier (2)“).
+      final m = _suffixed.firstMatch(query);
+      if (m != null) {
+        final base = await finder.find(m.group(1)!.trim(), fields: fields);
+        final key = foldForMatch(query);
+        final names = contactChoiceLabels(base);
+        matches = [
+          for (var i = 0; i < base.length; i++)
+            if (foldForMatch(names[i]) == key) base[i],
+        ];
+      }
+    }
     if (matches.isEmpty) return _status('no_contact', 'Kein Kontakt gefunden');
     if (matches.length > 1) {
       return _status(
         'choice_needed',
         'Mehrere Kontakte',
-        extra: {
-          'contacts': [for (final m in matches) m.name],
-        },
+        extra: {'contacts': contactChoiceLabels(matches)},
       );
     }
     final contact = matches.single;
@@ -231,13 +241,13 @@ final class ContactsNavigateTool extends IntegrationTool
     if (addresses.isEmpty) {
       return _status('no_address', 'Keine Adresse für ${contact.name}');
     }
-    final labels = [
+    final labels = uniqueLabels([
       for (var i = 0; i < addresses.length; i++)
         // Unlabeled addresses are told apart as „Adresse 1“, „Adresse 2“.
         addresses[i].label.trim().isNotEmpty
             ? addresses[i].label.trim()
             : 'Adresse ${i + 1}',
-    ];
+    ]);
     final index = _pick(labels, label);
     if (index == null) {
       return _status(
@@ -266,6 +276,8 @@ final class ContactsNavigateTool extends IntegrationTool
       fixed: ConfirmationSentence('navigation.started', {'name': contact.name}),
     );
   }
+
+  static final _suffixed = RegExp(r'^(.+?)\s*\([^)]*\)\s*$');
 
   /// The index of the address meant by [wanted] among [labels]; `null` if
   /// the user has to choose (several addresses and no unique label match).
@@ -534,4 +546,40 @@ final class PhoneCallTool extends IntegrationTool
 
   @override
   String get fallbackDescription => 'Anrufen';
+}
+
+/// Makes repeated [labels] distinct („Privat“, „Privat“ becomes „Privat 1“,
+/// „Privat 2“); unique ones stay as they are.
+List<String> uniqueLabels(List<String> labels) {
+  final count = <String, int>{};
+  for (final l in labels) {
+    count.update(foldForMatch(l), (n) => n + 1, ifAbsent: () => 1);
+  }
+  final seen = <String, int>{};
+  return [
+    for (final l in labels)
+      if (count[foldForMatch(l)]! > 1)
+        '$l ${seen.update(foldForMatch(l), (n) => n + 1, ifAbsent: () => 1)}'
+      else
+        l,
+  ];
+}
+
+/// Names for a choice among [contacts]: equal display names get an index
+/// („Anna Meier (1)“, „Anna Meier (2)“), so the user can pick one in the
+/// follow-up call. Only the address is read, so nothing else can tell them
+/// apart.
+List<String> contactChoiceLabels(List<ContactEntry> contacts) {
+  final groups = <String, List<int>>{};
+  for (var i = 0; i < contacts.length; i++) {
+    groups.putIfAbsent(foldForMatch(contacts[i].name), () => []).add(i);
+  }
+  final out = [for (final c in contacts) c.name];
+  for (final idx in groups.values) {
+    if (idx.length < 2) continue;
+    for (var k = 0; k < idx.length; k++) {
+      out[idx[k]] = '${contacts[idx[k]].name} (${k + 1})';
+    }
+  }
+  return out;
 }
