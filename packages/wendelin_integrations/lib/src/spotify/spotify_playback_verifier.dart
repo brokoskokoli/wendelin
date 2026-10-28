@@ -11,10 +11,11 @@ final class SpotifyPlaybackVerifier {
     required this.run,
     required this.delay,
     required this.maxAttempts,
+    int? foreignMaxAttempts,
     required this.interval,
     this.media,
     this.onDiagnostic,
-  });
+  }) : foreignMaxAttempts = foreignMaxAttempts ?? maxAttempts;
 
   /// The Web API.
   final SpotifyApi api;
@@ -31,13 +32,18 @@ final class SpotifyPlaybackVerifier {
   /// How often the state is read.
   final int maxAttempts;
 
+  /// How often the state is read for a foreign device (cast devices report
+  /// `progress_ms` late); the phone uses [maxAttempts].
+  final int foreignMaxAttempts;
+
   /// Wait before each look.
   final Duration interval;
 
   /// Diagnostics without titles, URIs, device names or tokens.
   final void Function(String event, Map<String, Object> fields)? onDiagnostic;
 
-  /// Looks up to [maxAttempts] times whether [target] plays.
+  /// Looks up to [maxAttempts] times ([foreignMaxAttempts] if not [isPhone])
+  /// whether [target] plays.
   ///
   /// For the phone with notification access: Spotify's own media session
   /// (`com.spotify.music`) must be playing (`via=session`). Otherwise the
@@ -57,7 +63,8 @@ final class SpotifyPlaybackVerifier {
     }
     int? lastProgress;
     var otherApp = false;
-    for (var i = 0; i < maxAttempts; i++) {
+    final limit = isPhone ? maxAttempts : foreignMaxAttempts;
+    for (var i = 0; i < limit; i++) {
       await delay(interval);
       attempts++;
       if (via == 'session') {
@@ -92,23 +99,7 @@ final class SpotifyPlaybackVerifier {
         result = SpotifyVerdict.unchecked;
         break;
       }
-      if (state != null && state.isPlaying) {
-        if (!_isTarget(state, target)) {
-          result = SpotifyVerdict.otherDevice;
-          lastProgress = null;
-        } else {
-          final p = state.progressMs;
-          if (lastProgress != null && p != null && p > lastProgress) {
-            result = SpotifyVerdict.playing;
-          } else {
-            result = SpotifyVerdict.stalled;
-            lastProgress = p;
-          }
-        }
-      } else {
-        result = SpotifyVerdict.idle;
-        lastProgress = null;
-      }
+      (result, lastProgress) = _classify(state, target, lastProgress);
       if (result == SpotifyVerdict.playing) break;
     }
     // Another app plays and the Web API does not confirm Spotify: not
@@ -122,6 +113,24 @@ final class SpotifyPlaybackVerifier {
       'attempts': attempts,
     });
     return result;
+  }
+
+  /// Verdict for one read and the new base position. Equal or smaller
+  /// progress (the position jumps back to 0 when the new track starts, cast
+  /// devices first report the old one) is not yet proof: stalled, and the
+  /// base restarts there.
+  static (SpotifyVerdict, int?) _classify(
+    SpotifyPlayback? state,
+    SpotifyDevice target,
+    int? lastProgress,
+  ) {
+    if (state == null || !state.isPlaying) return (SpotifyVerdict.idle, null);
+    if (!_isTarget(state, target)) return (SpotifyVerdict.otherDevice, null);
+    final p = state.progressMs;
+    if (lastProgress != null && p != null && p > lastProgress) {
+      return (SpotifyVerdict.playing, lastProgress);
+    }
+    return (SpotifyVerdict.stalled, p);
   }
 
   /// Spotify may send `device.id: null` (restricted or private devices);

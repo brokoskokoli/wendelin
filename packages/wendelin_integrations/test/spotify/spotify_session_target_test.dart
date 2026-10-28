@@ -122,17 +122,58 @@ void main() {
       expect(waits.first, SpotifySession.verifyInterval);
     });
 
-    test('vorab ok, nach dem Befehl tot: Handy mit fellBackFrom', () async {
+    test(
+      'vorab ok, nach dem Befehl nichts: bleibt dort, unbestätigt',
+      () async {
+        speakerPlays();
+        api.frozenDeviceIds.add('spk');
+        final r = await start();
+        expect(r.isPhone, isFalse);
+        expect(r.deviceId, 'spk');
+        expect(r.confirmed, isFalse);
+        expect(r.fellBackFrom, isNull);
+        expect(count('play'), 1);
+        expect(api.lastPlay!.deviceId, 'spk');
+        expect(launcher.wakes, 0);
+        expect(diag.any((e) => e.$2['fallback'] == true), isFalse);
+        // The full foreign window was used (two waits before: pre-check).
+        expect(
+          waits.where((w) => w == SpotifySession.verifyInterval).length,
+          greaterThanOrEqualTo(SpotifySession.foreignVerifyAttempts),
+        );
+      },
+    );
+
+    test('Cast: alter Fortschritt, dann 0, spät wachsend: bestätigt', () async {
       speakerPlays();
-      api.frozenDeviceIds.add('spk');
+      // Two reads for the pre-check (growing), then after the command: old
+      // position, jump back to 0, stuck at 0 for 3 s, then growing (~5 s).
+      api.progressScript.addAll([
+        10000, 11000, // pre-check
+        120000, 0, 0, 0, 0, 0, 1000, 2000,
+      ]);
       final r = await start();
-      expect(r.isPhone, isTrue);
+      expect(r.isPhone, isFalse);
       expect(r.confirmed, isTrue);
-      expect(r.fellBackFrom, 'Wohnzimmer');
-      expect(api.lastPlay!.deviceId, 'dev1');
-      expect(count('play'), 2);
-      expect(diag.any((e) => e.$2['fallback'] == true), isTrue);
+      expect(r.fellBackFrom, isNull);
+      expect(count('play'), 1);
+      expect(launcher.wakes, 0);
     });
+
+    test(
+      'Handy: Versuche unverändert (nur verifyAttempts Wartezeiten)',
+      () async {
+        api
+          ..knownDevices.add(phone)
+          ..frozenDeviceIds.add('dev1');
+        await expectLater(start(), _port(PortErrorKind.failed));
+        final verify = waits
+            .where((w) => w == SpotifySession.verifyInterval)
+            .length;
+        expect(verify, 2 * SpotifySession.verifyAttempts);
+        expect(launcher.wakes, 1);
+      },
+    );
 
     test('Fremdgerät lehnt den Befehl ab (404): Handy mit Hinweis', () async {
       speakerPlays();
@@ -309,7 +350,7 @@ void main() {
     });
 
     for (final (label, setup, key) in <(String, void Function(), String)>[
-      ('Ausweichen', () => api.frozenDeviceIds.add('spk'), 'fallback'),
+      ('Ausweichen', () => api.rejectingDeviceIds.add('spk'), 'fallback'),
       ('Stillstand', () => api.stuckDeviceIds.add('spk'), 'skip'),
     ]) {
       test('Diagnose ohne Gerätenamen und IDs ($label)', () async {

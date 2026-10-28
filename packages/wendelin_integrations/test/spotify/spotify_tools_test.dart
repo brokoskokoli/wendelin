@@ -329,7 +329,7 @@ void main() {
     );
 
     test(
-      'Fremdgerät spielend, aber nichts kommt an: Handy mit Hinweis',
+      'Fremdgerät spielend, aber nichts bestätigt: bleibt dort, ehrlicher Satz',
       () async {
         api
           ..knownDevices.add(tv)
@@ -340,20 +340,39 @@ void main() {
         expect(o.isError, isFalse);
         expect(
           o.text,
-          contains('Auf „Wohnzimmer“ kam nichts an, ich spiele auf dem Handy.'),
+          'Ich habe es an „Wohnzimmer“ geschickt, konnte es aber nicht '
+          'bestätigen.',
         );
-        expect(api.lastPlay!.deviceId, 'dev1');
-        expect(api.playing, isTrue);
+        expect(o.text, isNot(contains('Spielt')));
+        expect(api.lastPlay!.deviceId, 'tv');
         expect(o.fixed, isNull);
       },
     );
+
+    test('Fremdgerät lehnt den Befehl ab (404): Handy mit Hinweis', () async {
+      api
+        ..knownDevices.add(tv)
+        ..activeDeviceId = 'tv'
+        ..playing = true
+        ..rejectingDeviceIds.add('tv');
+      final o = await call('spotify__play', {'query': 'bohemian'});
+      expect(o.isError, isFalse);
+      expect(
+        o.text,
+        contains('Auf „Wohnzimmer“ kam nichts an, ich spiele auf dem Handy.'),
+      );
+      expect(api.lastPlay!.deviceId, 'dev1');
+      expect(api.playing, isTrue);
+      expect(o.fixed, isNull);
+    });
 
     test('Ausweichen, Handy spielt auch nicht: Fehler statt Erfolg', () async {
       api
         ..knownDevices.add(tv)
         ..activeDeviceId = 'tv'
         ..playing = true
-        ..frozenDeviceIds.addAll(['tv', 'dev1']);
+        ..rejectingDeviceIds.add('tv')
+        ..frozenDeviceIds.add('dev1');
       final o = await call('spotify__play', {'query': 'bohemian'});
       expect(o.isError, isTrue);
       expect(o.text, isNot(contains('Spielt')));

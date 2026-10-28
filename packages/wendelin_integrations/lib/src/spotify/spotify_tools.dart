@@ -231,11 +231,10 @@ final class SpotifyPlayTool extends IntegrationTool
 
   @override
   String get description =>
-      'Play on Spotify: track, album, artist (top tracks) or playlist, by '
-      'query or URI; with neither, resumes paused music. Plays where music '
-      'already plays, else on this phone (starts Spotify); device only if '
-      'the user names one. If nothing is found, say so and only offer an '
-      'alternative; never play a different item silently.';
+      'Play on Spotify: track, album, artist or playlist, by query or URI; '
+      'none = resume. Plays where music already plays, else on this phone; '
+      'device only if the user names one. Nothing found: say so, never play '
+      'another item. "Sent, not confirmed" means exactly that, not playing.';
 
   @override
   Map<String, Object?> get inputSchema => const {
@@ -281,12 +280,21 @@ final class SpotifyPlayTool extends IntegrationTool
             ? 'Wiedergabe fortgesetzt$where.'
             : 'Spielt$where: ${target.label} (${target.uri}).') +
         hint;
+    // Sent to a foreign device but not seen playing: never "Spielt".
+    final unsure = !start.confirmed && !start.isPhone;
     return ToolOutcome.text(
       start.confirmed
           ? base
+          : unsure
+          ? 'Ich habe es an „${start.deviceName}“ geschickt, konnte es aber '
+                'nicht bestätigen.'
           : '$base Gesendet, aber die Wiedergabe konnte nicht geprüft '
                 'werden.',
-      summary: target == null ? 'Weiter' : 'Spielt ${target.label}',
+      summary: unsure
+          ? 'Gesendet'
+          : target == null
+          ? 'Weiter'
+          : 'Spielt ${target.label}',
       // Fixed sentence only for checked playback on the phone; otherwise the
       // model words the result (other device, not checked) from the text.
       // A label is the uri or a server name; never read it aloud.

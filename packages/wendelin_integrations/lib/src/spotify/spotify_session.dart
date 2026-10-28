@@ -80,6 +80,7 @@ final class SpotifySession {
     media: media,
     delay: _delay,
     maxAttempts: verifyAttempts,
+    foreignMaxAttempts: foreignVerifyAttempts,
     interval: verifyInterval,
     onDiagnostic: onDiagnostic,
   );
@@ -92,6 +93,10 @@ final class SpotifySession {
 
   /// How often [startPlayback] looks at the playback state.
   static const verifyAttempts = 3;
+
+  /// The same for a foreign device (about 10 s): cast devices report the
+  /// new position late, so a slow start is not "nothing arrived".
+  static const foreignVerifyAttempts = 10;
 
   /// Wait before each of those looks.
   static const verifyInterval = Duration(seconds: 1);
@@ -176,9 +181,13 @@ final class SpotifySession {
   ///
   /// The target is the named device; else the device on which something plays
   /// right now (checked twice, see [_playingElsewhere]; if nothing arrives
-  /// there, the phone takes over, `fellBackFrom` set); else the phone (see
+  /// there because the command fails with a dead-device error, the phone
+  /// takes over, `fellBackFrom` set; a command that is accepted but not
+  /// confirmed within [foreignVerifyAttempts] stays there, `confirmed ==
+  /// false`); else the phone (see
   /// [_phone]). The command always carries the target's `device_id`.
-  /// The state is read up to [verifyAttempts] times (see [_verify]: for the
+  /// The state is read up to [verifyAttempts] times (foreign device:
+  /// [foreignVerifyAttempts]; see [_verify]: for the
   /// phone with notification access Spotify's media session must be playing,
   /// else the Web API must show the target playing with a growing position).
   /// If the phone does not play, or rejects the command (404, 5xx: frozen
