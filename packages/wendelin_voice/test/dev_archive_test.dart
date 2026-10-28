@@ -35,60 +35,6 @@ final class _Archive {
 }
 
 void main() {
-  group('NearMissTracker', () {
-    NearMissTracker make() => NearMissTracker(above: 0.98);
-
-    NearMiss? run(NearMissTracker t, Map<int, double> scores, int until) {
-      NearMiss? out;
-      for (var end = 1600; end <= until; end += 1600) {
-        final m = t.onScore(end, scores[end ~/ 1600] ?? 0);
-        if (m != null) {
-          expect(out, isNull, reason: 'genau ein Eintrag');
-          out = m;
-        }
-      }
-      return out;
-    }
-
-    test(
-      'eine Äußerung mit vielen Fenstern ergibt genau eine, Spitze zählt',
-      () {
-        final m = run(make(), {10: 0.55, 11: 0.8, 12: 0.7, 13: 0.6}, 40000);
-        expect(m, isNotNull);
-        expect(m!.peak, 0.8);
-        expect(m.peakEnd, 11 * 1600);
-      },
-    );
-
-    test('unter der Sammelschwelle: nichts', () {
-      expect(run(make(), {10: 0.49, 11: 0.3}, 40000), isNull);
-    });
-
-    test('Lauf mit einem Wert ab 0,98 (Kandidat samt Anstieg) zählt nicht', () {
-      expect(run(make(), {10: 0.6, 11: 0.99, 12: 0.7}, 40000), isNull);
-    });
-
-    test('NaN ist kein Wert', () {
-      final t = make();
-      expect(t.onScore(1600, double.nan), isNull);
-      expect(t.onScore(40000, 0), isNull);
-    });
-
-    test('zwei Äußerungen nah beieinander: zweite wird entprellt', () {
-      final t = make();
-      final found = <NearMiss>[];
-      for (var end = 1600; end <= 400000; end += 1600) {
-        final i = end ~/ 1600;
-        // Spitze bei 10 und bei 50 (64000 Samples = 4 s später), dann 150.
-        final s = {10: 0.7, 50: 0.7, 150: 0.7}[i] ?? 0.0;
-        final m = t.onScore(end, s);
-        if (m != null) found.add(m);
-      }
-      // 4 s < 5 s Abstand: die zweite fällt weg, die dritte kommt.
-      expect(found.map((m) => m.peakEnd), [10 * 1600, 150 * 1600]);
-    });
-  });
-
   group('DevArchiveCase', () {
     test('geht erst raus, wenn Ergebnis und Clip da sind, genau einmal', () {
       final a = _Archive();

@@ -24,6 +24,10 @@ abstract interface class AttestationNotifier {
 /// [AttestationNotifier.takeLaunchTarget] value: open the Prüfprotokoll.
 const attestationLogTarget = 'attestation_log';
 
+/// [AttestationNotifier.takeLaunchTarget] value: open the wake word settings
+/// (the notification of the wake word service, WP171).
+const wakeWordSettingsTarget = 'wake_word_settings';
+
 /// [AttestationNotifier] over the Kotlin `NotifyChannel`.
 final class ChannelAttestationNotifier implements AttestationNotifier {
   /// Creates the notifier; [channel] is injectable for tests.

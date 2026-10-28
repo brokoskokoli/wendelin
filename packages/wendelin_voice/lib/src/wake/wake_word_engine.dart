@@ -85,3 +85,29 @@ abstract interface class ScoringWakeEngine implements WakeWordEngine {
   /// score; `null` switches reporting off. Must not throw into the engine.
   set scoreSink(void Function(int endSample, double score)? sink);
 }
+
+/// WP171: what the engine knows about one window, for the developer mode.
+/// [model] is the raw classifier score, [margin] the template similarity
+/// minus the threshold of the set with the largest margin ([similarity] and
+/// [threshold] are that set's values); each is `null` when its recognizer
+/// did not rate the window (no classifier, no templates). [primaryModel] says
+/// which recognizer decides; the other one is the shadow.
+typedef WakeWindowScores = ({
+  int endSample,
+  double? model,
+  double? similarity,
+  double? threshold,
+  double? margin,
+  bool primaryModel,
+});
+
+/// WP171: an engine that rates every window with **both** stage 1
+/// recognizers (templates and trained model) on one feature chain and
+/// reports it. Only the set one decides; the other one (the shadow) never
+/// triggers. Reporting changes no decision and is computed only while a
+/// sink is set.
+abstract interface class ShadowScoringWakeEngine implements ScoringWakeEngine {
+  /// Called per window; `null` switches reporting off. Must not throw into
+  /// the engine.
+  set windowSink(void Function(WakeWindowScores window)? sink);
+}

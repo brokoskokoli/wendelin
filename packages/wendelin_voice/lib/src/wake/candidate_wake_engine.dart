@@ -11,7 +11,7 @@ import 'wake_word_engine.dart';
 /// when the classifier is above a **low** threshold or a window is similar
 /// to a personal template. Stage 2 (transcription) confirms.
 final class CandidateWakeEngine
-    implements WarmableWakeEngine, ScoringWakeEngine {
+    implements WarmableWakeEngine, ShadowScoringWakeEngine {
   /// Creates the engine. [templates] may be `null` (classifier only);
   /// templates of another [WakeFeatureExtractor.featureVersion] are ignored.
   /// [modelThreshold] `null` disables the classifier rule. [refractory]
@@ -20,6 +20,8 @@ final class CandidateWakeEngine
     required this.features,
     this.templates,
     this.moreTemplates = const [],
+    this.shadowTemplates = const [],
+    this.shadowCost,
     this.modelThreshold = 0.5,
     this.refractory = const Duration(milliseconds: 1500),
     this.keywordId = 'wake',
@@ -38,6 +40,14 @@ final class CandidateWakeEngine
   /// Templates of further speakers (WP50: all learned voices); each set
   /// keeps its own threshold.
   final List<WakeTemplates> moreTemplates;
+
+  /// WP171: templates that are only rated for the developer-mode report
+  /// (classifier-first engine); they never enter the decision.
+  final List<WakeTemplates> shadowTemplates;
+
+  /// WP171: gets the compute time of rating the [shadowTemplates] per window
+  /// (cost log of the developer mode); never called without them.
+  final void Function(Duration time)? shadowCost;
 
   /// Low classifier threshold (rule a).
   final double? modelThreshold;
@@ -84,6 +94,9 @@ final class CandidateWakeEngine
 
   @override
   void Function(int endSample, double score)? scoreSink;
+
+  @override
+  void Function(WakeWindowScores window)? windowSink;
 
   bool _open = false;
   int _lastHit = -1 << 40;
@@ -136,6 +149,7 @@ final class CandidateWakeEngine
       );
       if (d != null && silenceFloor != null && !silenceFloor!.active) d = null;
       onWindow?.call(main.top, w.modelScore);
+      _report(w, main);
       final gap = (refractory.inMicroseconds * 16000) ~/ 1000000;
       // The lock runs from the hit time (the peak), also for the next hit.
       if (d == null || ev.end - _lastHit < gap) continue;
@@ -147,7 +161,9 @@ final class CandidateWakeEngine
           holdMs: ev.holdSamples == null ? null : ev.holdSamples! ~/ 16,
           confidence: d.confidence,
           reason: d.reason.name,
-          score: score,
+          // The score of a template hit is the shadow classifier's, not
+          // the rule's: it stays out of the hit.
+          score: modelThreshold == null ? null : score,
           direct:
               d.reason != CandidateReason.template &&
               directThreshold != null &&
@@ -156,6 +172,33 @@ final class CandidateWakeEngine
       );
     }
     return hits;
+  }
+
+  // WP171: both recognizers' view of the window; only with a sink.
+  void _report(
+    WakeWindow w,
+    ({double? similarity, double? threshold, double margin, double top}) main,
+  ) {
+    final sink = windowSink;
+    if (sink == null) return;
+    try {
+      final shadow = _usable(shadowTemplates);
+      final clock = shadow.isEmpty ? null : (Stopwatch()..start());
+      final t = shadow.isEmpty ? main : _closest(w.embedding, shadow);
+      if (clock != null) shadowCost?.call(clock.elapsed);
+      final sim = t.similarity, thr = t.threshold;
+      final raw = w.modelScore;
+      sink((
+        endSample: w.endSample,
+        model: raw == null || raw.isNaN ? null : raw,
+        similarity: sim,
+        threshold: thr,
+        margin: sim == null || thr == null ? null : sim - thr,
+        primaryModel: modelThreshold != null,
+      ));
+    } on Object {
+      // Reporting never touches the decision.
+    }
   }
 
   int? _holdStart;

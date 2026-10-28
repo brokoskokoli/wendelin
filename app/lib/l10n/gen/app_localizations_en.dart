@@ -5302,6 +5302,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get wakeNotifGapAction => 'Load model';
+
+  @override
+  String get wakeNotifGapNoSeqAction => 'Enroll again';
+
+  @override
+  String get wakeNotifGapNoSeqText =>
+      'Wake word cannot be checked reliably – please enroll it again';
+
+  @override
+  String get wakeNotifGapText =>
+      'Wake word cannot be checked – load the recognition model';
+
+  @override
   String get wakeNotifListeningText =>
       'The microphone is on. Audio stays on the device.';
 
@@ -5359,7 +5373,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeServiceSectionEnableDetail =>
-      'Wendelin listens in the background for “Hey Wendelin”.';
+      'Wendelin listens in the background for “Hey Wendelin”. In station mode it is always on.';
 
   @override
   String get wakeServiceSectionEndedEngine => 'Ended: recognition failed';
@@ -5444,6 +5458,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get wakeServiceSectionWhisperDetail =>
       'Wendelin only listens if the verification confirms the wake word. It covers the whole of stage 2: verifier B, Parakeet or Whisper, depending on what is enrolled and loaded. Turn it off if it is too strict for your voice; there will be more false triggers then.';
+
+  @override
+  String get wakeStage2GapLoad => 'Download recognition model';
+
+  @override
+  String get wakeStage2GapNotice =>
+      'The second check cannot decide: “Hey Wendelin” has no recognition model, and the learned voice has no sequences for the checker yet. Hits are therefore dropped. Download the recognition model or train the voice again.';
+
+  @override
+  String get wakeStage2NoSeqEnroll => 'Enroll wake word again';
+
+  @override
+  String get wakeStage2NoSeqNotice =>
+      'The second check is unreliable: the enrolled voice has no sequences for the checker yet, so only the recognition model is asked. That can drop real calls. Enroll the wake word again.';
 
   @override
   String wakeTestAgo(String v, int inSeconds) {

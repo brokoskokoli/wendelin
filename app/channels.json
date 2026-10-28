@@ -293,6 +293,7 @@
       "toKotlin": {
         "configure": {"args": ["enabled", "mode", "verify", "detector"], "returns": "none"},
         "texts": {"args": ["texts"], "returns": "none"},
+        "recheck": {"args": [], "returns": "none"},
         "devMode": {"args": ["on", "clear", "archive"], "returns": "none"},
         "status": {"args": [], "returns": "map"},
         "chatVisible": {"args": ["visible"], "returns": "none"},
@@ -317,7 +318,8 @@
         "startMic": {"args": [], "returns": "none"},
         "stopMic": {"args": [], "returns": "none"},
         "hit": {"args": ["pcm", "end", "pos", "kw", "score"], "returns": "none"},
-        "failed": {"args": ["reason"], "returns": "none"}
+        "failed": {"args": ["reason"], "returns": "none"},
+        "stage2Gap": {"args": ["reason"], "returns": "none"}
       },
       "toDart": {
         "run": {"args": ["verify", "detector", "station", "dev"], "returns": "none"},
@@ -326,6 +328,7 @@
         "audioError": {"args": ["message"], "returns": "none"},
         "conflict": {"args": ["reason"], "returns": "none"},
         "overlayClosed": {"args": [], "returns": "none"},
+        "recheck": {"args": [], "returns": "none"},
         "shutdown": {"args": [], "returns": "none"}
       }
     },

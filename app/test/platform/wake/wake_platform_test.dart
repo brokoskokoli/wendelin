@@ -45,6 +45,20 @@ void main() {
     });
   });
 
+  test('recheckStage2 ruft den Kanal „recheck“; Fehler sind still', () async {
+    final methods = <String>[];
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      methods.add(call.method);
+      return null;
+    });
+    await WakePlatform().recheckStage2();
+    expect(methods, ['recheck']);
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      throw PlatformException(code: 'x');
+    });
+    await WakePlatform().recheckStage2();
+  });
+
   test('status liest die Antwort von Kotlin', () async {
     messenger.setMockMethodCallHandler(
       channel,

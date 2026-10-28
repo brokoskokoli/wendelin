@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart'
+    show ValueListenable, visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
@@ -11,24 +12,40 @@ import '../../voice/dev_log.dart';
 import '../../voice/voice_log.dart';
 import '../channels.dart';
 import 'service_audio_input.dart';
+import 'wake_alive_log.dart';
 import 'wake_detector.dart';
+import 'wake_gap_tracker.dart';
+import 'wake_stage2_gap.dart';
 
 export '../channels.dart' show wakeEngineChannelName;
+export 'wake_stage2_gap.dart';
 
 /// What the wake word host needs from the device (replaced in tests).
 abstract interface class WakeParts {
   /// Stage 1 for all learned voices; `null` if nothing is learned. WP129:
   /// [detector] chooses templates or the trained classifier, [station] the
   /// score band of the place; the classifier throws if its model is missing.
+  ///
+  /// [shadow] (WP171, developer mode): both detectors run, the other one only
+  /// rates the windows for the archive; the decision stays with [detector].
   Future<WakeWordEngine?> engine({
     WakeDetector detector = WakeDetector.templates,
     bool station = false,
+    bool shadow = false,
   });
 
-  /// Stage 2; loads the recognizer when needed and frees it again. With the
-  /// classifier ([detector] `model`) Parakeet is preferred, Whisper is the
-  /// fallback; the template path always uses Whisper.
+  /// Stage 2 (WP171, both detectors): verifier B with the enrolled sequences;
+  /// if it cannot decide, the installed recognizer (Parakeet preferred, else
+  /// Whisper), loaded when needed and freed again.
   WakeVerifier verifier({WakeDetector detector = WakeDetector.templates});
+
+  /// WP171: whether stage 2 cannot decide right now (a learned voice without
+  /// sequences for verifier B and neither Parakeet nor Whisper installed),
+  /// checked before any candidate. `null`: it can (or unknown).
+  Future<WakeStage2Gap?> stage2Gap();
+
+  /// WP171: loads and checks of the recognizer fallback, for `wake-alive`.
+  WakeFallbackStats get fallbackStats;
 
   /// Frees everything the parts hold (Whisper).
   Future<void> dispose();
@@ -49,7 +66,8 @@ abstract interface class WakeParts {
 /// Calls from Kotlin: `run` (`{verify, detector, station, dev}`), `audio` (`{pcm}`), `audioError`
 /// (`{message}`), `conflict` (`{reason}`, `null` = free), `overlayClosed`,
 /// `shutdown`, `devMode` (`{on}`, WP148). Calls to Kotlin: `ready`, `startMic`, `stopMic`, `hit`
-/// (`{pcm, kw, score}`) and `failed` (`{reason}`).
+/// (`{pcm, kw, score}`), `failed` (`{reason}`) and `stage2Gap` (`{reason}`,
+/// `null` = stage 2 can decide, WP171).
 final class WakeHost {
   /// Creates the host.
   WakeHost({
@@ -76,12 +94,25 @@ final class WakeHost {
   _LoggingVerifier? _verifier;
   WakeDetector _detector = WakeDetector.templates;
   bool _station = false;
+  // WP171: whether the run was built with the developer-mode shadow detector
+  // (the engine is built once per run, so a switch restarts the run).
+  bool _shadow = false;
+  WakeDetectorChoice _choice = WakeDetectorChoice.auto;
   bool _started = false;
   final _holds = <String>{};
   final _subs = <StreamSubscription<Object?>>[];
   Timer? _alive;
   Future<void> _ops = Future.value();
   bool _ending = false;
+
+  late final _gaps = WakeGapTracker(
+    check: () => parts.stage2Gap(),
+    send: (reason) => _call('stage2Gap', {'reason': reason}),
+  );
+
+  /// Why stage 2 could not decide on the last candidate (WP171), see
+  /// [WakeGapTracker.gap].
+  ValueListenable<WakeStage2Gap?> get stage2Gap => _gaps.gap;
 
   /// Listens to the service and reports `ready`.
   Future<void> attach() async {
@@ -106,6 +137,12 @@ final class WakeHost {
           _sweep = _sweepAfterOff(deleteArchive: args['archive'] == true);
           unawaited(_sweep);
         }
+        // WP171: the shadow detector is built with the run: restart on a switch.
+        await _serial(
+          () => _listener == null
+              ? Future<void>.value()
+              : _run(verify: _verify, choice: _choice, station: _station),
+        );
       case 'run':
         // The flag as Kotlin has stored it; anything else is off.
         devLogEnabled = args['dev'] == true;
@@ -134,6 +171,13 @@ final class WakeHost {
               ? _hold('conflict', reason)
               : _release('conflict'),
         );
+      case 'recheck':
+        await _serial(
+          () => _gaps.recheck(
+            active: _listener != null && _verify,
+            ending: () => _ending,
+          ),
+        );
       case 'overlayClosed':
         await _serial(() => _release('overlay'));
       case 'shutdown':
@@ -156,20 +200,28 @@ final class WakeHost {
   }) async {
     if (_ending) return;
     final detector = choice.resolve(station: station);
+    final shadow = devLogEnabled;
     if (_listener != null &&
         _verify == verify &&
         _detector == detector &&
-        _station == station) {
+        _station == station &&
+        _shadow == shadow) {
       return;
     }
     await _stopListener();
     _verify = verify;
+    _choice = choice;
+    _shadow = shadow;
     _detector = detector;
     _station = station;
     _started = false;
     final WakeWordEngine? engine;
     try {
-      engine = await parts.engine(detector: detector, station: station);
+      engine = await parts.engine(
+        detector: detector,
+        station: station,
+        shadow: shadow,
+      );
     } on Object catch (e) {
       // The classifier without its model (WP140): the learned voice takes
       // over if there is one; without it the service ends and the settings
@@ -190,6 +242,8 @@ final class WakeHost {
     required bool verify,
   }) async {
     final band = wakeBandFor(station: _station);
+    await _gaps.checkAtStart(verify: verify, ending: () => _ending);
+    if (_ending) return;
     devArchiveSetInfo('idle', {
       'mode': 'idle',
       'detector': _detector.name,
@@ -202,7 +256,10 @@ final class WakeHost {
       audio: audio,
       engine: _LoggingEngine(engine, _detector, verify: verify),
       verifier: verify
-          ? _verifier = _LoggingVerifier(parts.verifier(detector: _detector))
+          ? _verifier = _LoggingVerifier(
+              parts.verifier(detector: _detector),
+              onGap: _gaps.onVerdict,
+            )
           : null,
       // Room noise before the word (WP73): `speechAfterWakeWord` measures
       // its threshold there. The overlay skips everything up to the end of
@@ -260,6 +317,7 @@ final class WakeHost {
       templates = await parts.engine(
         detector: WakeDetector.templates,
         station: _station,
+        shadow: _shadow,
       );
     } on Object {
       return false;
@@ -275,6 +333,7 @@ final class WakeHost {
 
   Future<void> _begin(WakeWordListener listener) async {
     _started = true;
+    parts.fallbackStats.reset();
     await listener.start();
     voiceLog('wake-listening', {
       'verify': _verify,
@@ -287,13 +346,7 @@ final class WakeHost {
   void _logAlive() {
     final stats = _listener?.stats;
     if (stats == null) return;
-    voiceLog('wake-alive', {
-      'cand': stats.candidates,
-      'ok': stats.confirmed,
-      'candPerH': stats.candidatesPerHour.toStringAsFixed(1),
-      'okPerH': stats.confirmedPerHour.toStringAsFixed(1),
-      'min': stats.runtime.inMinutes,
-    });
+    logWakeAlive(stats, parts.fallbackStats, shadow: _shadow);
   }
 
   Future<void> _onDetection(WakeWordDetection d) => _serial(() async {
@@ -420,7 +473,7 @@ final class WakeHost {
 const wakePreRoll = Duration(milliseconds: 2500);
 
 /// Logs every stage 1 candidate: score and rule, nothing else.
-final class _LoggingEngine implements WakeWordEngine, ScoringWakeEngine {
+final class _LoggingEngine implements WakeWordEngine, ShadowScoringWakeEngine {
   _LoggingEngine(this.inner, this.detector, {required this.verify});
 
   final WakeWordEngine inner;
@@ -437,6 +490,19 @@ final class _LoggingEngine implements WakeWordEngine, ScoringWakeEngine {
   @override
   set scoreSink(void Function(int endSample, double score)? sink) {
     if (inner case final ScoringWakeEngine e) e.scoreSink = sink;
+  }
+
+  // WP171: both detectors' view of each window.
+  @override
+  set windowSink(void Function(WakeWindowScores window)? sink) {
+    if (sink != null) return attachWindowSink(inner, sink);
+    switch (inner) {
+      case final ShadowScoringWakeEngine e:
+        e.windowSink = null;
+      case final ScoringWakeEngine e:
+        e.scoreSink = null;
+      default:
+    }
   }
 
   @override
@@ -471,9 +537,13 @@ final class _LoggingEngine implements WakeWordEngine, ScoringWakeEngine {
 /// Logs the verdict of stage 2 (`ok`, `no`, or `skip` if it could not
 /// decide, which counts as not confirmed).
 final class _LoggingVerifier implements WakeEndAwareVerifier, VerdictDetail {
-  _LoggingVerifier(this.inner);
+  _LoggingVerifier(this.inner, {this.onGap});
 
   final WakeVerifier inner;
+
+  /// Called after every candidate: the reason stage 2 could not decide, or
+  /// `null` if it did.
+  final void Function(WakeStage2Gap? gap)? onGap;
 
   @override
   String get kind => inner.kind;
@@ -496,9 +566,16 @@ final class _LoggingVerifier implements WakeEndAwareVerifier, VerdictDetail {
           ? await i.confirmAt(pcm, endSample)
           : await i.confirm(pcm);
       voiceLog('wake-verify', {'result': ok ? 'ok' : 'no'});
+      onGap?.call(null);
       return ok;
     } on Object catch (e) {
-      voiceLog('wake-verify', {'result': 'skip', 'error': errorCode(e)});
+      final missing =
+          e is VoiceException && e.kind == VoiceErrorKind.modelMissing;
+      voiceLog('wake-verify', {
+        'result': 'skip',
+        'error': missing ? 'model_missing' : errorCode(e),
+      });
+      onGap?.call(missing ? WakeStage2Gap.modelMissing : null);
       return false;
     }
   }

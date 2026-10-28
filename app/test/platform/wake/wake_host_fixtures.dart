@@ -31,27 +31,40 @@ final class FakeParts implements WakeParts {
   final Object? openError;
   bool verdict;
   Object? verifyError;
+  @override
+  final fallbackStats = WakeFallbackStats();
   int disposed = 0;
   int engines = 0;
   WakeDetector? lastDetector;
   bool? lastStation;
+  bool? lastShadow;
+
+  /// The `shadow` flag of every engine built, in order (WP171).
+  final shadows = <bool>[];
+
+  /// The engines built, in order (WP171).
+  final built = <FakeWakeWordEngine>[];
   WakeDetector? verifierDetector;
 
   @override
   Future<WakeWordEngine?> engine({
     WakeDetector detector = WakeDetector.templates,
     bool station = false,
+    bool shadow = false,
   }) async {
     engines++;
     lastDetector = detector;
     lastStation = station;
+    lastShadow = shadow;
+    shadows.add(shadow);
     final hit = !errorsOnlyModel || detector == WakeDetector.model;
     final error = engineError;
     if (hit && error != null) throw error;
     if (hit && openError != null) return OpenFailsEngine(openError!);
-    return engineless
-        ? null
-        : FakeWakeWordEngine(direct: direct, holdMs: holdMs);
+    if (engineless) return null;
+    final engine = FakeWakeWordEngine(direct: direct, holdMs: holdMs);
+    built.add(engine);
+    return engine;
   }
 
   @override
@@ -61,6 +74,19 @@ final class FakeParts implements WakeParts {
       this,
       detector == WakeDetector.model ? 'parakeet' : 'whisper',
     );
+  }
+
+  /// What the check before the start answers ([gapError]: it throws).
+  WakeStage2Gap? gap;
+  Object? gapError;
+  int gapChecks = 0;
+
+  @override
+  Future<WakeStage2Gap?> stage2Gap() async {
+    gapChecks++;
+    final e = gapError;
+    if (e != null) throw e;
+    return gap;
   }
 
   @override
