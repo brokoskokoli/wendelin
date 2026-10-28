@@ -179,6 +179,7 @@ void _deadPathInRuleDocs(
     put(d, '# $d\n');
     t.eq(errors(), <String>[], '$d nach Korrektur ohne Befund');
   }
+  _conceptDocs(t, put, errors);
 }
 
 /// Bezeichner-Check: unbekannter Name rot, bekannter grün, Allowlist ist eine Ratsche.
@@ -278,4 +279,31 @@ void _tableChecks(SelfCheck t) {
     ch.contains('| `x` | `a.dart` | `X.kt` | `go(p, q)` | – |'),
     'Kanal-Tabelle: Dateien und Methoden mit Argumenten ($ch)',
   );
+}
+
+/// Konzept und Änderungsarchiv: erfundene Repo-Pfade sind rot, Fremdes und
+/// als „nur im Git-Verlauf“ gekennzeichnete Dateien nicht.
+void _conceptDocs(
+  SelfCheck t,
+  void Function(String, String) put,
+  List<String> Function() errors,
+) {
+  const concept = 'Voice Agent App – Gesamtkonzept.md';
+  put(
+    concept,
+    '# K\n\nsiehe `docs/gibt-es-nicht.md`, `tools/list`, `Tasks.md`\n',
+  );
+  t.eq(errors(), [
+    '$concept:3: Pfad `docs/gibt-es-nicht.md` existiert nicht',
+  ], 'erfundener Pfad im Konzept wird gemeldet, Fremdes nicht');
+  put(concept, '# K\n');
+  put('docs/concept-changelog/M9.md', 'Plan `docs/work-packages/M9.md`\n');
+  t.eq(errors(), [
+    'docs/concept-changelog/M9.md:1: Pfad `docs/work-packages/M9.md` existiert nicht',
+  ], 'toter Pfad im Änderungsarchiv wird gemeldet');
+  put(
+    'docs/concept-changelog/M9.md',
+    'Plan `docs/work-packages/M9.md` (nur im Git-Verlauf)\n',
+  );
+  t.eq(errors(), <String>[], '„nur im Git-Verlauf“ ist ausgenommen');
 }

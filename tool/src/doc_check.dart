@@ -15,6 +15,7 @@ const checkedDocs = [
   'docs/ENGINEERING.md',
   'docs/RELEASE.md',
   'PROJECT.md',
+  'Voice Agent App – Gesamtkonzept.md',
   'docs/work-packages/README.md',
   'docs/work-packages/REVIEW.md',
   'packages/wendelin_core/README.md',
@@ -43,6 +44,7 @@ DocCheck checkDocs(List<String> files, {String root = '.'}) {
           (f.startsWith('docs/architecture/') ||
               f.startsWith('docs/testing/m5/') ||
               f.startsWith('docs/agents/') ||
+              f.startsWith('docs/concept-changelog/') ||
               f.startsWith('.claude/agents/')))
         f,
   ];
@@ -54,12 +56,15 @@ DocCheck checkDocs(List<String> files, {String root = '.'}) {
     }
     final text = f.readAsStringSync();
     for (final ref in pathRefs(text)) {
+      if (_inHistory(text, ref.line)) continue;
+      if (_rootedOnly(doc) && !index.hasTopLevel(ref.path)) continue;
       count++;
       if (!index.resolves(ref.path, docDir: _dirOf(doc))) {
         errors.add('$doc:${ref.line}: Pfad `${ref.path}` existiert nicht');
       }
     }
     for (final ref in linkRefs(text)) {
+      if (_inHistory(text, ref.line)) continue;
       count++;
       if (!index.resolvesLink(ref.path, docDir: _dirOf(doc))) {
         errors.add('$doc:${ref.line}: Link `${ref.path}` ist tot');
@@ -118,6 +123,18 @@ List<String> identErrors(List<String> files, {String root = '.'}) {
     fix: 'dart run tool/check_docs.dart --update-baseline',
   );
 }
+
+/// Konzept und Änderungsarchiv nennen auch Fremdes (Notizen, MCP-Methoden,
+/// Netze, Modellnamen): dort zählen nur Pfade, die mit einem Repo-Ordner oder
+/// einer Repo-Datei auf oberster Ebene beginnen.
+bool _rootedOnly(String doc) =>
+    doc.startsWith('Voice Agent App') ||
+    doc.startsWith('docs/concept-changelog/');
+
+/// Zeilen mit „(nur im Git-Verlauf)“ nennen bewusst gelöschte Dateien
+/// (Archiv `docs/concept-changelog/`) und werden nicht aufgelöst.
+bool _inHistory(String text, int line) =>
+    text.split('\n')[line - 1].contains('nur im Git-Verlauf');
 
 String _dirOf(String path) {
   final i = path.lastIndexOf('/');
