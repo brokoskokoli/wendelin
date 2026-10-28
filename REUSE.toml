@@ -1,0 +1,26 @@
+version = 1
+SPDX-PackageName = "Wendelin"
+SPDX-PackageDownloadLocation = "https://github.com/brokoskokoli/wendelin"
+
+# Licensing per REUSE (https://reuse.software), checked with `reuse lint`.
+# Source files carry no per-file headers; this file assigns the copyright notice and the
+# license to everything. License texts live in LICENSES/.
+
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Wendelin contributors"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Bundled fonts (SIL Open Font License 1.1). Provenance: app/assets/fonts/SOURCES.txt; the
+# copyright notices of the font authors are in the OFL-*.txt files next to the fonts.
+[[annotations]]
+path = ["app/assets/fonts/*.ttf", "app/assets/fonts/OFL-*.txt"]
+precedence = "override"
+SPDX-FileCopyrightText = ["2017 IBM Corp. (IBM Plex Mono)", "2022 The Instrument Sans Project Authors (Instrument Sans)"]
+SPDX-License-Identifier = "OFL-1.1"
+
+# Speech models (wake word, speech recognition, speech output) are not part of this repository.
+# They are downloaded by the app; their licenses and attributions are listed in the app under
+# Settings -> Voice -> Licenses of the speech models (app/lib/ui/settings/voice_licenses_screen.dart)
+# and, for the wake-word model, in docs/notes/wake-word-v8-licenses.md.

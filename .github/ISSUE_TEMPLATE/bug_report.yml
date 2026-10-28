@@ -1,0 +1,84 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug!
+        **Security problems:** please don't file them here – see [SECURITY.md](https://github.com/brokoskokoli/wendelin/blob/main/SECURITY.md).
+        **Privacy:** remove API keys, tokens, names, phone numbers and addresses from everything you paste or attach.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: A clear description of the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Say "Hey Wendelin" …
+        2. Ask …
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Wake word / speech recognition
+        - Speech output
+        - Language model provider / attestation
+        - Home Assistant
+        - Spotify / media
+        - Contacts / calls / SMS
+        - Navigation
+        - Alarms / notes / tools (MCP, HTTP)
+        - Lock screen / security levels
+        - Settings
+        - Translations / UI text
+        - Installation / updates
+        - Performance / battery
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Wendelin version
+      description: Shown in the app settings and in Android's App info
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: "Pixel 8, Android 15"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installed via
+      options:
+        - APK from GitHub Releases
+        - Built from source
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log output or screenshots
+      description: Only what you are allowed to share, with secrets and personal data removed.
+      render: text
