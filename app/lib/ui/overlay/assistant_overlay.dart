@@ -8,12 +8,9 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../agent/agent_controller.dart';
 import '../../agent/conversation_state.dart';
-import '../../di/attestation_hub.dart';
-import '../../di/attestation_providers.dart';
 import '../../di/preferences.dart';
 import '../../di/provider_config.dart';
 import '../../di/providers.dart';
-import '../../di/routing.dart';
 import '../../di/voice_providers.dart';
 import '../../di/wake_settings.dart';
 import '../../l10n/l10n.dart';
@@ -28,6 +25,7 @@ import '../screens/private_banner.dart';
 import '../voice/microphone_access.dart';
 import 'overlay_frame.dart';
 import 'overlay_idle_close.dart';
+import 'overlay_resume.dart';
 import 'overlay_sheet.dart';
 import 'overlay_teardown.dart';
 import 'unlock_window.dart';
@@ -115,11 +113,6 @@ class AssistantOverlayScreen extends ConsumerStatefulWidget {
       _AssistantOverlayState();
 }
 
-// Recognition, follow-up listening or an answer is under way.
-bool _requestRunning(WidgetRef ref) =>
-    ref.read(voiceControllerProvider).active ||
-    ref.read(agentControllerProvider).running;
-
 // What the locked sheet shows: request and answer only (WP163).
 OverlayExchange _lockedExchange(LockedExchange? e) =>
     OverlayExchange(request: e?.request, answer: e?.answer);
@@ -153,10 +146,15 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   bool _lockKnown = false;
   bool _typing = false;
   bool _closing = false;
-  // Listening ended because of our own retrigger (not the end of a request)
-  // or because the user tapped the microphone off: no automatic close.
-  bool _retriggering = false;
-  bool _micCancelled = false;
+  late final IdleCloser _idle = IdleCloser(
+    ref: ref,
+    enabled: () => AssistantOverlayScreen.closeWhenIdle,
+    typing: () => _typing,
+    closing: () => _closing,
+    locked: () => _locked,
+    unlocking: () => _unlockWatch.window.active || _unlockWatch.window.open,
+    close: () => unawaited(_close('idle')),
+  );
   // The keyguard transition is not „leaving“ the overlay and not a tap
   // (WP114, K85): while the unlock runs and shortly after, lifecycle
   // changes, taps outside and the platform close request are ignored.
@@ -185,7 +183,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
         _closeUnlessUnlocking;
     _lifecycle = AppLifecycleListener(onStateChange: _onLifecycle);
     unawaited(_checkLock());
-    _warmUpAttestation();
+    warmUpOverlayAttestation(ref, () => mounted && !_closing);
     if (widget.autoStart) {
       // Load the tone setting and the tone itself before the first hit.
       ref
@@ -266,20 +264,9 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   /// while the user is still speaking (WP77): this engine has its own
   /// providers and the main app's warm-up does not reach it. A valid
   /// session is kept, the call is cheap then.
-  void _warmUpAttestation() => scheduleMicrotask(() {
-    if (!mounted || _closing) return;
-    unawaited(
-      warmUpAttestation(
-        config: ref.read(providerConfigProvider.future),
-        network: ref.read(networkStatusProvider),
-        hub: ref.read(attestationHubProvider),
-      ),
-    );
-  });
-
   Future<void> _onTrigger(TriggerEvent e) async {
     if (_closing) return;
-    _warmUpAttestation();
+    warmUpOverlayAttestation(ref, () => mounted && !_closing);
     final locked = await _checkLock();
     if (!mounted || _closing) return;
     ref.read(lockedModeProvider.notifier).set(locked);
@@ -290,12 +277,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     });
     final voice = ref.read(voiceControllerProvider);
     if (voice.active) {
-      _retriggering = true;
-      try {
-        await _voice.cancel(VoiceCancelReason.retrigger);
-      } finally {
-        _retriggering = false;
-      }
+      await _idle.retrigger(() => _voice.cancel(VoiceCancelReason.retrigger));
     }
     if (_closing) return;
     if (ref.read(agentControllerProvider).running) {
@@ -383,32 +365,12 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       return;
     }
     _voice.prewarm();
-    // The request from before goes on now, answered here and read aloud
-    // (K85); without one, the overlay listens again.
-    if (request != null) {
-      final spoken =
-          !_closing && await answerRemembered(ref, request, _voice.answerText);
-      if (!spoken && mounted && !_closing) unawaited(_agent.send(request.text));
-    } else if (!_closing && !_requestRunning(ref)) {
-      _triggers.fire();
-    }
-  }
-
-  // Listening ended without anything left to do (WP172): recognition,
-  // answer and read-aloud are over. Not while the user interacts or an
-  // answer is awaited: typing, an open question or GPU choice, the unlock
-  // offer. Decided at the moment listening ends; a blocker that falls away
-  // later does not close (a typed exchange keeps its sheet; an unlock starts
-  // listening again by itself).
-  void _onListeningEnded() {
-    if (!AssistantOverlayScreen.closeWhenIdle || _typing || _micCancelled) {
-      return;
-    }
-    if (_closing || _retriggering) return;
-    final unlocking = _unlockWatch.window.active || _unlockWatch.window.open;
-    if (nothingLeftToDo(ref, locked: _locked, unlocking: unlocking)) {
-      unawaited(_close('idle'));
-    }
+    await continueAfterUnlock(
+      ref,
+      request,
+      alive: () => mounted && !_closing,
+      fire: _triggers.fire,
+    );
   }
 
   Future<void> _close(String by) async {
@@ -512,7 +474,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
 
   void _onMic(VoiceUiState voice, ConversationState conversation) {
     if (voice.active) {
-      _micCancelled = true;
+      _idle.micCancelled();
       unawaited(_voice.cancel());
     } else if (conversation.running) {
       _agent.cancel();
@@ -545,18 +507,8 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       ..listen(voiceControllerProvider.select((v) => v.stopCount), (_, _) {
         _onStop();
       })
-      // Not `active`: `preparing` ends before the phase turns to listening,
-      // that gap is no end of listening (closing there kills the start).
-      ..listen(
-        voiceControllerProvider.select(
-          (v) => v.phase != VoiceState.idle || v.awaitingAnswer,
-        ),
-        (was, now) {
-          if (now) _micCancelled = false;
-          if (was == true && !now) _onListeningEnded();
-        },
-      )
       ..listen(lockedRefusalsProvider, (_, _) => unawaited(_offerUnlock()));
+    _idle.listen();
     final conversation = ref.watch(agentControllerProvider);
     final voice = ref.watch(voiceControllerProvider);
     final config = ref.watch(providerConfigProvider).value;

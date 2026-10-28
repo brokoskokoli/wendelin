@@ -6,15 +6,15 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
-import 'package:wendelin/ui/design/design.dart';
-import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin/agent/conversation_state.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
+import 'package:wendelin/ui/design/design.dart';
+import 'package:wendelin/ui/overlay/assistant_overlay.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin/voice/voice_log.dart';
-import 'package:wendelin/ui/overlay/assistant_overlay.dart';
 import 'package:wendelin_core/testing.dart';
+import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_voice/fakes.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
