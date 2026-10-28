@@ -1,12 +1,14 @@
 # Wake-Word-Modell „Wendelin“ (WP58, 2026-10-14): Pilot
 
-Stand: Pilot-Training mit synthetischen Daten, Messung auf dem Host (macOS, ohne Gerät). **Die Abnahmegrenzen (Treffer ≥ 80 %, FA ≤ 2/h) sind nicht erreicht.** Aufnahmen des Maintainers (`~/wendelin-fixtures/wake/`) lagen nicht vor.
+> Pfade: `$WENDELIN_KWS` und `$WENDELIN_FIXTURES` bezeichnen lokale Ordner bzw. Dateien außerhalb des Repos (nicht eingecheckt).
+
+Stand: Pilot-Training mit synthetischen Daten, Messung auf dem Host (macOS, ohne Gerät). **Die Abnahmegrenzen (Treffer ≥ 80 %, FA ≤ 2/h) sind nicht erreicht.** Aufnahmen des Maintainers (`$WENDELIN_FIXTURES/wake/`) lagen nicht vor.
 
 ## Trainingsweg (Recherche, Stand 2026)
 - openWakeWord (Apache-2.0, v0.6.0) trennt Mel-Spektrogramm (ONNX), Google-`speech_embedding` (ONNX, Apache-2.0, eingefroren) und einen kleinen Klassifikator (16 Embeddings × 96 → DNN, ca. 0,86 MB). Nur der Klassifikator wird trainiert. Der offizielle Weg (`openwakeword/train.py`, Colab-Notebook) setzt Piper-Beispiele, RIR/Hintergrundgeräusche und vorberechnete ACAV100M-Negativ-Features (ca. 16 GB) voraus, ist laut Community-Berichten seit 2023 abhängigkeitsbrüchig (Torch/Speechbrain-Pins) und braucht GPU und etwa 45 GB Platz. Der Mac hat nur etwa 12 GB frei. Daher eigenes, schlankes Skript (`tool/train_wake_word/`), das dieselbe Feature-Pipeline (`openwakeword.utils.AudioFeatures`) und dasselbe Klassifikator-Format (Eingabe `[1,16,96]`, Ausgabe `[1,1]`) nutzt. Gegenprobe: das offizielle `alexa`-Modell läuft mit unseren Features korrekt (Pipeline in Ordnung).
 - Das ONNX-Modell läuft in openWakeWord direkt (`Model(wakeword_models=[…], inference_framework="onnx")`) und braucht keine neue Laufzeit; Mel-/Embedding-Modelle (2,4 MB) kämen in die App.
 
-## Daten und Lizenzen (alles unter `~/wendelin-models/kws/wp58/`, nichts im Repo)
+## Daten und Lizenzen (alles unter `$WENDELIN_KWS/wp58/`, nichts im Repo)
 | Quelle | Verwendung | Lizenz |
 |---|---|---|
 | Piper `de_DE-thorsten-medium` | Positiv/Negativ-Synthese | CC0 |
@@ -49,6 +51,6 @@ v1 (5000 Piper-Wörter, 4 s Clips, strenge Fensteretiketten) 10 %; Fehler gefund
 - Konzeptabweichung (zu melden): Plan B liefert mit rein synthetischen Daten **nicht** die geforderten Werte; WP44 sollte die Zweitstufe und die Feintuning-Schleife mit echten Aufnahmen einplanen.
 
 ## Offen
-1. Aufnahmen des Maintainers → `eval.py` mit `--pos ~/wendelin-fixtures/wake/pos --neg ~/wendelin-fixtures/wake/neg` (Ordner existiert noch nicht).
+1. Aufnahmen des Maintainers → `eval.py` mit `--pos $WENDELIN_FIXTURES/wake/pos --neg $WENDELIN_FIXTURES/wake/neg` (Ordner existiert noch nicht).
 2. Lizenz M-AILABS (eva_k/karlsson/ramona) klären; Namensnennung für MLS, FLEURS, Tatoeba festhalten.
 3. Gerätemessung (CPU/PSS) und Einbindung (WP44) nicht gemacht.

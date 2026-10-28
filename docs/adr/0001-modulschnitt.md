@@ -1,6 +1,8 @@
 # ADR 0001 – Modulschnitt als Dart-Workspace
 
-Status: angenommen · 2026-10-12
+Status: angenommen (mit Vermerk) · 2026-10-12
+
+**Vermerk 2026-10-28:** Die Aussage „Alle anderen Pakete hängen nur von `core` ab, nie voneinander“ gilt nur als Grundregel. Erlaubte Ausnahmen (z. B. `wendelin_mcp` → `wendelin_integrations`, `wendelin_voice` → `wendelin_agent`) stehen in `docs/ENGINEERING.md`, Abhängigkeitsregeln; sie sind maßgeblich.
 
 ## Kontext
 Das Konzept verlangt „alles ist ein Plugin“, austauschbare Provider/Tools und gute Testbarkeit. Die Projektstruktur im Konzept legt alles in `app/lib/…`. Dadurch hängt jeder Test am Flutter-SDK, und Grenzen (z. B. „keine Provider-Typen außerhalb der Adapter“) sind nur Konvention.

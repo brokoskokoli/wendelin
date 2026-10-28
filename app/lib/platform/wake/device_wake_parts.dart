@@ -310,7 +310,7 @@ final class DeviceWakeParts implements WakeParts {
         idleRelease: idleRelease,
       ),
     );
-    // Templates path and „Stopp“ stay on Whisper; the classifier's stage 2
+    // Templates path stays on Whisper; the classifier's stage 2
     // takes Parakeet when installed, else Whisper without a message.
     if (detector != WakeDetector.model) return whisper;
     final parakeet = _parakeet ??= LazyParakeetVerifier(

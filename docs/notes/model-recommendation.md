@@ -1,5 +1,7 @@
 # WP112: Modellempfehlung je Rolle (Live-Messung 2026-10-20/21)
 
+> Pfade: `$WENDELIN_LIVE_ENV` bezeichnen lokale Ordner bzw. Dateien außerhalb des Repos (nicht eingecheckt).
+
 Grundlage für die Standardmodelle je Rolle (normal, privat/TEE, schnell/Station, Notfall). Rohdaten: `evals/reports/2026-10-20-*.json` (ohne `.local`, das sind die Probeläufe), Kosten `evals/reports/2026-10-20-ledger.json`. Vorbild: `docs/notes/wp54-tee-eval.md`.
 
 ## Aufbau
@@ -69,7 +71,7 @@ Die Intervalle der Spitzengruppe überlappen stark (58/58 gegen 56/58 und 55/58 
 
 ## Kommandos zum Wiederholen
 
-Keys: `set -a; . ~/.wendelin-live.env; set +a` (Werte nie ausgeben). Im Verzeichnis `evals/`; Beispiel Haiku, je Modell nur Profil und `--model` ändern:
+Keys: `set -a; . $WENDELIN_LIVE_ENV; set +a` (Werte nie ausgeben). Im Verzeichnis `evals/`; Beispiel Haiku, je Modell nur Profil und `--model` ändern:
 
 ```sh
 dart run wendelin_evals:run --profile profiles/claude-haiku.json \

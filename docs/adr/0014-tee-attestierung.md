@@ -1,6 +1,8 @@
 # ADR 0014 – TEE-Attestierung: Vertrauensanker, Prüfstufen, Status
 
-Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-14 (WP46, Grundlage: Spike WP43, `docs/notes/attestation-spike-2026-10-14.md`)
+Status: teilweise überholt (umgesetzt, nachgezogen 2026-10-25; siehe Vermerk) · 2026-10-14 (WP46, Grundlage: Spike WP43, `docs/notes/attestation-spike-2026-10-14.md`)
+
+**Vermerk 2026-10-28 (§3 überholt durch K44):** Die Quittung wird bis zu 6 Mal geholt (`maxReceiptAttempts`); ist sie danach nur nicht abrufbar und gibt es keinen Prüffehler, endet die Antwort grau als „nicht bestätigt“ ohne Sperre des Anbieters. Rot gibt es nur bei echten Prüffehlern. „Endstatus grün oder rot“ und „3 Mal, danach rot“ gelten nicht mehr.
 
 ## Kontext
 TEE-Provider (Phala/RedPill) sollen nur genutzt werden, wenn die Enklave geprüft ist (Konzept „TEE-Provider und Attestierung“, K2, K23). Die Prüfung besteht aus kryptografischen Schritten (TDX-Quote, Ed25519, Hashes) und aus Protokolllogik (Bindung, Frische, Pinning, Status). WP46 baut die Logik in Dart gegen einen Port, WP47 liefert die Krypto in Rust.

@@ -89,3 +89,6 @@ MCP-Tools (Blatt „Tool“ der Serverseite) und HTTP-Tools (Editor, Abschnitt �
 - Eine Szene mit kritischem Mitglied, die der Nutzer selbst auf A–C stellt, läuft ohne Bestätigung (Nutzerentscheidung).
 - Die Sperrbildschirm-Logik (L2) und die Sprecherzuordnung (L3), beide umgesetzt, rufen `levelAccess`/`haDecide` mit `locked`/`speakerRecognized`; sie dürfen keine zweite Tabelle bauen.
 - K8 b („Risiko nur verschärfbar“) entfällt als Regel; Konzepteintrag über den Orchestrator.
+
+## Nachtrag 2026-10-28 (K131)
+Gesperrt zeigt das Overlay die aktuelle Anfrage und die gesprochene Antwort (kein Verlauf); der Merkeintrag aus L2 trägt Text (30 s) oder einen Werkzeugaufruf (60 s). Neues Merkmal „wirkt nur entsperrt“ (`WorksOnlyUnlocked`, `security_level.dart`): Solche Aufrufe laufen gesperrt auch bei erlaubter Stufe nicht, ein fester Satz kommt und das Entsperren wird angeboten; nach echtem Entsperren läuft der Aufruf genau einmal ohne neuen Modelllauf, Abbruch, Schließen oder 60 s verwerfen ihn. Welche Tools das betrifft und die weiteren Teile, steht in K131.

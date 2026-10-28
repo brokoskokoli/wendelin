@@ -1,6 +1,8 @@
 # ADR 0006 – Standard-Assistent, Overlay, Push-to-talk, Vault-Zugriff (`app/` + Kotlin)
 
-Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-13
+Status: teilweise überholt (umgesetzt, nachgezogen 2026-10-25; siehe Vermerk) · 2026-10-13
+
+**Vermerk 2026-10-28 (teilweise überholt):** §1: Die eigene Flutter-Engine je Overlay ist durch ADR 0021 (Engine-Group) ergänzt. §3: Das Verhalten bei gesperrtem Gerät ist durch ADR 0022 (L2/L3, K123) und K131 ersetzt: gesperrt läuft je Sicherheitsstufe A/B ein Modelllauf, das Overlay zeigt die Anfrage und die gesprochene Antwort, Werkzeuge mit „wirkt nur entsperrt“ warten auf das Entsperren (60 s). §8: Der Text „Gesprächsmodus kommt mit M4 · Stopp beendet“ gibt es nicht mehr (Stopp-Wort entfällt, K107). §11: Mindestversion ist Android 10 (API 29, K42); die Einstellung `assistant` vor Android 10 entfällt.
 
 ## Kontext
 WP18 macht Wendelin zum Android-Standard-Assistenten, baut das Assistenten-Overlay laut `docs/design/screens/overlay`, schaltet Push-to-talk im Hauptbildschirm frei und gibt der Obsidian-Integration (WP16) einen SAF-Vault auf dem Gerät. Die Sprach-Plattform (sherpa-onnx, Aufnahme, TTS) entsteht parallel in WP17.

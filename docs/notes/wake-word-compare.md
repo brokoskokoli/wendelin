@@ -1,5 +1,7 @@
 # Wake Words im Vergleich (WP111): Messung
 
+> Pfade: `$WENDELIN_KWS` und `$WENDELIN_FIXTURES` bezeichnen lokale Ordner bzw. Dateien außerhalb des Repos (nicht eingecheckt).
+
 Stand: Teil A (synthetisch) gemessen, 2026-10-20/21. Teil B (echte Aufnahmen, WP121) gemessen 2026-10-22, siehe Abschnitt „Teil B“ am Ende; Teil A und Anhang sind vom Platzhalter-Fehler (dort beschrieben) möglicherweise betroffen und nicht neu gemessen. Nur Zahlen, keine Transkripte und keine Aufnahmen.
 
 ## Ziel
@@ -33,13 +35,13 @@ Kennzahlen: Treffer % (Wilson-95-%), Kandidaten/h Stufe 1, FA/h nach Stufe 2 (Po
 ## microWakeWord-Training
 - Positive: ca. 14k Piper-Clips Wendelin (10,3k bare + 40 % hey) bzw. ca. 9,4k hey; Verwechsler 10,2k, Sprache 10,8k, 2x Augmentierung.
 - Schritte 40000 + 20000 je Wort (`run_mww.sh`, `STEPS=40000`), beide Trainings parallel unter `nice`.
-- Logs: `~/wendelin-models/kws/wp111/mww/` (Arbeitsordner), `train_wendelin.log`, `train_hey.log`, `feats_*.log`, `run_mww.log` unter `~/wendelin-models/kws/wp111/`.
+- Logs: `$WENDELIN_KWS/wp111/mww/` (Arbeitsordner), `train_wendelin.log`, `train_hey.log`, `feats_*.log`, `run_mww.log` unter `$WENDELIN_KWS/wp111/`.
 - Modelle: `mww/trained_{w,h}_main/tflite_stream_state_internal_quant/stream_state_internal_quant.tflite`.
 
 ## Ergebnisse
 Alle Zahlen synthetisch (Systemstimmen, 135 Positive je Wort und Bedingung, Negativsprache 1,93 h, Fernseher 1,01 h FLEURS test; Vorlagen T: 9 Stimmen-Vorlagen, Stundenbasis 17,4 h bzw. 9,06 h). Treffer % mit Wilson-95-%-Intervall in eckigen Klammern. FA/h = Punktwert Sprache / Fernseher, in Klammern die Poisson-Obergrenze (95 %). Stufe 2: `bs` = Parakeet ohne Hotword, `hw2`/`hw3` = Hotword-Boost 2 bzw. 3. Ein Fehlalarm (FA) ist ein Treffer der Wortregel nach Stufe 1 und Stufe 2 auf Negativ; Verwechsler und „andere Phrase“ stehen in der CSV. † T: Einlernstimmen = Teststimmen, siehe „Fairness“; die Werte für T sind geschönt.
 
-Vollansicht (alle Regeln x Stufe 2 x Bedingung, Verwechsler, „andere Phrase löst aus“, Kandidaten/h, Stunden): lokal `~/wendelin-models/kws/wp111/results/{nomww,mww}/compare_table.{md,csv}` und `compare_meta.json` (nicht im Repo).
+Vollansicht (alle Regeln x Stufe 2 x Bedingung, Verwechsler, „andere Phrase löst aus“, Kandidaten/h, Stunden): lokal `$WENDELIN_KWS/wp111/results/{nomww,mww}/compare_table.{md,csv}` und `compare_meta.json` (nicht im Repo).
 
 **A. Beste Konfiguration mit FA/h <= 2 (Punktwert, Sprache und Fernseher)**
 
@@ -136,9 +138,9 @@ Station (station)
 - **Programm**: Stufe 1 = openWakeWord v7 (`M`) wie in WP106; sherpa-KWS (`K`) ist als schlanke zweite Quelle für „Hey Wendelin“ ohne Training interessant (`Kz4/0,05`), aber nur in `clean` brauchbar (53 %); in `both`/`station` höchstens 2 % bei 5 FA/h. microWakeWord (`W`) mit dem hier trainierten Modell nicht verwenden (0 % „Hey“, wenige Treffer „Wendelin“, 47 MB RAM und 0,001 CPU-RTF sprechen aber für einen neuen Versuch mit anderen Trainingsdaten). Stufe 2 = Parakeet mit Hotword 2 (Hotword 3 hebt die Treffer, reißt aber die 2 FA/h).
 - **Schwellen Handy** (Nähe, `clean`): Stufe 1 `M0,3`, Stufe 2 Hotword 2; erwartet etwa 40 bis 45 % bei 1 bis 2 FA/h, also unter dem Ziel; Feintuning aus WP106 (persönlich, 50 bis 60 % mobil) bleibt der bessere Hebel (nicht neu gemessen).
 - **Schwellen Station** (2 bis 3 m, Fernseher): eigener Modus, Stufe 1 `M0,3` (119 Kandidaten/h) und Parakeet Hotword 2; erwartet etwa 11 % (synthetisch, streng) bei ≤ 2 FA/h; das echte Ergebnis aus WP106 (60 % sicher bei 2,1 bis 4,1 FA/h, n = 10) bleibt die bessere Grundlage. `M0,5` ist ruhiger (68 Kandidaten/h), aber nicht besser im Treffer-Verhältnis.
-- Offen: **Teil B** (echte Aufnahmen von „Wendelin“ und „Hey Wendelin“ unter `~/wendelin-fixtures/wake/hey/raw-pos|raw-neg`, mehrere Sprecher, Räume, Fernseher) und danach die Entscheidung über das Wort; ohne diese Daten keine Änderung an App oder ADR.
+- Offen: **Teil B** (echte Aufnahmen von „Wendelin“ und „Hey Wendelin“ unter `$WENDELIN_FIXTURES/wake/hey/raw-pos|raw-neg`, mehrere Sprecher, Räume, Fernseher) und danach die Entscheidung über das Wort; ohne diese Daten keine Änderung an App oder ADR.
 
-## Kommandos (alle aus dem Repo-Root, `K=~/wendelin-models/kws`)
+## Kommandos (alle aus dem Repo-Root, `K=$WENDELIN_KWS`)
 Venv wp58 (Python 3.12, WP58/WP106): `uv venv --python 3.12 $K/wp58/venv && uv pip install --python $K/wp58/venv/bin/python -r tool/train_wake_word/requirements.txt`; Piper-Stimmen unter `$K/wp58/dl`.
 
 1. Testclips (macOS-Systemstimmen, nur lokal): `$K/wp58/venv/bin/python -I tool/train_wake_word/gen_say_test.py --out $K/wp111/data` (erzeugt `pos_wendelin`, `pos_hey`, `conf`, `enroll_hey`).
@@ -150,7 +152,7 @@ Venv wp58 (Python 3.12, WP58/WP106): `uv venv --python 3.12 $K/wp58/venv && uv p
 
 Die Skripte `run_gen.sh` und `run_mww.sh` liegen unter `tool/train_wake_word/`.
 
-Messung ohne mww (läuft mit `K=~/wendelin-models/kws`):
+Messung ohne mww (läuft mit `K=$WENDELIN_KWS`):
 ```
 nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/station_measure.py --compare --cond clean,both,station --words wendelin,hey --rules T0.93,M0.3,M0.5,Kz2/0.15,Kz4/0.05,Kg4/0.05 --variants parakeet-bs,parakeet-hw2,parakeet-hw3 --neg-min 7 --neg-long-max 16 --tv-max-h 1.0 --fleurs $K/wp111/work/fleurs/test --out $K/wp111/results/nomww
 ```
@@ -189,11 +191,11 @@ Wunsch Maintainer nach einer Klang-Recherche (Kandidaten „Hey Wendelix“, „
 
 Verwechsler nach Stufe 2 überall ≤ 2,3 % (neue Wörter 0–0,2 %), FA/h ≤ 2,1. Das Originalmodell für „Alexa“ reagiert fast nur auf eine der Stimmen; die Bedingungen sind für synthetisch trainierte Modelle sehr hart.
 
-**Fazit:** Im gleichen Programm (sherpa-KWS, clean) ist kein Alternativwort besser als „Wendelin“. Der Hebel liegt bei Trainingsdaten (echte Aufnahmen, passende Domäne) und bei Stufe 2 unter Rauschen, nicht beim Wort. Die Empfehlung bleibt: bei „Wendelin“ bleiben, Teil B mit echten Aufnahmen entscheidet. Skriptkopien und Tabellen liegen lokal unter `~/wendelin-models/kws/wp111/{alexa,heyx,side-scripts}/` (nicht im Repo).
+**Fazit:** Im gleichen Programm (sherpa-KWS, clean) ist kein Alternativwort besser als „Wendelin“. Der Hebel liegt bei Trainingsdaten (echte Aufnahmen, passende Domäne) und bei Stufe 2 unter Rauschen, nicht beim Wort. Die Empfehlung bleibt: bei „Wendelin“ bleiben, Teil B mit echten Aufnahmen entscheidet. Skriptkopien und Tabellen liegen lokal unter `$WENDELIN_KWS/wp111/{alexa,heyx,side-scripts}/` (nicht im Repo).
 
 ## Teil B: echte Aufnahmen (WP121, 2026-10-22)
 
-Stand: gemessen 2026-10-22 (Labels aus Etappe 1, Messung `words_measure.py`, Etappe 4). Nur Zahlen, keine Transkripte und keine Aufnahmen; Ergebnisdateien (`grid.csv`, `tables.md`, `det.csv`, `det.png`) liegen lokal unter `~/wendelin-models/kws/wp121/results/`.
+Stand: gemessen 2026-10-22 (Labels aus Etappe 1, Messung `words_measure.py`, Etappe 4). Nur Zahlen, keine Transkripte und keine Aufnahmen; Ergebnisdateien (`grid.csv`, `tables.md`, `det.csv`, `det.png`) liegen lokal unter `$WENDELIN_KWS/wp121/results/`.
 
 Hinweis: Kein Trainingsleck: Die hier gemessenen Erkenner wurden nicht auf diesen Aufnahmen trainiert. Huawei und handy2 sind aber dieselbe Sitzung (zwei Geräte gleichzeitig, Versatz 0,72 s): Die Werte je Gerät sind nicht unabhängig und dürfen nicht addiert werden. Stand 2026-10-24.
 
@@ -318,7 +320,7 @@ Pipeline wie v7 (kein `--wide`): ca. 14000 Positive je Wort (v7: 5000 + 8734 = 1
 - Programm: M vor Kz/Kg und W. KWS bleibt Rückfall (Kz/Kg hier 0–70 %, stark vom Wort abhängig).
 - Vor einer Produktentscheidung: Negativ-Aufnahme verlängern (mehrere Stunden, mit Fernseher), mehr Sprecher/Räume, KWS-Messungen aus Teil A/WP111 neu rechnen.
 
-### Reproduzierbar (aus dem Repo-Root, `P="nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/words_measure.py"`, `K=~/wendelin-models/kws`)
+### Reproduzierbar (aus dem Repo-Root, `P="nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/words_measure.py"`, `K=$WENDELIN_KWS`)
 ```
 nice -n 10 tool/train_wake_word/run_words.sh                 # oct.onnx, kob.onnx unter $K/wp121/models
 $P s1 oww                          # M (Wendelin/Hey v7, alexa) + W; bei vorhandenen oct/kob: run_oww_x
@@ -327,7 +329,7 @@ $P s2 --variants bs --threads 4    # dann hw2, hw3 nacheinander (Parakeet ca. 1 
 $P report                          # grid.csv, tables.md, det.csv, det.png
 $P kontrolle                       # Stufe 1 an den Labels
 ```
-Label-Schritte (`words_labels.py`, vor der Messung; Rohaufnahmen und Labels liegen nur lokal unter `~/wendelin-fixtures/wake/words`):
+Label-Schritte (`words_labels.py`, vor der Messung; Rohaufnahmen und Labels liegen nur lokal unter `$WENDELIN_FIXTURES/wake/words`):
 ```
 L="nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/words_labels.py"
 $L convert                         # Rohaufnahmen -> work/*.wav
@@ -358,7 +360,7 @@ Messung `tool/train_wake_word/v8_measure.py` nur auf dem Prüf-Split: Huawei Blo
 | handy2 | Wendelin | keine Schwelle ≤ Ziel | **77 %** [59–88] | 73 % [56–86] | 67 % [49–81] | 67 % [49–81] | 63 % [46–78] |
 | handy2 | Hey Wendelin | keine Schwelle ≤ Ziel | **90 %** [74–97] | 87 % [70–95] | 63 % [46–78] | 63 % [46–78] | 57 % [39–73] |
 
-Arbeitspunkte Stufe 1 (Schwelle 0,98–0,99): v8a FA/h echt 0,0–1,6, syn 1,0–1,6, FLEURS 1,0, Verwechsler-Clips mit Ereignis 5–8 % [3–11]. v8b bei 0,99: FA/h echt 1,6, Verwechsler 15 % [11–19]. v7 erreicht 2 FA/h nur mit Stufe 2. Mit hw2: Verwechsler bei v7 1–7 %, bei v8a 1–6 %. Kalibrierung auf syn + FLEURS ergibt dieselben Stufe-1-Zahlen. Die „beste Wahl“ (Stufe frei in der Kreuzauswahl) liegt für Wendelin bei v8a unter Stufe 1 allein (47 % bzw. 60 %), weil die Auswahl je Block zwischen den Stufen wechselt. Volle Tabellen lokal unter `~/wendelin-models/kws/wp130/results/v8_table.md`.
+Arbeitspunkte Stufe 1 (Schwelle 0,98–0,99): v8a FA/h echt 0,0–1,6, syn 1,0–1,6, FLEURS 1,0, Verwechsler-Clips mit Ereignis 5–8 % [3–11]. v8b bei 0,99: FA/h echt 1,6, Verwechsler 15 % [11–19]. v7 erreicht 2 FA/h nur mit Stufe 2. Mit hw2: Verwechsler bei v7 1–7 %, bei v8a 1–6 %. Kalibrierung auf syn + FLEURS ergibt dieselben Stufe-1-Zahlen. Die „beste Wahl“ (Stufe frei in der Kreuzauswahl) liegt für Wendelin bei v8a unter Stufe 1 allein (47 % bzw. 60 %), weil die Auswahl je Block zwischen den Stufen wechselt. Volle Tabellen lokal unter `$WENDELIN_KWS/wp130/results/v8_table.md`.
 
 ### Empfehlung
 - **v8a übernehmen.** Bei 2 FA/h erreicht v8a mit Stufe 1 allein 77–93 %. v7 hält das Ziel ohne Stufe 2 nicht ein. Mit Stufe 2 (hw2) sind beide Modelle gleich gut. Bei Huawei überlappen sich die Intervalle von Stufe 1 und v7 + hw2, bei handy2 „Hey Wendelin“ (90 % [74–97] gegen 63 % [46–78]) nur knapp.
@@ -371,7 +373,7 @@ Arbeitspunkte Stufe 1 (Schwelle 0,98–0,99): v8a FA/h echt 0,0–1,6, syn 1,0�
 - Für die Negativzeit gibt es je Gerät nur 0,61 h echte Aufnahme, das sind höchstens 1 FA. Die FA/h-Werte sind damit grob. n = 15 bzw. 30 je Zelle.
 - Ein Lauf je Variante. Common Voice fehlt in v8a/v8b (Plattenplatz), `N_CV=0` überspringt den Schritt ohne Download (so entstanden v8a/v8b); mit dem Standard lädt das Skript das Shard.
 
-### Reproduzierbar (aus dem Repo-Root, `K=~/wendelin-models/kws`)
+### Reproduzierbar (aus dem Repo-Root, `K=$WENDELIN_KWS`)
 ```
 N_CV=0 NJ=4 THREADS=4 TAG=a nice -n 5 tool/train_wake_word/run_v8.sh alle
 TAG=b STEPS=10000 SEED=2 THREADS=4 nice -n 5 tool/train_wake_word/run_v8.sh train
@@ -439,7 +441,7 @@ Belastbar ist vor allem MLS (14,3 h, 30 Sprecher, daher Obergrenze eher zu knapp
 
 **Vergleich der Wörter (Band 0,999):** mit App-Bezug Kreuzauswahl Wendelin 34/45, Hey Wendelin 35/45; feste Schwelle 31/45 gegen 35/45; Verwechsler 5 gegen 4 (mit Spitze: 40/45 gegen 34/45 und 32/45 gegen 34/45; die scheinbare Überlegenheit von „Wendelin“ verschwindet unter App-Bezug). Kein belastbarer Unterschied; Stufe 1 ist für beide dasselbe Modell, nur Stufe 2 trennt über das Hey-Wort.
 
-Reproduzierbar (Repo-Root, `K=~/wendelin-models/kws`): `nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_analysis.py --threads 2 --model v8a=$K/wp130/out/wendelin_wp130_a.onnx` → `$K/wp130/results/stage2_table.md` (lokal). Die Zahlen bei fester Schwelle 0,98 (Spitzenwerte, Verwechsler, FA) stehen dort in Abschnitt 6 (Option `--fixed-thr`, Standard 0,98; `--report-only` rechnet nur aus den Caches), die Treffer-Spalten in Abschnitt 4. Ausschnitt: `… stage2_analysis.py --cut-only --model v8a=…` → `stage2_cut_table.md`. Negativquellen: `nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_extra_neg.py --model v8a=$K/wp130/out/wendelin_wp130_a.onnx --threads 2` → `stage2_extra_neg.md` (lokal; lädt den MLS-Test-Split einmalig nach `$K/wp133/dl`).
+Reproduzierbar (Repo-Root, `K=$WENDELIN_KWS`): `nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_analysis.py --threads 2 --model v8a=$K/wp130/out/wendelin_wp130_a.onnx` → `$K/wp130/results/stage2_table.md` (lokal). Die Zahlen bei fester Schwelle 0,98 (Spitzenwerte, Verwechsler, FA) stehen dort in Abschnitt 6 (Option `--fixed-thr`, Standard 0,98; `--report-only` rechnet nur aus den Caches), die Treffer-Spalten in Abschnitt 4. Ausschnitt: `… stage2_analysis.py --cut-only --model v8a=…` → `stage2_cut_table.md`. Negativquellen: `nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_extra_neg.py --model v8a=$K/wp130/out/wendelin_wp130_a.onnx --threads 2` → `stage2_extra_neg.md` (lokal; lädt den MLS-Test-Split einmalig nach `$K/wp133/dl`).
 
 ### B. v8a-syn gegen v8c-syn (2026-10-23)
 
@@ -481,7 +483,7 @@ Andere Schwellen, Band 0,999 (Treffer, Verwechsler W / HW): bei 0,95 v8a 75 (7 /
 - Der Spitze-Bezug ist optimistisch (die App hat ihn nicht); mit App-Bezug sind es bei v8a etwa 5 Treffer weniger. Die App-Parität (`stage2_cut.py`) ist nur für v8a gemessen, die Rangfolge der Modelle ist es nicht unter App-Bezug.
 - Echte Negativzeit nur 1,22 h; ein Ereignis je Gerät ist die FA-Grenze, die „echt“-Spalte unterscheidet 0 von 1 kaum.
 
-**Reproduzierbar (Repo-Root, `K=~/wendelin-models/kws`, nur aus den Caches):** `M=$K/wp130/out/wendelin_wp130; nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_analysis.py --report-only --threads 2 --fixed-thr 0.95,0.98,0.99 --model v8a=${M}_a.onnx --model a-syn=${M}_a-syn.onnx --model c-syn=${M}_c-syn.onnx` → `stage2_table.md` (Abschnitt 6 je Modell und Schwelle, 6e: Vergleichstabelle). Alle Blöcke ohne v8a: dasselbe mit `--split all` und nur den Modellen `a-syn`, `c-syn` (v7 ist immer dabei) → `stage2_table_all.md`.
+**Reproduzierbar (Repo-Root, `K=$WENDELIN_KWS`, nur aus den Caches):** `M=$K/wp130/out/wendelin_wp130; nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_analysis.py --report-only --threads 2 --fixed-thr 0.95,0.98,0.99 --model v8a=${M}_a.onnx --model a-syn=${M}_a-syn.onnx --model c-syn=${M}_c-syn.onnx` → `stage2_table.md` (Abschnitt 6 je Modell und Schwelle, 6e: Vergleichstabelle). Alle Blöcke ohne v8a: dasselbe mit `--split all` und nur den Modellen `a-syn`, `c-syn` (v7 ist immer dabei) → `stage2_table_all.md`.
 
 ## Vorlagen zentriert (WP134)
 
@@ -547,7 +549,7 @@ Bei der ruhigen Schwelle (0,47) trifft V2b-`noise` ebenfalls 29/30 und „Hey“
 
 *Barge-in-Kandidatenschwelle.* `candidateWakeFloor` 0,45 (`wake_barge_in.dart`): Eine kalibrierte Schwelle bis 0,40 ergäbe mit dem Rand -0,05 nur 0,35, wo FLEURS allein 88 Kandidaten/h liefert (0,40: 88/h, 0,45: 30/h, Messung WP134). Der Rand selbst (-0,05) ist per Test festgehalten.
 
-**Reproduzierbar (Repo-Root, `K=~/wendelin-models/kws`):** `nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/template_center_measure.py run --threads 2` (Cache der Fenster unter `$K/wp134/cache`, erster Lauf etwa 10 min, danach unter 1 min; Selbsttest: `$K/wp58/venv/bin/python -I -m unittest discover -s tool/train_wake_word -p 'test_template_center_measure.py'`). Rohtabelle des Laufs:
+**Reproduzierbar (Repo-Root, `K=$WENDELIN_KWS`):** `nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/template_center_measure.py run --threads 2` (Cache der Fenster unter `$K/wp134/cache`, erster Lauf etwa 10 min, danach unter 1 min; Selbsttest: `$K/wp58/venv/bin/python -I -m unittest discover -s tool/train_wake_word -p 'test_template_center_measure.py'`). Rohtabelle des Laufs:
 
 Negativ echt: huawei 0.61 h, handy2 0.61 h (zusammen 1.22 h, erlaubt 2 Ereignisse bei 2/h); FLEURS-Fernseher test 1.00 h (Auswahlhälfte 0.50 h, Berichtshälfte 0.50 h).
 

@@ -5,7 +5,7 @@ Wo liegt was, und welche Dateien gehören zu einer Änderung? Das ist nur der In
 ## Bereiche
 
 - **Pakete** (`packages/`, reines Dart): Einstiegsdateien und wichtige Typen je Paket. [packages.md](architecture/packages.md); Abhängigkeiten je Paket erzeugt: [generated/packages.md](architecture/generated/packages.md).
-- **App** (`app/lib`): Ordner und ihre Aufgaben, die vier Einstiege. [app.md](architecture/app.md)
+- **App** (`app/lib`): Ordner und ihre Aufgaben, die fünf Einstiege. [app.md](architecture/app.md)
 - **Ports**: wo ein Port liegt und wer ihn in der App umsetzt. [ports.md](architecture/ports.md)
 - **App-Verdrahtung**: Start, Provider, Integrationsregistry, Overlay-Engine, Wake-Word-Dienst. [wiring.md](architecture/wiring.md)
 - **Integrationen**: erzeugte Liste aus der Registry in [generated/integrations.md](architecture/generated/integrations.md); nicht ableitbare Angaben je Integration in einer eigenen Datei [integrations/](architecture/integrations/README.md) (`<id>.md`, keine gemeinsame Tabelle).

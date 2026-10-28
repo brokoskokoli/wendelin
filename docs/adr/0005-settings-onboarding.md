@@ -1,6 +1,8 @@
 # ADR 0005 – Einstellungen und Onboarding (`app/lib/ui/settings/`, `app/lib/ui/onboarding/`)
 
-Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-13
+Status: teilweise überholt (umgesetzt, nachgezogen 2026-10-25; siehe Vermerk) · 2026-10-13
+
+**Vermerk 2026-10-28 (§5 überholt durch ADR 0022, K123):** Die Aussage „es gibt keinen Weg, eine Stufe zu lockern (K8 b)“ gilt nicht mehr. Seit ADR 0022 hat jedes Tool und jedes HA-Gerät eine Sicherheitsstufe A–D, die der Nutzer frei lockern oder verschärfen darf (Hinweis beim Lockern gefährlicher Ziele); `external` ist nur Standard D. Der Rest von §5 (Tool aus/an, „sensibel“ umschaltbar) gilt weiter.
 
 ## Kontext
 WP09 ersetzt die vorläufige Einstellungsseite aus WP08 und ergänzt Provider-Einrichtung, Listen (K6) mit Dateizugriff, Web-Suche, Gedächtnis, Datenschutz, Kosten, Assistent und das Onboarding. Mehrere Punkte lassen Konzept und Arbeitspaket offen.

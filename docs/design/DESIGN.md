@@ -1,7 +1,6 @@
 # Wendelin – Design-Übergabe
 
 Stand 12.10.2026. Ergänzt `../../Voice Agent App – Gesamtkonzept.md` (Abschnitt „UI/UX und Einstellungen“).
-Live-Entwurf (Canvas): https://claude.ai/artifact/EqTEPd6uuiBt2mjmi9muTH
 
 ## Inhalt
 
@@ -20,7 +19,7 @@ Live-Entwurf (Canvas): https://claude.ai/artifact/EqTEPd6uuiBt2mjmi9muTH
 
 - Dunkles Theme ist Standard. Hintergrund `ink`, Karten `surface`, Rahmen `line`.
 - Ein Akzent: Kobalt (`accent`) nur für Mikrofon-Button, aktive Schalter, Auswahl. Keine Verläufe, keine Glow-Effekte.
-- Status immer **Farbe + Form**: geprüft = Kreis mit Haken (grün), ausstehend/Bestätigung = Dreieck (gelb), Fehler = Quadrat mit Kreuz (rot).
+- Status immer **Farbe + Form**: geprüft = Kreis mit Haken (grün), ausstehend/Bestätigung = Dreieck (gelb), Fehler = Quadrat mit Kreuz (rot), nicht bestätigt (Quittung nicht abrufbar, K44) = grauer Ring mit Strich.
 - Datenschutzstufe als Chip, unterschieden über Füllung/Rahmen (siehe `tokens.json → privacyLevel`): ● lokal, ◆ TEE, ▲ EU, ○ Standard.
 - Technisches (Tool-Namen, IDs, Kosten) in IBM Plex Mono 12, `textMuted`.
 - Touch-Ziele ≥ 44, Primär-Buttons 52–56 hoch. Alle Icon-Buttons mit `Semantics`/`tooltip`.
@@ -84,5 +83,5 @@ Instrument Sans und IBM Plex Mono stehen unter der SIL Open Font License. Für D
 ## Offen
 
 - Helles Theme ist nur in den Tokens angelegt (`paper`, `paperInk`), Screens gibt es nur dunkel.
-- Onboarding, Provider-Einrichtung, Einstellungsübersicht, Gedächtnis, Kosten: noch ohne Entwurf.
-- Markenrecherche „Wendelin“ (DPMA/EUIPO/USPTO, Klassen 9/42) und Bildähnlichkeitsprüfung des Logos vor Veröffentlichung.
+- Onboarding, Provider-Einrichtung, Einstellungsübersicht, Gedächtnis, Kosten: ohne Entwurf in `screens/`, in der App umgesetzt.
+- Markenrecherche „Wendelin“ (DPMA/EUIPO/USPTO, Klassen 9/42) und Bildähnlichkeitsprüfung des Logos. Der Stand ist hier nicht festgehalten (v0.1.0 ist bereits veröffentlicht); Maintainer entscheidet, ob erledigt oder bewusst offen.

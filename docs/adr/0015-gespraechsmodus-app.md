@@ -1,6 +1,8 @@
 # ADR 0015 – Gesprächsmodus, Barge-in und Audioquelle in der App
 
-Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-14
+Status: teilweise überholt (umgesetzt, nachgezogen 2026-10-25; siehe Vermerk) · 2026-10-14
+
+**Vermerk 2026-10-28 (teilweise überholt durch K107; führende ADR für Gesprächsmodus und Barge-in in der Pipeline ist ADR 0016):** Das Stopp-Wort als Barge-in-Schlüsselwort entfällt (K107, WP134); `KwsBargeInDetector` gibt es nicht, der Detektor kennt nur das Aktivierungswort. Stopp wirkt nur noch aus dem Transkript im Gesprächsmodus und per Antippen. Die Folgen zu „Stopp“ mit strengerer Schwelle sind damit gegenstandslos.
 
 ## Kontext
 ADR 0016 legt Gesprächsmodus und Barge-in in der Pipeline fest (`VoiceFollowUpListening`, `VoiceBargeIn`, `VoiceConversationEnded`, `VoicePipelineConfig.conversationMode`/`bargeIn`). WP51 bringt sie in die App (K23 c/d, K24). Entscheidung des Maintainers (M4, Punkt 2): Gesprächsmodus Standard aus, einmalige Nachfrage nach der ersten Antwort, Einstellung unter Sprache, Schritt im Onboarding. Das Wake-Word-Modell fehlt noch (WP44/WP58).

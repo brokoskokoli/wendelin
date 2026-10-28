@@ -1,6 +1,6 @@
 # Wake Word im Stationsmodus (WP106, 2026-10-19): Messung
 
-Stand: Messung auf dem Host (macOS, ohne Gerät), nur Zahlen. Frage: Reicht Stufe 1 (Wake-Word-Modell oder Vorlagen) plus Stufe 2 (STT mit Hotword) plus Stufe 3 (Sprecherprüfung) für ein Handy, das 2 bis 3 m entfernt liegt, mit Fernseher und Küchengeräuschen? **Nicht erreicht:** keine Kombination liefert hohe Trefferquote und 0 FA/h zugleich. Skripte: `tool/train_wake_word/` (`station_measure.py`, `real_measure.py`, `train.py`, `mww_*`). Rohdaten liegen nur lokal unter `~/wendelin-models/kws/wp106/results/` und `~/wendelin-fixtures/wake/station/`, nichts davon im Repo.
+Stand: Messung auf dem Host (macOS, ohne Gerät), nur Zahlen. Frage: Reicht Stufe 1 (Wake-Word-Modell oder Vorlagen) plus Stufe 2 (STT mit Hotword) plus Stufe 3 (Sprecherprüfung) für ein Handy, das 2 bis 3 m entfernt liegt, mit Fernseher und Küchengeräuschen? **Nicht erreicht:** keine Kombination liefert hohe Trefferquote und 0 FA/h zugleich. Skripte: `tool/train_wake_word/` (`station_measure.py`, `real_measure.py`, `train.py`, `mww_*`). Rohdaten liegen nur lokal unter `$WENDELIN_KWS/wp106/results/` und `$WENDELIN_FIXTURES/wake/station/`, nichts davon im Repo.
 
 ## Messaufbau
 - **Synthetisch** (`station_measure.py`): 9 macOS-Systemstimmen (Anna, Eddy, Flo, Grandma, Grandpa, Reed, Rocko, Sandy, Shelley; lokal erzeugt, nur Messung), Bedingungen `clean`, `both` (Rauschen 10 dB + Hall 0,5 s), `station` (2 bis 3 m, RT60 0,7 s, Pegel -10 bis -15 dB, Fernsehton aus FLEURS + synthetische Musik bei SNR 5 bis 10 dB, Mikrofonrauschen 25 dB). Negativ: 1,0 h Systemstimmen-Sprache (150 Clips; 8 Clips mit „Wendelin“ ausgeschlossen) und 1,0 h Fernsehton („Fernseher“).
@@ -183,7 +183,7 @@ Einheitliche Station-Schwellen wären zu streng für das Handy und umgekehrt: Di
 
 ## Erneut messen (je ein Kommando)
 ```
-K=~/wendelin-models/kws
+K=$WENDELIN_KWS
 # synthetisch (Stufe 1 bis 3, ca. 55 min):
 nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/station_measure.py --out $K/wp106/results
 # echte Aufnahmen, Standard (v7, Vorlagen; ca. 55 min mit allen Varianten):
@@ -193,4 +193,4 @@ nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/real_measure.py --mod
 # Feintuning (ca. 3 min), danach real_measure --model $K/wp106/finetune/ft_v9.onnx --model-thr 0.5,0.7,0.9 --thr 0.95 --s2-thr M0.5,M0.7,M0.9 --variants parakeet-hw2 --spk-thr 0.45:
 nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/finetune_personal.py
 ```
-Eingaben: `~/wendelin-fixtures/wake/station/{pos,neg}/{station,mobile}/*.wav`. Neue Aufnahmen nach demselben Aufbau (Anleitung in den Fixtures) ablegen und die Kommandos wiederholen.
+Eingaben: `$WENDELIN_FIXTURES/wake/station/{pos,neg}/{station,mobile}/*.wav`. Neue Aufnahmen nach demselben Aufbau (Anleitung in den Fixtures) ablegen und die Kommandos wiederholen.

@@ -1,5 +1,7 @@
 # Spike Sprachqualität: STT- und TTS-Kandidaten (WP102, 2026-10-19)
 
+> Pfade: `$WENDELIN_FIXTURES` bezeichnen lokale Ordner bzw. Dateien außerhalb des Repos (nicht eingecheckt).
+
 Grundlage für WP103 (K64). Gemessen auf dem Mac (Apple Silicon, 4 Threads, sherpa-onnx Python 1.13.8, int8-Modelle), mit `tool/voice_quality_measure.py` (Aufruf im Kopf der Datei). Keine Handy-Zahlen: Absolutzeiten und RAM gelten für den Mac; für das Telefon zählen die Verhältnisse (RTF) und die Reihenfolge. Echte Geräte-Werte misst Maintainer im Folgepaket per Debug-Ansicht; eine Emulator-Stichprobe steht unten.
 
 ## Messaufbau und Grenzen
@@ -108,7 +110,7 @@ Release-Tags `asr-models`, `tts-models`, `speech-enhancement-models` unter githu
 | Kokoro multi-lang v1.0 int8 | `tts-models`: `kokoro-int8-multi-lang-v1_0.tar.bz2` (132 MB) | Apache-2.0 |
 | Piper miro high (de, fr) | `vits-piper-{de_DE,fr_FR}-miro-high-int8` | CC BY-NC-SA 4.0, ausgeschlossen |
 
-Modelle liegen unter `~/wendelin-fixtures/models` (früher `handoff/wp102-models`; Ordner per `WENDELIN_MODELS` änderbar) (nicht im Repo). Für Hotwords zusätzlich `tokenizer.vocab` aus `parakeet-tdt-0.6b-v3.nemo` (HF `nvidia/parakeet-tdt-0.6b-v3`, CC-BY-4.0) in `wp102-models/parakeet-bpe/`.
+Modelle liegen unter `$WENDELIN_FIXTURES/models` (früher `handoff/wp102-models`; Ordner per `WENDELIN_MODELS` änderbar) (nicht im Repo). Für Hotwords zusätzlich `tokenizer.vocab` aus `parakeet-tdt-0.6b-v3.nemo` (HF `nvidia/parakeet-tdt-0.6b-v3`, CC-BY-4.0) in `wp102-models/parakeet-bpe/`.
 
 ## Empfehlung für WP103
 1. **Standard bleibt `whisper-small`** (fest Sprache). Er bleibt ein vertretbarer Kompromiss und ist unverändert getestet.
