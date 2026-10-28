@@ -207,6 +207,35 @@ void main() {
       expect(launcher.wakes, 0);
     });
 
+    test(
+      '429 beim zweiten Vorab-Lesen: Fehler, kein Handy, kein Wecken',
+      () async {
+        speakerPlays();
+        final secrets = FakeSpotifySecrets(storedClientId: _clientId)
+          ..storedAuth = await api.exchangeCode(
+            clientId: _clientId,
+            code: FakeSpotifyApi.validCode,
+            verifier: 'v' * 64,
+            redirect: spotifyRedirect,
+          );
+        api.methodCalls.clear();
+        final s = SpotifySession(
+          api,
+          secrets,
+          launcher: launcher,
+          hostDevice: FakeSpotifyHostDevice(),
+          delay: (d) async => api.failNext('playback', spotifyRateLimited),
+        );
+        await expectLater(
+          s.startPlayback((a, d) => api.play(a, deviceId: d, uris: ['x'])),
+          throwsA(same(spotifyRateLimited)),
+        );
+        expect(count('playback'), 2);
+        expect(count('play'), 0);
+        expect(launcher.wakes, 0);
+      },
+    );
+
     for (final (label, setup) in <(String, void Function())>[
       ('nichts aktiv', () => api.knownDevices.addAll([phone, speaker])),
       (
