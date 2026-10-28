@@ -17,6 +17,9 @@ final class FakeContactsPort with FakeFailures implements ContactsPort {
   /// The `fields` of every [all] call, in order.
   final List<Set<ContactField>> requested = [];
 
+  /// The hits (names) and `fields` of every [details] call, in order.
+  final List<({List<String> names, Set<ContactField> fields})> detailed = [];
+
   @override
   Future<bool> hasPermission() async => permission;
 
@@ -32,21 +35,55 @@ final class FakeContactsPort with FakeFailures implements ContactsPort {
         'Kein Zugriff auf die Kontakte.',
       );
     }
-    // Like the real port: only the requested fields are filled in.
+    // Like the real port: phone and mail as requested, the extras (address,
+    // birthday, organization) only through [details]; `ref` is the index.
     return [
-      for (final c in contacts)
+      for (var i = 0; i < contacts.length; i++)
         ContactEntry(
-          name: c.name,
-          phones: fields.contains(ContactField.phone) ? c.phones : const [],
-          emails: fields.contains(ContactField.email) ? c.emails : const [],
-          addresses: fields.contains(ContactField.address)
-              ? c.addresses
+          name: contacts[i].name,
+          phones: fields.contains(ContactField.phone)
+              ? contacts[i].phones
               : const [],
-          birthday: fields.contains(ContactField.birthday) ? c.birthday : null,
-          organization: fields.contains(ContactField.organization)
-              ? c.organization
-              : null,
+          emails: fields.contains(ContactField.email)
+              ? contacts[i].emails
+              : const [],
+          ref: '$i',
         ),
+    ];
+  }
+
+  @override
+  Future<List<ContactEntry>> details(
+    List<ContactEntry> hits,
+    Set<ContactField> fields,
+  ) async {
+    enter('details');
+    detailed.add((names: [for (final h in hits) h.name], fields: fields));
+    if (!permission) {
+      throw const PortException(
+        PortErrorKind.permissionDenied,
+        'Kein Zugriff auf die Kontakte.',
+      );
+    }
+    return [
+      for (final h in hits)
+        if (int.tryParse(h.ref ?? '') case final i? when i < contacts.length)
+          h.withDetails(
+            ContactEntry(
+              name: h.name,
+              addresses: fields.contains(ContactField.address)
+                  ? contacts[i].addresses
+                  : const [],
+              birthday: fields.contains(ContactField.birthday)
+                  ? contacts[i].birthday
+                  : null,
+              organization: fields.contains(ContactField.organization)
+                  ? contacts[i].organization
+                  : null,
+            ),
+          )
+        else
+          h,
     ];
   }
 }

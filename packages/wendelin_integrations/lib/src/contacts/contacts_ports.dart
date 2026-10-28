@@ -78,7 +78,12 @@ final class ContactEntry {
     this.addresses = const [],
     this.birthday,
     this.organization,
+    this.ref,
   });
+
+  /// Opaque handle of the port for [ContactsPort.details] (the platform's
+  /// contact id). Never part of any JSON form: it does not reach the model.
+  final String? ref;
 
   /// Display name.
   final String name;
@@ -97,6 +102,18 @@ final class ContactEntry {
 
   /// Company or organization.
   final String? organization;
+
+  /// This entry with [addresses], [birthday] and [organization] taken from
+  /// [other] (the details of the same contact).
+  ContactEntry withDetails(ContactEntry other) => ContactEntry(
+    name: name,
+    phones: phones,
+    emails: emails,
+    addresses: other.addresses,
+    birthday: other.birthday,
+    organization: other.organization,
+    ref: ref,
+  );
 
   /// JSON form for the model without a `fields` request: phones and mail
   /// addresses only.
@@ -131,13 +148,24 @@ abstract interface class ContactsPort {
   /// Whether reading contacts is allowed.
   Future<bool> hasPermission();
 
-  /// All contacts that have a phone number or a mail address (matching is
-  /// done by [ContactsFinder], so it is the same on every platform), with
-  /// only the requested [fields] filled in. Data beyond phone and mail is
-  /// read from the address book only when asked for here.
+  /// The search index: all contacts that have a phone number or a mail
+  /// address, or data of the requested extra [fields] (matching is done by
+  /// [ContactsFinder], so it is the same on every platform). Only phone
+  /// numbers and mail addresses are filled in (if requested); address,
+  /// birthday and organization are not read here, see [details].
   Future<List<ContactEntry>> all({
     Set<ContactField> fields = defaultContactFields,
   });
+
+  /// Reads address, birthday and organization (as far as in [fields]) of
+  /// the contacts [hits] only, so that data beyond phone and mail is never
+  /// loaded for the whole address book. Returns the hits in order, with the
+  /// extras filled in; a hit the platform no longer knows comes back
+  /// unchanged. Entries without [ContactEntry.ref] are returned as they are.
+  Future<List<ContactEntry>> details(
+    List<ContactEntry> hits,
+    Set<ContactField> fields,
+  );
 }
 
 /// How [PhonePort.call] started the call.
@@ -274,8 +302,11 @@ final class ContactsFinder {
       if (name == q) exact.add(c);
       if (hits(name)) matches.add(c);
     }
-    final result = exact.isNotEmpty ? exact : matches;
-    return result.take(limit).toList();
+    final result = (exact.isNotEmpty ? exact : matches).take(limit).toList();
+    // Data beyond phone and mail is read for the hits only.
+    final extras = fields.difference(defaultContactFields);
+    if (result.isEmpty || extras.isEmpty) return result;
+    return port.details(result, extras);
   }
 
   /// The contact that owns [number], if any.

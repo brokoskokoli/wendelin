@@ -33,43 +33,68 @@ final class ChannelContactsPort implements ContactsPort, PhonePort {
   @override
   Future<List<ContactEntry>> all({
     Set<ContactField> fields = defaultContactFields,
-  }) async {
-    final rows =
-        await _call<List<Object?>>('all', {
+  }) async => _entries(
+    await _call<List<Object?>>('all', {
+      'fields': [for (final f in fields) f.name],
+    }),
+  );
+
+  @override
+  Future<List<ContactEntry>> details(
+    List<ContactEntry> hits,
+    Set<ContactField> fields,
+  ) async {
+    final ids = [
+      for (final h in hits)
+        if (h.ref != null) h.ref!,
+    ];
+    if (ids.isEmpty) return hits;
+    final byRef = {
+      for (final e in _entries(
+        await _call<List<Object?>>('details', {
+          'ids': ids,
           'fields': [for (final f in fields) f.name],
-        }) ??
-        const [];
+        }),
+      ))
+        if (e.ref != null) e.ref!: e,
+    };
     return [
-      for (final row in rows.whereType<Map<Object?, Object?>>())
-        ContactEntry(
-          name: row['name']! as String,
-          phones: [
-            for (final p
-                in (row['phones'] as List<Object?>? ?? const [])
-                    .whereType<Map<Object?, Object?>>())
-              ContactPhone(
-                p['number']! as String,
-                label: p['label'] as String? ?? '',
-              ),
-          ],
-          emails: [
-            for (final e in (row['emails'] as List<Object?>? ?? const []))
-              e! as String,
-          ],
-          addresses: [
-            for (final a
-                in (row['addresses'] as List<Object?>? ?? const [])
-                    .whereType<Map<Object?, Object?>>())
-              ContactAddress(
-                a['address']! as String,
-                label: a['label'] as String? ?? '',
-              ),
-          ],
-          birthday: row['birthday'] as String?,
-          organization: row['organization'] as String?,
-        ),
+      for (final h in hits)
+        if (byRef[h.ref] case final d?) h.withDetails(d) else h,
     ];
   }
+
+  List<ContactEntry> _entries(List<Object?>? rows) => [
+    for (final row in (rows ?? const []).whereType<Map<Object?, Object?>>())
+      ContactEntry(
+        name: row['name']! as String,
+        ref: row['id'] as String?,
+        phones: [
+          for (final p
+              in (row['phones'] as List<Object?>? ?? const [])
+                  .whereType<Map<Object?, Object?>>())
+            ContactPhone(
+              p['number']! as String,
+              label: p['label'] as String? ?? '',
+            ),
+        ],
+        emails: [
+          for (final e in (row['emails'] as List<Object?>? ?? const []))
+            e! as String,
+        ],
+        addresses: [
+          for (final a
+              in (row['addresses'] as List<Object?>? ?? const [])
+                  .whereType<Map<Object?, Object?>>())
+            ContactAddress(
+              a['address']! as String,
+              label: a['label'] as String? ?? '',
+            ),
+        ],
+        birthday: row['birthday'] as String?,
+        organization: row['organization'] as String?,
+      ),
+  ];
 
   @override
   Future<void> sendSms(String number, String text) =>

@@ -238,6 +238,7 @@
         "requestPermission": {"args": [], "returns": "value"},
         "canSendSms": {"args": [], "returns": "value"},
         "all": {"args": ["fields"], "returns": "list"},
+        "details": {"args": ["ids", "fields"], "returns": "list"},
         "sendSms": {"args": ["number", "text"], "returns": "none"},
         "call": {"args": ["number"], "returns": "value"}
       },

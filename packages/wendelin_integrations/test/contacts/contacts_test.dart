@@ -245,6 +245,55 @@ void main() {
       expect(m['organization'], 'Muster GmbH');
     });
 
+    test(
+      'Zusatzfelder nur für die Treffer, nicht für das ganze Adressbuch',
+      () async {
+        await find('Anna', ['address', 'birthday']);
+        expect(book.detailed, hasLength(1));
+        expect(book.detailed.single.names, ['Anna Meier']);
+        expect(book.detailed.single.fields, {
+          ContactField.address,
+          ContactField.birthday,
+        });
+      },
+    );
+
+    test('ohne Zusatzfelder oder ohne Treffer keine Detailabfrage', () async {
+      await find('Anna');
+      await find('Anna', ['phone', 'email']);
+      await find('Niemand', ['address']);
+      expect(book.detailed, isEmpty);
+    });
+
+    test(
+      'Kontakt nur mit Adresse bleibt mit fields:[address] auffindbar',
+      () async {
+        book.contacts = const [
+          ContactEntry(
+            name: 'Clara Nur',
+            addresses: [ContactAddress('Weg 9, 11111 Ort', label: 'Privat')],
+          ),
+        ];
+        final m = only(await find('Clara', ['address']));
+        expect(m['addresses'], [
+          {'address': 'Weg 9, 11111 Ort', 'label': 'Privat'},
+        ]);
+      },
+    );
+
+    test('die Kontakt-Kennung erreicht das Modell nie', () async {
+      final o = await tool('contacts__find').execute({
+        'query': 'Anna',
+        'fields': ['address'],
+      }, ctx());
+      expect(o.text, isNot(contains('"ref"')));
+      expect(o.text, isNot(contains('"id"')));
+      expect(
+        book.contacts.first.toJsonFor(ContactField.values.toSet()),
+        isNot(contains('ref')),
+      );
+    });
+
     test('Feld ohne Wert: Liste leer, Skalar fehlt', () async {
       final m = only(await find('Ben', ['address', 'birthday']));
       expect(m.keys, unorderedEquals(['name', 'addresses']));
@@ -510,4 +559,10 @@ final class _FullPort implements ContactsPort {
   Future<List<ContactEntry>> all({
     Set<ContactField> fields = defaultContactFields,
   }) async => [entry];
+
+  @override
+  Future<List<ContactEntry>> details(
+    List<ContactEntry> hits,
+    Set<ContactField> fields,
+  ) async => hits;
 }

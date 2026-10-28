@@ -131,4 +131,133 @@ class ContactRowsTest {
             }
         }
     }
+
+    // --- WP164 R1b: selection and index (what is read, and for whom) ---
+
+    private val extras = setOf(ContactRows.Kind.ADDRESS, ContactRows.Kind.BIRTHDAY, ContactRows.Kind.ORGANIZATION)
+
+    @Test
+    fun mimeTypesAndColumnsAreThoseOfAndroid() {
+        assertEquals(android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE, ContactRows.Kind.PHONE.mime)
+        assertEquals(android.provider.ContactsContract.CommonDataKinds.Email.CONTENT_ITEM_TYPE, ContactRows.Kind.EMAIL.mime)
+        assertEquals(android.provider.ContactsContract.CommonDataKinds.StructuredPostal.CONTENT_ITEM_TYPE, ContactRows.Kind.ADDRESS.mime)
+        assertEquals(android.provider.ContactsContract.CommonDataKinds.Event.CONTENT_ITEM_TYPE, ContactRows.Kind.BIRTHDAY.mime)
+        assertEquals(android.provider.ContactsContract.CommonDataKinds.Organization.CONTENT_ITEM_TYPE, ContactRows.Kind.ORGANIZATION.mime)
+        assertEquals(android.provider.ContactsContract.CommonDataKinds.Event.TYPE_BIRTHDAY.toString(), ContactRows.EVENT_BIRTHDAY)
+        assertEquals(android.provider.ContactsContract.Data.MIMETYPE, ContactRows.COL_MIME)
+        assertEquals(android.provider.ContactsContract.Data.CONTACT_ID, ContactRows.COL_CONTACT_ID)
+        assertEquals(android.provider.ContactsContract.Data.DISPLAY_NAME, ContactRows.COL_NAME)
+        assertEquals(android.provider.ContactsContract.Data.DATA1, ContactRows.COL_DATA1)
+        assertEquals(android.provider.ContactsContract.Data.DATA2, ContactRows.COL_DATA2)
+        assertEquals(android.provider.ContactsContract.Data.DATA3, ContactRows.COL_DATA3)
+    }
+
+    @Test
+    fun selectionLoadsOnlyTheMimeTypesOfTheKindsAsked() {
+        val (sql, args) = ContactRows.selection(ContactRows.DEFAULT_FIELDS)
+        assertEquals("(mimetype = ? OR mimetype = ?)", sql)
+        assertEquals(listOf(ContactRows.Kind.PHONE.mime, ContactRows.Kind.EMAIL.mime), args.toList())
+        for (k in listOf(ContactRows.Kind.ADDRESS, ContactRows.Kind.BIRTHDAY, ContactRows.Kind.ORGANIZATION)) {
+            assertTrue("$k loaded unasked", k.mime !in args)
+        }
+    }
+
+    @Test
+    fun selectionOfExtrasAndBirthdayOnlyAsEventOfTypeBirthday() {
+        val (sql, args) = ContactRows.selection(extras)
+        assertEquals(
+            "(mimetype = ? OR (mimetype = ? AND data2 = ?) OR mimetype = ?)",
+            sql,
+        )
+        assertEquals(
+            listOf(ContactRows.Kind.ADDRESS.mime, ContactRows.Kind.BIRTHDAY.mime, "3", ContactRows.Kind.ORGANIZATION.mime),
+            args.toList(),
+        )
+        assertEquals(setOf(ContactRows.Kind.PHONE.mime), ContactRows.selection(setOf(ContactRows.Kind.PHONE)).second.toSet())
+    }
+
+    @Test
+    fun selectionWithIdsIsRestrictedToThem() {
+        val (sql, args) = ContactRows.selection(setOf(ContactRows.Kind.ADDRESS), listOf(7L, 9L))
+        assertEquals("(mimetype = ?) AND contact_id IN (?,?)", sql)
+        assertEquals(listOf(ContactRows.Kind.ADDRESS.mime, "7", "9"), args.toList())
+        assertEquals(sql.count { it == '?' }, args.size)
+    }
+
+    @Test
+    fun selectionRefusesEmptyKindsAndBadIdLists() {
+        for (bad in listOf<() -> Any>(
+            { ContactRows.selection(emptySet()) },
+            { ContactRows.selection(extras, emptyList()) },
+            { ContactRows.selection(extras, List(ContactRows.MAX_IDS + 1) { it.toLong() }) },
+        )) {
+            try {
+                bad()
+                throw AssertionError("accepted")
+            } catch (e: ArgumentException) {
+                // refused
+            }
+        }
+    }
+
+    @Test
+    fun presenceSelectionSkipsEmptyContentWithoutReadingIt() {
+        val (sql, _) = ContactRows.selection(setOf(ContactRows.Kind.ADDRESS), nonEmpty = true)
+        assertEquals("(mimetype = ?) AND data1 IS NOT NULL AND data1 != ''", sql)
+        assertTrue(ContactRows.PRESENCE_PROJECTION.none { it.startsWith("data") })
+        assertTrue(ContactRows.DATA_PROJECTION.any { it == "data1" })
+    }
+
+    @Test
+    fun parseIdsAndDetailFields() {
+        assertEquals(listOf(1L, 2L), ContactRows.parseIds(listOf("1", "2", "1")))
+        for (bad in listOf(null, emptyList(), listOf("x"), listOf("1", "")) ) {
+            try {
+                ContactRows.parseIds(bad)
+                throw AssertionError("accepted $bad")
+            } catch (e: ArgumentException) {
+                assertEquals("argument ids", e.message)
+            }
+        }
+        assertEquals(setOf(ContactRows.Kind.ADDRESS), ContactRows.parseDetailFields(listOf("address", "phone")))
+        for (bad in listOf(null, listOf("phone"), listOf("email", "phone"), emptyList())) {
+            try {
+                ContactRows.parseDetailFields(bad)
+                throw AssertionError("accepted $bad")
+            } catch (e: ArgumentException) {
+                assertEquals("argument fields", e.message)
+            }
+        }
+    }
+
+    @Test
+    fun indexKeepsAddressOnlyContactsFindableAndHandsOutNoContent() {
+        val data = listOf(phone(1, "Berta", "0170 1"))
+        val presence = listOf(
+            ContactRows.Row(2, "Anna", ContactRows.Kind.ADDRESS, ContactRows.PRESENT, null),
+            ContactRows.Row(1, "Berta", ContactRows.Kind.ADDRESS, ContactRows.PRESENT, null),
+        )
+        val out = ContactRows.index(data, presence, setOf(ContactRows.Kind.ADDRESS))
+        assertEquals(listOf("Anna", "Berta"), out.map { it["name"] })
+        assertEquals(listOf("2", "1"), out.map { it["id"] })
+        for (c in out) assertEquals(setOf("name", "id"), c.keys)
+        assertTrue(out.toString(), !out.toString().contains(ContactRows.PRESENT))
+    }
+
+    @Test
+    fun indexWithPhoneAndAddressHandsOutPhonesOnly() {
+        val out = ContactRows.index(
+            listOf(phone(1, "Anna", "0170 1")),
+            listOf(ContactRows.Row(1, "Anna", ContactRows.Kind.ADDRESS, ContactRows.PRESENT, null)),
+            setOf(ContactRows.Kind.PHONE, ContactRows.Kind.ADDRESS),
+        ).single()
+        assertEquals(setOf("name", "id", "phones"), out.keys)
+    }
+
+    @Test
+    fun mergeWithoutIdHasNoIdAndDetailsRowsGetOne() {
+        assertTrue("id" !in ContactRows.merge(annaRows).single())
+        val d = ContactRows.merge(annaRows, setOf(ContactRows.Kind.ORGANIZATION), withId = true).single()
+        assertEquals(mapOf("name" to "Anna Meier", "id" to "1", "organization" to "Muster GmbH"), d)
+    }
 }

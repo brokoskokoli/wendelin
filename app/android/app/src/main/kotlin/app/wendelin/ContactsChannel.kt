@@ -9,9 +9,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.ContactsContract
-import android.provider.ContactsContract.CommonDataKinds.Email
-import android.provider.ContactsContract.CommonDataKinds.Event
-import android.provider.ContactsContract.CommonDataKinds.Organization
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.CommonDataKinds.StructuredPostal
 import android.telephony.SmsManager
@@ -67,6 +64,19 @@ class ContactsChannel(private val activity: Activity, messenger: BinaryMessenger
                     return
                 }
                 io.execute { reply(result) { readAll(fields) } }
+            }
+            "details" -> {
+                val args = ChannelArgs.of(call.arguments)
+                val ids: List<Long>
+                val fields: Set<ContactRows.Kind>
+                try {
+                    ids = ContactRows.parseIds(args.stringList("ids"))
+                    fields = ContactRows.parseDetailFields(args.stringList("fields"))
+                } catch (e: ArgumentException) {
+                    result.error("bad_args", e.message, null)
+                    return
+                }
+                io.execute { reply(result) { readDetails(ids, fields) } }
             }
             "sendSms" -> {
                 val args = ChannelArgs.of(call.arguments)
@@ -130,47 +140,49 @@ class ContactsChannel(private val activity: Activity, messenger: BinaryMessenger
     }
 
     /**
-     * Phone and mail rows are always read (they decide which contacts exist, as before); postal
-     * address, birthday and organization rows only when [fields] asks for them. [ContactRows.merge]
-     * hands out the requested fields only.
+     * The search index: phone and mail rows are always read (they decide which contacts exist, as
+     * before); for requested address, birthday or organization only the presence is queried (no
+     * content column), so the content itself is read later, for the hits only ([readDetails]).
      */
     private fun readAll(fields: Set<ContactRows.Kind>): List<Map<String, Any>> {
         if (!has(Manifest.permission.READ_CONTACTS)) throw PermissionException("READ_CONTACTS")
-        val rows = mutableListOf<ContactRows.Row>()
-        val projection = arrayOf(
-            ContactsContract.Data.CONTACT_ID,
-            ContactsContract.Data.DISPLAY_NAME,
-            ContactsContract.Data.MIMETYPE,
-            ContactsContract.Data.DATA1,
-            ContactsContract.Data.DATA2,
-            ContactsContract.Data.DATA3,
+        val data = query(
+            ContactRows.DATA_PROJECTION,
+            ContactRows.selection(ContactRows.DEFAULT_FIELDS),
         )
-        val types = mutableListOf(Phone.CONTENT_ITEM_TYPE, Email.CONTENT_ITEM_TYPE)
-        if (ContactRows.Kind.ADDRESS in fields) types.add(StructuredPostal.CONTENT_ITEM_TYPE)
-        if (ContactRows.Kind.ORGANIZATION in fields) types.add(Organization.CONTENT_ITEM_TYPE)
-        var selection = "${ContactsContract.Data.MIMETYPE} IN (${types.joinToString(",") { "?" }})"
-        val selectionArgs = types.toMutableList()
-        if (ContactRows.Kind.BIRTHDAY in fields) {
-            selection += " OR (${ContactsContract.Data.MIMETYPE} = ? AND ${ContactsContract.Data.DATA2} = ?)"
-            selectionArgs.add(Event.CONTENT_ITEM_TYPE)
-            selectionArgs.add(Event.TYPE_BIRTHDAY.toString())
+        val extras = fields.filter { it in ContactRows.EXTRA_FIELDS }.toSet()
+        val presence = if (extras.isEmpty()) {
+            emptyList()
+        } else {
+            query(ContactRows.PRESENCE_PROJECTION, ContactRows.selection(extras, nonEmpty = true))
         }
+        return ContactRows.index(data, presence, fields)
+    }
+
+    /** Address, birthday and organization of the contacts [ids] (the hits of a search) only. */
+    private fun readDetails(ids: List<Long>, fields: Set<ContactRows.Kind>): List<Map<String, Any>> {
+        if (!has(Manifest.permission.READ_CONTACTS)) throw PermissionException("READ_CONTACTS")
+        val rows = query(ContactRows.DATA_PROJECTION, ContactRows.selection(fields, ids))
+        return ContactRows.merge(rows, fields, withId = true)
+    }
+
+    /** Runs one query on the data table; presence projections yield rows with [ContactRows.PRESENT]. */
+    private fun query(projection: Array<String>, where: Pair<String, Array<String>>): List<ContactRows.Row> {
+        val rows = mutableListOf<ContactRows.Row>()
+        val withData = projection.size > ContactRows.PRESENCE_PROJECTION.size
         activity.contentResolver.query(
             ContactsContract.Data.CONTENT_URI,
             projection,
-            selection,
-            selectionArgs.toTypedArray(),
+            where.first,
+            where.second,
             "${ContactsContract.Data.DISPLAY_NAME} COLLATE NOCASE",
         )?.use { c ->
             while (c.moveToNext()) {
                 val mime = c.getString(2)
-                val kind = when (mime) {
-                    Phone.CONTENT_ITEM_TYPE -> ContactRows.Kind.PHONE
-                    Email.CONTENT_ITEM_TYPE -> ContactRows.Kind.EMAIL
-                    StructuredPostal.CONTENT_ITEM_TYPE -> ContactRows.Kind.ADDRESS
-                    Event.CONTENT_ITEM_TYPE -> ContactRows.Kind.BIRTHDAY
-                    Organization.CONTENT_ITEM_TYPE -> ContactRows.Kind.ORGANIZATION
-                    else -> continue
+                val kind = ContactRows.Kind.values().firstOrNull { it.mime == mime } ?: continue
+                if (!withData) {
+                    rows.add(ContactRows.Row(c.getLong(0), c.getString(1), kind, ContactRows.PRESENT, null))
+                    continue
                 }
                 val label = when (kind) {
                     ContactRows.Kind.PHONE ->
@@ -182,7 +194,7 @@ class ContactsChannel(private val activity: Activity, messenger: BinaryMessenger
                 rows.add(ContactRows.Row(c.getLong(0), c.getString(1), kind, c.getString(3), label))
             }
         }
-        return ContactRows.merge(rows, fields)
+        return rows
     }
 
     private fun sendSms(number: String, text: String) {
