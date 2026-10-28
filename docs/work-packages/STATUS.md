@@ -6,7 +6,7 @@ Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) 
 
 Parallelität: bis zu 4 Paket-Sitzungen, je 1 Sub-Agent (AGENTS.md); Standard 2, solange der Maintainer am Rechner ist.
 
-Stand: 2026-10-28; läuft: WP169, WP170; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
+Stand: 2026-10-28; läuft: WP169, WP170, WP171, WP172; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
 
 ## Meilensteine
 
@@ -31,6 +31,8 @@ Stand: 2026-10-28; läuft: WP169, WP170; Release v0.1.0 (2fd52524); der nächste
 | WP138 | Kompakt-Modus: kleines Sprach-Overlay mit Kreis und Haken | geplant | Idee Maintainer 2026-10-23; nur nach Gespräch und Go |
 | WP169 | GitHub-Repo auf Stand v0.1.0: Lizenz GPL-3.0-or-later, README en/de, Screenshots, Homepage | in Arbeit | Wunsch Maintainer 2026-10-28 |
 | WP170 | Doku bereinigen: Widersprüche, Veraltetes, Doppelungen, Erledigtes löschen | in Arbeit | Auftrag Maintainer 2026-10-28; Entscheidungen im Paket |
+| WP171 | Weckwort: zweite Prüfung scheitert still ohne Whisper (Zweitgerät), robust machen | in Arbeit | Gerätetest Maintainer 2026-10-28 |
+| WP172 | Overlay schließt nach dem Zuhören ohne Antwort, Weckwort wieder bereit | in Arbeit | Wunsch Maintainer 2026-10-28 |
 
 ## Offen
 
