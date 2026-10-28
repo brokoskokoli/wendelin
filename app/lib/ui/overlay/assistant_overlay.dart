@@ -146,14 +146,21 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   bool _lockKnown = false;
   bool _typing = false;
   bool _closing = false;
+  // An unlock offer is pending (set synchronously with the refusal).
+  bool _unlockOffered = false;
   late final IdleCloser _idle = IdleCloser(
     ref: ref,
     enabled: () => AssistantOverlayScreen.closeWhenIdle,
     typing: () => _typing,
     closing: () => _closing,
     locked: () => _locked,
-    unlocking: () => _unlockWatch.window.active || _unlockWatch.window.open,
+    unlocking: () =>
+        _unlockOffered ||
+        _unlockWatch.window.active ||
+        _unlockWatch.window.open,
+    stopping: () => _closeTimer?.isActive ?? false,
     close: () => unawaited(_close('idle')),
+    closeSoon: () => _closeLater('idle-error'),
   );
   // The keyguard transition is not „leaving“ the overlay and not a tap
   // (WP114, K85): while the unlock runs and shortly after, lifecycle
@@ -325,17 +332,26 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   void _onStop() {
     final entries = ref.read(agentControllerProvider).entries;
     setState(() => _hideBefore = entries.length);
+    _closeLater('stop');
+  }
+
+  void _closeLater(String by) {
     _closeTimer?.cancel();
     _closeTimer = Timer(AssistantOverlayScreen.stopCloseDelay, () {
-      if (mounted) unawaited(_close('stop'));
+      if (mounted) unawaited(_close(by));
     });
   }
 
   // A request was refused while locked: after the spoken hint the system
   // unlock opens (the utterance itself is dropped).
   Future<void> _offerUnlock() async {
-    await _voice.whenIdle;
-    if (mounted && _locked && !_closing) await _unlock();
+    _unlockOffered = true;
+    try {
+      await _voice.whenIdle;
+      if (mounted && _locked && !_closing) await _unlock();
+    } finally {
+      _unlockOffered = false;
+    }
   }
 
   Future<void> _unlock() async {
@@ -468,7 +484,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     onMic: () => _onMic(voice, conversation),
     onClose: () => unawaited(_close('tap')),
     onKeyboard: _toggleKeyboard,
-    onUndo: (id) => unawaited(_voice.undo(id)),
+    onUndo: (id) => unawaited(_idle.retrigger(() async => _voice.undo(id))),
     typing: _typing ? _typingField() : null,
   );
 

@@ -8,6 +8,7 @@ import 'package:wendelin/di/preference_models.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/ui/design/design.dart';
+import 'package:wendelin/ui/overlay/assistant_overlay.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
@@ -125,6 +126,8 @@ void main() {
   testWidgets('gesperrt: Entsperren oben, darunter Anfrage und Antwort', (
     tester,
   ) async {
+    AssistantOverlayScreen.closeWhenIdle =
+        false; // layout test reads the sheet after the answer (WP172)
     await run(tester, 'Taschenlampe an');
     final button = find.text('Entsperren');
     final request = find.text('„Taschenlampe an“');

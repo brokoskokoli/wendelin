@@ -11,6 +11,7 @@ import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/overlay/assistant_overlay.dart';
+import 'package:wendelin/voice/locked_agent_run.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin_core/testing.dart';
@@ -20,7 +21,8 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../support/test_env.dart';
 import '../voice/voice_controller_test.dart' show utterance;
-import 'assistant_overlay_test.dart' show FakeAssistantPlatform, pumpOverlay;
+import 'assistant_overlay_test.dart'
+    show FakeAssistantPlatform, overlaySample, pumpOverlay;
 
 Future<void> _pump(WidgetTester t, {int steps = 100, int ms = 100}) async {
   for (var i = 0; i < steps; i++) {
@@ -47,12 +49,16 @@ void main() {
   });
   tearDown(() => voiceLogSink = savedSink);
 
+  bool closedBy(String by) =>
+      logs.any((l) => l.contains('overlay-close') && l.contains('by=$by'));
+
   bool closedByIdle() =>
       logs.any((l) => l.contains('overlay-close') && l.contains('by=idle'));
 
   VoiceComponents voice({
     required List<Transcript> script,
     bool conversation = false,
+    Duration speak = Duration.zero,
   }) => VoiceComponents(
     audio: FakeAudioInput(
       frames: utterance(),
@@ -60,7 +66,7 @@ void main() {
     ),
     vad: FakeVoiceActivityDetector(),
     stt: FakeSpeechToText(script),
-    textToSpeech: (_) async => FakeTextToSpeech(),
+    textToSpeech: (_) async => FakeTextToSpeech(utteranceDuration: speak),
     config: VoicePipelineConfig(conversationMode: conversation),
   );
 
@@ -73,13 +79,14 @@ void main() {
     ],
     bool conversation = false,
     bool autoStart = true,
+    Duration speak = Duration.zero,
   }) async {
     final c = await pumpOverlay(
       tester,
       TestEnv(providerConfig: scripted(llm)),
       platform,
       autoStart: false,
-      voice: voice(script: script, conversation: conversation),
+      voice: voice(script: script, conversation: conversation, speak: speak),
     );
     c.listen(voiceControllerProvider.select((v) => v.phase), (_, p) {
       phases.add(p);
@@ -266,5 +273,97 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(logs.any((l) => l.contains('overlay-close')), isFalse);
     expect(platform.calls, isNot(contains('releaseHost')));
+  });
+
+  testWidgets('Gesperrt, teils erledigt: das Entsperr-Angebot geht nicht '
+      'durch das Schliessen verloren', (tester) async {
+    platform.locked = true;
+    final c = await open(tester, autoStart: false);
+    await _pump(tester, steps: 3);
+    final v = c.read(voiceControllerProvider.notifier)
+      ..seed(const VoiceUiState(phase: VoiceState.speaking));
+    await tester.pump();
+    // The refusal and the end of the spoken hint come in the same moment;
+    // lockedPending stays empty (onPartlyDone, WP154).
+    v.seed(const VoiceUiState()); // idle is reported before the refusal
+    c.read(lockedRefusalsProvider.notifier).bump();
+    await _pump(tester, steps: 10);
+    expect(platform.unlockRequests, 1, reason: 'die Abfrage wurde gestellt');
+    expect(closedByIdle(), isFalse);
+  });
+
+  testWidgets(
+    'Mikrofon-Tipp betrifft nur diese Anfrage: die naechste schliesst '
+    'wieder',
+    (tester) async {
+      final c = await open(tester, autoStart: false);
+      final v = c.read(voiceControllerProvider.notifier)
+        ..seed(const VoiceUiState(phase: VoiceState.listening));
+      await tester.pump();
+      await tester.tap(find.byType(MicButton));
+      await tester.pump();
+      v.seed(const VoiceUiState());
+      await _pump(tester, steps: 5);
+      expect(closedByIdle(), isFalse, reason: 'Mikro-Tipp: bleibt offen');
+      platform.trigger(); // the next request (real pipeline)
+      await _pump(tester);
+      expect(llm.requests, hasLength(1));
+      expect(closedByIdle(), isTrue);
+    },
+  );
+
+  testWidgets('Tastatur waehrend des echten Zuhoerens: kein Schliessen', (
+    tester,
+  ) async {
+    await open(tester);
+    for (var i = 0; i < 100 && !phases.contains(VoiceState.listening); i++) {
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    expect(phases, contains(VoiceState.listening));
+    await tester.tap(find.byTooltip(AppLocalizationsDe().overlayTextInput));
+    await _pump(tester, steps: 30);
+    expect(phases.last, VoiceState.idle, reason: 'Zuhoeren wurde beendet');
+    // (The tap-cancel also closes by `stop` after the display time; that is
+    // existing behaviour of the keyboard button, not part of WP172.)
+    expect(closedByIdle(), isFalse);
+  });
+
+  testWidgets('Rueckgaengig bei Sprachausgabe: das Fenster bleibt', (
+    tester,
+  ) async {
+    final c = await open(tester, speak: const Duration(seconds: 3));
+    for (var i = 0; i < 200 && phases.lastOrNull != VoiceState.speaking; i++) {
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    expect(phases.last, VoiceState.speaking, reason: 'echte Sprachausgabe');
+    // An undoable entry (the answer itself is not undoable).
+    c.read(agentControllerProvider.notifier).seed(overlaySample());
+    await tester.pump();
+    // The undo cancels the running output itself (idle inside `undo`).
+    await tester.tap(find.textContaining('Rückgängig'));
+    await _pump(tester, steps: 10);
+    expect(phases.last, VoiceState.idle, reason: 'die Ausgabe wurde beendet');
+    expect(logs.any((l) => l.contains('overlay-close')), isFalse);
+    expect(platform.calls, isNot(contains('releaseHost')));
+  });
+
+  testWidgets('Erkennungsfehler: Meldung bleibt kurz sichtbar, dann zu', (
+    tester,
+  ) async {
+    final c = await open(tester, autoStart: false);
+    final v = c.read(voiceControllerProvider.notifier)
+      ..seed(const VoiceUiState(phase: VoiceState.listening));
+    await tester.pump();
+    v.seed(const VoiceUiState(error: 'Erkennung fehlgeschlagen'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Erkennung fehlgeschlagen'), findsOneWidget);
+    expect(logs.any((l) => l.contains('overlay-close')), isFalse);
+    await tester.pump(
+      AssistantOverlayScreen.stopCloseDelay + const Duration(milliseconds: 50),
+    );
+    await _pump(tester, steps: 5);
+    expect(closedBy('idle-error'), isTrue);
+    expect(platform.calls, contains('releaseHost'));
   });
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
@@ -36,7 +38,9 @@ class IdleCloser {
     required this.closing,
     required this.locked,
     required this.unlocking,
+    required this.stopping,
     required this.close,
+    required this.closeSoon,
   });
 
   final WidgetRef ref;
@@ -45,7 +49,13 @@ class IdleCloser {
   final bool Function() closing;
   final bool Function() locked;
   final bool Function() unlocking;
+
+  /// A stop or final message is still shown (its own timer closes later).
+  final bool Function() stopping;
   final void Function() close;
+
+  /// Closes after the short display time (used when an error is shown).
+  final void Function() closeSoon;
 
   // Listening ended because of our own retrigger (not the end of a request)
   // or because the user tapped the microphone off: no automatic close.
@@ -55,7 +65,7 @@ class IdleCloser {
   /// The user tapped the microphone off.
   void micCancelled() => _micCancelled = true;
 
-  /// Runs [cancel] (our own cancel at a retrigger) without closing.
+  /// Runs [cancel] (our own cancel at a retrigger or undo) without closing.
   Future<void> retrigger(Future<void> Function() cancel) async {
     _retriggering = true;
     try {
@@ -75,7 +85,9 @@ class IdleCloser {
       ),
       (was, now) {
         if (now) _micCancelled = false;
-        if (was == true && !now) _onListeningEnded();
+        // Decide after the other reactions of the same moment (stop word,
+        // unlock offer) set their blockers: idle is reported before them.
+        if (was == true && !now) scheduleMicrotask(_onListeningEnded);
       },
     );
   }
@@ -84,8 +96,14 @@ class IdleCloser {
     if (!enabled() || typing() || _micCancelled) {
       return;
     }
-    if (closing() || _retriggering) return;
-    if (nothingLeftToDo(ref, locked: locked(), unlocking: unlocking())) {
+    if (closing() || _retriggering || stopping()) return;
+    if (!nothingLeftToDo(ref, locked: locked(), unlocking: unlocking())) {
+      return;
+    }
+    // An error stays visible briefly, like the stop message.
+    if (ref.read(voiceControllerProvider).error != null) {
+      closeSoon();
+    } else {
       close();
     }
   }
