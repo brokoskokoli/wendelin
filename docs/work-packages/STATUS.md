@@ -6,7 +6,7 @@ Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) 
 
 Parallelität: bis zu 4 Paket-Sitzungen, je 1 Sub-Agent (AGENTS.md); Standard 2, solange der Maintainer am Rechner ist.
 
-Stand: 2026-10-28; läuft: WP169; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
+Stand: 2026-10-28; läuft: WP169, WP170; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
 
 ## Meilensteine
 
@@ -30,6 +30,7 @@ Stand: 2026-10-28; läuft: WP169; Release v0.1.0 (2fd52524); der nächste RC bra
 | WP132 | Zwei Build-Varianten frei/Store (Vorbereitung), K103 | geplant | nur mit Go, nach WP131 und Gesamttest |
 | WP138 | Kompakt-Modus: kleines Sprach-Overlay mit Kreis und Haken | geplant | Idee Maintainer 2026-10-23; nur nach Gespräch und Go |
 | WP169 | GitHub-Repo auf Stand v0.1.0: Lizenz GPL-3.0-or-later, README en/de, Screenshots, Homepage | in Arbeit | Wunsch Maintainer 2026-10-28 |
+| WP170 | Doku bereinigen: Widersprüche, Veraltetes, Doppelungen, Erledigtes löschen | in Arbeit | Auftrag Maintainer 2026-10-28; Entscheidungen im Paket |
 
 ## Offen
 
