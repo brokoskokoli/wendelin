@@ -7,6 +7,8 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../../../di/voice_providers.dart';
 import '../../../di/wake_providers.dart';
 import '../../../l10n/l10n.dart';
+import '../../../platform/wake/wake_stage2_gap.dart';
+import '../../../voice/wake/wake_storage.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 
@@ -33,6 +35,90 @@ final wakeVerifyMissingProvider = Provider<List<SpeechModel>>((ref) {
   final m = catalog.byId(sttId);
   return [if (m != null && states[m.id]?.phase != ModelPhase.installed) m];
 });
+
+/// The learned voices with embeddings and their templates.
+final _wakeVoicesProvider = Provider<List<(WakeSpeaker, WakeTemplates)>>((ref) {
+  final speakers = ref.watch(wakeSpeakersProvider).value ?? const [];
+  return [
+    for (final s in speakers)
+      if (ref.watch(wakeTemplatesProvider(s.id)).value case final t?)
+        if (t.embeddings.isNotEmpty) (s, t),
+  ];
+});
+
+/// WP171: the voice that needs enrolling again for verifier B (the first
+/// one without sequences), `null` if every voice has them.
+final wakeSpeakerWithoutSequencesProvider = Provider<WakeSpeaker?>((ref) {
+  for (final (s, t) in ref.watch(_wakeVoicesProvider)) {
+    if (!t.hasSequences) return s;
+  }
+  return null;
+});
+
+/// WP171: why stage 2 cannot decide (rule: [wakeStage2GapOf], the same as in
+/// the engine). A learned voice without sequences for verifier B and no
+/// recognizer installed: `modelMissing`; with a recognizer: `noSequences`
+/// (only the recognizer decides, enroll again). `null` while the install
+/// states are not read yet (no flash of the notice at start).
+final wakeStage2GapProvider = Provider<WakeStage2Gap?>((ref) {
+  final sets = ref.watch(_wakeVoicesProvider).map((v) => v.$2).toList();
+  final installed = wakeStage2RecognizerInstalled(
+    ref.watch(modelStatesProvider),
+  );
+  if (installed == null) return null;
+  return wakeStage2GapOf(
+    anyVoice: sets.isNotEmpty,
+    anyWithoutSequences: sets.any((t) => !t.hasSequences),
+    verifierB: !wakeVerifierBMuIsPlaceholder,
+    recognizerInstalled: installed,
+  );
+});
+
+/// WP171: notice for [wakeStage2GapProvider]. Missing model: button
+/// downloads Parakeet through the model management; missing sequences: the
+/// button enrolls the wake word again ([onEnroll]).
+class WakeStage2GapNotice extends ConsumerWidget {
+  /// Creates the notice; [onEnroll] starts the enrollment again.
+  const WakeStage2GapNotice({super.key, this.onEnroll});
+
+  /// Starts enrolling again (hint `noSequences`).
+  final VoidCallback? onEnroll;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final gap = ref.watch(wakeStage2GapProvider);
+    if (gap == null) return const SizedBox.shrink();
+    final id = SpeechModelCatalog.parakeetV3.id;
+    final phase = ref.watch(modelStatesProvider.select((s) => s[id]?.phase));
+    final loading =
+        phase == ModelPhase.downloading || phase == ModelPhase.unpacking;
+    final l = context.l10n;
+    final missing = gap == WakeStage2Gap.modelMissing;
+    return Column(
+      key: ValueKey(missing ? 'wakeStage2Gap' : 'wakeStage2NoSeq'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: WSpace.s,
+      children: [
+        Text(
+          missing ? l.wakeStage2GapNotice : l.wakeStage2NoSeqNotice,
+          style: WText.caption,
+        ),
+        WideButton(
+          missing
+              ? (loading ? l.voiceDownloadLoading : l.wakeStage2GapLoad)
+              : l.wakeStage2NoSeqEnroll,
+          onPressed: missing
+              ? (loading
+                    ? null
+                    : () => unawaited(
+                        ref.read(modelStatesProvider.notifier).download(id),
+                      ))
+              : onEnroll,
+        ),
+      ],
+    );
+  }
+}
 
 /// Notice with „Sprachmodell laden“ while [wakeMissingModelsProvider] is
 /// not empty; nothing otherwise. Replaces the cryptic error the start of

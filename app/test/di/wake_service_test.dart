@@ -25,6 +25,11 @@ final class _FakePlatform extends WakePlatform {
     return snapshot;
   }
 
+  int rechecks = 0;
+
+  @override
+  Future<void> recheckStage2() async => rechecks++;
+
   final texts = <Map<String, String>>[];
 
   /// Order of the calls that matter: `texts`, `configure`.
@@ -65,6 +70,61 @@ void main() {
       ],
     );
     addTearDown(c.dispose);
+  });
+
+  // WP171: the notice of the service must follow what the user just did.
+  group('Prüfung der Stufe 2 neu anstoßen (WP171)', () {
+    late FakeSpeechModelService models;
+
+    Future<void> open() async {
+      models = FakeSpeechModelService();
+      c.dispose();
+      c = ProviderContainer(
+        overrides: [
+          storageProvider.overrideWithValue(openInMemoryStorage()),
+          secretStoreProvider.overrideWithValue(InMemorySecretStore()),
+          wakePlatformProvider.overrideWithValue(platform),
+          speechModelServiceProvider.overrideWith((_) async => models),
+        ],
+      );
+      addTearDown(c.dispose);
+      await c.read(modelStatesProvider.notifier).refresh();
+      await c.read(wakeServiceProvider.future);
+      await c.read(wakeSpeakersProvider.future);
+      await pumpEventQueue();
+      platform.rechecks = 0;
+    }
+
+    test('Erkennungsmodell installiert: Engine prüft neu; weitere Änderung '
+        'ohne Wirkung auf das Ergebnis meldet nichts', () async {
+      await open();
+      models.installed.add(SpeechModelCatalog.whisperBase.id);
+      await c.read(modelStatesProvider.notifier).refresh();
+      // Whisper without Silero VAD is no recognizer for the engine: no change.
+      expect(platform.rechecks, 0);
+      models.installed.add(SpeechModelCatalog.sileroVad.id);
+      await c.read(modelStatesProvider.notifier).refresh();
+      expect(platform.rechecks, 1);
+      // Same answer ("a recognizer is installed"): nothing new to check.
+      await c.read(modelStatesProvider.notifier).refresh();
+      expect(platform.rechecks, 1);
+      // Deleting the VAD takes Whisper away as well.
+      models.installed.remove(SpeechModelCatalog.sileroVad.id);
+      await c.read(modelStatesProvider.notifier).refresh();
+      expect(platform.rechecks, 2);
+    });
+
+    test('Stimme eingelernt oder gelöscht: Engine prüft neu', () async {
+      await open();
+      final n = c.read(wakeSpeakersProvider.notifier);
+      await n.upsert('a', 'A');
+      expect(platform.rechecks, 1);
+      await n.remove('a');
+      expect(platform.rechecks, 2);
+      await n.upsert('b', 'B');
+      await n.removeAll();
+      expect(platform.rechecks, 4);
+    });
   });
 
   // WP156: the notification speaks the app language and gets it before the
@@ -222,7 +282,7 @@ void main() {
       await n.setCondition(WakeCondition.always);
       expect(platform.sent.last.condition, WakeCondition.always);
       await c.read(wakeVerifyProvider.notifier).set(enabled: false);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(platform.sent.last.verify, isFalse);
       // Aus.
       expect(await n.setEnabled(enabled: false), isTrue);
@@ -269,7 +329,7 @@ void main() {
       expect(platform.sent, isEmpty);
       // Nächster push (z. B. Nachprüfung) schaltet nichts wieder ein.
       await c.read(wakeVerifyProvider.notifier).set(enabled: false);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(platform.sent.where((s) => s.enabled), isEmpty);
     },
   );

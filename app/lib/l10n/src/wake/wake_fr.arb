@@ -118,7 +118,7 @@
   "wakeServiceSectionChimeDetail": "Un bref son quand Wendelin a reconnu le mot.",
   "wakeServiceSectionChooseAssistant": "Choisir l’assistant",
   "wakeServiceSectionEnable": "Activer le mot d’activation",
-  "wakeServiceSectionEnableDetail": "Wendelin écoute en arrière-plan le mot « Hey Wendelin ».",
+  "wakeServiceSectionEnableDetail": "Wendelin écoute en arrière-plan le mot « Hey Wendelin ». En mode station, il est toujours actif.",
   "wakeServiceSectionEndedEngine": "Arrêté : la reconnaissance a échoué",
   "wakeServiceSectionEndedModel": "Arrêté : un modèle de détection manque",
   "wakeServiceSectionEndedNoPermission": "Arrêté : autorisation du microphone manquante",
@@ -206,5 +206,13 @@
   "wakeNotifReenableTitle": "Le mot d’activation est désactivé",
   "wakeNotifReenableAction": "Réactiver",
   "wakeNotifNoRole": "Wendelin doit être l’assistant pour que le mot d’activation fonctionne après un redémarrage.",
-  "wakeNotifEnded": "Le mot d’activation s’est arrêté ({reason}). Touchez pour le réactiver."
+  "wakeNotifEnded": "Le mot d’activation s’est arrêté ({reason}). Touchez pour le réactiver.",
+  "wakeNotifGapText": "Le mot d’activation ne peut pas être vérifié – charger le modèle de reconnaissance",
+  "wakeNotifGapAction": "Charger le modèle",
+  "wakeStage2GapNotice": "La seconde vérification ne peut pas trancher : il manque un modèle de reconnaissance pour « Hey Wendelin », et la voix apprise n’a pas encore de séquences pour le vérificateur. Les détections sont donc rejetées. Télécharge le modèle de reconnaissance ou entraîne la voix de nouveau.",
+  "wakeStage2GapLoad": "Télécharger le modèle de reconnaissance",
+  "wakeNotifGapNoSeqText": "Le mot d'activation ne peut pas être vérifié de façon fiable – à réenregistrer",
+  "wakeNotifGapNoSeqAction": "Réenregistrer",
+  "wakeStage2NoSeqNotice": "La deuxième vérification est peu fiable : la voix enregistrée n'a pas encore de séquences pour le vérificateur, seul le modèle de reconnaissance est consulté. De vrais appels peuvent être rejetés. Réenregistrez le mot d'activation.",
+  "wakeStage2NoSeqEnroll": "Réenregistrer le mot d'activation"
 }

@@ -10,6 +10,7 @@ library;
 
 export 'src/dev/dev_archive.dart';
 export 'src/dev/dev_clips.dart';
+export 'src/dev/wake_shadow_run.dart';
 export 'src/io/audio_input.dart';
 export 'src/io/barge_in_detector.dart';
 export 'src/io/speech_to_text.dart';

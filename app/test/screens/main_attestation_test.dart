@@ -10,6 +10,7 @@ import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
 import 'package:wendelin/ui/settings/attestation_log_detail.dart';
 import 'package:wendelin/ui/settings/attestation_log_screen.dart';
+import 'package:wendelin/ui/settings/wake/wake_word_screen.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/fakes.dart';
@@ -131,6 +132,17 @@ void main() {
       () => find.byType(AttestationLogScreen).evaluate().isNotEmpty,
     );
     expect(find.byType(AttestationLogScreen), findsOneWidget);
+  });
+
+  testWidgets('Aktion der Weckwort-Benachrichtigung öffnet die '
+      'Weckwort-Einstellungen (WP171)', (tester) async {
+    await pumpTee(tester, launchTarget: 'wake_word_settings');
+    await _settle(
+      tester,
+      () => find.byType(WakeWordScreen).evaluate().isNotEmpty,
+    );
+    expect(find.byType(WakeWordScreen), findsOneWidget);
+    expect(find.byType(AttestationLogScreen), findsNothing);
   });
 
   testWidgets('Start ohne Benachrichtigung: kein Prüfprotokoll', (

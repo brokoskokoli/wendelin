@@ -190,12 +190,37 @@ final wakeClassifierFeaturesFactoryProvider =
       (ref) => _featuresFactory(ref, classifier: true),
     );
 
+/// Feature chain of the developer-mode shadow detector on the template path
+/// (WP171): like the classifier chain, but the classifier is optional. When
+/// it is missing or broken, the chain runs without scores ([onNote] hears
+/// why, once) and the templates keep deciding. [classifyCost] gets the time
+/// of each classifier score.
+typedef WakeShadowFeaturesFactory = WakeFeatureExtractor Function({
+  void Function(Duration)? classifyCost,
+  void Function(String reason)? onNote,
+});
+
+/// See [WakeShadowFeaturesFactory] (tests replace it by a fake).
+final wakeShadowFeaturesFactoryProvider = Provider<WakeShadowFeaturesFactory>(
+  (ref) =>
+      ({classifyCost, onNote}) => _featuresFactory(
+        ref,
+        classifier: true,
+        optional: true,
+        classifyCost: classifyCost,
+        onNote: onNote,
+      )(),
+);
+
 const _missingText =
     'Die Wake-Modelle fehlen (Einstellungen → Sprache → Aktivierungswort).';
 
 WakeFeatureExtractor Function() _featuresFactory(
   Ref ref, {
   required bool classifier,
+  bool optional = false,
+  void Function(Duration)? classifyCost,
+  void Function(String reason)? onNote,
 }) {
   return () => ChainWakeFeatureExtractor(() async {
     final service = await ref.read(speechModelServiceProvider.future);
@@ -207,16 +232,22 @@ WakeFeatureExtractor Function() _featuresFactory(
     String? classifierPath;
     if (classifier) {
       final c = catalog.byId(SpeechModelCatalog.wakeClassifierWendelin.id)!;
-      if (!await service.isInstalled(c)) {
+      if (await service.isInstalled(c)) {
+        classifierPath =
+            '${service.directoryOf(c).path}/'
+            '${SpeechModelCatalog.wakeClassifierFile}';
+      } else if (optional) {
+        onNote?.call('not-installed');
+      } else {
         throw const VoiceException(VoiceErrorKind.modelMissing, _missingText);
       }
-      classifierPath =
-          '${service.directoryOf(c).path}/'
-          '${SpeechModelCatalog.wakeClassifierFile}';
     }
     return OnnxWakeModels.open(
       service.directoryOf(model).path,
       classifierPath: classifierPath,
+      classifierOptional: optional,
+      classifyCost: classifyCost,
+      onClassifierIssue: onNote,
     );
   });
 }

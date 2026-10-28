@@ -45,6 +45,7 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP164 Kontakt-Felder, Waze, Navigation zum Kontakt](wp164.md)
 - [WP165 – Kein Kommunikationsmodus mehr (Gerätetest)](wp165.md)
 - [WP166 – Spotify: dort weiterspielen, wo schon etwas läuft](wp166.md)
+- [WP171 – Weckwort: zweite Prüfung mit Rückfall, Station, Schatten-Erkenner (Gerätetest)](wp171.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)
 - [WP85 Kontakte, SMS und Anrufe (`contacts`)](wp85.md)
