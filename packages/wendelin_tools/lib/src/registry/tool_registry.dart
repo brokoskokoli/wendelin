@@ -85,14 +85,19 @@ final class ToolRegistry {
       if (name == ToolSearchTool.toolName) {
         throw ArgumentError.value(name, 'tool.name', 'reservierter Name');
       }
-      if (!names.add(name) || _toolOwner.containsKey(name)) {
+      // The same instance may belong to several integrations (a tool that
+      // serves two apps, e.g. `maps__navigate` for Google Maps and Waze); a
+      // different tool of the same name is still refused.
+      final shared = _toolOwner[name]?.tools.any((t) => identical(t, tool));
+      if (!names.add(name) ||
+          (_toolOwner.containsKey(name) && shared != true)) {
         throw ArgumentError.value(name, 'tool.name', 'doppelter Tool-Name');
       }
     }
     final entry = _Entry(integration, tools, enabled: enabled);
     _entries[id] = entry;
     for (final tool in tools) {
-      _toolOwner[tool.name] = entry;
+      _toolOwner.putIfAbsent(tool.name, () => entry);
     }
     _changed();
     await _check(entry);
@@ -103,6 +108,14 @@ final class ToolRegistry {
     final entry = _entries.remove(id);
     if (entry == null) return;
     for (final tool in entry.tools) {
+      final other = _entries.values
+          .where((e) => e.tools.any((t) => identical(t, tool)))
+          .firstOrNull;
+      if (other != null) {
+        // Still offered by another integration.
+        _toolOwner[tool.name] = other;
+        continue;
+      }
       _toolOwner.remove(tool.name);
       _disabledTools.remove(tool.name);
       for (final names in _unlocked.values) {
@@ -296,6 +309,7 @@ final class ToolRegistry {
   /// Active tools the provider with [level] may see, sorted by name.
   List<CatalogEntry> _active(PrivacyLevel level) {
     final minimum = _sensitiveMinimum;
+    final seen = <String>{};
     final out = <CatalogEntry>[
       for (final entry in _entries.values)
         if (entry.info(_platformOk).status == IntegrationStatus.active &&
@@ -303,7 +317,8 @@ final class ToolRegistry {
                 minimum == null ||
                 level.isAtLeast(minimum)))
           for (final tool in entry.tools)
-            if (!_disabledTools.contains(tool.name))
+            // A tool shared by several integrations is listed once.
+            if (!_disabledTools.contains(tool.name) && seen.add(tool.name))
               (integration: entry.integration, tool: tool),
     ];
     return out..sort((a, b) => a.tool.name.compareTo(b.tool.name));

@@ -57,4 +57,22 @@ class LocationPickTest {
         assertFalse(LocationPick.isAllowedLaunch("geo", null, null, "com.evil.app"))
         assertFalse(LocationPick.isAllowedLaunch(null, null, null, null))
     }
+
+    @Test
+    fun launchAllowsWazeOnlyWithItsLinkAndPackage() {
+        assertTrue(LocationPick.isAllowedLaunch("https", "waze.com", "/ul", "com.waze"))
+        // Wrong host, other subdomain, wrong path, wrong or missing package, wrong scheme.
+        assertFalse(LocationPick.isAllowedLaunch("https", "evil.example", "/ul", "com.waze"))
+        assertFalse(LocationPick.isAllowedLaunch("https", "www.waze.com", "/ul", "com.waze"))
+        assertFalse(LocationPick.isAllowedLaunch("https", "waze.com", "/live-map", "com.waze"))
+        assertFalse(LocationPick.isAllowedLaunch("https", "waze.com", null, "com.waze"))
+        assertFalse(LocationPick.isAllowedLaunch("https", "waze.com", "/ul", "com.google.android.apps.maps"))
+        assertFalse(LocationPick.isAllowedLaunch("https", "waze.com", "/ul", "com.evil.app"))
+        assertFalse(LocationPick.isAllowedLaunch("https", "waze.com", "/ul", null))
+        assertFalse(LocationPick.isAllowedLaunch("http", "waze.com", "/ul", "com.waze"))
+        assertFalse(LocationPick.isAllowedLaunch("waze", "waze.com", "/ul", "com.waze"))
+        // The Waze package may not carry Google Maps links or map schemes.
+        assertFalse(LocationPick.isAllowedLaunch("https", "www.google.com", "/maps/dir/", "com.waze"))
+        assertFalse(LocationPick.isAllowedLaunch("geo", null, null, "com.waze"))
+    }
 }

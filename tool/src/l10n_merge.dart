@@ -36,6 +36,7 @@ const prefixAreas = <String, String>{
   'integrations': 'integrations',
   'coming': 'integrations',
   'ha': 'ha',
+  'navigation': 'navigation',
   'obsidian': 'obsidian',
   'obs': 'obsidian',
   'spotify': 'spotify',

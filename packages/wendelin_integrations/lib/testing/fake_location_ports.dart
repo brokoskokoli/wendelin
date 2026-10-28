@@ -1,5 +1,6 @@
 import '../src/common/port_exception.dart';
 import '../src/location/location_port.dart';
+import '../src/maps/navigation_apps.dart';
 import 'fake_failures.dart';
 
 /// In-memory [LocationPort]: without [permission] `current` throws
@@ -86,5 +87,32 @@ final class FakeMapsLauncherPort with FakeFailures implements MapsLauncherPort {
       throw const PortException(PortErrorKind.notFound, 'Keine Karten-App.');
     }
     launched.add(launch);
+  }
+}
+
+/// In-memory [NavigationApps]: [active] and [preferred] are set by the test,
+/// [installed] holds the apps the live check finds.
+final class FakeNavigationApps with FakeFailures implements NavigationApps {
+  /// Creates the fake; by default Google Maps and Waze are on and installed.
+  FakeNavigationApps({
+    Set<NavigationApp>? active,
+    Set<NavigationApp>? installed,
+    this.preferred,
+  }) : active = active ?? {...NavigationApp.values},
+       installed = installed ?? {...NavigationApp.values};
+
+  @override
+  Set<NavigationApp> active;
+
+  @override
+  NavigationApp? preferred;
+
+  /// Apps the live check finds installed.
+  final Set<NavigationApp> installed;
+
+  @override
+  Future<bool> isInstalled(NavigationApp app) async {
+    enter('isInstalled');
+    return installed.contains(app);
   }
 }

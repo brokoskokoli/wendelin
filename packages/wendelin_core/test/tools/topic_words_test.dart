@@ -6,7 +6,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 const _ids = [
   'alarms', 'bring', 'calendar', 'clipboard', 'contacts', 'flashlight', //
   'gtasks', 'ha', 'lists', 'location', 'maps', 'media', 'memory',
-  'obsidian', 'spotify', 'station', 'tasks', 'todoist', 'weather', 'web',
+  'obsidian', 'spotify', 'station', 'tasks', 'todoist', 'waze', 'weather', 'web',
 ];
 
 void main() {

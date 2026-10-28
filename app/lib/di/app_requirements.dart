@@ -85,8 +85,16 @@ abstract final class KnownApps {
     storeUrl: 'https://www.google.com/maps/about/',
   );
 
+  /// Waze (WP164: the `waze` integration needs it; it adds the app option
+  /// to `maps__navigate`).
+  static const waze = AppRequirement(
+    androidPackage: 'com.waze',
+    appName: 'Waze',
+    storeUrl: 'https://www.waze.com/',
+  );
+
   /// All known apps.
-  static const all = [bring, obsidian, spotify, audible, googleMaps];
+  static const all = [bring, obsidian, spotify, audible, googleMaps, waze];
 }
 
 /// Last known answers of the [AppPresencePort]; filled by every check.

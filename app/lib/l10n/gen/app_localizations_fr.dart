@@ -2952,6 +2952,16 @@ class AppLocalizationsFr extends AppLocalizations {
       'Pour vous dire ce qui est en cours de lecture et avancer ou reculer dans un livre audio ou un podcast, Wendelin a besoin de « l’accès aux notifications ». Android ouvre ensuite cette page : choisissez Wendelin dans la liste et activez-le (si Android le bloque, Wendelin explique ensuite comment l’autoriser). Wendelin ne lit pas les notifications, seulement la lecture multimédia. Pause, reprise et retour fonctionnent aussi sans.';
 
   @override
+  String get navigationAppDefault => 'Par défaut (Google Maps, sinon Waze)';
+
+  @override
+  String get navigationAppHelp =>
+      'L’appli qu’ouvre « Navigue vers … ». Si tu nommes une appli dans la commande (« avec Waze »), c’est elle qui est utilisée. Si l’appli choisie est désactivée ou non installée, Wendelin le dit au lieu d’en ouvrir une autre.';
+
+  @override
+  String get navigationAppTitle => 'Appli de navigation';
+
+  @override
   String get obsIndexBuilding => 'Création de l’index …';
 
   @override

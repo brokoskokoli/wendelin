@@ -2913,6 +2913,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'To tell you what is playing and to skip within an audiobook or podcast, Wendelin needs “Notification access”. Android opens that page next: pick Wendelin in the list and turn it on (if Android blocks it, Wendelin then explains how to allow it). Wendelin does not read notifications, only media playback. Pause, resume and back work without it.';
 
   @override
+  String get navigationAppDefault => 'Default (Google Maps, otherwise Waze)';
+
+  @override
+  String get navigationAppHelp =>
+      'Which app “Navigate to …” opens. If you name an app in the command (“with Waze”), that one is used. If the chosen app is switched off or not installed, Wendelin says so instead of opening another one.';
+
+  @override
+  String get navigationAppTitle => 'Navigation app';
+
+  @override
   String get obsIndexBuilding => 'Building index …';
 
   @override

@@ -298,6 +298,31 @@ final class HaFastPathSetting extends Notifier<bool> {
   }
 }
 
+/// „Navigations-App“ (Einstellungen → Google Maps / Waze, WP164 B): the app
+/// `maps__navigate` uses without an `app` argument; `null` = default.
+final navigationAppProvider =
+    NotifierProvider<NavigationAppSetting, NavigationApp?>(
+      NavigationAppSetting.new,
+    );
+
+/// Setting „Navigations-App“.
+final class NavigationAppSetting extends Notifier<NavigationApp?> {
+  @override
+  NavigationApp? build() =>
+      NavigationApp.parse(ref.watch(startupProvider).navigationApp);
+
+  /// Stores [app] (`null` = default); the next request uses it.
+  Future<void> set(NavigationApp? app) async {
+    state = app;
+    final settings = _settings(ref);
+    if (app == null) {
+      await settings.remove(AppSettings.navigationApp);
+    } else {
+      await settings.set(AppSettings.navigationApp, app.id);
+    }
+  }
+}
+
 /// Screen protection setting of the main app.
 final class SecureScreen extends Notifier<bool> {
   @override

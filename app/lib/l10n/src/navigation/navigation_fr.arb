@@ -1,0 +1,5 @@
+{
+  "navigationAppDefault": "Par défaut (Google Maps, sinon Waze)",
+  "navigationAppHelp": "L’appli qu’ouvre « Navigue vers … ». Si tu nommes une appli dans la commande (« avec Waze »), c’est elle qui est utilisée. Si l’appli choisie est désactivée ou non installée, Wendelin le dit au lieu d’en ouvrir une autre.",
+  "navigationAppTitle": "Appli de navigation"
+}

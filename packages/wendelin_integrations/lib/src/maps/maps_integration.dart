@@ -2,6 +2,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import '../location/location_port.dart';
 import 'maps_tools.dart';
+import 'waze_integration.dart';
 
 /// Google Maps adapter: `maps__navigate`, `maps__search_place`. Works over
 /// the installed app only (no API key); the app registry keeps it inactive
@@ -11,10 +12,14 @@ import 'maps_tools.dart';
 /// needs the Directions API and with it an API key.
 final class MapsIntegration implements Integration {
   /// Creates the integration.
-  MapsIntegration(this.launcher);
+  MapsIntegration(this.launcher, this.navigate);
 
   /// Starts map apps.
   final MapsLauncherPort launcher;
+
+  /// `maps__navigate`; the same instance as in [WazeIntegration], so the
+  /// registry offers it once while either integration is on.
+  final MapsNavigateTool navigate;
 
   @override
   String get id => 'maps';
@@ -43,7 +48,7 @@ final class MapsIntegration implements Integration {
 
   @override
   late final List<Tool> tools = List.unmodifiable(<Tool>[
-    MapsNavigateTool(launcher),
+    navigate,
     MapsSearchPlaceTool(launcher),
   ]);
 }

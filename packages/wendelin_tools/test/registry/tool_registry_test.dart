@@ -127,6 +127,47 @@ void main() {
       expect([for (final i in r.integrations) i.id], ['b']);
     });
 
+    test(
+      'geteilte Tool-Instanz: einmal angeboten, solange einer aktiv',
+      () async {
+        final r = ToolRegistry();
+        final shared = FakeTool(name: 'nav__go');
+        await r.registerIntegration(
+          FakeIntegration(id: 'one', tools: [shared]),
+          enabled: true,
+        );
+        await r.registerIntegration(
+          FakeIntegration(id: 'two', tools: [shared]),
+          enabled: true,
+        );
+        expect(_names(_cat(r).activeSpecs()), ['nav__go']);
+        r.setEnabled('one', enabled: false);
+        expect(_names(_cat(r).activeSpecs()), ['nav__go']);
+        expect(_cat(r).lookup('nav__go'), same(shared));
+        r.setEnabled('two', enabled: false);
+        expect(_cat(r).activeSpecs(), isEmpty);
+        r
+          ..setEnabled('two', enabled: true)
+          ..unregister('one');
+        expect(_names(_cat(r).activeSpecs()), ['nav__go']);
+        r.unregister('two');
+        expect(_cat(r).activeSpecs(), isEmpty);
+        // Another tool with the same name is still refused.
+        await r.registerIntegration(
+          FakeIntegration(id: 'one', tools: [shared]),
+        );
+        await expectLater(
+          r.registerIntegration(
+            FakeIntegration(
+              id: 'x',
+              tools: [FakeTool(name: 'nav__go')],
+            ),
+          ),
+          throwsArgumentError,
+        );
+      },
+    );
+
     test('lehnt den reservierten Namen tools__search ab', () async {
       final r = ToolRegistry();
       await expectLater(
