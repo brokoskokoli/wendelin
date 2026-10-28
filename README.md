@@ -22,7 +22,7 @@ M1 umfasst: Anthropic- und OpenAI-kompatible Adapter, Provider-Einrichtung mit V
 - Standard-Assistent mit Overlay, Push-to-talk im Hauptbildschirm, Vault über die Dateiauswahl (WP18, ADR 0006),
 - lokale System-Spracherkennung (`RecognitionService` mit Whisper) für andere Apps (WP20, ADR 0008): aktiv nur, solange Wendelin die Assistenten-Rolle hält; die Einstellung „Als Spracherkennung für andere Apps anbieten“ ist standardmäßig an und abschaltbar.
 
-Der End-to-End-Nachweis auf dem Emulator steht (WP19): Eine WAV statt des Mikrofons, Whisper base und small lokal, das Overlay über `KEYCODE_ASSIST` und eine byte-genau ergänzte Tagesnotiz im Test-Vault, dazu ein Live-Durchlauf mit Claude Haiku ([`docs/notes/m2-e2e-2026-10-13.md`](docs/notes/m2-e2e-2026-10-13.md)). Offen ist der Test auf einem echten Telefon (Liste: [`docs/testing/m4-device.md`](docs/testing/m4-device.md)). Pakete und Stand: [`docs/work-packages/STATUS.md`](docs/work-packages/STATUS.md).
+Der End-to-End-Nachweis auf dem Emulator steht (WP19): Eine WAV statt des Mikrofons, Whisper base und small lokal, das Overlay über `KEYCODE_ASSIST` und eine byte-genau ergänzte Tagesnotiz im Test-Vault, dazu ein Live-Durchlauf mit Claude Haiku ([`docs/notes/m2-e2e-2026-10-13.md`](docs/notes/m2-e2e-2026-10-13.md)). Offen ist der Test auf einem echten Telefon nach [`docs/testing/m2-device.md`](docs/testing/m2-device.md). Pakete und Stand: [`docs/work-packages/M2.md`](docs/work-packages/M2.md).
 
 ## Aufbau
 
@@ -126,7 +126,7 @@ Kosten (heute, in USD) stehen im Chip neben dem Provider, Details unter Einstell
 
 ## Demo-Anleitung M2
 
-Sprache und Assistent auf dem Telefon. Die ausführliche Fassung mit Checkliste ist [`docs/testing/m4-device.md`](docs/testing/m4-device.md).
+Sprache und Assistent auf dem Telefon. Die ausführliche Fassung mit Checkliste ist [`docs/testing/m2-device.md`](docs/testing/m2-device.md).
 
 1. **Installieren und Provider einrichten** wie bei M1 (für den Alltag `flutter build apk --release --split-per-abi`, dann `app-arm64-v8a-release.apk`).
 2. **Spracherkennung laden:** Im Onboarding-Schritt „Spracherkennung laden“ oder unter Einstellungen → Sprache Whisper wählen und laden, am besten im WLAN. Zur Wahl stehen „base“ (161 MB, schnell) und „small“ (376 MB, für Deutsch und Französisch deutlich genauer). Dazu kommt Silero VAD (0,6 MB). Nichts davon steckt im APK.
@@ -147,7 +147,7 @@ Sprache und Assistent auf dem Telefon. Die ausführliche Fassung mit Checkliste 
 
 ## Demo-Anleitung M3
 
-Routing, MCP-Server, HTTP-Tools und Bring!. Die Schritt-für-Schritt-Fassung für das Telefon mit Checkliste ist [`docs/testing/m4-device.md`](docs/testing/m4-device.md); ohne Telefon laufen die Gerätetests auf dem Emulator ([`docs/notes/m3-e2e-2026-10-14.md`](docs/notes/m3-e2e-2026-10-14.md)).
+Routing, MCP-Server, HTTP-Tools und Bring!. Die Schritt-für-Schritt-Fassung für das Telefon mit Checkliste ist [`docs/notes/m3-device-test.md`](docs/notes/m3-device-test.md); ohne Telefon laufen die Gerätetests auf dem Emulator ([`docs/notes/m3-e2e-2026-10-14.md`](docs/notes/m3-e2e-2026-10-14.md)).
 
 1. **Zwei Profile:** Einstellungen → Provider: ein Standardprofil und ein Profil „Claude API“ (Anthropic-Key).
 2. **Regel „Starkes Modell“:** Einstellungen → Routing → „+ Regel hinzufügen“, Bedingung Präfix „Claude“, Ziel „Claude API“. Im Feld „Testsatz“ zeigt „Claude, wie spät ist es?“ die greifende Regel. Danach geht ein Satz „Claude, …“ an das Claude-Profil (der Provider-Chip nennt es), alles andere an das Standardprofil. Das Prüfprotokoll hält jede Routing-Entscheidung fest.
