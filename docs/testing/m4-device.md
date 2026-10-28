@@ -282,7 +282,7 @@ Ziel: höchstens ca. 1,1 GB bei aktiver Sprachnutzung, unter 200 MB im Hintergru
 
 ## 16. Aus M3 entfallen
 
-Nichts aus m3-device.md ist ersatzlos gestrichen. Geändert, ersetzt oder zusammengelegt wurde:
+Nichts aus m3-device.md (frühere Anleitung, wie wp56-device.md nur im Git-Verlauf) ist ersatzlos gestrichen. Geändert, ersetzt oder zusammengelegt wurde:
 
 | M3-Punkt | Jetzt | Grund |
 | --- | --- | --- |
