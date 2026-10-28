@@ -1,6 +1,6 @@
 # WP70 – Phala-Quittung auf dem Gerät, ehrliche Warnkarte, Attest-Logs (`wendelin_providers`, `app/`)
 
-Bezug: Gerätetest 2026-10-15 (Xiaomi 15T Pro, Android 16, APK 81ef3b9), `~/ai/wendelin-m4-test/ergebnisse.md` Prio 1 Nr. 1, Prio 2 Nr. 4/5.
+Bezug: Gerätetest 2026-10-15 (Testtelefon, Android 16, APK 81ef3b9), `ergebnisse.md` im lokalen Testordner des Maintainers Prio 1 Nr. 1, Prio 2 Nr. 4/5.
 
 ## Befunde
 1. **Jede Phala-Antwort wird rot:** Sitzung grün (inkl. TLS-Pin und E2EE-Schlüssel), danach `receipt.fetch = unavailable` („Quittung nicht abrufbar“): gelb → gelb → rot nach 3 Versuchen im Abstand von ~3 s. 4/4 Antworten, Modelle `google/gemma-4-31b-it` und `meta-llama/llama-3.3-70b-instruct`, „Ohne Tools“ an. „Neu prüfen“ hebt die Sperre auf, nächste Antwort wieder rot. Auf dem Emulator (Fixture) war es grün → Unterschied zum echten Dienst seit WP61/WP62 (E2EE-Header, Pinned-Client für den Quittungsabruf, Antwort-ID aus verschlüsselter Antwort, Endpunkt/Parameter, Verzögerung beim Anbieter).

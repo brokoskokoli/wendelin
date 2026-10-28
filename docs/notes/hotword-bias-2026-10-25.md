@@ -4,7 +4,7 @@ Frage: Erkennt Parakeet nach dem Weckwort ständig Kontaktnamen, weil die Hotwor
 
 ## Aufbau
 
-- Werkzeug: `tool/voice_quality_measure.py hotword-bias` und `hotword-bias-wake` (Python-venv `$WENDELIN_FIXTURES/venv`, sherpa-onnx 1.13.8 wie die App, Parakeet-v3 int8, 4 Threads, Standard-`max_active_paths`).
+- Werkzeug: `tool/voice_quality_measure.py hotword-bias` und `hotword-bias-wake` (Python-venv `~/wendelin-fixtures/venv`, sherpa-onnx 1.13.8 wie die App, Parakeet-v3 int8, 4 Threads, Standard-`max_active_paths`).
 - 300 erfundene Namen (Vor- plus Nachname aus zufälligen Silben, feste Seed 146, keine echten Personen), dazu 5 erfundene Listennamen und „Wendelin“. Die Teilmengen 0/50/300 enthalten immer „Wendelin“ und die Listennamen; die 10 gesprochenen Namen stehen in jeder Teilmenge mit n>0 (Recall ist dadurch günstig).
 - Audio: 12 de-Fixtures ohne Namen (`app/test/fixtures/stt`), 10 `say`-Befehle mit je einem erfundenen Namen. Wake-Pfad: je Befehl `say` „Hey Wendelin, …“ (ohne Pause) und „Hey Wendelin. [[slnc 500]] …“ (mit Pause), dazu der Befehl allein (Tipp-Pfad). 20 Befehle.
 - Bedingungen: clean, noisy 10 dB, Handoff-Loch (600 ms auf null, mittig im ersten Wort), Handoff-Schnitt (Beginn mitten im ersten Wort), nur Stille, nur Rauschen. Wake-Pfad: Schnitt bei Wortende „Wendelin“ mit Versatz -400/-200/0/+200 ms (Ende bei Pause aus der Energie, ohne Pause aus separat gerendertem „Hey Wendelin,“), zusätzlich Loch (erste 9600 Samples nach dem Schnitt null) und Mute (erste 3200 Samples null, nur mit Pause). Mit Pause werden Segment bis zur Pause und Rest getrennt decodiert, Transkripte verbunden.

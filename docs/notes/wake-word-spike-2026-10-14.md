@@ -3,10 +3,10 @@
 Stand: nur Host-Messung (macOS, ohne Gerät) mit **synthetischen** Aufnahmen. Die Messung mit echten Aufnahmen des Maintainers, alle Emulator-/Geräteteile (Fragen 2 bis 6 auf dem Gerät) und die Prüfliste sind **offen** (siehe unten).
 
 ## Aufbau
-- Skript: `tool/kws_measure.py` (Python, sherpa-onnx 1.13.8 aus dem venv `$WENDELIN_KWS/venv`, nichts im Repo). Anleitung: `tool/record_wake_fixtures.md`.
-- Modelle (nur lokal in `$WENDELIN_KWS/`): `sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20` (Phoneme, chunk-8/16, encoder int8 je 4,4 MB, joiner int8 88 KB, decoder fp32 0,7 MB) und `sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01` (BPE, chunk-16, int8 4,6 MB).
+- Skript: `tool/kws_measure.py` (Python, sherpa-onnx 1.13.8 aus dem venv `~/wendelin-models/kws/venv`, nichts im Repo). Anleitung: `tool/record_wake_fixtures.md`.
+- Modelle (nur lokal in `~/wendelin-models/kws/`): `sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20` (Phoneme, chunk-8/16, encoder int8 je 4,4 MB, joiner int8 88 KB, decoder fp32 0,7 MB) und `sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01` (BPE, chunk-16, int8 4,6 MB).
 - Positivsatz: 90 Clips mit 9 deutschen macOS-Systemstimmen (`say`, 2 Tempi, 5 Sätze: „Wendelin“ allein, „Hey Wendelin“, 3 Sätze mit Kommando). Negativsatz: 0,3 bis 0,5 h deutsche Sprache (vorgelesene Repo-Dokus mit 8 Systemstimmen, `app/test/fixtures/stt/`). Bedingungen: `clean`, `noise` (SNR 10 dB), `reverb` (synthetische RT60 0,5 s).
-- Aufruf (Beispiel): `$WENDELIN_KWS/venv/bin/python tool/kws_measure.py --model-dir <zh-en> --pos <pos> --neg <neg> --chunk 16 --thr 0.1,0.25 --boost 4,5,6 --neg-max-h 0.5 --kw "W EH1 N D AH0 L IH0 N"`.
+- Aufruf (Beispiel): `~/wendelin-models/kws/venv/bin/python tool/kws_measure.py --model-dir <zh-en> --pos <pos> --neg <neg> --chunk 16 --thr 0.1,0.25 --boost 4,5,6 --neg-max-h 0.5 --kw "W EH1 N D AH0 L IH0 N"`.
 
 ## Ergebnisse (Trefferquote Positiv, Falschauslösungen je Stunde, Latenz Wortende → Treffer, nur „allein“-Clips)
 
@@ -38,7 +38,7 @@ Echtzeitfaktor auf dem Host (1 Thread, Apple Silicon): 0,016 bis 0,028, das hei�
 - Modelllizenz: gigaspeech-Archiv nennt Apache-2.0 (README). Das zh-en-Archiv enthält keine Lizenzangabe; sherpa-onnx selbst steht unter Apache-2.0. **Offen:** Lizenz der zh-en-Gewichte (Trainingsdaten) vor jeder Nutzung klären.
 
 ## Offen / Maintainer
-1. 20 bis 30 Aufnahmen nach `tool/record_wake_fixtures.md` (`$WENDELIN_FIXTURES/wake/`, Ordner existierte nicht), Messung wiederholen und Tabelle ergänzen.
+1. 20 bis 30 Aufnahmen nach `tool/record_wake_fixtures.md` (`~/wendelin-fixtures/wake/`, Ordner existierte nicht), Messung wiederholen und Tabelle ergänzen.
 2. Emulator-Messungen (CPU, PSS, Foreground-Service nach Sleep/Doze, `onReady`-Start nach Neustart, `BOOT_COMPLETED`, `showSession`-Übergabe, AEC-Verfügbarkeit): offen. Der Emulator `emulator-5580` lief mit fremden E2E-Prozessen, außerdem braucht es eine Spike-APK mit Service; das war im Rahmen dieses Laufs nicht ohne Belegungskonflikt möglich.
 3. Prüfliste für das echte Telefon aus WP42 (30× Wake aus 1 m/3 m, 8 h Alltag, Hersteller-Akkusparer, AEC-Messplan).
 4. Plan B (Folgepaket) einplanen.

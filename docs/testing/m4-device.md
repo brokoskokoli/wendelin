@@ -1,6 +1,8 @@
 # M3 und M4 zusammen auf dem eigenen Telefon testen (Geräte-Prüfliste)
 
-Diese Liste ersetzt die früheren Anleitungen m3-device.md und wp56-device.md (nur im Git-Verlauf). Sie prüft Meilenstein M3 (Routing, MCP, HTTP-Tools, Bring!, App-Erkennung, Sprach-UX, Power-Taste nach Pause) und M4 (Wake Word, Gesprächsmodus, Barge-in, Phala mit Prüfstatus, Taschenlampe) in einem Durchgang auf dem Xiaomi mit HyperOS. Auf dem Emulator ist vieles automatisch belegt (`docs/notes/m3-e2e-2026-10-14.md`, Emulatorlauf WP54). Hier steht nur, was das Telefon zeigt: echte Stimme im Raum, Hersteller-Akkusparer, Mikrofon- und Lautsprecherverhalten, Akku über Stunden, echte Dienste (Tailscale, Bring!, Home Assistant, Claude, Phala) und die echte Taschenlampen-LED.
+> **Stand vor WP134/WP165:** Das Stopp-Wort entfällt (WP134), der Gesprächston ist entfernt (WP165). Punkte zu „Stopp“ (Barge-in) und Gesprächston, vor allem in Abschnitt 11, sind überholt; aktuell gilt nur „Hey Wendelin“. Aktuelle Listen je Paket: [m5/README.md](m5/README.md).
+
+Diese Liste ersetzt die früheren Anleitungen m3-device.md und wp56-device.md (nur im Git-Verlauf). Sie prüft Meilenstein M3 (Routing, MCP, HTTP-Tools, Bring!, App-Erkennung, Sprach-UX, Power-Taste nach Pause) und M4 (Wake Word, Gesprächsmodus, Barge-in, Phala mit Prüfstatus, Taschenlampe) in einem Durchgang auf dem Testtelefon. Auf dem Emulator ist vieles automatisch belegt (`docs/notes/m3-e2e-2026-10-14.md`, Emulatorlauf WP54). Hier steht nur, was das Telefon zeigt: echte Stimme im Raum, Hersteller-Akkusparer, Mikrofon- und Lautsprecherverhalten, Akku über Stunden, echte Dienste (Tailscale, Bring!, Home Assistant, Claude, Phala) und die echte Taschenlampen-LED.
 
 **So wird sie benutzt:** Die Punkte sind nach Blöcken nummeriert (1.1, 1.2 …). Jeder Punkt sagt, was zu tun ist und was erscheinen muss (*Erwartet*). Wer die Liste abarbeitet, hakt die Kästchen ab und schreibt bei Abweichungen auf, was stattdessen passiert ist. Wo ein Befehl auf dem Rechner nötig ist, steht er im Wortlaut da. **Alle `adb`-Befehle und Skripte am Telefon führt nur der Maintainer selbst aus; ein Test-Agent leitet nur an und führt sie nicht aus.** Keys, Tokens und Passwörter trägst du nur in der App ein, nie in Chats, Notizen oder Screenshots.
 
@@ -16,7 +18,7 @@ Namen in „Anführungszeichen“ sind Beschriftungen in der App. Der Einstellun
 
 ## 0. Einrichtung (einmal am Anfang)
 
-- [ ] **0.1 Telefon und APK.** Android 10 oder neuer (Xiaomi 15T Pro, HyperOS / Android 16). Die Wendelin-App installiert (Release-APK `arm64-v8a`, möglichst frisch aus dem Stand mit allen M4-Paketen). Die M2-Einrichtung (Onboarding, Mikrofon, Vault, Sprachmodell) ist erledigt; falls nicht, zuerst die Einrichtung in der App durchlaufen. Das Onboarding enthält den Schritt „Gespräch“ (Weiter zuhören). Notiere Gerät, Android-Version und App-Version: ______________.
+- [ ] **0.1 Telefon und APK.** Android 10 oder neuer (Testtelefon, Android 16). Die Wendelin-App installiert (Release-APK `arm64-v8a`, möglichst frisch aus dem Stand mit allen M4-Paketen). Die M2-Einrichtung (Onboarding, Mikrofon, Vault, Sprachmodell) ist erledigt; falls nicht, zuerst die Einrichtung in der App durchlaufen. Das Onboarding enthält den Schritt „Gespräch“ (Weiter zuhören). Notiere Gerät, Android-Version und App-Version: ______________.
 - [ ] **0.2 Provider-Keys.** Ein Anthropic-Key (für das Profil „Claude API“), ein zweiter Provider als Standard (z. B. Mistral oder ein zweites Anthropic-Profil mit Haiku) und ein Phala-Key (RedPill) für Block 12. Alles nur in der App eintragen. Budget klein halten: Der ganze Test braucht unter 2 Euro.
 - [ ] **0.3 Tailscale.** Auf dem Telefon und dem Homeserver ist Tailscale installiert und angemeldet. Telefon: Tailscale-App öffnen, Status „Verbunden“. Rechner: `tailscale status` zeigt den Homeserver mit `100.x.y.z` und einem Namen `*.ts.net`. Notiere `HOMESERVER = ______________`.
 - [ ] **0.4 Testserver für MCP und HTTP.** Auf dem Homeserver (oder einem Rechner im Tailnet) läuft ein MCP-Server. Zwei Wege:
@@ -307,7 +309,7 @@ Quelle: das Konzept und die früheren Meilensteinpläne M3/M4 (nur im Git-Verlau
 
 **M4**
 - [ ] **D4.1** Wake-Word-Dienst läuft mit Bildschirm aus (`KEYCODE_SLEEP`), „Hey Wendelin, mach die Taschenlampe an“ bzw. „Hey Wendelin, wie spät ist es“ öffnet das Overlay bzw. führt das Taschenlampen-Tool aus; der Dienst übersteht einen Neustart, wenn Wendelin Standard-Assistent ist. Emulator belegt (WP50, WP54, WP53); Gerät: 8.5, 8.7, 10.4, 10.5.
-- [ ] **D4.2** Echtes Gerät (Xiaomi/HyperOS): Wake Word löst mit Bildschirm aus nach 30 min Standby aus, Treffer ≥ 90 % bei 1 bis 2 m ruhig, höchstens 1 Fehlauslösung in 8 h: 10.4, 10.7, Tabelle 15.3; Dienst unter HyperOS: 10.8.
+- [ ] **D4.2** Echtes Gerät (Testtelefon): Wake Word löst mit Bildschirm aus nach 30 min Standby aus, Treffer ≥ 90 % bei 1 bis 2 m ruhig, höchstens 1 Fehlauslösung in 8 h: 10.4, 10.7, Tabelle 15.3; Dienst unter HyperOS: 10.8.
 - [ ] **D4.3** Jede Antwort eines Phala-Profils trägt nach Ende des Streams einen Endstatus grün oder rot (gelb nur Zwischenstand): 12.2, 12.4, 12.5; manipulierter Fixture-Fall rot und Live-Test grün: Emulator belegt (WP46, WP52, WP54).
 - [ ] **D4.4** Gate grün, APK baut, `tool/check_apk.sh` grün (keine GMS-Klassen): Emulator/CI belegt (WP54), kein Handytest.
 - [ ] **D4.5** K11 f / K16: vor dem Entsperren keine Inhalte und keine Sprachantwort an ein Modell, einzige Ausnahme Taschenlampen-Befehle: 8.5, 8.6, 8.7.

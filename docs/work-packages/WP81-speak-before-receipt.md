@@ -1,6 +1,6 @@
 # WP81 – Antwort sofort vorlesen, Haken danach; Profil nicht ständig neu aufbauen (`app/`, `wendelin_voice`, `wendelin_agent`)
 
-Bezug: Nachtest APK 11193bb (2026-10-16, Xiaomi, `ergebnisse.md`): Tools wirken sofort, die gesprochene Antwort kommt erst 2–3 s später. Log: `speak source=answer` startet 14–16 ms nach `receipt green` (15:39:57.336 → .350; 15:41:01.642 → .658); `mic-stop`→`speak` 3,4 / 5,6 / 9,1 s. Außerdem 5× „Sitzung übernommen (Profil neu aufgebaut)“ in 6 min.
+Bezug: Nachtest APK 11193bb (2026-10-16, Testtelefon, `ergebnisse.md`): Tools wirken sofort, die gesprochene Antwort kommt erst 2–3 s später. Log: `speak source=answer` startet 14–16 ms nach `receipt green` (15:39:57.336 → .350; 15:41:01.642 → .658); `mic-stop`→`speak` 3,4 / 5,6 / 9,1 s. Außerdem 5× „Sitzung übernommen (Profil neu aufgebaut)“ in 6 min.
 
 ## Inhalt
 1. **Ursache finden:** Wo wartet die Sprachausgabe auf die Quittung (z. B. Antwort-Strom endet erst nach Quittung, Satz-Puffer, Zwei-Versionen-Schutz, Overlay-Ausgabe hängt an `AttestationOutcome`)? Mit Test belegen.

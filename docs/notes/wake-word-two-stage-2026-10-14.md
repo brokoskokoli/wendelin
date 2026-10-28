@@ -1,12 +1,10 @@
 # Wake Word zweistufig: Messung mit synthetischen Einlernern (WP44 Nachtrag 2, 2026-10-14)
 
-> Pfade: `$WENDELIN_KWS` bezeichnen lokale Ordner bzw. Dateien außerhalb des Repos (nicht eingecheckt).
-
 Stand: Host-Messung (macOS, ohne Gerät), **synthetische** Sprecher. Aussagekraft für echte Stimmen offen (WP60/WP50).
 
 ## Aufbau
-- `tool/kws_measure.py --two-stage` (Anleitung im Kopf des Skripts). Venv `$WENDELIN_KWS/wp58/venv` (openwakeword, onnxruntime, sherpa-onnx), nichts im Repo.
-- Einlerner = 9 macOS-Stimmen. Je Stimme 15 Vorlagen: „Wendelin“/„Wendelin.“ in 8 Tempi (110 bis 235 Wörter/min), erzeugt mit `say` unter `$WENDELIN_KWS/data/enroll/` (135 kurze WAVs, lokal). Test: die 10 Positiv-Clips derselben Stimme (`data/pos`, Sätze mit Kommando; nie Vorlage). Negativ: 1,17 h deutsche Systemstimmen-Sprache (`data/neg`), je Einlerner geprüft, Werte sind Mittel über die 9 Einlerner (FA je Vorlagensatz).
+- `tool/kws_measure.py --two-stage` (Anleitung im Kopf des Skripts). Venv `~/wendelin-models/kws/wp58/venv` (openwakeword, onnxruntime, sherpa-onnx), nichts im Repo.
+- Einlerner = 9 macOS-Stimmen. Je Stimme 15 Vorlagen: „Wendelin“/„Wendelin.“ in 8 Tempi (110 bis 235 Wörter/min), erzeugt mit `say` unter `~/wendelin-models/kws/data/enroll/` (135 kurze WAVs, lokal). Test: die 10 Positiv-Clips derselben Stimme (`data/pos`, Sätze mit Kommando; nie Vorlage). Negativ: 1,17 h deutsche Systemstimmen-Sprache (`data/neg`), je Einlerner geprüft, Werte sind Mittel über die 9 Einlerner (FA je Vorlagensatz).
 - Vorlage = Fenster aus 16 Embeddings à 96 (1 536 Werte), das 0,3 s nach dem Wortende endet. Ähnlichkeit = Kosinus zum besten der 15 Vorlagen (wie `bestSimilarity` in Dart). Kandidat = Ähnlichkeit ≥ Schwelle **oder** WP58-Modell (v7) ≥ 0,3. Sperrzeit 1,5 s.
 - Stufe 2: Whisper small (int8, sherpa-onnx, Deutsch) transkribiert **~3 s: 2 s vor dem Fensterende plus 0,9 s Nachlauf** (`--tail`, Dart: `verifyWindow` + `verifyTail`; Zusatzlatenz ~1 s); Treffer, wenn ein Wort (oder zwei benachbarte) höchstens 1 (bzw. 2) Editierschritte von „Wendelin“/Schreibvarianten („Wendelmann“, „Wendemann“, „Wendelen“, …) entfernt ist oder nach Kölner Phonetik wie „Wendelin“ klingt (Schlüssel 36256, 6 bis 11 Buchstaben, Anlaut w/v/f). Spiegel von `matchesWakeWord`, Dart. Bedingungen: `clean` und `both` (Rauschen 10 dB SNR + Hall RT60 0,5 s, Vorlagen bleiben sauber).
 

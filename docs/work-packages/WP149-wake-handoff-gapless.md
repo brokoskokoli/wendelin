@@ -1,6 +1,6 @@
 # WP149 – Wake-Übergabe ohne Audiolücke
 
-**Zuordnung:** Gerätetest des Maintainers mit rc5 (2026-10-26, Log 00:05:29): Nach dem Weckwort steht `wake-gap engine=overlay ms=674 afterTake=886 mode=overlap tail=200 trim=0 silence=674`. WP146 hatte als Ziel unter 50 ms ohne Lücke; jetzt wird die Lücke nur mit Stille gefüllt. Entscheidung des Maintainers: Die Aufnahme muss durchgehend laufen, ohne Lücke. Auch wenn es heute wenig stört, sprechen andere Leute ohne Pause weiter.
+**Zuordnung:** Gerätetest des Maintainers mit rc5 (2026-10-26): Nach dem Weckwort steht `wake-gap engine=overlay ms=674 afterTake=886 mode=overlap tail=200 trim=0 silence=674`. WP146 hatte als Ziel unter 50 ms ohne Lücke; jetzt wird die Lücke nur mit Stille gefüllt. Entscheidung des Maintainers: Die Aufnahme muss durchgehend laufen, ohne Lücke. Auch wenn es heute wenig stört, sprechen andere Leute ohne Pause weiter.
 
 ## Inhalt
 - **Erst verstehen:** Warum entsteht trotz WP146 (Dienst nimmt bis zum ersten App-Frame auf, `bridgeWakeTail`) eine Lücke von 674 ms mit `mode=overlap`? Den Ablauf mit Zeitstempeln nachverfolgen: wann der Dienst das letzte Sample liefert, wann die App ihr erstes, ob der Schwanz des Dienstes (`tail=200`) zu kurz übergeben wird oder verloren geht, und was `afterTake=886` bedeutet. Die Ursache belegen (Diagnose-Logs, Test), bevor geändert wird.

@@ -169,10 +169,11 @@ String _m5Index(String root) {
         f.path.split('/').last,
   ]..sort();
   final b = StringBuffer(_head)
-    ..writeln('# M5 auf dem Telefon testen (Geräte-Prüfliste)')
+    ..writeln('# Geräte-Prüflisten je Paket')
     ..writeln()
     ..writeln(
-      'Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an '
+      'Jedes Arbeitspaket mit Gerätebezug (M5 und M6) legt hier seine '
+      'eigene Datei `<wp>.md` an '
       '(Überschrift `# WPnn Titel`); dieser Index wird erzeugt '
       '(`tool/regen_generated.sh`). Befehle am Telefon führt nur der '
       'Maintainer aus.',

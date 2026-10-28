@@ -11,7 +11,7 @@ Teile außerhalb des Repos und alles, was wirklich löscht, erledigt der Orchest
 - `.claude/agents/*.md` und `docs/agents/*.md` enthalten nur noch die Rolle und Verweise, keine kopierten Regeln. Identität und Trailer stehen nur noch in `docs/agents/common.md`, `AGENTS.md` verweist darauf.
 - Widersprüche beheben:
   - a) `.claude/agents/wendelin-coder.md:16,29` (volles Gate, „nie pushen“) → lokal `--changed`, `wp/*`-Branch pushen, `tool/ci_wait.sh`, Abschluss „CI GRÜN“ mit Lauf-URL.
-  - b) `.claude/agents/wendelin-coder.md:21`: toten Pfad `~/ai/james/app/android` entfernen.
+  - b) `.claude/agents/wendelin-coder.md:21`: toten lokalen Pfad entfernen.
   - c) `docs/work-packages/REVIEW.md:7,10,16-26` → kein lokales Gate (CI-Lauf prüfen), 3–10 Mutationen, Urteil FREIGABE/NACHBESSERN mit Blocker/Muss/Soll, wie in `wendelin-reviewer.md`.
   - d) `AGENTS.md:25` → `tool/t.sh` statt rohem `flutter test`/`dart test`; check_flaky-Regel ergänzen (keine Wanduhr-Asserts, kein `runAsync(Future.delayed)`, Bestand in `tool/flaky_allowlist.yaml` nur abbauen).
   - e) Übergabegrenze überall ~60 Werkzeugaufrufe bzw. ~120k Tokens.

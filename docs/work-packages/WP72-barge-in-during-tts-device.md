@@ -1,6 +1,6 @@
 # WP72 – Barge-in während der Sprachausgabe erkennt auf dem Gerät nichts (`app/`, `wendelin_voice`)
 
-Bezug: Gerätetest 2026-10-15 (Xiaomi 15T Pro, Android 16), `ergebnisse.md` Prio 2 Nr. 2; WP64/WP64b (Emulator grün mit Fake-TTS).
+Bezug: Gerätetest 2026-10-15 (Testtelefon, Android 16), `ergebnisse.md` Prio 2 Nr. 2; WP64/WP64b (Emulator grün mit Fake-TTS).
 
 ## Befund
 Weder „Stopp“ (gelernt) noch „Wendelin“ unterbricht, solange die App spricht. `barge-listen on=true`, `mic-start profile=speechOutput`, Android nimmt auf (AudioRecord source=7 VOICE_COMMUNICATION, 16 kHz), aber **keine** `barge-hit`- oder Kandidatenzeile. Ein `barge-hit kind=keyword-wake` kam nur in der Stille direkt nach der Ausgabe. Bei jedem Mikrofonstart `wake-conflict reason=recording`. Auf dem Emulator lief es grün, weil dort keine echte Ausgabe (Fake-TTS) und kein echtes AEC lief.
