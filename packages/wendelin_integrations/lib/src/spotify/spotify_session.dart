@@ -265,7 +265,7 @@ final class SpotifySession {
       // Only the phone gets here (a foreign device returned above): it
       // rejected the command or could not be woken.
       if (rejection != null) throw rejection;
-      throw PortException(
+      throw const PortException(
         PortErrorKind.failed,
         'Spotify hat den Befehl angenommen, aber auf dem Handy läuft '
         'nichts. Die Spotify-App reagiert nicht; bitte Spotify '
