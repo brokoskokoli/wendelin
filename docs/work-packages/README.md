@@ -1,19 +1,10 @@
 # Arbeitspakete
 
-Index und Regeln für Arbeitspakete. Der Umsetzungsstand aller Meilensteine und Pakete steht in **`STATUS.md`** (maßgeblich); Paketdateien heißen `WPnn-<slug>.md`, das Prüfprotokoll steht in `REVIEW.md`.
+Zweck: Ordner der offenen Arbeitspakete (`WPnn-<slug>.md`, Abnahmekriterien je Paket) und des Prüfprotokolls `REVIEW.md`. Der Umsetzungsstand aller Meilensteine und Pakete steht in **`STATUS.md`** (maßgeblich); einen Index pflegen wir hier nicht.
 
-Jedes Paket: eigener Branch `wp/<nr>-<slug>` in eigenem Worktree, Umsetzung durch einen Coding-Agenten, Prüfung durch einen unabhängigen Review-Agenten nach `REVIEW.md`, Merge nach bestandenem Review.
-
-## Größe eines Arbeitspakets
-
-Richtwert: **höchstens ca. 1 500 Zeilen geänderter Produktivcode je Review-Einheit** (hinzugefügt plus entfernt unter `lib/` bzw. `app/lib/` und Kotlin `main`, ohne Tests und generierten Code). Größere Pakete werden in Teil-Merges (a/b/c) geschnitten, jeder Teil mit eigenem Review nach `REVIEW.md` und eigenen Mutationsproben. Messung: `git diff --shortstat main...HEAD -- '*/lib/*'` und `dart run tool/check_sizes.dart --report`. Größenregeln für Dateien und Funktionen: `docs/ENGINEERING.md`, Abschnitt „Größen“.
-
-## Merge-Hotspots
-
-Diese Dateien ändert fast jedes Feature-Paket. Regel: **nur anhängen, nicht umsortieren oder umformatieren; bei einem Konflikt den Integrator fragen**, statt selbst semantisch zu mergen. Mit WP38 entschärft (je Integration eigene Barrel-, Spec- und Routendatei; `main.dart`, `app.dart`, `providers.dart` und `test_env.dart` sind schlank bzw. Re-Export-Barrels).
-
-- `packages/wendelin_integrations/lib/wendelin_integrations.dart` (nur noch eine Exportzeile je Integration), `fakes.dart`, `testing.dart`
-- `app/lib/di/integrations/registry.dart` (eine Zeile je Integration)
-- `app/lib/ui/routes.dart` (`AppRoutes`-Namen), `app/lib/ui/screens/labels.dart`
-- `app/test/di/wiring_test.dart`
-- `app/android/app/src/main/AndroidManifest.xml`, `app/pubspec.yaml`
+- Ablauf je Paket: eigener Branch `wp/<nr>-<slug>` im eigenen Worktree, Umsetzung durch einen Coder, Prüfung durch einen unabhängigen Reviewer nach `REVIEW.md`, Merge nach bestandenem Review und grünem CI (Rollen: `docs/agents/`).
+- Paketgröße (Review-Einheit ca. 1 500 Zeilen geänderter Produktivcode, Messung, Schnitt in Teil-Merges) und Dateigrößen: `docs/ENGINEERING.md`, Abschnitt „Größen“. Merge-Hotspots: ebenda.
+- Paketvorlage: Kopf „Zuordnung“, dann „Inhalt“ und „Abnahmekriterien“ (Beispiele: jedes offene Paket in diesem Ordner).
+- Erledigte Pakete (WP01–WP60, Stopp-Wort/Gesprächston-Pakete), alte Meilensteinpläne (M2–M5) und alte Gerätetest-Listen sind gelöscht; der Verlauf steht in Git (`git log -- docs/work-packages/<datei>`), die Entscheidungen in Konzept, ADR und STATUS.
+- Nummern ohne Paketdatei: WP00 (Gerüst, gleich im ersten Commit), WP34, WP69, WP139 und WP144 (nie vergeben), WP168 (erledigt laut STATUS, ohne Paketdatei).
+- Meilensteinplan Ausbau: `M6-PLAN.md`.

@@ -115,7 +115,8 @@ Richtwerte, geprüft von `tool/check_sizes.dart` (Dart und Kotlin gleich):
 - Bestandsdateien über der Fehlerschwelle stehen in `tool/size_allowlist.yaml` mit ihrer Zeilenzahl als Obergrenze und dem Paket, das sie abbaut. Sie dürfen nicht wachsen; fällt eine unter die Schwelle, muss der Eintrag raus. Die Liste schrumpft nur.
 - `dart run tool/check_sizes.dart --verbose` listet die Warnungen, `--report` die größten Dateien, Klassen und Funktionen.
 - **Ratsche:** Die heutigen Größenwarnungen stehen mit ihrer Zeilenzahl in `tool/size_warn_baseline.yaml`. Eine neue Warnung oder Wachstum ist rot; sinkt ein Wert oder entfällt die Warnung, ist es ebenfalls rot, bis `dart run tool/check_sizes.dart --update-baseline` die Datei gesenkt hat (senkt oder entfernt, erhöht nie, nimmt nichts Neues auf). Dasselbe gilt für `// ignore:` und `// ignore_for_file:` je Regel (`tool/ignore_budget.yaml`, Gate-Schritt `check_ignores`, `dart run tool/check_ignores.dart --update-baseline`; erzeugter Code ausgenommen). Nach `git merge origin/main` kurz vor dem Push die Baseline neu senken, falls ein anderes Paket Warnungen abgebaut hat.
-- Größere Arbeitspakete werden in Teil-Reviews mit eigenem Merge geschnitten (`docs/work-packages/README.md`).
+- Größere Arbeitspakete werden in Teil-Reviews mit eigenem Merge geschnitten (jeder Teil mit eigenem Review und eigenen Mutationsproben). Review-Einheit gemessen als hinzugefügt plus entfernt unter `lib/`/`app/lib/` und Kotlin `main`, ohne Tests und generierten Code: `git diff --shortstat main...HEAD -- '*/lib/*'`.
+- Merge-Hotspots, die fast jedes Feature-Paket ändert (nur anhängen, nicht umsortieren; bei Konflikt den Integrator fragen): die Registry-Dateien (Regel oben), `app/lib/ui/routes.dart` (`AppRoutes`), `app/lib/ui/screens/labels.dart`, `app/test/di/wiring_test.dart`, `AndroidManifest.xml` und `app/pubspec.yaml`.
 
 Testarten:
 - **Unit-Tests** je Klasse, Tabellentests für Logik mit vielen Fällen.
