@@ -35,7 +35,7 @@ Live-Entwurf (Canvas): https://claude.ai/artifact/EqTEPd6uuiBt2mjmi9muTH
 | Hauptbildschirm | `hauptbildschirm` | Oberflächen → Hauptbildschirm | `Scaffold`: Kopf (Lockup + Einstellungen), Chips (Provider, Kosten heute), `ListView` mit `UserBubble`, `ToolChip`, `AssistantText`, `EscalationDivider`; unten `TextField` + `MicButton` (64) |
 | Integrationen | `integrationen` | Tool-System → Zustand einer Integration | Liste in `surface`-Karte; `IntegrationTile` mit 5 Zuständen: aktiv (Switch an, grüner Status), verfügbar (Switch aus), Einrichtung nötig (gelber Outlined-Button), Fehler (roter Outlined-Button), nicht installiert (Opazität 0.55 + Store-Link); Badge „sensibel“; unten „+ MCP-Server“, „+ HTTP-Tool“ |
 | Routing | `routing` | Routing und Eskalation → Regel-Editor | Testfeld + Ergebnis-Chip; `ReorderableListView` mit `RuleTile` (Ziehgriff, Name, Bedingung in Mono); aktive Regel mit Kobalt-Rahmen; Default-Regel gestrichelt, nicht verschiebbar (keine Eskalationskette mehr, K28); Filled-Button „+ Regel“ |
-| TEE-Prüfprotokoll | `pruefprotokoll` | TEE → Prüfprotokoll (UI) | Sitzungskarte (Provider, `workload_id`, Keyset, Frische, 4 Prüfschritte), Quittungsliste mit `CheckStatusIcon`, JSON-Export, Filled-Button „Neu attestieren“ |
+| TEE-Prüfprotokoll | `pruefprotokoll` | TEE → Prüfprotokoll (UI) | Sitzungskarte (Provider, Keyset-Digest, Keyset, Frische, 4 Prüfschritte), Quittungsliste mit `CheckStatusIcon`, JSON-Export, Filled-Button „Neu attestieren“ |
 
 Wiederverwendbare Bausteine: `MicButton`, `ProviderChip(PrivacyLevel)`, `CheckStatusIcon(CheckStatus)`, `ToolResultCard`, `ConfirmationCard`, `ToolChip`, `IntegrationTile`, `RuleTile`, `Waveform`, `WendelinWordmark`.
 
