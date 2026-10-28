@@ -421,6 +421,7 @@ void _identityTrailers(
     'Co-Authored-By: Claude Sonnet 4.6 (<x@y.de>) <noreply@anthropic.com>',
     'Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com.evil.org>',
     'Co-Authored-By:  Claude Sonnet 4.6 <noreply@anthropic.com>',
+    'Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropicXcom>',
   ];
   for (final (i, tr) in okTrailers.indexed) {
     t.eq(branch('okm$i', () => c('x\n\n$tr')), 0, 'Trailer ok: $tr');
