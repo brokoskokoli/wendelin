@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete, solange der Maintainer am Rechner ist (
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: keins; Release v0.1.0 (2fd52524, = rc13; RC-Releases auf GitHub gelöscht; nächster RC braucht eine höhere pubspec-Version); als Nächstes: siehe „Nächste Schritte“
+Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP169; Release v0.1.0 (2fd52524, = rc13; RC-Releases auf GitHub gelöscht; nächster RC braucht eine höhere pubspec-Version); als Nächstes: siehe „Nächste Schritte“
 
 ## Meilensteine
 
@@ -115,6 +115,7 @@ Stand: 2026-10-27 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: keins; Rel
 | WP166 | Spotify: läuft schon etwas, dort weiterspielen statt aufs Handy wechseln | gemergt af519771 | K129 angepasst (offen). Regel: benannt > spielendes Gerät (Fortschritt wächst) > Handy; nicht bestätigt auf Fremdgerät → Handy mit Hinweis; 429 → kein Ausweichen. Folgepunkte: Gerätetest `docs/testing/m5/wp166.md` C1–C5 (Chromecast); ob Spotify für tote Geräte den Fortschritt weiterzählt, nur per Fake belegt |
 | WP167 | Spotify: Chromecast nach dem Befehl länger prüfen, ohne Bestätigung dort bleiben | gemergt 01f3f5a8 | K129 angepasst (offen). Ursache plausibel (3-s-Fenster zu kurz für Cast), nicht belegt; neues Diagnosefeld `spotify-verify progress=` belegt es im Gerätetest (`docs/testing/m5/wp166.md` C1/C4/C5). Folgepunkt: Commit-Hook ließ prefer_const-Lint durch (CI fing ihn) |
 | WP168 | Spotify-Client-ID als Passwortfeld (Passwortmanager) | gemergt cc347e92 | Mini-Paket ohne WP-Datei, Auftrag Maintainer direkt; kein Gerätetest nötig, keine Konzeptabweichung |
+| WP169 | GitHub-Repo auf Stand v0.1.0: Lizenz GPL-3.0-or-later, README en/de, Screenshots, Homepage | in Arbeit | Wunsch Maintainer 2026-10-28 |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
