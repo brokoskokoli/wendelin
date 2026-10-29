@@ -94,6 +94,7 @@ void main() {
     await tapText(tester, 'Ohne fortfahren');
 
     expect(find.text('Was darf Wendelin?'), findsOneWidget);
+    await tapText(tester, 'Integrationen öffnen');
     await tester.runAsync(() => c.read(toolRegistryProvider).refresh());
     await tester.pumpAndSettle();
     expect(env.permissionRequests, 0);
@@ -105,14 +106,16 @@ void main() {
     );
     await settle(tester);
     expect(c.read(enabledIntegrationsProvider), contains('clipboard'));
+    await tester.tap(find.byTooltip('Zurück').first);
+    await settle(tester);
     await tapText(tester, 'Weiter');
 
     expect(find.text('Personalisierung'), findsOneWidget);
-    await tapText(tester, 'Ohne fortfahren');
+    await tapText(tester, 'Überspringen');
 
-    expect(find.text('Fertig'), findsOneWidget);
+    expect(find.text('Alles bereit'), findsOneWidget);
     expect(find.byType(MainScreen), findsNothing);
-    await tapText(tester, 'Los geht’s');
+    await tapText(tester, 'Fertig');
     expect(find.byType(MainScreen), findsOneWidget);
     expect(await env.storage.settings.get(AppSettings.setupWizardDone), isTrue);
     expect(c.read(setupWizardDoneProvider), isTrue);

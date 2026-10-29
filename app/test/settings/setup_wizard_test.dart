@@ -12,6 +12,7 @@ import 'package:wendelin/di/voice_settings_providers.dart';
 import 'package:wendelin/ui/onboarding/onboarding_screen.dart';
 import 'package:wendelin/ui/routes.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
+import 'package:wendelin/ui/settings/speaker/speaker_screen.dart';
 import 'package:wendelin_storage/fakes.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
@@ -274,6 +275,7 @@ void main() {
       await pump(tester, await envOn(storage));
       expect(find.text('Noch keine Stimme eingelernt'), findsOneWidget);
       await tapText(tester, 'Stimme einlernen');
+      expect(find.byType(SpeakerScreen), findsOneWidget);
       await systemBack(tester);
       expect(find.text('Noch keine Stimme eingelernt'), findsOneWidget);
     });
@@ -305,8 +307,8 @@ void main() {
       await storage.settings.set(AppSettings.setupWizardPage, 'done');
       final env = await envOn(storage);
       final c = await pump(tester, env);
-      expect(find.text('Fertig'), findsOneWidget);
-      await tapText(tester, 'Los geht’s');
+      expect(find.text('Alles bereit'), findsOneWidget);
+      await tapText(tester, 'Fertig');
       expect(c.read(setupWizardActiveProvider), isFalse);
       unawaited(navigator(tester).pushNamed<void>(AppRoutes.wakeWord));
       await settle(tester);

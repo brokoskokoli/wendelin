@@ -3100,14 +3100,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupContinueWithout => 'Continue without';
 
   @override
-  String get setupDoneAction => 'Let’s go';
+  String get setupDoneAction => 'Done';
 
   @override
   String get setupDoneIntro =>
       'Wendelin is set up. You can find everything else in Settings at any time.';
 
   @override
-  String get setupDoneTitle => 'Done';
+  String get setupDoneTitle => 'All set';
+
+  @override
+  String get setupIntegrationsOpen => 'Open integrations';
 
   @override
   String get setupPersonalizationIntro =>
@@ -3134,7 +3137,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupRetry => 'Try again';
 
   @override
+  String get setupSkip => 'Skip';
+
+  @override
   String get setupSpeakerMissing => 'No voice enrolled yet';
+
+  @override
+  String get setupSpeakerModelReady => 'Recognition model downloaded';
 
   @override
   String get setupSpeakerOpen => 'Enroll voice';
@@ -3156,6 +3165,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupSpeechModel => 'Recognition model';
+
+  @override
+  String get setupSpeechReady => 'Speech recognition set up';
 
   @override
   String get setupSpeechTitle => 'Speech recognition';

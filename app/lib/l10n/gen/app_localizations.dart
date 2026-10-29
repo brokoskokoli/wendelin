@@ -5329,7 +5329,7 @@ abstract class AppLocalizations {
   /// No description provided for @setupDoneAction.
   ///
   /// In de, this message translates to:
-  /// **'Los geht’s'**
+  /// **'Fertig'**
   String get setupDoneAction;
 
   /// No description provided for @setupDoneIntro.
@@ -5341,8 +5341,14 @@ abstract class AppLocalizations {
   /// No description provided for @setupDoneTitle.
   ///
   /// In de, this message translates to:
-  /// **'Fertig'**
+  /// **'Alles bereit'**
   String get setupDoneTitle;
+
+  /// No description provided for @setupIntegrationsOpen.
+  ///
+  /// In de, this message translates to:
+  /// **'Integrationen öffnen'**
+  String get setupIntegrationsOpen;
 
   /// No description provided for @setupPersonalizationIntro.
   ///
@@ -5386,11 +5392,23 @@ abstract class AppLocalizations {
   /// **'Erneut versuchen'**
   String get setupRetry;
 
+  /// No description provided for @setupSkip.
+  ///
+  /// In de, this message translates to:
+  /// **'Überspringen'**
+  String get setupSkip;
+
   /// No description provided for @setupSpeakerMissing.
   ///
   /// In de, this message translates to:
   /// **'Noch keine Stimme eingelernt'**
   String get setupSpeakerMissing;
+
+  /// No description provided for @setupSpeakerModelReady.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennungsmodell geladen'**
+  String get setupSpeakerModelReady;
 
   /// No description provided for @setupSpeakerOpen.
   ///
@@ -5427,6 +5445,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Erkennungsmodell'**
   String get setupSpeechModel;
+
+  /// No description provided for @setupSpeechReady.
+  ///
+  /// In de, this message translates to:
+  /// **'Spracherkennung eingerichtet'**
+  String get setupSpeechReady;
 
   /// No description provided for @setupSpeechTitle.
   ///
