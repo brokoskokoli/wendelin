@@ -5746,6 +5746,18 @@ abstract class AppLocalizations {
   /// **'Spracherkennung, Stimme, Tempo'**
   String get areaSpeechDetail;
 
+  /// No description provided for @areaWakeWord.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktivierungswort'**
+  String get areaWakeWord;
+
+  /// No description provided for @areaWakeWordDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'„Hey Wendelin“ einlernen, Modell, Dienst'**
+  String get areaWakeWordDetail;
+
   /// No description provided for @costsIntro.
   ///
   /// In de, this message translates to:
@@ -5967,17 +5979,17 @@ abstract class AppLocalizations {
   /// **'+ Provider'**
   String get providersAdd;
 
+  /// No description provided for @providersAdvanced.
+  ///
+  /// In de, this message translates to:
+  /// **'Erweiterte Einstellungen'**
+  String get providersAdvanced;
+
   /// No description provided for @providersBudget.
   ///
   /// In de, this message translates to:
   /// **'Budget {v}/Monat'**
   String providersBudget(String v);
-
-  /// No description provided for @providersChoice.
-  ///
-  /// In de, this message translates to:
-  /// **'Anbieterwahl'**
-  String get providersChoice;
 
   /// No description provided for @providersDeleteBody.
   ///
@@ -5996,12 +6008,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Fehler: {error}'**
   String providersError(String error);
-
-  /// No description provided for @providersIntro.
-  ///
-  /// In de, this message translates to:
-  /// **'Der Standard bekommt jede Anfrage, für die keine Routing-Regel greift. Scheitert er, sagt Wendelin das klar und wechselt nie von selbst zu einem anderen Anbieter.'**
-  String get providersIntro;
 
   /// No description provided for @providersMakeDefault.
   ///
@@ -7329,6 +7335,24 @@ abstract class AppLocalizations {
   /// **'{hour} Uhr'**
   String stationHour(int hour);
 
+  /// No description provided for @stationNeedModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktivierungswort in der Station aus'**
+  String get stationNeedModel;
+
+  /// No description provided for @stationNeedModelBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Ohne das Wendelin-Modell hört die Station nicht auf das Aktivierungswort. Lade das Modell, dann ist es hier bereit.'**
+  String get stationNeedModelBody;
+
+  /// No description provided for @stationNeedModelLink.
+  ///
+  /// In de, this message translates to:
+  /// **'Zum Aktivierungswort'**
+  String get stationNeedModelLink;
+
   /// No description provided for @stationNoEvents.
   ///
   /// In de, this message translates to:
@@ -8180,18 +8204,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Standard der Sprache'**
   String get voiceScreenLanguageDefaultChip;
-
-  /// No description provided for @voiceScreenLearnsVoice.
-  ///
-  /// In de, this message translates to:
-  /// **'Wendelin lernt deine Stimme'**
-  String get voiceScreenLearnsVoice;
-
-  /// No description provided for @voiceScreenLearnsVoiceDetail.
-  ///
-  /// In de, this message translates to:
-  /// **'Einlernen, kalibrieren und ausprobieren'**
-  String get voiceScreenLearnsVoiceDetail;
 
   /// No description provided for @voiceScreenLikeApp.
   ///
@@ -9174,7 +9186,7 @@ abstract class AppLocalizations {
   /// No description provided for @wakeServiceSectionEnableDetail.
   ///
   /// In de, this message translates to:
-  /// **'Wendelin hört im Hintergrund auf „Hey Wendelin“. Im Stationsmodus ist es immer an.'**
+  /// **'Wendelin hört im Hintergrund auf „Hey Wendelin“. Im Stationsmodus ist es mit dem Wendelin-Modell immer an.'**
   String get wakeServiceSectionEnableDetail;
 
   /// No description provided for @wakeServiceSectionEndedEngine.
@@ -9236,6 +9248,24 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Ohne eingelernte Stimme erkennt Wendelin das Aktivierungswort nicht.'**
   String get wakeServiceSectionEnrollFirstBody;
+
+  /// No description provided for @wakeServiceSectionLoadModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Modell laden'**
+  String get wakeServiceSectionLoadModel;
+
+  /// No description provided for @wakeServiceSectionNeedModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Erst Modell laden'**
+  String get wakeServiceSectionNeedModel;
+
+  /// No description provided for @wakeServiceSectionNeedModelBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Das Aktivierungswort lässt sich erst einschalten, wenn das Wendelin-Modell geladen ist (siehe oben auf dieser Seite).'**
+  String get wakeServiceSectionNeedModelBody;
 
   /// No description provided for @wakeServiceSectionNotAssistant.
   ///
@@ -9578,6 +9608,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Die Vorlagen sind veraltet (der Vergleich wurde verbessert). Bitte neu einlernen.'**
   String get wakeWordTemplatesOutdated;
+
+  /// No description provided for @wakeWordTrainedModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendelin-Modell'**
+  String get wakeWordTrainedModel;
 
   /// No description provided for @wakeWordTryNow.
   ///

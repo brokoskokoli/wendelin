@@ -128,7 +128,13 @@ void main() {
       await askHost('role');
       final service = c.read(wakeServiceProvider.notifier);
       await service.setCondition(WakeCondition.always);
-      expect(await service.setEnabled(enabled: true), isTrue);
+      expect(
+        await service.setEnabled(enabled: true),
+        isTrue,
+        reason:
+            'WP173: Einschalten braucht das Klassifikator-Modell; '
+            'WENDELIN_MODELS braucht wake-classifier-wendelin/',
+      );
       final platform = WakePlatform();
       await _until(() async => (await platform.status()).running, 'Dienst');
       // Ruhezustand: kein Whisper geladen, keine WAV.

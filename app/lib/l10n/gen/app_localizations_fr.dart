@@ -3378,6 +3378,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get areaSpeechDetail => 'Reconnaissance vocale, voix, débit';
 
   @override
+  String get areaWakeWord => 'Mot d’activation';
+
+  @override
+  String get areaWakeWordDetail =>
+      'Apprendre « Hey Wendelin », modèle, service';
+
+  @override
   String get costsIntro =>
       'D’après les prix du catalogue de modèles, en dollars américains.';
 
@@ -3534,12 +3541,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get providersAdd => '+ Fournisseur';
 
   @override
+  String get providersAdvanced => 'Paramètres avancés';
+
+  @override
   String providersBudget(String v) {
     return 'Budget $v/mois';
   }
-
-  @override
-  String get providersChoice => 'Choix du fournisseur';
 
   @override
   String get providersDeleteBody =>
@@ -3554,10 +3561,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String providersError(String error) {
     return 'Erreur : $error';
   }
-
-  @override
-  String get providersIntro =>
-      'Le fournisseur par défaut reçoit toute demande pour laquelle aucune règle de routage ne s’applique. S’il échoue, Wendelin le dit clairement et ne passe jamais de lui-même à un autre fournisseur.';
 
   @override
   String get providersMakeDefault => 'Définir par défaut';
@@ -4316,6 +4319,16 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get stationNeedModel => 'Mot d’activation inactif dans la station';
+
+  @override
+  String get stationNeedModelBody =>
+      'Sans le modèle Wendelin, la station n’écoute pas le mot d’activation. Chargez le modèle et il sera prêt ici.';
+
+  @override
+  String get stationNeedModelLink => 'Vers le mot d’activation';
+
+  @override
   String get stationNoEvents => 'Aucun rendez-vous à venir.';
 
   @override
@@ -4814,12 +4827,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get voiceScreenLanguageDefaultChip => 'Voix par défaut de la langue';
-
-  @override
-  String get voiceScreenLearnsVoice => 'Wendelin apprend votre voix';
-
-  @override
-  String get voiceScreenLearnsVoiceDetail => 'Entraîner, calibrer et essayer';
 
   @override
   String voiceScreenLikeApp(String v) {
@@ -5426,7 +5433,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeServiceSectionEnableDetail =>
-      'Wendelin écoute en arrière-plan le mot « Hey Wendelin ». En mode station, il est toujours actif.';
+      'Wendelin écoute en arrière-plan le mot « Hey Wendelin ». En mode station, il est toujours actif avec le modèle Wendelin.';
 
   @override
   String get wakeServiceSectionEndedEngine =>
@@ -5464,6 +5471,16 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get wakeServiceSectionEnrollFirstBody =>
       'Sans voix entraînée, Wendelin ne reconnaît pas le mot d’activation.';
+
+  @override
+  String get wakeServiceSectionLoadModel => 'Charger le modèle';
+
+  @override
+  String get wakeServiceSectionNeedModel => 'Chargez d’abord le modèle';
+
+  @override
+  String get wakeServiceSectionNeedModelBody =>
+      'Le mot d’activation ne peut être activé qu’une fois le modèle Wendelin chargé (voir en haut de cette page).';
 
   @override
   String get wakeServiceSectionNotAssistant =>
@@ -5671,6 +5688,9 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get wakeWordTemplatesOutdated =>
       'Ces modèles sont périmés (la comparaison a été améliorée). Veuillez entraîner de nouveau.';
+
+  @override
+  String get wakeWordTrainedModel => 'Modèle Wendelin';
 
   @override
   String get wakeWordTryNow => 'Essayer maintenant';

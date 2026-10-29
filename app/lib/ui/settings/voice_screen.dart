@@ -78,16 +78,6 @@ class VoiceScreen extends ConsumerWidget {
           ],
         ),
         SettingsSection(
-          title: context.l10n.onboardingWakeWord,
-          children: [
-            SettingsRow(
-              title: context.l10n.voiceScreenLearnsVoice,
-              detail: context.l10n.voiceScreenLearnsVoiceDetail,
-              onTap: () => Navigator.of(context).pushNamed(AppRoutes.wakeWord),
-            ),
-          ],
-        ),
-        SettingsSection(
           title: context.l10n.speakerRowTitle,
           children: [
             SettingsRow(

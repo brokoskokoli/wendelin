@@ -43,7 +43,7 @@ String verdictText(AppLocalizations l, UtteranceVerdict v, {String? word}) =>
       UtteranceVerdict.unchecked => l.wakeEnrollUnchecked,
     };
 
-/// Einstellungen → Sprache → Aktivierungswort → „Stimme einlernen“:
+/// Einstellungen → Aktivierungswort → „Stimme einlernen“:
 /// Wendelin bittet etwa 15 Mal um „Wendelin“ (WP60). Aus jeder Aufnahme
 /// wird sofort das Embedding berechnet, das Audio wird verworfen.
 class WakeEnrollScreen extends ConsumerStatefulWidget {

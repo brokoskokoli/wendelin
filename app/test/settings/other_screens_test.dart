@@ -128,7 +128,10 @@ void main() {
 
       // Keine Eskalationsketten mehr (K28); die Anbieterwahl steht im Routing.
       expect(find.textContaining('Eskalation'), findsNothing);
-      expect(find.text('Anbieterwahl'), findsOneWidget);
+      expect(find.text('Erweiterte Einstellungen'), findsOneWidget);
+      expect(find.text('Anbieterwahl'), findsNothing);
+      // Der frühere Hinweistext oben ist weg (WP173).
+      expect(find.textContaining('keine Routing-Regel greift'), findsNothing);
       await tester.tap(find.text('Routing'));
       await settle(tester);
       expect(find.byType(RoutingScreen), findsOneWidget);
@@ -145,6 +148,18 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Löschen'));
       await settle(tester);
       expect((await c.read(profilesProvider.future)).profiles, hasLength(1));
+    });
+
+    testWidgets('ein Profil: kein Zugang zum Routing (WP173)', (tester) async {
+      final env = TestEnv(
+        storedProfiles: true,
+        llmFactory: (p, s) => FakeLlmProvider(const []),
+      );
+      await env.storage.providerProfiles.save(profile('a', budget: 5000000));
+      await env.storage.providerProfiles.setDefault('a');
+      await pumpPage(tester, env, const ProvidersScreen());
+      expect(find.text('Erweiterte Einstellungen'), findsNothing);
+      expect(find.text('Routing'), findsNothing);
     });
 
     testWidgets('ohne Profile: Hinweis und „+ Provider“', (tester) async {

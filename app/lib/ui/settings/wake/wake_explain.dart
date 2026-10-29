@@ -88,7 +88,15 @@ Future<bool> enableWakeWord(BuildContext context, WidgetRef ref) async {
   final on = await ref
       .read(wakeServiceProvider.notifier)
       .setEnabled(enabled: true);
-  if (!on) return false;
+  if (!on) {
+    // The page showed the model as installed, the disk says otherwise (or it
+    // cannot be read): say so, and read the model states again.
+    unawaited(ref.read(modelStatesProvider.notifier).refresh());
+    if (context.mounted) {
+      showHint(context, context.l10n.wakeServiceSectionNeedModelBody);
+    }
+    return false;
+  }
   await settings.set(wakeExplainedKey, true);
   ref.invalidate(wakeStatusProvider);
   if (!battery.ignoringOptimizations && context.mounted) {

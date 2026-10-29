@@ -13,6 +13,8 @@
   "areaProviderDetail": "Profile, Standard, Budget",
   "areaRouting": "Routing",
   "areaRoutingDetail": "Regeln, Testfeld, Import und Export",
+  "areaWakeWord": "Aktivierungswort",
+  "areaWakeWordDetail": "„Hey Wendelin“ einlernen, Modell, Dienst",
   "areaSpeech": "Sprache",
   "areaSpeechDetail": "Spracherkennung, Stimme, Tempo",
   "costsIntro": "Nach den Preisen im Modellkatalog, in US-Dollar.",
@@ -119,7 +121,7 @@
       }
     }
   },
-  "providersChoice": "Anbieterwahl",
+  "providersAdvanced": "Erweiterte Einstellungen",
   "providersDeleteBody": "Profil und gespeicherter Key werden entfernt.",
   "providersDeleteTitle": "„{name}“ löschen?",
   "@providersDeleteTitle": {
@@ -137,7 +139,6 @@
       }
     }
   },
-  "providersIntro": "Der Standard bekommt jede Anfrage, für die keine Routing-Regel greift. Scheitert er, sagt Wendelin das klar und wechselt nie von selbst zu einem anderen Anbieter.",
   "providersMakeDefault": "Als Standard",
   "providersNone": "Noch kein Provider eingerichtet.",
   "providersProfiles": "Profile",

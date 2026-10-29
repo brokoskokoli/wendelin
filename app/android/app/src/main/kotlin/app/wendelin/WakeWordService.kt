@@ -87,13 +87,7 @@ class WakeWordService : Service() {
     private fun begin(source: String) {
         resume?.let { main.removeCallbacks(it) }
         val settings = WakeSettingsStore.load(this)
-        val decision = WakePolicy.decide(
-            settings,
-            holdsRole = RecognizerSwitch.holdsAssistantRole(this),
-            micGranted = WakeStarter.micGranted(this),
-            charging = WakeStarter.isCharging(this),
-            nowMs = System.currentTimeMillis(), station = StationState.open,
-        )
+        val decision = WakeStarter.decide(this, settings)
         val forced = WakePolicy.forcedLog(settings, WakeStarter.isCharging(this), StationState.open)
         if (decision is WakeDecision.Skip) {
             if (decision.reason == "paused") {

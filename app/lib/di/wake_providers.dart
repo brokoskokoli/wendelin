@@ -84,6 +84,17 @@ final wakeNeedsVoiceProvider = Provider<bool>((ref) {
   return ref.watch(modelStatesProvider)[m.id]?.phase != ModelPhase.installed;
 });
 
+/// Whether the trained classifier model (Wendelin) is installed (WP173). The
+/// wake word can only be switched on with it, in every detection mode. Not
+/// known yet counts as not installed.
+final wakeClassifierInstalledProvider = Provider<bool>((ref) {
+  final m = ref
+      .watch(speechModelCatalogProvider)
+      .byId(SpeechModelCatalog.wakeClassifierWendelin.id);
+  if (m == null) return false;
+  return ref.watch(modelStatesProvider)[m.id]?.phase == ModelPhase.installed;
+});
+
 /// Stores the setting.
 final class WakeDetectorNotifier extends AsyncNotifier<WakeDetectorChoice> {
   @override
@@ -213,7 +224,7 @@ final wakeShadowFeaturesFactoryProvider = Provider<WakeShadowFeaturesFactory>(
 );
 
 const _missingText =
-    'Die Wake-Modelle fehlen (Einstellungen → Sprache → Aktivierungswort).';
+    'Die Wake-Modelle fehlen (Einstellungen → Aktivierungswort).';
 
 WakeFeatureExtractor Function() _featuresFactory(
   Ref ref, {

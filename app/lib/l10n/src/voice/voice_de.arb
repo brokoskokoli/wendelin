@@ -181,8 +181,6 @@
   "voiceScreenKeepModelLabel": "Modell im Speicher halten",
   "voiceScreenLanguageDefault": "Standard der Sprache",
   "voiceScreenLanguageDefaultChip": "Standard der Sprache",
-  "voiceScreenLearnsVoice": "Wendelin lernt deine Stimme",
-  "voiceScreenLearnsVoiceDetail": "Einlernen, kalibrieren und ausprobieren",
   "voiceScreenLikeApp": "Wie die App ({v})",
   "@voiceScreenLikeApp": {
     "placeholders": {

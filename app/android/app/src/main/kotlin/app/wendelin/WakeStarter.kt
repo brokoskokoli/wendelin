@@ -16,16 +16,20 @@ import android.os.Build
  * (`wake-start result=…`, [WakePolicy]).
  */
 object WakeStarter {
+    /** The start/stop decision with the live state of the device (also used by [WakeWordService]). */
+    fun decide(context: Context, settings: WakeSettings): WakeDecision = WakePolicy.decideWithFiles(
+        settings,
+        holdsRole = RecognizerSwitch.holdsAssistantRole(context),
+        micGranted = micGranted(context),
+        charging = isCharging(context),
+        nowMs = System.currentTimeMillis(),
+        station = StationState.open,
+        filesDir = context.filesDir,
+    )
+
     fun sync(context: Context, source: String) {
         val settings = WakeSettingsStore.load(context)
-        val decision = WakePolicy.decide(
-            settings,
-            holdsRole = RecognizerSwitch.holdsAssistantRole(context),
-            micGranted = micGranted(context),
-            charging = isCharging(context),
-            nowMs = System.currentTimeMillis(),
-            station = StationState.open,
-        )
+        val decision = decide(context, settings)
         when (decision) {
             WakeDecision.Start -> start(context, source)
             is WakeDecision.Skip -> {
