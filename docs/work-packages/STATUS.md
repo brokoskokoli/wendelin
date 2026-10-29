@@ -51,7 +51,7 @@ Aktuell rc11 bis rc13 = Release v0.1.0 (Testprotokoll-Blöcke T31-WP158 bis T31-
 
 ### Offene Konzeptänderungen (Status offen, Änderungsprotokoll im Konzept)
 
-K138 offen, K139 offen, K140 offen, K141 offen, K142 offen. K115 ist zurückgestellt.
+K138 offen, K139 offen, K140 offen, K141 offen, K142 offen, K144 offen, K145 offen. K115 ist zurückgestellt.
 
 ### Bekannte Folgepunkte und Backlog
 
@@ -76,7 +76,8 @@ K138 offen, K139 offen, K140 offen, K141 offen, K142 offen. K115 ist zurückgest
 
 ## Nächste Schritte
 
-1. WP169 läuft (GitHub-Repo auffrischen).
+1. WP180 läuft (Zentrale Audio-Aufnahme und Ringpuffer im Dienst, ADR 0024, K145).
+2. WP169 läuft (GitHub-Repo auffrischen).
 2. Gerätetests beim Maintainer: rc13/v0.1.0 (T31) und die noch offenen Blöcke T30, T29, T28 (siehe „Offen“).
 3. K127–K133 vom Maintainer bestätigen lassen.
 4. Danach nur mit Go (M6): Prüfseite Weckwort-Archiv (dann Hey-Pflicht K115 und Training mit eigenem HW-Kopf), WP100/WP101, STT-Messung (K99), WP132, WP138.
