@@ -9387,6 +9387,18 @@ abstract class AppLocalizations {
   /// **'Pausiert bis {v}'**
   String wakeServiceSectionPausedUntil(String v);
 
+  /// No description provided for @wakeServiceSectionRecognizer.
+  ///
+  /// In de, this message translates to:
+  /// **'Spracherkennungsmodell'**
+  String get wakeServiceSectionRecognizer;
+
+  /// No description provided for @wakeServiceSectionRecognizerDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestätigt das Aktivierungswort durch das Spracherkennungsmodell. Gut für allgemeine Bereiche, wenn auch nicht trainierte Personen das Gerät ansprechen.'**
+  String get wakeServiceSectionRecognizerDetail;
+
   /// No description provided for @wakeServiceSectionRunning.
   ///
   /// In de, this message translates to:
@@ -9416,6 +9428,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Zum Einlernen'**
   String get wakeServiceSectionToEnroll;
+
+  /// No description provided for @wakeServiceSectionVerifierB.
+  ///
+  /// In de, this message translates to:
+  /// **'Prüfer B (Stimmvorlagen)'**
+  String get wakeServiceSectionVerifierB;
+
+  /// No description provided for @wakeServiceSectionVerifierBDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestätigt das Aktivierungswort anhand der eingelernten Stimmvorlagen. Funktioniert nur für bekannte Personen, deren Stimme eingelernt wurde.'**
+  String get wakeServiceSectionVerifierBDetail;
 
   /// No description provided for @wakeServiceSectionWhen.
   ///

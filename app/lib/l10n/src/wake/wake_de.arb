@@ -295,6 +295,10 @@
   "wakeServiceSectionWhen": "Wann zuhören?",
   "wakeServiceSectionWhisper": "Nachprüfung (Stufe 2)",
   "wakeServiceSectionWhisperDetail": "Wendelin hört nur zu, wenn die Nachprüfung das Aktivierungswort bestätigt. Sie umfasst die ganze Stufe 2: Prüfer B, Parakeet oder Whisper, je nachdem, was eingelernt und geladen ist. Schalte sie aus, wenn sie mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.",
+  "wakeServiceSectionVerifierB": "Prüfer B (Stimmvorlagen)",
+  "wakeServiceSectionVerifierBDetail": "Bestätigt das Aktivierungswort anhand der eingelernten Stimmvorlagen. Funktioniert nur für bekannte Personen, deren Stimme eingelernt wurde.",
+  "wakeServiceSectionRecognizer": "Spracherkennungsmodell",
+  "wakeServiceSectionRecognizerDetail": "Bestätigt das Aktivierungswort durch das Spracherkennungsmodell. Gut für allgemeine Bereiche, wenn auch nicht trainierte Personen das Gerät ansprechen.",
   "wakeTestAgo": "{v} · {inSeconds} s",
   "@wakeTestAgo": {
     "placeholders": {

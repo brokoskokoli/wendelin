@@ -193,6 +193,8 @@ class WakePlatform {
     required bool enabled,
     required WakeCondition condition,
     required bool verify,
+    bool verifyB = true,
+    bool verifyModel = false,
     String detector = 'auto',
   }) async {
     try {
@@ -200,6 +202,8 @@ class WakePlatform {
         'enabled': enabled,
         'mode': condition.name,
         'verify': verify,
+        'verifyB': verifyB,
+        'verifyModel': verifyModel,
         'detector': detector,
       });
     } on MissingPluginException {

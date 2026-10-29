@@ -40,7 +40,7 @@ void main() {
   // Live: 25 gleiche Frames in Richtung 0; Vorlagen mit Kosinus [cos].
   VerifierBBargeVerifier make({
     required double cos,
-    required _Fallback fallback,
+    _Fallback? fallback,
     bool templates = true,
     Object? error,
     double threshold = 0.6815,
@@ -95,17 +95,25 @@ void main() {
     },
   );
 
-  test('Score unter der Schwelle: verworfen, kein Transkript', () async {
-    final fb = _Fallback();
+  test('Score unter der Schwelle ohne Fallback: verworfen', () async {
     final v = await make(
       cos: 0.3,
-      fallback: fb,
+      fallback: null,
     ).verify(clip, candidate: BargeInKeyword.wake);
     expect(v.keyword, isNull);
     expect(v.result, 'no');
     expect(v.verifier, 'b');
     expect(v.score, closeTo(0.3, 1e-3));
-    expect(fb.calls, 0);
+  });
+
+  test('Score unter der Schwelle mit Fallback (ODER-Logik): Transkript entscheidet', () async {
+    final fb = _Fallback();
+    final v = await make(
+      cos: 0.3,
+      fallback: fb,
+    ).verify(clip, candidate: BargeInKeyword.wake);
+    expect(v.result, 'echo');
+    expect(fb.calls, 1);
   });
 
   test('ohne Vorlagen mit Folgen: Transkript entscheidet', () async {

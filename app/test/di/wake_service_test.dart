@@ -49,6 +49,8 @@ final class _FakePlatform extends WakePlatform {
     required bool enabled,
     required WakeCondition condition,
     required bool verify,
+    bool verifyB = true,
+    bool verifyModel = false,
     String detector = 'auto',
   }) async {
     calls.add('configure');

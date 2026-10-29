@@ -291,7 +291,10 @@
         "app/android/app/src/main/kotlin/app/wendelin/WakePolicy.kt"
       ],
       "toKotlin": {
-        "configure": {"args": ["enabled", "mode", "verify", "detector"], "returns": "none"},
+        "configure": {
+          "args": ["enabled", "mode", "verify", "verifyB", "verifyModel", "detector"],
+          "returns": "none"
+        },
         "texts": {"args": ["texts"], "returns": "none"},
         "recheck": {"args": [], "returns": "none"},
         "devMode": {"args": ["on", "clear", "archive"], "returns": "none"},
@@ -322,7 +325,7 @@
         "stage2Gap": {"args": ["reason"], "returns": "none"}
       },
       "toDart": {
-        "run": {"args": ["verify", "detector", "station", "dev"], "returns": "none"},
+        "run": {"args": ["verify", "verifyB", "verifyModel", "detector", "station", "dev"], "returns": "none"},
         "devMode": {"args": ["on", "clear", "archive"], "returns": "none"},
         "audio": {"args": ["pcm"], "returns": "none"},
         "audioError": {"args": ["message"], "returns": "none"},

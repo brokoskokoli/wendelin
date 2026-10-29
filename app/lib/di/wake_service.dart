@@ -55,6 +55,7 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
   Future<WakeServiceSettings> build() async {
     final settings = ref.read(storageProvider).settings;
     // „Nachprüfung“ is part of what the service needs to know.
+    ref.listen(wakeStage2Provider, (_, _) => unawaited(push()));
     ref.listen(wakeVerifyProvider, (_, _) => unawaited(push()));
     // WP129: the choice of the detection goes to the service as well.
     ref.listen(wakeDetectorProvider, (_, _) => unawaited(push()));
@@ -88,7 +89,7 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
   Future<void> push() async {
     final s = await future;
     if (!ref.mounted) return;
-    final verify = await ref.read(wakeVerifyProvider.future);
+    final stage2 = await ref.read(wakeStage2Provider.future);
     if (!ref.mounted) return;
     final detector = await ref.read(wakeDetectorProvider.future);
     if (!ref.mounted) return;
@@ -105,7 +106,9 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
     await platform.configure(
       enabled: s.enabled,
       condition: s.condition,
-      verify: verify,
+      verify: stage2.active,
+      verifyB: stage2.verifierB,
+      verifyModel: stage2.recognizer,
       detector: detector.name,
     );
   }
