@@ -6,7 +6,7 @@ Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) 
 
 Parallelität: bis zu 4 Paket-Sitzungen, je 1 Sub-Agent (AGENTS.md); Standard 2, solange der Maintainer am Rechner ist.
 
-Stand: 2026-10-29; läuft: WP169, WP174; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
+Stand: 2026-10-29; läuft: WP174; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
 
 ## Meilensteine
 
@@ -29,7 +29,7 @@ Stand: 2026-10-29; läuft: WP169, WP174; Release v0.1.0 (2fd52524); der nächste
 | WP101 | Stationsmodus: Ruhezeiten, Bluetooth, Wecker-Ansage | geplant | nur mit Go |
 | WP132 | Zwei Build-Varianten frei/Store (Vorbereitung), K103 | geplant | nur mit Go, nach WP131 und Gesamttest |
 | WP138 | Kompakt-Modus: kleines Sprach-Overlay mit Kreis und Haken | geplant | Idee Maintainer 2026-10-23; nur nach Gespräch und Go |
-| WP169 | GitHub-Repo auf Stand v0.1.0: Lizenz GPL-3.0-or-later, README en/de, Screenshots, Homepage | in Arbeit | Wunsch Maintainer 2026-10-28 |
+| WP169 | GitHub-Repo auf Stand v0.1.0: Lizenz GPL-3.0-or-later, README en/de, Screenshots, Homepage | gemergt 83c5b70e | Dazu: 44 STT-Test-WAVs durch Piper-Stimmen ersetzt (Maintainer). Folgepunkte: Integrationsnamen nur deutsch (displayName in wendelin_integrations); Sprechsprache-Default fest 'de' (`startup.dart:19`); make_stt_fixtures nicht deterministisch; `app/tool/stt_wer.dart`/`stt_measure.sh` kaputt (dart:ui); release.yml nutzt CHANGELOG nicht; nur dunkles Theme; Social Preview hochladen und Search Console (Maintainer) |
 | WP170 | Doku bereinigen: Widersprüche, Veraltetes, Doppelungen, Erledigtes löschen | gemergt b3e6ce97 | K127–K137 bestätigt (2026-10-29) und archiviert; offen: Lint-Hook vor dem Commit (P6) |
 | WP171 | Weckwort: Stufe 2 immer Prüfer B, Rückfall auf installiertes Modell, Hinweis statt stillem Verwerfen | gemergt 8d2d699d | K138/K139 offen. Gerätetest `docs/testing/m5/wp171.md` (Benachrichtigungs-Tipp, Akku/fbLoads, Schatten-Fälle); Akku-Messung nur bei Auffälligkeit; `wake_align_test.dart:428` flaky unter Last; Overlay `start-failed reason=no-models` im E2E-Aufbau klären |
 | WP172 | Overlay schließt nach dem Zuhören ohne Äußerung, Weckwort wieder bereit | gemergt 12e05a0c | K140 offen. Ursache: Overlay reagierte nicht auf idle, Weckwort pausiert bis overlayClosed. Gerätetest `docs/testing/m5/wp172.md` (echtes Weckwort, Resume, TTS); Soll: 2 nahezu äquivalente Mutationen; Sprachstart beim Modell-Laden von Tastatur nicht abgebrochen (`voice_controller.dart:203-210`) |
@@ -64,7 +64,7 @@ K138 offen, K139 offen, K140 offen, K141 offen. K115 ist zurückgestellt.
 - Sperre/Stufen: Store-_merge nicht atomar, Sperrtexte ohne l10n (WP157); Einträge gesperrter Läufe im Transkript, kollidierende Tool-Call-Ids (WP163); Undo nach gesperrtem Lauf unter Sitzung „locked“ (WP154); `attestation_hub.dart:82` Default isLocked ungetestet (WP96)
 - Kontakte: Kontakte-Integration zeigt „Aktiv“ auch ohne SMS (WP159); Sortierschlüssel `ContactsChannel.kt:178`, doppelte Bezeichnungen `contacts_tools.dart:586` (WP164); Kontaktänderungen erreichen den Erkenner erst bei Resume (WP85)
 - Texte/l10n: „Wake Word“ in `wake_de.arb:101-102`, `wake_classifier_catalog.dart:61` (WP156); Agent-Fehlertexte nur deutsch (WP150); Überschrift `voice_licenses_screen.dart:21` (WP162); `AppRoutes.httpToolNew` ohne Aufrufer (WP152); Leerzustand providersNone ohne Test (WP116)
-- Gate lokal: `dart test` löst Pakete neu auf und findet das Flutter-SDK nicht („integration_test from sdk“), wenn package_config veraltet ist (2× beim Merge, WP167/WP172) – Gate soll vorher `flutter pub get` ausführen; Commit-Hook prüft check_sizes nicht (WP172)
+- Gate lokal: `dart test` löst Pakete neu auf und findet das Flutter-SDK nicht („integration_test from sdk“), weil `.dart_tool/package_config.json` älter als `pubspec.lock` ist und `flutter pub get` sie bei gleichem Inhalt nicht neu schreibt (3× beim Merge, WP167/WP172/WP169; Zwischenlösung `touch`) – Gate soll `FLUTTER_ROOT` setzen bzw. vorher `flutter pub get` und Zeitstempel prüfen; Commit-Hook prüft check_sizes nicht (WP172)
 - E2E auf main rot (Befund WP169 2026-10-28, mit alten und neuen WAVs gleich): voice_note D1 (de-05, `voice_note_e2e_test.dart:106`), overlay_e2e, overlay_fresh_conversation („Expected length 2“), voice_barge_in; wp140_voice ohne WAVs unter `wake-e2e/` – Kandidat für ein E2E-Reparaturpaket
 - Tests/Gate: Goldens zeigen Material-Icons als Kästchen (WP154); E2E „SemanticsHandle active“ rot am Testende (WP163); E2E-Messung „während Antwort 2“ (WP165); lokales Gate fand `directives_ordering`/`prefer_const` nicht, erst CI (WP158, WP167); Commit-Hooks führen kein Gate aus (WP159); SIGINT-Freigabe, kein actions/cache (WP97)
 - Build/Release: Debug-Fallback-Warnung in `check_apk.sh`, versionCode-Anstieg, Tag-Schutzregel `v*` (WP131); CI-Filter: nur `tool/check_apk.sh` startet apk-Job nicht (WP91); `cleanup_wt.sh` löscht Urteilsdateien (WP110)
