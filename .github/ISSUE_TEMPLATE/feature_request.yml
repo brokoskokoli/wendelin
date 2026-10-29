@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest an idea or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check existing issues first.
+        Open-ended questions fit better in [Discussions](https://github.com/brokoskokoli/wendelin/discussions).
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How should it work? Voice commands, settings, defaults.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives / other apps
+      description: Workarounds you use, or how other assistants solve it.
+  - type: input
+    id: version
+    attributes:
+      label: Wendelin version you use
+      placeholder: "0.1.0"
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Fit with the project
+      options:
+        - label: I'd be willing to help implement or test this.
+          required: false

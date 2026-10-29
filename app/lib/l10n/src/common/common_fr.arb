@@ -33,6 +33,7 @@
   "ok": "OK",
   "on": "Activé",
   "open": "Ouvrir",
+  "quotedText": "« {text} »",
   "remove": "Retirer",
   "reset": "Réinitialiser",
   "retry": "Réessayer",

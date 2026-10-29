@@ -1353,6 +1353,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get open => 'Ouvrir';
 
   @override
+  String quotedText(String text) {
+    return '« $text »';
+  }
+
+  @override
   String get remove => 'Retirer';
 
   @override

@@ -251,15 +251,15 @@ void main() {
 
     // (file, b, hole in samples, estimate): the app continues [hole] samples
     // after the tail, the timestamps see the gap (estimate < 0). Without
-    // the gap rule each of these finds a "match" 21-54 ms inside the tail
+    // the gap rule each of these finds a "match" 16-19 ms inside the tail
     // (voiced speech repeats with every pitch period) and cuts real speech.
     const holes = [
-      (0, 15149, 16, -361),
-      (0, 45321, 216, -234),
-      (0, 39367, 366, -682),
-      (0, 19718, 421, -620),
-      (1, 65119, 26, -340),
-      (2, 21542, 16, -52),
+      (0, 33903, 26, -258),
+      (1, 10084, 366, -322),
+      (2, 16406, 16, -112),
+      (3, 16730, 421, -369),
+      (4, 20819, 16, -313),
+      (5, 35136, 26, -393),
     ];
     test(
       'Fortsetzung nach einem Loch: nie eine Kürzung (Stille wie bisher)',
@@ -284,16 +284,16 @@ void main() {
     // (wakeAlignMinPeak 88 -> 80, wakeAlignSure 97 -> 90, no minimum
     // overlap) and must stay `null`.
     const elsewhere = [
-      (1, 43263, 28725, 2055), // MinPeak 80
-      (5, 19655, 30477, 1889), // MinPeak 80
-      (0, 54088, 26392, 313), // MinPeak 80
-      (0, 63311, 8106, 85), // MinPeak 80
-      (1, 22588, 65270, 742), // Sure 90
-      (0, 16645, 56913, 155), // Sure 90
-      (0, 16451, 46615, 327), // Sure 90
-      (0, 22050, 5134, 154), // no minimum overlap
-      (0, 29809, 40942, 16), // no minimum overlap
-      (0, 18376, 59537, 107), // no minimum overlap
+      (0, 15776, 14278, 1867), // MinPeak 80
+      (0, 46573, 46001, 792), // MinPeak 80
+      (4, 19992, 19666, 738), // MinPeak 80
+      (0, 28657, 8911, 491), // MinPeak 80
+      (4, 14773, 13618, 1353), // Sure 90
+      (3, 20117, 9403, 135), // Sure 90
+      (2, 15905, 15344, 798), // Sure 90
+      (3, 20353, 4522, 43), // no minimum overlap
+      (2, 29263, 29423, 155), // no minimum overlap
+      (1, 33728, 5038, 94), // no minimum overlap
     ];
     test('fremde Aufnahme: nie eine Kürzung, auch nicht bei kleiner '
         'Schätzung', () {

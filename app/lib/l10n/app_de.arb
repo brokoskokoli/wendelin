@@ -676,6 +676,14 @@
   "ok": "OK",
   "on": "An",
   "open": "Öffnen",
+  "quotedText": "„{text}“",
+  "@quotedText": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
   "remove": "Entfernen",
   "reset": "Zurücksetzen",
   "retry": "Erneut versuchen",

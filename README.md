@@ -1,174 +1,112 @@
-# Wendelin
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+**English** · [Deutsch](README.de.md)
 
-Persönlicher Sprachassistent für Android (später iOS): lokal transkribieren, frei wählbares LLM über eigene API-Keys, Tool-Aufrufe auf dem Handy oder über MCP-Server. Die App führt Tools aus, nie das Modell. Schreibende Aktionen lassen sich kurz rückgängig machen, Aktionen mit Außenwirkung (`external`, z. B. Termin löschen) fragen immer nach, und jede Anfrage steht im Prüfprotokoll (Audit-Log) auf dem Gerät.
+<div align="center">
 
-- Konzept: [`Voice Agent App – Gesamtkonzept.md`](Voice%20Agent%20App%20%E2%80%93%20Gesamtkonzept.md)
-- Design: [`docs/design/DESIGN.md`](docs/design/DESIGN.md)
-- Regeln für Beiträge: [`docs/ENGINEERING.md`](docs/ENGINEERING.md)
-- Arbeitspakete: [`docs/work-packages/`](docs/work-packages/README.md)
-- Architekturentscheidungen: [`docs/adr/`](docs/adr/)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="app/assets/logo/wendelin-lockup-on-dark.svg">
+  <img src="app/assets/logo/wendelin-lockup.svg" width="320" alt="Wendelin">
+</picture>
 
-## Status
+**A personal voice assistant for Android that does as much as possible on your phone: wake word, speech recognition and speech output run locally, and the language model is one you choose.**
 
-**M1 (Text-Agent auf Android) ist erreicht** (2026-10-13): „Trag mir morgen um 10 Tauchen ein“ funktioniert per Text mit Claude Haiku (`claude-haiku-5-5`) und einem OpenAI-kompatiblen Modell (`gpt-5-mini`, außerdem Phala TEE). Der Termin landet im Gerätekalender, die Tool-Karte zeigt „Rückgängig“, alles steht im Audit-Log. Belege: Gerätetests auf einem AOSP-Emulator ohne Google Play (`app/integration_test/`), Live-Durchlauf (`evals/test/live/`), Modell-Eval ([`evals/reports/`](evals/reports/README.md)).
+[![Gate](https://github.com/brokoskokoli/wendelin/actions/workflows/gate.yml/badge.svg)](https://github.com/brokoskokoli/wendelin/actions/workflows/gate.yml)
+[![Latest release](https://img.shields.io/github/v/release/brokoskokoli/wendelin?include_prereleases&sort=semver)](https://github.com/brokoskokoli/wendelin/releases)
+[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
+[![Platform: Android 10+](https://img.shields.io/badge/platform-Android%2010%2B-3ddc84.svg)](#install)
 
-M1 umfasst: Anthropic- und OpenAI-kompatible Adapter, Provider-Einrichtung mit Verbindungstest, Agent-Schleife mit Bestätigungen und Eskalation, Integrationen Kalender, Zwischenablage, Wecker/Timer, Gedächtnis, Web (Abruf, Suche mit eigenem Suchdienst) und Listen (Markdown-Dateien über die Android-Dateiauswahl), Einstellungen, Onboarding, Kosten und Audit-Log.
+<img src="docs/images/screenshots/conversation.webp" width="300" alt="Wendelin conversation: a spoken request, the tool calls it triggered and the answer">
 
-**M2 (Sprache und Assistent) ist in Abnahme.** Ziel: Der lange Druck auf die Power-Taste öffnet Wendelin als Standard-Assistent, und ein gesprochener Befehl ergänzt eine Notiz im Obsidian-Vault. Gemergt sind:
+[![Download for Android](https://img.shields.io/badge/Download_for_Android-latest_release-3ddc84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/brokoskokoli/wendelin/releases/latest)
 
-- Sprach-Kern `wendelin_voice` (Pipeline, Endpointing, TTS-Auswahl, Modellkatalog und Download; WP15),
-- Obsidian-Integration mit Vault-Port, Notiz-Tools, Tagesnotiz und Volltext-Index (WP16),
-- Sprach-Plattform: Whisper und Silero VAD lokal über sherpa-onnx, Aufnahme, System-TTS mit sherpa-Fallback, Modell-Download (WP17, ADR 0007),
-- Standard-Assistent mit Overlay, Push-to-talk im Hauptbildschirm, Vault über die Dateiauswahl (WP18, ADR 0006),
-- lokale System-Spracherkennung (`RecognitionService` mit Whisper) für andere Apps (WP20, ADR 0008): aktiv nur, solange Wendelin die Assistenten-Rolle hält; die Einstellung „Als Spracherkennung für andere Apps anbieten“ ist standardmäßig an und abschaltbar.
+[Website](https://brokoskokoli.github.io/wendelin/)
 
-Der End-to-End-Nachweis auf dem Emulator steht (WP19): Eine WAV statt des Mikrofons, Whisper base und small lokal, das Overlay über `KEYCODE_ASSIST` und eine byte-genau ergänzte Tagesnotiz im Test-Vault, dazu ein Live-Durchlauf mit Claude Haiku ([`docs/notes/m2-e2e-2026-10-13.md`](docs/notes/m2-e2e-2026-10-13.md)). Offen ist der Test auf einem echten Telefon nach [`docs/testing/m2-device.md`](docs/testing/m2-device.md). Pakete und Stand: [`docs/work-packages/M2.md`](docs/work-packages/M2.md).
+</div>
 
-## Aufbau
+> **Status:** version 0.1.0 is the first public release. See the [changelog](CHANGELOG.md).
 
-```
-packages/wendelin_core          Verträge: Nachrichtenformat, Provider-, Tool-, Agent-Interfaces
-packages/wendelin_providers     Anthropic- und OpenAI-kompatible Adapter, Modellkatalog, Kosten
-packages/wendelin_tools         ToolRegistry, ToolExecutor, Risikostufen, Undo
-packages/wendelin_agent         Agent-Schleife, Kontext, Limits, Eskalation
-packages/wendelin_storage       drift/SQLite: Verlauf, Gedächtnis, Audit-Log, Kosten
-packages/wendelin_integrations  Kalender, Zwischenablage, Wecker, Gedächtnis, Web, Listen, Obsidian, Bring!, HTTP-Tools (über Ports)
-packages/wendelin_voice         Sprach-Kern: Pipeline, Endpointing, VAD/STT/TTS-Schnittstellen, Modell-Download
-packages/wendelin_mcp           MCP-Client (Streamable HTTP, Legacy-SSE, OAuth 2.1) und Abbildung auf das Tool-System
-app/                            Flutter-App: UI, Verdrahtung, Android-Kanäle (Kalender, Dateien, Sprache, Assistent)
-evals/                          Modell-Evals (Dart-CLI) und Live-Tests
-tool/                           Gate, Prüfskripte, Gerätetests
-```
+## Why Wendelin?
 
-Die Pakete unter `packages/` sind reines Dart ohne Flutter; Gerätezugriff geht über Ports, die die App implementiert. Wo was liegt (Ports, Datenfluss einer Anfrage, Plattformkanäle, Checklisten): [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (Index, Bereiche unter `docs/architecture/`). Regeln und Abhängigkeiten: [`docs/ENGINEERING.md`](docs/ENGINEERING.md).
+Most voice assistants send your voice to someone else's cloud and only talk to the services their maker has picked. Wendelin turns that around: it becomes your phone's default assistant, understands you **on the device**, and only the text goes to a language model **of your choice** (your own API key, no Wendelin server). For providers that run in a confidential environment (TEE), Wendelin checks the attestation itself before it sends anything.
 
-## Entwickeln und Gate
+It runs without Google Play Services, so it also works on AOSP-based systems.
 
-Voraussetzungen: Flutter 3.47 / Dart 3.13, Android SDK (API 35).
+## Features
+
+- **Speak instead of type.** Wendelin registers as the default assistant and starts with the side key, the assistant gesture or "Hey Wendelin". The wake word, speech recognition (Whisper, Parakeet) and speech output run locally. In conversation mode Wendelin keeps listening after its answer, and you can interrupt it with the wake word.
+- **A language model of your choice, with verification.** Answers come from a provider you set up (for example Claude, OpenAI, Mistral, OpenRouter, Ollama or your own endpoint). For providers with confidential execution (Phala, NEAR AI, Tinfoil) Wendelin verifies the attestation, and the GPU proof on request, before it sends data.
+- **Everyday integrations.** Home Assistant (lights, blinds, scenes ...), Spotify (plays on the device that is currently playing, or on the phone), media control, contacts, calls and SMS, navigation with Google Maps or Waze (also "navigate to <contact>"), calendar, alarms and timers, tasks (Todoist, Google Tasks), weather, shopping lists (Bring!), Obsidian notes, plus your own MCP and HTTP tools. Each integration is off until you switch it on.
+- **Security in levels.** Every tool and device kind gets a level from A to D, which decides what is allowed while the phone is locked: free, only with a recognised voice, only unlocked, or always with a confirmation. Actions such as navigation ask after unlocking and then run exactly once. Changes can be undone briefly, and risky actions always ask first.
+- **Useful while locked.** On a locked phone the window shows the request and the answer, but no history. Contacts are handed out field by field. When you navigate to a contact, the address stays on the device; the language model does not see it.
+- **Station mode and speech recognition for other apps.** The phone can serve as a fixed voice station (clock, weather, appointments, playback, smart-home tiles). The local speech recognition is also available to other apps on request.
+- **Audit log.** Every request, tool call and attestation result is logged on the device and can be exported.
+- **Languages:** the interface is available in German, English and French.
+
+## Screenshots
+
+| | | |
+|---|---|---|
+| <img src="docs/images/screenshots/conversation.webp" width="250" alt="Conversation with tool calls"> | <img src="docs/images/screenshots/confirmation.webp" width="250" alt="Confirmation sheet for a risky action"> | <img src="docs/images/screenshots/settings.webp" width="250" alt="Settings overview"> |
+| **Conversation** with tool calls | **Confirmation** for risky actions | **Settings** |
+
+More on the [website](https://brokoskokoli.github.io/wendelin/).
+
+## Install
+
+Requirements: **Android 10 or later**. Google Play Services are not needed.
+
+1. Download `wendelin-<version>.apk` and `SHA256SUMS` from the [latest release](https://github.com/brokoskokoli/wendelin/releases/latest) and install the APK (allow installing from this source when Android asks).
+2. **Verify it (recommended).** Compare the checksum with `SHA256SUMS` (`sha256sum -c SHA256SUMS`) and the signing certificate with the published fingerprint, for example with `apksigner verify --print-certs wendelin-<version>.apk`. Certificate fingerprint (SHA-256) of version 0.1.0:
+
+   ```text
+   A9:E9:5A:13:98:34:19:23:4B:DB:8F:CA:F6:0F:1B:84:18:88:36:86:7B:F8:DC:38:99:15:B5:25:39:DC:09:7B
+   ```
+
+   The fingerprint is also in the notes of every release. Background: [docs/RELEASE.md](docs/RELEASE.md) (German).
+3. **Android 13 and later: restricted settings.** For an APK installed outside a store, Android blocks SMS and notification access at first. Open *Settings > Apps > Wendelin*, tap the menu (three dots) and choose **Allow restricted settings** (the entry appears only after the first failed attempt to grant the access), then grant the access. Wendelin shows these steps, with a button to the app info, when it is needed.
+
+## Getting started
+
+1. Open Wendelin and follow the onboarding. Grant the microphone permission; the speech models are downloaded in the app.
+2. **Set up a provider** (Settings > Providers): pick a template, enter your API key and run the connection test. The key stays in the Android Keystore. For providers with confidential execution, the verification result is shown with the provider.
+3. Make Wendelin your **default assistant** (the app takes you to the Android setting) and switch on **Hey Wendelin** (Settings > Wake word) if you want hands-free use.
+4. Switch on the **integrations** you want (Settings > Integrations) and grant the permissions each one asks for.
+5. Say, for example: "Hey Wendelin, set a timer for ten minutes."
+
+## Privacy
+
+Wendelin has no account, no analytics and no telemetry, and no backend of its own.
+
+- **Stays on the device:** audio, the wake word, speech recognition and speech output (with the local engines), the conversation history, memory, the audit log and all secrets (API keys and tokens in the Android Keystore). Audio does not leave the phone.
+- **Goes to your language-model provider:** the transcript, the system prompt, selected memory entries, the tool descriptions and tool results. Which privacy level a provider has (local, TEE, EU, standard) is shown per provider, and you can restrict sensitive integrations to stricter providers.
+- **Other connections, only for features you switch on:** the services of the integrations you set up (for example your Home Assistant, Spotify, Todoist, Google Tasks, a web-search service, public web pages the model asks to read, a weather service, your MCP servers and HTTP tools) and, for attestation, the verification endpoints of the TEE providers (for example NVIDIA's GPU attestation service and the AMD and Intel certificate services). The speech models are downloaded once in the app from Hugging Face, the sherpa-onnx project and this repository's release page.
+- Every connection is listed on the [privacy page](https://brokoskokoli.github.io/wendelin/privacy.html).
+- You can export and delete the audit log in Settings > Privacy and logs.
+
+The speech models are not part of this repository. Their licenses and attributions are listed in the app under Settings > Speech > Licenses of the speech models.
+
+## Build from source
+
+You need Flutter 3.47 / Dart 3.13 (the Android SDK with API 35 for the app, Rust for `native/attest`).
 
 ```sh
-flutter pub get
-dart run tool/gate.dart        # Format, Analyse, Tests, Abdeckung ≥ 85 %, Abhängigkeiten, Secrets, Größen, Doku-Pfade, Selbsttests
-dart run tool/gate.dart --no-app   # ohne Flutter-App (wie der Ubuntu-Job in CI)
-dart run tool/gate.dart --changed  # Zwischenstand: nur geänderte Pakete und ihre Abhängigen
-dart run tool/gate.dart --help     # alle Schalter
+flutter pub get                      # in the repository root (Pub workspace)
+dart run tool/gate.dart --changed    # format, analysis, tests for what you changed
+cd app && flutter build apk --release
 ```
 
-Die Ausgabe ist kompakt (eine Zeile je Schritt, bei Fehlern das Ende der Ausgabe des Schritts, am Ende eine Tabelle mit Dauer und `GATE GRÜN`/`GATE ROT`); `--verbose` zeigt alles.
+Without signing keys the build falls back to the debug key (for local tests only). Layout, dependency rules, tests and git workflow: [docs/ENGINEERING.md](docs/ENGINEERING.md) (German). Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), decisions: [docs/adr/](docs/adr/), design: [docs/design/DESIGN.md](docs/design/DESIGN.md).
 
-Das Gate muss vor jedem Commit grün sein. GitHub Actions (`.github/workflows/gate.yml`) führt es bei jedem Push aus: die Pakete auf Ubuntu, die App (Analyse und Widget-/Golden-Tests) auf macOS.
+## Contributing
 
-Weitere Prüfungen (lokal, brauchen Android-SDK bzw. Emulator):
+Bug reports, ideas, translations and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first. Report security issues privately, see [SECURITY.md](SECURITY.md).
 
-```sh
-tool/check_apk.sh              # Release-APK: keine GMS-/Firebase-Klassen, Backup aus, nur erwartete Berechtigungen und exportierte Komponenten
-tool/check_apk.sh --self-test  # Selbsttest des Prüfskripts mit Attrappen (ohne SDK, auch im Gate)
-bash tool/android_device.sh --self-test  # Geräteauswahl mit Fake-adb: 0/1/2 Geräte, DEVICE/ANDROID_SERIAL (auch im Gate)
-tool/e2e_android.sh            # Gerätetests app/integration_test/ auf dem verbundenen Emulator
-WENDELIN_MODELS=<dir> tool/e2e_android.sh      # dazu Sprache und Assistent (M2, WP19)
-WENDELIN_MODELS=<dir> tool/e2e_recognizer.sh   # System-Spracherkennung (androidTest, WP20)
-tool/whisper_timing.sh [--clear]               # Whisper-Laufzeit auf dem eigenen Telefon aus logcat
-```
+## License
 
-`tool/e2e_android.sh` läuft nur auf Emulatoren (ein echtes Gerät nur mit `E2E_ALLOW_DEVICE=1`; bei mehreren Geräten `DEVICE` oder `ANDROID_SERIAL` setzen), legt bei Bedarf einen lokalen Kalender an, erteilt die Kalender-Berechtigung per `adb shell pm grant` und bestätigt den Speichern-Dialog der Dateiauswahl. Mit `WENDELIN_MODELS` (Ordner mit `whisper-base/`, `whisper-small/`, `silero-vad/` aus dem Modellkatalog) kopiert es zusätzlich Modelle und WAVs per `run-as` in die App, wählt den Test-Vault in der Ordnerauswahl, setzt die Assistenten-Rolle und öffnet das Overlay. Tests, die eine zweite Engine starten (Overlay), laufen über Android-Instrumentierung. Getestet wird auf einem AVD mit AOSP-Image ohne Google Play:
+Wendelin is free software under the **GNU General Public License v3.0 or later** (GPL-3.0-or-later), see [LICENSE](LICENSE). The repository follows the [REUSE](https://reuse.software) specification ([REUSE.toml](REUSE.toml), license texts in [LICENSES/](LICENSES/)). The bundled fonts (IBM Plex Mono, Instrument Sans) are under the SIL Open Font License 1.1. The speech models are downloaded separately under their own licenses (see the in-app license page).
 
-```sh
-sdkmanager "system-images;android-35;default;arm64-v8a"
-avdmanager create avd -n Wendelin_AOSP_35 -k "system-images;android-35;default;arm64-v8a"
-emulator -avd Wendelin_AOSP_35 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect &
-tool/e2e_android.sh
-```
+## Acknowledgements
 
-Live-Tests gegen echte APIs tragen `@Tags(['live'])` und laufen nur auf Wunsch (`dart test -t live --run-skipped`) mit Keys aus der Umgebung; ohne Key überspringt sich ein Test selbst (siehe [`evals/README.md`](evals/README.md)).
+Wendelin builds on many open-source projects, among them [Flutter](https://flutter.dev), [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (local speech recognition and output), [Whisper](https://github.com/openai/whisper) and [Parakeet](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3), [openWakeWord](https://github.com/dscripka/openWakeWord) (feature extractors for the wake word), and the [Model Context Protocol](https://modelcontextprotocol.io). Thanks to everyone who maintains them.
 
-## Demo-Anleitung M1
-
-### 1. APK bauen und installieren
-
-```sh
-flutter pub get
-cd app
-flutter build apk --debug      # Debug: mit Demo-Modus; für den Alltag: --release
-adb install -r build/app/outputs/flutter-apk/app-debug.apk
-```
-
-Oder direkt `flutter run` mit angeschlossenem Gerät bzw. laufendem Emulator. Mindestversion ist Android 8.0 (API 26). Die App braucht keine Google Play Services.
-
-### 2. Ohne Key ausprobieren (nur Debug-Build)
-
-Im Onboarding „Demo ohne Provider“ wählen. Ein Skript-Provider beantwortet „Trag mir morgen um 10 Tauchen ein“ und „Lösch den Termin“; Kalender und Listen liegen dabei nur im Speicher.
-
-### 3. Provider einrichten
-
-Im Onboarding (Schritt „Sprachmodell“) oder unter Einstellungen → Provider:
-
-1. Vorlage wählen: **Claude** (Anthropic), **OpenAI**, **Phala (RedPill)** (TEE), OpenRouter, Mistral, Tinfoil, Ollama oder eigener Endpunkt.
-2. API-Key eingeben und **Verbindung testen**: der Key geht direkt in den sicheren Speicher (Android Keystore), die Modellliste wird geladen.
-3. Modell wählen, z. B. `claude-haiku-5-5` oder `gpt-5-mini`, und **Modell prüfen** (prüft Tool-Calls und Streaming).
-4. **Speichern**. Der Provider-Chip oben im Hauptbildschirm zeigt das Ziel.
-
-Danach unter „Was darf Wendelin?“ bzw. Einstellungen → Integrationen den **Kalender** einschalten; Android fragt erst jetzt nach der Kalender-Berechtigung. Auf Geräten ohne Kalender-Konto braucht es einen lokalen Kalender (z. B. in der Kalender-App „Lokaler Kalender“ anlegen).
-
-### 4. Beispielsätze
-
-| Satz | Erwartung |
-| --- | --- |
-| Trag mir morgen um 10 Tauchen ein | Tool-Karte „Termin angelegt“ mit „Rückgängig · 10 s“, Termin im Gerätekalender |
-| Was steht morgen in meinem Kalender? | Liste der Termine |
-| Wann habe ich morgen Nachmittag eine Stunde Zeit? | Freie Zeiten |
-| Lösch den Termin Tauchen | Bestätigungs-Sheet „Termin löschen?“ – erst „Ja, löschen“ löscht |
-| Weck mich morgen um halb sieben | Wecker in der Uhr-App (ohne Uhr-App ist die Integration nicht verfügbar) |
-| Stell einen Timer auf 12 Minuten | Timer |
-| Merk dir, dass ich keinen Koriander mag | Eintrag im Gedächtnis (Einstellungen → Gedächtnis) |
-| Setz Milch auf die Einkaufsliste | Eintrag in der Markdown-Liste (vorher unter Einstellungen → Listen eine Datei wählen) |
-
-Kosten (heute, in USD) stehen im Chip neben dem Provider, Details unter Einstellungen → Kosten. Das Prüfprotokoll mit jeder Anfrage, jedem Tool-Aufruf, jeder Bestätigung und jedem „Rückgängig“ steht unter Einstellungen → Datenschutz und Logs.
-
-## Demo-Anleitung M2
-
-Sprache und Assistent auf dem Telefon. Die ausführliche Fassung mit Checkliste ist [`docs/testing/m2-device.md`](docs/testing/m2-device.md).
-
-1. **Installieren und Provider einrichten** wie bei M1 (für den Alltag `flutter build apk --release --split-per-abi`, dann `app-arm64-v8a-release.apk`).
-2. **Spracherkennung laden:** Im Onboarding-Schritt „Spracherkennung laden“ oder unter Einstellungen → Sprache Whisper wählen und laden, am besten im WLAN. Zur Wahl stehen „base“ (161 MB, schnell) und „small“ (376 MB, für Deutsch und Französisch deutlich genauer). Dazu kommt Silero VAD (0,6 MB). Nichts davon steckt im APK.
-3. **Mikrofon:** Beim ersten Tipp auf das Mikrofon erklärt Wendelin, wozu er es braucht, dann fragt Android.
-4. **Standard-Assistent:** Einstellungen → Assistent → „Als Standard-Assistent setzen“ → „Wendelin“ wählen. Bei Bedarf in Android das lange Drücken der Power-Taste auf „Digitaler Assistent“ stellen.
-5. **Vault:** Einstellungen → Obsidian → „Vault-Ordner wählen“ (Android-Ordnerauswahl), Tagesnotizen eintragen (Ordner, Datumsformat wie in Obsidian, Vorlage), „Index aufbauen“.
-6. **Ausprobieren:** Power-Taste lang drücken und sagen:
-
-| Satz | Erwartung |
-| --- | --- |
-| Ergänze in meiner Tagesnotiz, dass ich den Zahnarzt angerufen habe. | Overlay über der aktuellen App, Karte „Tagesnotiz …: …“ mit „Rückgängig · 10 s“, neue Zeile in der Tagesnotiz |
-| Was steht in meiner Notiz Wendelin-Test? | Wendelin liest vor, ohne Rückfrage |
-| Ersetze in meiner Notiz Wendelin-Test den Abschnitt Status durch erledigt. | Bestätigung mit Zeilen-Diff, Wendelin fragt „Soll ich das tun? Ja oder nein?“, „Ja“ ersetzt |
-| Note dans mon journal que la réunion est reportée. | wie oben auf Französisch (Gesprochene Sprache vorher auf „Français“ oder „Automatisch“) |
-| Append to my daily note that the meeting moved to Friday. | wie oben auf Englisch |
-
-„Stopp“ beendet, solange Wendelin zuhört. Ein Tipp beendet jederzeit. Auf dem gesperrten Telefon zeigt das Overlay nur „Gerät entsperren“. Als Standard-Assistent ist Wendelin auch die Spracheingabe anderer Apps (Einstellungen → Assistent, abschaltbar).
-
-## Demo-Anleitung M3
-
-Routing, MCP-Server, HTTP-Tools und Bring!. Die Schritt-für-Schritt-Fassung für das Telefon mit Checkliste ist [`docs/notes/m3-device-test.md`](docs/notes/m3-device-test.md); ohne Telefon laufen die Gerätetests auf dem Emulator ([`docs/notes/m3-e2e-2026-10-14.md`](docs/notes/m3-e2e-2026-10-14.md)).
-
-1. **Zwei Profile:** Einstellungen → Provider: ein Standardprofil und ein Profil „Claude API“ (Anthropic-Key).
-2. **Regel „Starkes Modell“:** Einstellungen → Routing → „+ Regel hinzufügen“, Bedingung Präfix „Claude“, Ziel „Claude API“. Im Feld „Testsatz“ zeigt „Claude, wie spät ist es?“ die greifende Regel. Danach geht ein Satz „Claude, …“ an das Claude-Profil (der Provider-Chip nennt es), alles andere an das Standardprofil. Das Prüfprotokoll hält jede Routing-Entscheidung fest.
-3. **MCP-Server:** Einstellungen → MCP-Server → „+ Server“, Adresse (https, oder im Heimnetz/Tailscale auch http, z. B. `http://100.x.y.z:8123/…`), Bearer-Token, „Verbindung prüfen“, Speichern. Lesende Tools laufen ohne Nachfrage, Tools mit `destructiveHint` fragen immer. Zum Ausprobieren ohne eigenen Server: `cd app && dart run tool/mcp_test_server.dart` (Tools `echo`, `get_time`, `toggle_light`, `delete_thing`; Port und Token siehe Ausgabe und `WENDELIN_MCP_TOKEN`).
-4. **HTTP-Tool:** Einstellungen → HTTP-Tools → „+ HTTP-Tool“, z. B. `GET http://homeassistant.local:8123/api/states/{entity_id}` mit Bearer-Token und „Heimnetz-Ziel“, „Testen“, dann „Ist das Licht im Wohnzimmer an?“.
-5. **Bring!:** Einstellungen → Integrationen → Bring!, E-Mail und Passwort.
-
-| Satz | Erwartung |
-| --- | --- |
-| Claude, wie spät ist es? | Antwort vom Claude-Profil, Chip „Claude API · Starkes Modell“ |
-| Setz 2 Liter Milch auf die Bring-Liste. | Tool-Karte `bring__add_items` mit „Rückgängig“ |
-| Ist das Licht im Wohnzimmer an? | Tool-Karte `http__…` mit dem Zustand |
-| Lösche die Szene Abend auf dem Server. | Bestätigung mit dem Servernamen, „Nein“ führt nichts aus |
-
-Offline-Nachweis der Modellseite: `cd evals && dart run wendelin_evals:run -p profiles/fake-m3.json --cases-dir cases-m3` (Bring!, HTTP-Tool, MCP in de/fr/en gegen Fake-Backends) und `dart run wendelin_evals:run --routing-table` (welche Regel greift).
-
-## Ohne Google Play Services (K7)
-
-Wendelin läuft auf entgoogelten Geräten (z. B. LineageOS ohne GApps, GrapheneOS): keine Abhängigkeit von `com.google.android.gms` oder Firebase, Kalender über `CalendarContract`, Dateien über das Storage Access Framework, Wecker über AOSP-Intents (der Benachrichtigungs-Fallback ohne Uhr-App ist noch offen), Spracherkennung lokal mit Whisper, Sprachausgabe über System-TTS mit sherpa-onnx als Ausweichlösung. Geprüft mit `tool/check_apk.sh` und den Gerätetests auf einem AOSP-Image ohne Google Play.
-
-## Lizenzhinweise
-
-- Schriften: **Instrument Sans** und **IBM Plex Mono** unter der SIL Open Font License 1.1, gebündelt in `app/assets/fonts/` mit Lizenztexten (`OFL-*.txt`) und Herkunft (`SOURCES.txt`). Die App registriert die Texte beim Start in der Flutter-`LicenseRegistry` (eine Lizenzseite in den Einstellungen fehlt noch).
-- Alle weiteren Abhängigkeiten sind Dart-/Flutter-Pakete von pub.dev unter ihren eigenen Lizenzen.
+The French speech test fixtures (`app/test/fixtures/stt/fr-*.wav`, `b6-06.wav`) are synthesized with the Piper voice `fr_FR-siwis-medium`, trained on the SIWIS French Speech Synthesis Database (University of Edinburgh, [doi:10.7488/ds/1705](https://doi.org/10.7488/ds/1705), CC-BY-4.0). The German and English fixtures use voices from the CC0 Thorsten-Voice and public-domain LJ Speech datasets. Details: header of `tool/make_stt_fixtures.sh`.

@@ -1,8 +1,10 @@
 // Regression (Review WP16): ein langer Diff von obsidian__replace_section
 // darf die Bestätigungskarte nicht sprengen – „Ja“ bleibt erreichbar.
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/conversation_state.dart';
+import 'package:wendelin/l10n/gen/app_localizations.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/screens/confirmation_sheet.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -87,4 +89,45 @@ void main() {
       expect(result, isTrue);
     },
   );
+
+  // WP169: Anführungszeichen um die Anfrage folgen der Oberflächensprache
+  // (vorher fest „…“).
+  for (final (code, open, close) in [
+    ('de', '„', '“'),
+    ('en', '“', '”'),
+    ('fr', '« ', ' »'),
+  ]) {
+    testWidgets('Anfrage in Anführungszeichen für $code', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: Locale(code),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            ...GlobalMaterialLocalizations.delegates,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: ConfirmationSheet(
+              question: ToolQuestion(
+                ConfirmationRequired(
+                  call: ToolCallBlock(
+                    id: 'c',
+                    name: 'a__b',
+                    argumentsJson: '{}',
+                  ),
+                  description: 'x',
+                  respond: (_) {},
+                ),
+                request: 'Delete it',
+              ),
+              providerName: 'Claude',
+              privacy: PrivacyLevel.standard,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('${open}Delete it$close'), findsOneWidget);
+    });
+  }
 }
