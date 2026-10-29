@@ -1,6 +1,8 @@
 # ADR 0004 – App-Verdrahtung (`app/`)
 
-Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-13
+Status: angenommen (umgesetzt, nachgezogen 2026-10-25; mit Vermerk) · 2026-10-13
+
+**Vermerk 2026-10-28:** `AppSettings.escalationChain` (Folgen, WP09) ist entfallen (K28, ADR 0009: Eskalationsketten gibt es nicht mehr).
 
 ## Kontext
 WP08 verdrahtet die reinen Dart-Pakete in der Flutter-App: Datenbank, Secrets, Plattform-Ports, Tool-Registry, Provider, Agent-Schleife, Audit-Log und Hauptbildschirm. Einige Punkte lassen Konzept und Paket-ADRs offen.

@@ -1,6 +1,8 @@
 # ADR 0003 – Agent-Schleife (`wendelin_agent`)
 
-Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-13
+Status: teilweise überholt (umgesetzt, nachgezogen 2026-10-25; siehe Vermerk) · 2026-10-13
+
+**Vermerk 2026-10-28 (teilweise überholt durch K28, K100, K104/K134):** Die automatische Eskalation in §2 entfällt (K28, wie in ADR 0009): `EscalationReason` kennt nur `userRequested` und `providerFailed`, die Auslöser „zwei ungültige Tool-Calls“, `escalateAfterRoundsWithoutResult` und „kann ich nicht“ gibt es nicht mehr. Es bleiben der eine stille Wiederholversuch, „nochmal mit X“ als ausdrückliche Nutzeranfrage und das Ausfall-Angebot (Abschnitt „Nachfrage bei Ausfall (WP128)“, K100; bei TEE-Prüffehlern K134).
 
 ## Kontext
 WP05 baut die Agent-Schleife nur gegen die Interfaces aus `wendelin_core` (ADR 0002). Einige Punkte lässt das Konzept offen; sie werden hier festgelegt.

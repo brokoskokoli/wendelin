@@ -1,6 +1,8 @@
 # ADR 0016 – Barge-in und Gesprächsmodus in der Sprach-Pipeline
 
-Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-14
+Status: teilweise überholt (umgesetzt, nachgezogen 2026-10-25; siehe Vermerk) · 2026-10-14
+
+**Vermerk 2026-10-28 (teilweise überholt durch K107; diese ADR ist die führende für Gesprächsmodus und Barge-in in der Pipeline, ADR 0015 beschreibt die App-Seite):** `keyword(stop)` und `cancel(stopWord)` aus §1 und §3 entfallen (K107, WP134); `BargeInKeyword` kennt nur `wake`. Stopp erkennt nur noch das Transkript im Gesprächsmodus. Der Nachtrag von 2026-10-27, Entscheidung 1 und 3 blieben unverändert, gilt insoweit nicht für das Stopp-Wort.
 
 ## Kontext
 K23 c/d: Während der Ausgabe darf nur „Wendelin“ oder „Stopp“ unterbrechen (freie Sprache experimentell); der Gesprächsmodus ist standardmäßig aus und bietet eine einmalige Nachfrage nach der ersten gesprochenen Antwort. Das Wake-Word-Modell kommt erst mit WP58, Echo-Unterdrückung und Audioquelle gehören der App (WP51).

@@ -2,6 +2,8 @@
 
 **Zuordnung:** K102/K103. Entscheidung Maintainer 2026-10-22: Paket nur anlegen, noch nicht umsetzen. Die App soll später in zwei Varianten gebaut werden: **frei** (wie heute, alles drin; GitHub/privat) und **Store** (ohne inoffizielle Integrationen und mit store-tauglichen Ersatzwegen). Baut auf WP131 auf.
 
+> **Vor Start abgleichen:** SMS/Anruf-Berechtigungen und Google-Tasks-OAuth gegen WP159 (eingeschränkte Einstellungen) und WP164 (Kontaktfelder) prüfen.
+
 ## Inhalt
 1. **Varianten** als Android-Flavors bzw. Dart-Build-Schalter (`--dart-define=WENDELIN_VARIANT=store|free` plus Flavor für Manifest/Berechtigungen). Integrationen registrieren sich je Variante (`app/lib/di/integrations/registry.dart`); Code bleibt im Repo, die Store-APK enthält ihn nicht (Tree-Shaking prüfen) und das Manifest der Store-Variante enthält die Berechtigungen nicht.
 2. **Store-Variante – Unterschiede:**

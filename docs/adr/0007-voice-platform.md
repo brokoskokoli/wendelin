@@ -46,4 +46,4 @@ Die Bausteine halten das Mikrofon nicht selbst an. Wer die `VoicePipeline` betre
 ## Folgen
 - Ein beschädigtes Modell gleicher Größe beendet den Prozess (nativer `exit` in sherpa-onnx); Schutz sind SHA-256 beim Download und die Größenprüfung vor dem Laden. Ein Test mit kaputtem Inhalt ist nicht möglich.
 - Die Pipeline mit Agent und Auslösern baut WP18 aus `voiceComponentsProvider`.
-- Laufzeiten: Auf dem Emulator gemessen (WP19, `docs/notes/m2-e2e-2026-10-13.md`), auf dem Telefon misst der Maintainer mit `tool/whisper_timing.sh` (`docs/testing/m2-device.md`). `WhisperSpeechToText` meldet dazu jede Laufzeit ohne Inhalt (`WhisperTiming`, Log „Whisper-Zeit …“). Echte Aufnahmen fehlen weiter.
+- Laufzeiten: Auf dem Emulator gemessen (WP19, `docs/notes/m2-e2e-2026-10-13.md`), auf dem Telefon misst der Maintainer mit `tool/whisper_timing.sh` (die frühere Anleitung m2-device.md (nur im Git-Verlauf)). `WhisperSpeechToText` meldet dazu jede Laufzeit ohne Inhalt (`WhisperTiming`, Log „Whisper-Zeit …“). Echte Aufnahmen fehlen weiter.

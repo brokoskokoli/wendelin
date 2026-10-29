@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'doc_idents.dart';
 import 'doc_paths.dart';
+import 'doc_stand.dart';
 import 'gen_docs.dart';
 import 'ratchet.dart';
 
@@ -13,11 +14,18 @@ const checkedDocs = [
   'CLAUDE.md',
   'docs/ARCHITECTURE.md',
   'docs/ENGINEERING.md',
+  'docs/RELEASE.md',
+  'PROJECT.md',
+  'Voice Agent App – Gesamtkonzept.md',
+  'docs/work-packages/README.md',
   'docs/work-packages/REVIEW.md',
   'packages/wendelin_core/README.md',
   'packages/wendelin_providers/README.md',
   'packages/wendelin_tools/README.md',
   'packages/wendelin_agent/README.md',
+  'packages/wendelin_mcp/README.md',
+  'packages/wendelin_storage/README.md',
+  'packages/wendelin_voice/README.md',
 ];
 
 /// Ergebnis von [checkDocs].
@@ -37,6 +45,7 @@ DocCheck checkDocs(List<String> files, {String root = '.'}) {
           (f.startsWith('docs/architecture/') ||
               f.startsWith('docs/testing/m5/') ||
               f.startsWith('docs/agents/') ||
+              f.startsWith('docs/concept-changelog/') ||
               f.startsWith('.claude/agents/')))
         f,
   ];
@@ -48,12 +57,15 @@ DocCheck checkDocs(List<String> files, {String root = '.'}) {
     }
     final text = f.readAsStringSync();
     for (final ref in pathRefs(text)) {
+      if (_inHistory(text, ref.line)) continue;
+      if (_rootedOnly(doc) && !index.hasTopLevel(ref.path)) continue;
       count++;
       if (!index.resolves(ref.path, docDir: _dirOf(doc))) {
         errors.add('$doc:${ref.line}: Pfad `${ref.path}` existiert nicht');
       }
     }
     for (final ref in linkRefs(text)) {
+      if (_inHistory(text, ref.line)) continue;
       count++;
       if (!index.resolvesLink(ref.path, docDir: _dirOf(doc))) {
         errors.add('$doc:${ref.line}: Link `${ref.path}` ist tot');
@@ -67,6 +79,7 @@ DocCheck checkDocs(List<String> files, {String root = '.'}) {
     }
   }
   errors.addAll(identErrors(files, root: root));
+  errors.addAll(standErrors(files, root: root));
   return (errors: errors, count: count, docs: docsToCheck.length);
 }
 
@@ -113,7 +126,32 @@ List<String> identErrors(List<String> files, {String root = '.'}) {
   );
 }
 
+/// Konzept und Änderungsarchiv nennen auch Fremdes (Notizen, MCP-Methoden,
+/// Netze, Modellnamen): dort zählen nur Pfade, die mit einem Repo-Ordner oder
+/// einer Repo-Datei auf oberster Ebene beginnen.
+bool _rootedOnly(String doc) =>
+    doc.startsWith('Voice Agent App') ||
+    doc.startsWith('docs/concept-changelog/');
+
+/// Zeilen mit „(nur im Git-Verlauf)“ nennen bewusst gelöschte Dateien
+/// (Archiv `docs/concept-changelog/`) und werden nicht aufgelöst. Der Vermerk
+/// nimmt alle Pfade seiner Zeile aus (auch einer ganzen K-Tabellenzeile).
+bool _inHistory(String text, int line) =>
+    text.split('\n')[line - 1].contains('nur im Git-Verlauf');
+
 String _dirOf(String path) {
   final i = path.lastIndexOf('/');
   return i < 0 ? '' : path.substring(0, i);
 }
+
+/// m5-Anleitungen ohne gültige Stand-Zeile (zweite Zeile).
+List<String> standErrors(List<String> files, {String root = '.'}) => [
+  for (final f in files)
+    if (f.startsWith('docs/testing/m5/') &&
+        f.endsWith('.md') &&
+        !f.endsWith('/README.md') &&
+        File('$root/$f').existsSync() &&
+        standOf(File('$root/$f').readAsStringSync()) == null)
+      '$f:2: Stand-Zeile fehlt (`> Stand: gültig | teilweise überholt (…) | '
+          'überholt durch WPnn`)',
+];

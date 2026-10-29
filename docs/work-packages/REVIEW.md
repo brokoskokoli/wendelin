@@ -1,13 +1,13 @@
 # Review-Protokoll
 
-Jedes Arbeitspaket wird von einem Agenten geprüft, der den Code nicht geschrieben hat. Der Reviewer ändert keinen Produktivcode. Rolle, Prüf-Worktree (`../james-wt/rev-<wp>`, Mutationen nur dort, am Ende sauber und entfernt), Grenzen und Re-Review stehen in `docs/agents/reviewer.md`, die übrigen Regeln in `AGENTS.md`. Temporäre Skripte liegen in einem eigenen Unterordner.
+Jedes Arbeitspaket wird von einem Agenten geprüft, der den Code nicht geschrieben hat. Der Reviewer ändert keinen Produktivcode. Rolle, Grenzen und Re-Review stehen in `docs/agents/reviewer.md`, die übrigen Regeln in `AGENTS.md`. **Prüf-Worktree:** `../james-wt/rev-<wp>` (`git worktree add --detach`); Mutationen und Probetests nur dort, am Ende ist er sauber (`git status`) und mit `git worktree remove --force` entfernt; temporäre Skripte liegen in einem eigenen Unterordner.
 
 ## Prüfschritte
 
 1. **CI prüfen statt Gate lokal laufen lassen**: Der CI-Lauf des `wp/*`-Branches auf genau dem Commit (`gh run list -b <branch>`) muss grün sein; rot oder fehlend ist ein Befund. Lokal nur gezielte Testdateien (`tool/t.sh`, `--concurrency=2`). Abdeckung aus dem CI-Bericht oder gezielt ablesen. Nicht der Aussage des Coders vertrauen.
 2. **Abnahmekriterien**: Jedes Kriterium im WP-Dokument einzeln abhaken, mit Fundstelle (Datei:Zeile oder Testname). Fehlt eines → Befund.
 3. **Spezifikationstreue**: Relevante Abschnitte des Gesamtkonzepts gegen die Umsetzung lesen (Namen, Grenzwerte, Verhalten, z. B. 8 Tool-Runden, 60 s, Tool-Namensformat, Risikostufen).
-4. **Test-Gegenbeweis (Mutationsprobe)**: 3 bis 10 gezielte Mutationen in Kernlogik einbauen (Bedingung umdrehen, Grenzwert ±1, Zweig entfernen, Fehler verschlucken, Reihenfolge ändern). Jede Mutation muss mindestens einen Test rot machen. Überlebende Mutationen sind Befunde („Test fehlt für …"). Danach zurücksetzen.
+4. **Test-Gegenbeweis (Mutationsprobe)**: 3 bis 10 gezielte Mutationen in sicherheits- und logikkritischer Kernlogik einbauen (Bedingung umdrehen, Grenzwert ±1, Zweig entfernen, Fehler verschlucken, Reihenfolge ändern). Jede Mutation muss mindestens einen Test rot machen. Überlebende Mutationen sind Befunde („Test fehlt für …"). Danach zurücksetzen.
 5. **Architekturgrenzen**: `dart run tool/check_deps.dart`; zusätzlich manuell: keine Provider-JSON-Typen außerhalb der Adapter, keine Flutter-Imports in `packages/`, Ports statt Plattformzugriff, Fakes unter `lib/testing/`.
 6. **Sicherheit**: Secrets nie geloggt/persistiert, `external` immer bestätigt, Eingaben aus Tools/Netz als Daten behandelt, keine Keys im Baum (`tool/check_secrets.dart`), Commit-Identität (`git log --format='%an <%ae>%n%(trailers)' main..HEAD`) nur erlaubte Werte (`docs/agents/common.md`).
 7. **Code-Qualität**: Lesbarkeit, Doppelungen, unnötige Komplexität, öffentliche API knapp und dokumentiert, README pro Integration.
@@ -24,11 +24,11 @@ BEFUNDE:
 - [Blocker|Muss|Soll] <kategorie> <Datei:Zeile> – <Befund> – <konkreter Vorschlag>
 ```
 
-`FREIGABE` nur ohne Blocker/Muss. Soll-Befunde dürfen offen bleiben, werden aber gelistet. Die Kategorie ist ein Schlüssel der Checkliste in `docs/agents/coder.md` (`bestaetigung`, `fail-closed`, `dispose`, `negativtest`, `texte`, `doku`, `berechtigung`) oder `sonstiges`.
+`FREIGABE` nur ohne Blocker/Muss. Soll-Befunde dürfen offen bleiben, werden aber gelistet. Die Kategorie ist ein Schlüssel der Checkliste in `docs/agents/coder.md` oder `sonstiges`.
 
 ## Urteilsdatei (maschinenlesbar)
 
-Der Reviewer legt sein Urteil als Datei ab: `../james-wt/reviews/<wp>-review.md` (z. B. wp110-review.md; aus einem Worktree heraus liegt der Ordner reviews neben dem Worktree). Das ist der dauerhafte Ablageort: `tool/cleanup_wt.sh` löscht dort nichts und verschiebt Urteile, die noch im Ordner handoff liegen, nach reviews, beim Re-Review `<wp>-review2.md`, dann `-review3.md`. Die Datei beginnt mit genau diesem Kopf (eine Angabe je Zeile, `Schlüssel: Wert`, danach beliebiger Text, am besten das Ergebnis oben):
+Der Reviewer legt sein Urteil zusätzlich zum Bericht als Datei ab (Write-Werkzeug, Bash/Heredoc geht ebenfalls; nur diese Datei, außerhalb des Repos, nichts wird committet): `../james-wt/reviews/<wp>-review.md` (z. B. wp110-review.md; aus einem Worktree heraus liegt der Ordner reviews neben dem Worktree). Das ist der dauerhafte Ablageort: `tool/cleanup_wt.sh` löscht dort nichts und verschiebt Urteile, die noch im Ordner handoff liegen, nach reviews, beim Re-Review `<wp>-review2.md`, dann `-review3.md`. Die Datei beginnt mit genau diesem Kopf (eine Angabe je Zeile, `Schlüssel: Wert`, danach beliebiger Text, am besten das Ergebnis oben):
 
 ```
 URTEIL: FREIGABE | NACHBESSERN

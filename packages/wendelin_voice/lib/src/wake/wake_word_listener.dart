@@ -5,6 +5,7 @@ import 'package:meta/meta.dart';
 
 import '../dev/dev_archive.dart';
 import '../dev/dev_clips.dart';
+import '../dev/wake_shadow_run.dart';
 import '../io/audio_input.dart';
 import '../io/voice_exception.dart';
 import '../models/wake_classifier_catalog.dart';
@@ -168,10 +169,10 @@ final class WakeWordListener {
     ),
   );
   late final _dev = DevAroundSet(devClips);
-  // WP155: one near miss per utterance from the window scores.
-  late final _near = NearMissTracker(
-    above: nearMissAbove ?? WakeClassifierRules.phone.verifyFrom,
-  );
+  // WP155/WP171: one case per utterance from the window values.
+  late final double _above =
+      nearMissAbove ?? WakeClassifierRules.phone.verifyFrom;
+  late final _shadow = WakeShadowRun(above: _above);
   Completer<void>? _tailWait;
   int _tailTarget = 0;
   // Cancelled in stop/_release.
@@ -241,11 +242,8 @@ final class WakeWordListener {
     _chain = Future.value();
     _lockedUntil = 0;
     _verifying = false;
-    _near.reset();
-    final e = engine;
-    if (e is ScoringWakeEngine && devClips?.archive != null) {
-      e.scoreSink = _onScore;
-    }
+    _shadow.reset();
+    if (devClips?.archive != null) attachWindowSink(engine, _onWindow);
     final gen = ++_generation;
     _sub = audio.start().listen(
       (f) => _onFrame(f, gen),
@@ -293,19 +291,19 @@ final class WakeWordListener {
     }
   }
 
-  // WP155: a window score; a near miss is archived once its run is over.
-  void _onScore(int end, double score) {
+  // WP155/WP171: a window; a case is archived once its run is over.
+  void _onWindow(WakeWindowScores w) {
     try {
       if (!_dev.on) {
-        _near.reset();
+        _shadow.reset();
         return;
       }
-      final miss = _near.onScore(end, score);
+      final miss = _shadow.onWindow(w);
       if (miss == null) return;
-      final c = noteNearMiss(devClips, miss);
+      final c = noteShadowCase(devClips, miss, _above);
       if (c == null) return;
       _dev.startCase(
-        () => _candidateClip(miss.peakEnd, 'near-miss', c, only: true),
+        () => _candidateClip(miss.clipEnd, 'near-miss', c, only: true),
         c,
       );
     } on Object {
@@ -324,7 +322,8 @@ final class WakeWordListener {
   Future<void> _onCandidate(WakeWordHit hit, int gen) async {
     _candidates++;
     final end = hit.endSample;
-    final arch = noteWakeCandidate(devClips, hit);
+    final peaks = _shadow.candidate(end);
+    final arch = noteWakeCandidate(devClips, hit, shadow: peaks, above: _above);
     _startCandidateClip(end, arch);
     final v = verifier;
     final tail = v == null || hit.direct ? 0 : durationToSamples(verifyTail);

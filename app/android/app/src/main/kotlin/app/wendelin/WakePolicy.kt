@@ -175,6 +175,12 @@ object WakePolicy {
     /**
      * Order of the reasons: off, no assistant role (decision 5), no microphone permission,
      * paused, not charging (only in mode [WakeMode.CHARGING]).
+     * WP171: while the station runs ([station]) the wake word is always on: `disabled` and
+     * `not-charging` do not apply (role, microphone and a pause the user set still do).
+     * WP173: the station forces the word only with the trained model installed
+     * ([stationModelInstalled], [classifierInstalled]); without it (or when that cannot be told:
+     * default `false`) it skips with `no-model`, like the Dart guard of the switch. A word the user
+     * switched on himself ([WakeSettings.enabled]) is not touched.
      */
     fun decide(
         settings: WakeSettings,
@@ -182,14 +188,54 @@ object WakePolicy {
         micGranted: Boolean,
         charging: Boolean,
         nowMs: Long,
+        station: Boolean = false,
+        stationModelInstalled: Boolean = false,
     ): WakeDecision = when {
-        !settings.enabled -> WakeDecision.Skip("disabled")
+        !settings.enabled && !station -> WakeDecision.Skip("disabled")
+        !settings.enabled && !stationModelInstalled -> WakeDecision.Skip("no-model")
         !holdsRole -> WakeDecision.Skip("no-role")
         !micGranted -> WakeDecision.Skip("no-permission")
         settings.pausedUntilMs > nowMs -> WakeDecision.Skip("paused")
-        settings.mode == WakeMode.CHARGING && !charging -> WakeDecision.Skip("not-charging")
+        settings.mode == WakeMode.CHARGING && !charging && !station -> WakeDecision.Skip("not-charging")
         else -> WakeDecision.Start
     }
+
+    /** WP173: [decide] with the model check done here ([filesDir] = the app's files directory), so the wiring is testable. */
+    fun decideWithFiles(
+        settings: WakeSettings,
+        holdsRole: Boolean,
+        micGranted: Boolean,
+        charging: Boolean,
+        nowMs: Long,
+        station: Boolean,
+        filesDir: java.io.File?,
+    ): WakeDecision = decide(
+        settings, holdsRole, micGranted, charging, nowMs, station,
+        stationModelInstalled = classifierInstalled(filesDir),
+    )
+
+    /** WP173: the trained classifier file inside the app's files directory (same place as `FileModelStore`). */
+    fun classifierFile(filesDir: java.io.File): java.io.File =
+        java.io.File(filesDir, "models/$CLASSIFIER_ID/$CLASSIFIER_FILE")
+
+    /** WP173: whether the classifier is installed; any error counts as not installed (fail-closed). */
+    fun classifierInstalled(filesDir: java.io.File?): Boolean = try {
+        filesDir != null && classifierFile(filesDir).isFile
+    } catch (e: Exception) {
+        false
+    }
+
+    // Model id and file of `WakeClassifierCatalog` (wake_classifier_catalog.dart); WakePolicyTest pins both
+    // and app/test/app/wake_policy_model_name_test.dart compares them with the Dart catalog.
+    const val CLASSIFIER_ID = "wake-classifier-wendelin"
+    const val CLASSIFIER_FILE = "wendelin_wp130_a.onnx"
+
+    /** WP171: whether the station alone keeps the service on (the settings would not): log `forced=station`. */
+    fun forcedByStation(settings: WakeSettings, charging: Boolean, station: Boolean): Boolean =
+        station && (!settings.enabled || (settings.mode == WakeMode.CHARGING && !charging))
+
+    fun forcedLog(settings: WakeSettings, charging: Boolean, station: Boolean): String =
+        if (forcedByStation(settings, charging, station)) " forced=station" else ""
 
     // Values of AudioManager.MODE_* (kept as numbers so no Android class is needed here).
     private const val MODE_IN_CALL = 2
@@ -258,6 +304,13 @@ object WakePolicy {
      */
     fun failureReason(reported: String?): String =
         if (reported == "modelMissing") "modelMissing" else "engine-failed"
+
+    /**
+     * WP171: whether the Dart engine's `stage2Gap` [reason] means that stage 2 cannot decide (no
+     * recognition model) or has no sequences of the voice (it has to be enrolled again). `null`
+     * (or anything unknown) clears the notice.
+     */
+    fun stage2GapActive(reason: String?): Boolean = reason == "model_missing" || reason == "no_sequences"
 
     /** Whether a service that runs for [mode] has to stop when charging changes to [charging]. */
     fun stopsOnUnplug(mode: WakeMode, charging: Boolean): Boolean =

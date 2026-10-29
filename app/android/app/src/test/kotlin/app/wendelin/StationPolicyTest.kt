@@ -10,6 +10,7 @@ class StationPolicyTest {
     @After
     fun reset() {
         StationState.active = false
+        StationState.open = false
         ChatState.reported = false
     }
 
@@ -115,5 +116,35 @@ class StationPolicyTest {
             HitRoute.CHAT,
             WakePolicy.routeHit(chatVisible = true, locked = false, hostAvailable = true),
         )
+    }
+
+    private val off = WakeSettings(enabled = false)
+
+    private fun decideWith(open: Boolean) = WakePolicy.decide(
+        off, holdsRole = true, micGranted = true, charging = false, nowMs = 0, station = open,
+        stationModelInstalled = true,
+    )
+
+    @Test
+    fun darkScreenOrHomeKeepsTheStationOpenAndTheWakeWordForced() {
+        StationState.created()
+        StationState.started()
+        StationState.stopped()
+        assertFalse(StationState.active)
+        assertTrue(StationState.open)
+        assertEquals(WakeDecision.Start, decideWith(StationState.open))
+        // Routing still sees no station.
+        assertEquals(WakeDecision.Skip("disabled"), decideWith(StationState.active))
+    }
+
+    @Test
+    fun destroyingTheStationEndsItButARecreateDoesNot() {
+        StationState.created()
+        StationState.started()
+        assertFalse(StationState.destroyed(changingConfigurations = true))
+        assertTrue(StationState.open)
+        assertTrue(StationState.destroyed(changingConfigurations = false))
+        assertFalse(StationState.open)
+        assertEquals(WakeDecision.Skip("disabled"), decideWith(StationState.open))
     }
 }

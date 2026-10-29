@@ -15,6 +15,7 @@ import 'package:wendelin/ui/settings/wake/wake_service_section.dart'
     show wakeStopText;
 import 'package:wendelin/ui/settings/wake/wake_word_screen.dart';
 import 'package:wendelin/voice/wake/wake_storage.dart';
+import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../overlay/assistant_overlay_test.dart' show FakeAssistantPlatform;
 import '../support/test_env.dart';
@@ -46,6 +47,7 @@ class Setup {
   Setup({
     WakeServiceStatus status = const WakeServiceStatus(holdsRole: true),
     this.speaker = true,
+    this.classifier = true,
     this.battery,
   }) : wake = FakeWakePlatform()..current = status,
        assistant = FakeAssistantPlatform();
@@ -53,6 +55,9 @@ class Setup {
   final FakeWakePlatform wake;
   final FakeAssistantPlatform assistant;
   final bool speaker;
+
+  /// Whether the trained model (WP173) is installed.
+  final bool classifier;
   final BatteryStatus? battery;
   final fakeBattery = FakeBatteryPlatform();
   late final TestEnv env;
@@ -73,6 +78,11 @@ Future<(Setup, ProviderContainer)> pump(
       batteryPlatformProvider.overrideWithValue(s.fakeBattery),
     ],
   );
+  if (s.classifier) {
+    s.env.speechModels.installed.add(
+      SpeechModelCatalog.wakeClassifierWendelin.id,
+    );
+  }
   await tester.runAsync(() async {
     if (s.speaker) {
       await SecretWakeTemplateStore(s.env.secrets).save(templates('a'));
@@ -146,6 +156,84 @@ void main() {
     await tester.tap(find.text('Zum Einlernen'));
     await settle(tester);
     expect(find.text('Wer spricht?'), findsOneWidget);
+  });
+
+  // WP173: switching on needs the trained model.
+  testWidgets('Modell fehlt: gesperrt, Hinweis, „Modell laden“ lädt', (
+    tester,
+  ) async {
+    final (s, _) = await pump(tester, Setup(classifier: false));
+    expect(switchLocked(tester), isTrue);
+    expect(find.byKey(const ValueKey('wakeNeedModel')), findsOneWidget);
+    await tester.tap(find.text('Modell laden'));
+    await settle(tester);
+    expect(
+      s.env.speechModels.running.keys,
+      contains(SpeechModelCatalog.wakeClassifierWendelin.id),
+    );
+  });
+
+  testWidgets('Modell da: Schalter frei, kein Hinweis', (tester) async {
+    await pump(tester, Setup());
+    expect(switchLocked(tester), isFalse);
+    expect(find.byKey(const ValueKey('wakeNeedModel')), findsNothing);
+  });
+
+  testWidgets('Modell fehlt, Dienst schon an: Schalter frei (Ausschalten)', (
+    tester,
+  ) async {
+    final (s, c) = await pump(tester, Setup(classifier: false), enabled: true);
+    expect(switchLocked(tester), isFalse);
+    expect(find.byKey(const ValueKey('wakeNeedModel')), findsNothing);
+    await tester.tap(
+      find.byWidgetPredicate(
+        (w) =>
+            w is WSwitch && w.semanticLabel == 'Aktivierungswort einschalten',
+      ),
+    );
+    await settle(tester);
+    expect((await c.read(wakeServiceProvider.future)).enabled, isFalse);
+    expect(s.wake.configured.last.enabled, isFalse);
+  });
+
+  testWidgets(
+    'Modell nach dem Laden der Seite verschwunden: Hinweis, Schalter bleibt aus',
+    (tester) async {
+      final (s, c) = await pump(tester, Setup());
+      expect(switchLocked(tester), isFalse);
+      // The disk changed behind the page's back.
+      s.env.speechModels.installed.clear();
+      await tester.tap(
+        find.byWidgetPredicate(
+          (w) =>
+              w is WSwitch && w.semanticLabel == 'Aktivierungswort einschalten',
+        ),
+      );
+      await settle(tester);
+      await tester.tap(find.text('Einschalten'));
+      await settle(tester);
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.textContaining('erst einschalten'),
+        ),
+        findsOneWidget,
+      );
+      expect((await c.read(wakeServiceProvider.future)).enabled, isFalse);
+      // The states were read again: the page now shows the lock and the link.
+      expect(switchLocked(tester), isTrue);
+      expect(find.byKey(const ValueKey('wakeNeedModel')), findsOneWidget);
+    },
+  );
+
+  testWidgets('Das Modell steht ganz oben, nur einmal', (tester) async {
+    await pump(tester, Setup());
+    final name = SpeechModelCatalog.wakeClassifierWendelin.displayName;
+    expect(find.text(name), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text(name)).dy,
+      lessThan(tester.getTopLeft(find.byKey(const ValueKey('wakeStatus'))).dy),
+    );
   });
 
   testWidgets('Aus: Status „Aus“, Schalter frei, Standard nur beim Laden', (

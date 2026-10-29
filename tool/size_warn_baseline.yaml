@@ -15,12 +15,12 @@ app/lib/ui/settings/model_download_row.dart#ModelDownloadRow.build: 100
 app/lib/ui/settings/provider_setup/finish_step.dart#finishStep: 83
 app/lib/ui/settings/routing/condition_builder.dart: 605
 app/lib/ui/settings/speaker/speaker_person_screen.dart#_PersonState.build: 104
-app/lib/ui/settings/voice_screen.dart#VoiceScreen.build: 95
+app/lib/ui/settings/voice_screen.dart#VoiceScreen.build: 85
 app/lib/ui/settings/voice_voices_screen.dart#VoiceVoicesScreen.build: 102
-app/lib/ui/settings/wake/wake_service_section.dart#_State.build: 108
+app/lib/ui/settings/wake/wake_service_section.dart#_State.build: 86
 app/lib/voice/voice_confirmation.dart#_VoiceConfirmation._confirmByVoice: 142
-app/lib/voice/voice_controller.dart: 675
-app/lib/voice/voice_controller.dart#VoiceController: 590
+app/lib/voice/voice_controller.dart: 674
+app/lib/voice/voice_controller.dart#VoiceController: 589
 app/lib/voice/voice_controller.dart#VoiceController.start: 94
 app/test/settings/voice_settings_test.dart: 1105
 app/tool/mcp_test_server.dart#main: 100

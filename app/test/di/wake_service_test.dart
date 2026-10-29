@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,6 +25,11 @@ final class _FakePlatform extends WakePlatform {
     await gate;
     return snapshot;
   }
+
+  int rechecks = 0;
+
+  @override
+  Future<void> recheckStage2() async => rechecks++;
 
   final texts = <Map<String, String>>[];
 
@@ -62,9 +68,70 @@ void main() {
         storageProvider.overrideWithValue(storage),
         secretStoreProvider.overrideWithValue(InMemorySecretStore()),
         wakePlatformProvider.overrideWithValue(platform),
+        // WP173: switching on needs the trained model; most tests have it.
+        speechModelServiceProvider.overrideWith(
+          (_) async =>
+              FakeSpeechModelService()
+                ..installed.add(SpeechModelCatalog.wakeClassifierWendelin.id),
+        ),
       ],
     );
     addTearDown(c.dispose);
+  });
+
+  // WP171: the notice of the service must follow what the user just did.
+  group('Prüfung der Stufe 2 neu anstoßen (WP171)', () {
+    late FakeSpeechModelService models;
+
+    Future<void> open() async {
+      models = FakeSpeechModelService();
+      c.dispose();
+      c = ProviderContainer(
+        overrides: [
+          storageProvider.overrideWithValue(openInMemoryStorage()),
+          secretStoreProvider.overrideWithValue(InMemorySecretStore()),
+          wakePlatformProvider.overrideWithValue(platform),
+          speechModelServiceProvider.overrideWith((_) async => models),
+        ],
+      );
+      addTearDown(c.dispose);
+      await c.read(modelStatesProvider.notifier).refresh();
+      await c.read(wakeServiceProvider.future);
+      await c.read(wakeSpeakersProvider.future);
+      await pumpEventQueue();
+      platform.rechecks = 0;
+    }
+
+    test('Erkennungsmodell installiert: Engine prüft neu; weitere Änderung '
+        'ohne Wirkung auf das Ergebnis meldet nichts', () async {
+      await open();
+      models.installed.add(SpeechModelCatalog.whisperBase.id);
+      await c.read(modelStatesProvider.notifier).refresh();
+      // Whisper without Silero VAD is no recognizer for the engine: no change.
+      expect(platform.rechecks, 0);
+      models.installed.add(SpeechModelCatalog.sileroVad.id);
+      await c.read(modelStatesProvider.notifier).refresh();
+      expect(platform.rechecks, 1);
+      // Same answer ("a recognizer is installed"): nothing new to check.
+      await c.read(modelStatesProvider.notifier).refresh();
+      expect(platform.rechecks, 1);
+      // Deleting the VAD takes Whisper away as well.
+      models.installed.remove(SpeechModelCatalog.sileroVad.id);
+      await c.read(modelStatesProvider.notifier).refresh();
+      expect(platform.rechecks, 2);
+    });
+
+    test('Stimme eingelernt oder gelöscht: Engine prüft neu', () async {
+      await open();
+      final n = c.read(wakeSpeakersProvider.notifier);
+      await n.upsert('a', 'A');
+      expect(platform.rechecks, 1);
+      await n.remove('a');
+      expect(platform.rechecks, 2);
+      await n.upsert('b', 'B');
+      await n.removeAll();
+      expect(platform.rechecks, 4);
+    });
   });
 
   // WP156: the notification speaks the app language and gets it before the
@@ -207,6 +274,109 @@ void main() {
     });
   });
 
+  // WP173: switching on needs the trained model, in every detection mode.
+  group('Einschalten nur mit installiertem Modell (WP173)', () {
+    Future<void> open({
+      required bool installed,
+      bool voice = true,
+      SpeechModelService? service,
+      bool enabledBefore = false,
+    }) async {
+      final models = FakeSpeechModelService();
+      if (installed) {
+        models.installed.add(SpeechModelCatalog.wakeClassifierWendelin.id);
+      }
+      final storage = openInMemoryStorage();
+      if (enabledBefore) await storage.settings.set(wakeEnabledKey, true);
+      c.dispose();
+      c = ProviderContainer(
+        overrides: [
+          storageProvider.overrideWithValue(storage),
+          secretStoreProvider.overrideWithValue(InMemorySecretStore()),
+          wakePlatformProvider.overrideWithValue(platform),
+          speechModelServiceProvider.overrideWith(
+            (_) async => service ?? models,
+          ),
+        ],
+      );
+      addTearDown(c.dispose);
+      await c.read(modelStatesProvider.notifier).refresh();
+      if (voice) await c.read(wakeSpeakersProvider.notifier).upsert('s1', 'A');
+      await c.read(wakeServiceProvider.future);
+    }
+
+    for (final choice in WakeDetectorChoice.values) {
+      test('Modell fehlt, Wahl ${choice.name}, Stimme da: abgelehnt', () async {
+        await open(installed: false);
+        await c.read(wakeDetectorProvider.notifier).set(choice);
+        await pumpEventQueue();
+        expect(
+          await c.read(wakeServiceProvider.notifier).setEnabled(enabled: true),
+          isFalse,
+        );
+        expect((await c.read(wakeServiceProvider.future)).enabled, isFalse);
+        expect(
+          await c.read(storageProvider).settings.get(wakeEnabledKey),
+          isFalse,
+        );
+        expect(
+          platform.sent.where((s) => s.enabled),
+          isEmpty,
+          reason: 'nichts an den Dienst',
+        );
+      });
+
+      test('Modell da, Wahl ${choice.name}, Stimme da: einschaltbar', () async {
+        await open(installed: true);
+        await c.read(wakeDetectorProvider.notifier).set(choice);
+        expect(
+          await c.read(wakeServiceProvider.notifier).setEnabled(enabled: true),
+          isTrue,
+        );
+      });
+    }
+
+    test('Modelldienst nicht lesbar: abgelehnt statt durchgelassen', () async {
+      final models = _ThrowingModels();
+      await open(installed: true, service: models);
+      expect(c.read(wakeClassifierInstalledProvider), isTrue);
+      models.armed = true;
+      expect(
+        await c.read(wakeServiceProvider.notifier).setEnabled(enabled: true),
+        isFalse,
+      );
+    });
+
+    test('Ausschalten geht immer, auch ohne Modell', () async {
+      await open(installed: false);
+      expect(
+        await c.read(wakeServiceProvider.notifier).setEnabled(enabled: false),
+        isTrue,
+      );
+      expect(platform.sent.last.enabled, isFalse);
+    });
+
+    test(
+      'bereits eingeschaltet, Modell fehlt: bleibt an, Ausschalten geht',
+      () async {
+        await open(installed: false, enabledBefore: true);
+        final n = c.read(wakeServiceProvider.notifier);
+        expect((await c.read(wakeServiceProvider.future)).enabled, isTrue);
+        await n.setCondition(WakeCondition.always);
+        expect((await c.read(wakeServiceProvider.future)).enabled, isTrue);
+        expect(await n.setEnabled(enabled: false), isTrue);
+        expect((await c.read(wakeServiceProvider.future)).enabled, isFalse);
+      },
+    );
+
+    test('wakeClassifierInstalledProvider folgt dem Modellstand', () async {
+      await open(installed: false);
+      expect(c.read(wakeClassifierInstalledProvider), isFalse);
+      await open(installed: true);
+      expect(c.read(wakeClassifierInstalledProvider), isTrue);
+    });
+  });
+
   test(
     'mit Stimme: einschalten, Bedingung ändern, Nachprüfung folgt',
     () async {
@@ -222,7 +392,7 @@ void main() {
       await n.setCondition(WakeCondition.always);
       expect(platform.sent.last.condition, WakeCondition.always);
       await c.read(wakeVerifyProvider.notifier).set(enabled: false);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(platform.sent.last.verify, isFalse);
       // Aus.
       expect(await n.setEnabled(enabled: false), isTrue);
@@ -269,7 +439,7 @@ void main() {
       expect(platform.sent, isEmpty);
       // Nächster push (z. B. Nachprüfung) schaltet nichts wieder ein.
       await c.read(wakeVerifyProvider.notifier).set(enabled: false);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(platform.sent.where((s) => s.enabled), isEmpty);
     },
   );
@@ -355,4 +525,22 @@ void main() {
       expect(platform.sent, isEmpty);
     },
   );
+}
+
+/// Reports everything as installed until [armed], then cannot be read.
+final class _ThrowingModels implements SpeechModelService {
+  bool armed = false;
+
+  @override
+  Future<bool> isInstalled(SpeechModel model) async =>
+      armed ? throw const FileSystemException('unlesbar') : true;
+
+  @override
+  Future<bool> isDamaged(SpeechModel model) async => false;
+
+  @override
+  Future<bool> hasPartial(SpeechModel model) async => false;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

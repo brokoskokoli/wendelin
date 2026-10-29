@@ -2,6 +2,8 @@
 
 **Zuordnung:** M6. Nach WP99; braucht WP90 (Mediensteuerung) und WP92 (Sprecherrechte).
 
+> **Vor Start abgleichen:** Annahmen zu Station, Gesprächsmodus und Ton gegen WP134 (Stoppwort entfernt), WP158 (Stationskanal) und WP165 (Kommunikationsmodus entfernt) prüfen.
+
 Bezug: Konzept Stationsmodus; K54, K62, K63.
 
 ## Inhalt

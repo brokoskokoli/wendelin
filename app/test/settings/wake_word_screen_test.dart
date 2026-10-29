@@ -181,19 +181,25 @@ void main() {
       expect(find.byKey(const ValueKey('wakeNothingToHear')), findsNothing);
     });
 
-    testWidgets('Vorlagen: kein Modell-Download, kein Hinweis', (tester) async {
-      final env = wakeEnv();
-      await pumpWake(tester, env, const WakeWordScreen());
-      await tester.tap(find.byKey(const ValueKey('wakeDetector.templates')));
-      await tester.pump();
-      expect(find.byKey(const ValueKey('wakeClassifierMissing')), findsNothing);
-      expect(
-        find.textContaining(
-          SpeechModelCatalog.wakeClassifierWendelin.displayName,
-        ),
-        findsNothing,
-      );
-    });
+    testWidgets(
+      'Vorlagen: kein Hinweis; das Modell steht trotzdem oben (WP173)',
+      (tester) async {
+        final env = wakeEnv();
+        await pumpWake(tester, env, const WakeWordScreen());
+        await tester.tap(find.byKey(const ValueKey('wakeDetector.templates')));
+        await tester.pump();
+        expect(
+          find.byKey(const ValueKey('wakeClassifierMissing')),
+          findsNothing,
+        );
+        expect(
+          find.textContaining(
+            SpeechModelCatalog.wakeClassifierWendelin.displayName,
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('Modell geladen: kein Hinweis mehr', (tester) async {
       final env = wakeEnv();

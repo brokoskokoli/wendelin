@@ -66,7 +66,7 @@ Empfehlung zusätzlich: Tags `v*` per Tag-Schutzregel (Settings → Rules) auf d
 ## 5. Release per Tag
 
 1. `version:` in `app/pubspec.yaml` anheben (`0.6.0+7`; der Teil nach `+` ist der `versionCode` und muss bei jedem Release steigen), auf main mergen, Gate abwarten.
-2. `git tag v0.6.0 && git push origin v0.6.0`. Der Tag ohne `-` ist ein reguläres Release und nur erlaubt, wenn der Commit auf `main` liegt; mit `-` (z. B. `v0.6.0-rc.1`) ist es eine Vorabversion, die auch von einem Branch kommen darf (Probe).
+2. `git tag v0.6.0 && git push origin v0.6.0`. Der Tag ohne `-` ist ein reguläres Release und nur erlaubt, wenn der Commit auf `main` liegt; mit `-` (z. B. `v0.6.0-rc1`) ist es eine Vorabversion, die auch von einem Branch kommen darf (Probe).
 3. Der Workflow bricht ab (rot, mit Meldung ohne Werte), wenn: Secrets fehlen, die Tag-Basisversion nicht der pubspec-Version entspricht, das Gate für den Commit nicht grün war, ein echtes Release nicht von `main` kommt, `check_apk.sh` rot ist oder das APK-Zertifikat nicht das des Keystores ist (z. B. Debug-Schlüssel).
 4. Ergebnis: Release mit `wendelin-<version>.apk` und `SHA256SUMS`, Notizen aus den Merges auf main seit dem letzten echten Release-Tag.
 
@@ -74,12 +74,24 @@ Probeläufe: Actions → release → Run workflow (nur auf `main`; nur Build und
 
 ## 6. Lokal mit demselben Schlüssel signieren
 
-`app/android/key.properties` (gitignored) nach dem Muster `app/android/key.properties.example` anlegen (`storeFile` absolut, `storePassword`, `keyAlias`, `keyPassword`) oder die vier Umgebungsvariablen `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` setzen. Dann `cd app && flutter build apk --release`.
+`key.properties` in `app/android/` (gitignored) nach dem Muster `app/android/key.properties.example` anlegen (`storeFile` absolut, `storePassword`, `keyAlias`, `keyPassword`) oder die vier Umgebungsvariablen `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` setzen. Dann `cd app && flutter build apk --release`.
 
 - Ohne beides warnt der Build und nimmt den Debug-Schlüssel (nur für lokale Tests, nie weitergeben).
 - Unvollständige Angaben oder eine fehlende Keystore-Datei brechen immer ab.
 - `WENDELIN_REQUIRE_RELEASE_SIGNING=1` bricht auch ab, wenn gar nichts gesetzt ist (so baut der Workflow; absichtlich nicht `CI=true`, weil das Gate-Job `apk` ohne Schlüssel baut).
 - Prüfen: `apksigner verify --print-certs app/build/app/outputs/flutter-apk/app-release.apk` zeigt den Release-Fingerabdruck.
+
+### Release-Kandidaten
+
+Ein Release-Kandidat heißt `v<pubspec-version>-rcN` (z. B. `v0.6.0-rc1`, ohne Punkt vor `N`) und ist ein Tag auf `main`. Ablauf (Project Supervisor):
+
+1. Auf genau dem Commit, der getaggt wird, ist das Gate grün (Abschnitt 5, Punkt 3 bricht sonst ab).
+2. Tag setzen und pushen: `git tag v<version>-rcN && git push origin v<version>-rcN`. Zwischen Tag und dem Rest der Kette kommt kein Commit auf `main`.
+3. `release.yml` baut die signierte Vorabversion (Abschnitt 5).
+4. Herunterladen: `gh release download v<version>-rcN -R <owner>/<repo>` in ein leeres Verzeichnis, dann `shasum -c SHA256SUMS`.
+5. APK und `VERSION.txt` (Commit-SHA, Version) in den Testordner des Maintainers legen.
+
+Nach einem echten Release zuerst die pubspec-Version erhöhen: `vX-rcN` sortiert vor `vX`, ein Kandidat zur bereits veröffentlichten Version wäre also älter als das Release.
 
 ## 7. Umstieg vom Debug-Schlüssel auf dem Handy
 
@@ -89,7 +101,7 @@ Die App erlaubt kein System-Backup (`allowBackup="false"`). Es gibt **keinen Ges
 
 | Daten | Sicherung | Wiederherstellung |
 | --- | --- | --- |
-| Routing-Regeln | Einstellungen → Routing → Export (JSON) | Import mit Vorschau |
+| Routing-Regeln | Einstellungen → Provider → Erweiterte Einstellungen → Routing → Export (JSON); sichtbar erst ab zwei Profilen (mit einem Profil fehlt der Eintrag, Regeln und Export sind dann nicht erreichbar) | Import mit Vorschau |
 | MCP-Server | Einstellungen → MCP → Export (ohne Tokens und Passwörter) | Import, Tokens neu eingeben |
 | HTTP-Tools | Einstellungen → HTTP-Tools → Export (ohne Secrets) | Import, Secrets neu eingeben, „Ohne Nachfrage“ ist danach aus |
 | Gedächtnis | Einstellungen → Gedächtnis → Export als Markdown | kein Import: Einträge per Hand oder per Sprache neu anlegen |

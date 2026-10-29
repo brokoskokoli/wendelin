@@ -25,7 +25,7 @@ App: `drift_flutter` ≥ 0.3 verwenden (nutzt `sqlite3` 3.x mit Build-Hook). Kei
 - Tabellen: `lib/src/db/tables.dart`, FTS5-Tabellen: `lib/src/db/memory_fts.drift` (mit Triggern) und `lib/src/db/note_fts.drift`.
 - Versionen: v1 (M1), v2 (WP16) = `note_files` + `note_fts` für den Obsidian-Notizindex. Upgrade-Schritte in `WendelinDatabase.migration` (`stepByStep` aus der generierten `database.steps.dart`), Upgrade-Test v1 → v2 mit Daten in `migration_test.dart`.
 - Codegenerierung: `dart run build_runner build` (die erzeugte `database.g.dart` ist eingecheckt).
-- Schema-Dumps: `drift_schemas/wendelin/drift_schema_vN.json`, Test-Helfer in `test/drift/wendelin/generated/`, Test in `test/drift/wendelin/migration_test.dart`.
+- Schema-Dumps: „drift_schemas/wendelin/drift_schema_vN.json“, Test-Helfer in `test/drift/wendelin/generated/`, Test in `test/drift/wendelin/migration_test.dart`.
 - Schemaänderung: `WendelinDatabase.version` erhöhen, Migrationsschritt ergänzen, `dart run drift_dev make-migrations`, Upgrade-Test schreiben (Anleitung im Kopf von `migration_test.dart`).
 
 Zeitpunkte werden als Mikrosekunden seit der Epoche gespeichert (exakt, als Integer vergleichbar) und als lokale `DateTime` gelesen. Tages- und Monatssummen der Kosten gelten in lokaler Zeit.

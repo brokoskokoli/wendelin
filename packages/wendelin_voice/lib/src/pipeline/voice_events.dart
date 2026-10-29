@@ -35,6 +35,18 @@ enum VoiceCancelReason {
   /// A new trigger replaced the running request.
   retrigger,
 
+  /// The user switched to the keyboard: listening ends quietly, no stop
+  /// semantics (no stop count, no „Abgebrochen“ hint).
+  keyboard,
+
+  /// The app ended the request itself because the user undid an action
+  /// (`undo`): no stop semantics, the confirmation is spoken afterwards.
+  undo,
+
+  /// The app went to the background (screen off, other app): the request
+  /// ends without stop semantics, the overlay closes via idle.
+  suspend,
+
   /// The pipeline was disposed.
   disposed,
 

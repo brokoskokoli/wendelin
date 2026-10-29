@@ -55,13 +55,12 @@ extension _VoiceEventHandler on VoiceController {
     }
   }
 
-  // „Abgebrochen“: stop word (meta line, overlay reacts to stopCount) or
-  // a tap before the agent got the request (B5).
+  // „Abgebrochen“: stop word (meta line, overlay reacts to stopCount) or a
+  // tap (while listening or recognising before the agent got the request,
+  // B5; during the answer the overlay closes like at a stop, WP172).
   void _onCancelled(VoiceCancelReason reason, VoiceState during) {
     final stop = reason == VoiceCancelReason.stopWord;
-    final tap =
-        reason == VoiceCancelReason.tap &&
-        (during == VoiceState.listening || during == VoiceState.transcribing);
+    final tap = reason == VoiceCancelReason.tap;
     _answers.cancelled();
     if (!stop && !tap) return;
     if (stop) _agent.addNotice(cancelledText);

@@ -2,6 +2,8 @@
 
 **Zuordnung:** M6. Nach WP99.
 
+> **Vor Start abgleichen:** Annahmen zu Ton, Audioziel und Bestätigungston gegen WP134, WP158 (Stationskanal) und WP165 (Kommunikationsmodus entfernt) prüfen.
+
 Bezug: Konzept Stationsmodus; K62, K63.
 
 ## Inhalt

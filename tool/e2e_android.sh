@@ -177,7 +177,62 @@ copy_in() { # <quelle auf dem Rechner> <ziel relativ zu files/>
   adb shell "cat $TMP/x | run-as $PKG sh -c 'cat > files/$2'"
   adb shell rm -f "$TMP/x"
 }
+# Trainiertes Wake-Modell (WP129, seit WP173 Voraussetzung zum Einschalten).
+# Zweiteilig: fetch_classifier läuft VOR dem Hintergrund-Helfer im Hauptprozess
+# (ein Fehler bricht den ganzen Lauf ab, set -e); push_classifier kopiert im
+# Helfer aufs Gerät (ein Kopierfehler bricht den Lauf nicht ab; die Wake-Tests
+# scheitern dann an ihrem Timeout).
+# fetch: fehlt <MODELS>/wake-classifier-wendelin/<Datei> oder stimmt ihr SHA-256
+# nicht mit dem Katalog, kommt sie aus der Release-URL (SHA-256 geprüft).
+CLS_FILE=""
+CLS_DIR=""
+fetch_classifier() {
+  [ -n "$MODELS" ] || return 0
+  [ -d "$MODELS/wake-features" ] && [ -d "$MODELS/wake-e2e" ] || return 0
+  local cat="$ROOT/packages/wendelin_voice/lib/src/models"
+  local url sha
+  CLS_FILE=$(sed -n "s/.*static const file = '\(.*\)';/\1/p" "$cat/wake_classifier_catalog.dart")
+  url=$(grep -o "\$_wendelinRelease/[^']*" "$cat/wake_classifier_catalog.dart" | head -1)
+  url="https://github.com/brokoskokoli/wendelin/releases/download${url#\$_wendelinRelease}"
+  url="${url//\$file/$CLS_FILE}"
+  sha=$(grep -A4 "name: file," "$cat/wake_classifier_catalog.dart" | sed -n "s/.*'\([0-9a-f]\{64\}\)'.*/\1/p")
+  if [ -z "$CLS_FILE" ] || [ -z "$sha" ] || [ "${url#https://}" = "$url" ]; then
+    echo "FEHLER: Katalogeintrag des Wake-Modells nicht lesbar ($cat/wake_classifier_catalog.dart)" >&2
+    exit 1
+  fi
+  CLS_DIR="$MODELS/wake-classifier-wendelin"
+  if [ -f "$CLS_DIR/$CLS_FILE" ] \
+    && [ "$(shasum -a 256 "$CLS_DIR/$CLS_FILE" | cut -d' ' -f1)" != "$sha" ]; then
+    echo "Wake-Modell lokal mit falschem SHA-256, lade neu …"
+    rm -f "$CLS_DIR/$CLS_FILE"
+  fi
+  if [ ! -f "$CLS_DIR/$CLS_FILE" ]; then
+    echo "Lade das Wake-Modell ($CLS_FILE) aus dem Release …"
+    mkdir -p "$CLS_DIR"
+    if ! curl -fsSL --retry 2 -o "$CLS_DIR/$CLS_FILE.part" "$url" \
+      || [ "$(shasum -a 256 "$CLS_DIR/$CLS_FILE.part" | cut -d' ' -f1)" != "$sha" ]; then
+      rm -f "$CLS_DIR/$CLS_FILE.part"
+      echo "FEHLER: Wake-Modell nicht ladbar oder SHA-256 falsch ($url). Ohne dieses Modell lässt sich das Aktivierungswort nicht einschalten; Datei von Hand nach $CLS_DIR legen." >&2
+      exit 1
+    fi
+    mv "$CLS_DIR/$CLS_FILE.part" "$CLS_DIR/$CLS_FILE"
+  fi
+}
+# Läuft im Helfer, auch wenn files/e2e/ready schon steht (WENDELIN_KEEP). Eine
+# Gerätedatei mit anderer Größe (veraltet) wird ersetzt.
+push_classifier() {
+  [ -n "$CLS_FILE" ] || return 0
+  local want have
+  want=$(wc -c <"$CLS_DIR/$CLS_FILE" | tr -d ' ')
+  have=$(in_app stat -c %s "files/models/wake-classifier-wendelin/$CLS_FILE" 2>/dev/null | tr -d ' \r') || have=""
+  if [ "$have" != "$want" ]; then
+    adb shell mkdir -p "$TMP"
+    in_app mkdir -p files/models/wake-classifier-wendelin
+    copy_in "$CLS_DIR/$CLS_FILE" "models/wake-classifier-wendelin/$CLS_FILE"
+  fi
+}
 prepare_voice() {
+  push_classifier
   in_app test -f files/e2e/ready 2>/dev/null && return 0
   echo "Kopiere Modelle und WAVs in die App-Daten …"
   adb shell mkdir -p "$TMP"
@@ -199,13 +254,6 @@ prepare_voice() {
     for f in "$MODELS"/wake-e2e/*.wav; do
       copy_in "$f" "e2e/wake/$(basename "$f")"
     done
-    # Trainiertes Modell (WP129), falls vorhanden: <dir>/wake-classifier-wendelin/.
-    if [ -d "$MODELS/wake-classifier-wendelin" ]; then
-      in_app mkdir -p files/models/wake-classifier-wendelin
-      for f in "$MODELS"/wake-classifier-wendelin/*; do
-        copy_in "$f" "models/wake-classifier-wendelin/$(basename "$f")"
-      done
-    fi
     # „Stopp“ (WP64b), falls vorhanden.
     for f in "$MODELS"/wake-e2e-stop/*.wav; do
       [ -f "$f" ] && copy_in "$f" "e2e/wake/$(basename "$f")"
@@ -549,6 +597,7 @@ helper() {
     sleep 1
   done
 }
+fetch_classifier # im Hauptprozess: ein Fehler beendet den Lauf (set -e)
 helper &
 HELPER=$!
 HA_SERVER=

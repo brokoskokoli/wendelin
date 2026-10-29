@@ -26,7 +26,6 @@ class ProvidersScreen extends ConsumerWidget {
     final data = state.value;
     return SettingsPage(
       title: context.l10n.areaProvider,
-      intro: context.l10n.providersIntro,
       children: [
         if (data == null)
           Text(
@@ -66,7 +65,7 @@ class ProvidersScreen extends ConsumerWidget {
             ),
           if (data.profiles.length > 1)
             SettingsSection(
-              title: context.l10n.providersChoice,
+              title: context.l10n.providersAdvanced,
               children: [
                 SettingsRow(
                   title: context.l10n.areaRouting,

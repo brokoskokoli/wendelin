@@ -6,7 +6,7 @@ Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) 
 
 Parallelität: bis zu 4 Paket-Sitzungen, je 1 Sub-Agent (AGENTS.md); Standard 2, solange der Maintainer am Rechner ist.
 
-Stand: 2026-10-28; läuft: WP169, WP170, WP171, WP172; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
+Stand: 2026-10-29; läuft: WP169, WP174; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
 
 ## Meilensteine
 
@@ -18,7 +18,7 @@ Stand: 2026-10-28; läuft: WP169, WP170, WP171, WP172; Release v0.1.0 (2fd52524)
 | R1–R6 | Refactoring | WP35–WP40 | erledigt |
 | M4 | Wake Word und TEE (+ Gerätetest-Korrekturen) | WP41–WP78, WP80 | erledigt; Rest: K47 (nach Stopp-Test 11.6), Test 11.7a (Maintainer) |
 | M5 | Ausbau Android: Kontakte/SMS/Anrufe, Maps/Waze, Standort, Wetter, Aufgaben (Todoist/Google Tasks), Spotify und Mediensteuerung, Bring!, Home Assistant mit Sicherheitsstufen A–D, Sprechererkennung, Weckwort-Modell v8a + Prüfer B, Tinfoil/TEE in der App, App-Sprache, bessere Sprachmodelle und Stimmen, Overlay gesperrt (Entsperren, Aktionen danach), Stopp/Barge-in, Entwicklermodus mit Weckwort-Archiv, Leitplanken/CI | WP76a–d, WP79, WP81–WP98, WP102–WP168 | **erledigt** (abgeschlossen mit Release v0.1.0, 2026-10-28) |
-| M6 | Ausbau 2: Stationsmodus (WP99 Kern gemergt, WP158 Stationskanal), Wake-Word-Vergleich (WP106, WP111, WP121, WP133, WP137 gemergt), Modell-Empfehlung (WP112 gemergt); offen nur mit Go: WP100/WP101, WP132, WP138; Kamera/Bild in `M6-PLAN.md` noch als offen geführt (prüfen: laut Maintainer-Entscheidung gestrichen) | WP99–WP101, WP106, WP111, WP112 | teilweise erledigt (Plan `M6-PLAN.md`) |
+| M6 | Ausbau 2: Stationsmodus (WP99 Kern gemergt, WP158 Stationskanal), Wake-Word-Vergleich (WP106, WP111, WP121, WP133, WP137 gemergt), Modell-Empfehlung (WP112 gemergt); offen nur mit Go: WP100/WP101, WP132, WP138; Kamera/Bild gestrichen (Maintainer 2026-10-28) | WP99–WP101, WP106, WP111, WP112 | teilweise erledigt (Plan `M6-PLAN.md`) |
 | M7 | iOS | – | geplant |
 
 ## Laufende und offene Pakete
@@ -30,9 +30,11 @@ Stand: 2026-10-28; läuft: WP169, WP170, WP171, WP172; Release v0.1.0 (2fd52524)
 | WP132 | Zwei Build-Varianten frei/Store (Vorbereitung), K103 | geplant | nur mit Go, nach WP131 und Gesamttest |
 | WP138 | Kompakt-Modus: kleines Sprach-Overlay mit Kreis und Haken | geplant | Idee Maintainer 2026-10-23; nur nach Gespräch und Go |
 | WP169 | GitHub-Repo auf Stand v0.1.0: Lizenz GPL-3.0-or-later, README en/de, Screenshots, Homepage | in Arbeit | Wunsch Maintainer 2026-10-28 |
-| WP170 | Doku bereinigen: Widersprüche, Veraltetes, Doppelungen, Erledigtes löschen | in Arbeit | Auftrag Maintainer 2026-10-28; Entscheidungen im Paket |
-| WP171 | Weckwort: zweite Prüfung scheitert still ohne Whisper (Zweitgerät), robust machen | in Arbeit | Gerätetest Maintainer 2026-10-28 |
-| WP172 | Overlay schließt nach dem Zuhören ohne Antwort, Weckwort wieder bereit | in Arbeit | Wunsch Maintainer 2026-10-28 |
+| WP170 | Doku bereinigen: Widersprüche, Veraltetes, Doppelungen, Erledigtes löschen | gemergt b3e6ce97 | K127–K137 bestätigt (2026-10-29) und archiviert; offen: Lint-Hook vor dem Commit (P6) |
+| WP171 | Weckwort: Stufe 2 immer Prüfer B, Rückfall auf installiertes Modell, Hinweis statt stillem Verwerfen | gemergt 8d2d699d | K138/K139 offen. Gerätetest `docs/testing/m5/wp171.md` (Benachrichtigungs-Tipp, Akku/fbLoads, Schatten-Fälle); Akku-Messung nur bei Auffälligkeit; `wake_align_test.dart:428` flaky unter Last; Overlay `start-failed reason=no-models` im E2E-Aufbau klären |
+| WP172 | Overlay schließt nach dem Zuhören ohne Äußerung, Weckwort wieder bereit | gemergt 12e05a0c | K140 offen. Ursache: Overlay reagierte nicht auf idle, Weckwort pausiert bis overlayClosed. Gerätetest `docs/testing/m5/wp172.md` (echtes Weckwort, Resume, TTS); Soll: 2 nahezu äquivalente Mutationen; Sprachstart beim Modell-Laden von Tastatur nicht abgebrochen (`voice_controller.dart:203-210`) |
+| WP173 | Einstellungen umbauen: Routing unter Anbieter, „Erweiterte Einstellungen“, Sprache/Aktivierungswort getrennt, Modell oben | gemergt 955fbe2b | K141 offen, K139 angepasst. Gerätetest `docs/testing/m5/wp173.md`; Folgepunkte: Modell-Anzeigenamen im Katalog nicht lokalisiert; wake_service_e2e WAKE_RUNS=10 hing einmal; click-tile ohne add-tile startete Station einmal nicht |
+| WP174 | Einrichtungsassistent beim ersten Start (Anbieter, Sprache Pflicht; Weckwort, Integrationen, Personalisierung optional) | in Arbeit | Wunsch Maintainer 2026-10-28 |
 
 ## Offen
 
@@ -42,12 +44,12 @@ Aktuell rc11 bis rc13 = Release v0.1.0 (Testprotokoll-Blöcke T31-WP158 bis T31-
 - T30-WP153, T29-WP155/-WP156/-WP157, T28-WP151/-WP154; T27-WP149/-WP150, T26-WP148 (prüfen: ob noch offen)
 - `docs/testing/m5/`: wp153, wp155, wp156, wp157, wp159 (A1–A3, B1–B4), wp160 ((d) Falschannahme-Rate), wp161, wp163, wp164, wp165, wp166 (C1–C5, Chromecast), wp151, wp154, wp149, wp150, wp148
 - Gerätetest Stationsmodus (Helligkeit/Umgebungslicht) nach WP158
-- Älteres, nur nach Prüfung: WP90.1–7, WP91, WP107.2/.4, WP108, WP113, WP114, WP118–WP120, WP135, WP136, WP140–WP146 (jeweils `docs/testing/m5/wpNNN.md`) (prüfen)
+- Älteres, nur nach Prüfung: WP90.1–7, WP91, WP107.2/.4, WP108, WP113, WP114, WP119, WP120, WP135, WP136, WP140–WP146 (jeweils `docs/testing/m5/wpNNN.md`) (prüfen)
 - Test 11.7a und K47 (nach Stopp-Test 11.6), siehe M4
 
 ### Offene Konzeptänderungen (Status offen, Änderungsprotokoll im Konzept)
 
-K127 offen, K128 offen, K129 offen, K130 offen, K131 offen, K132 offen, K133 offen. K115 ist zurückgestellt.
+K138 offen, K139 offen, K140 offen, K141 offen. K115 ist zurückgestellt.
 
 ### Bekannte Folgepunkte und Backlog
 
@@ -62,6 +64,8 @@ K127 offen, K128 offen, K129 offen, K130 offen, K131 offen, K132 offen, K133 off
 - Sperre/Stufen: Store-_merge nicht atomar, Sperrtexte ohne l10n (WP157); Einträge gesperrter Läufe im Transkript, kollidierende Tool-Call-Ids (WP163); Undo nach gesperrtem Lauf unter Sitzung „locked“ (WP154); `attestation_hub.dart:82` Default isLocked ungetestet (WP96)
 - Kontakte: Kontakte-Integration zeigt „Aktiv“ auch ohne SMS (WP159); Sortierschlüssel `ContactsChannel.kt:178`, doppelte Bezeichnungen `contacts_tools.dart:586` (WP164); Kontaktänderungen erreichen den Erkenner erst bei Resume (WP85)
 - Texte/l10n: „Wake Word“ in `wake_de.arb:101-102`, `wake_classifier_catalog.dart:61` (WP156); Agent-Fehlertexte nur deutsch (WP150); Überschrift `voice_licenses_screen.dart:21` (WP162); `AppRoutes.httpToolNew` ohne Aufrufer (WP152); Leerzustand providersNone ohne Test (WP116)
+- Gate lokal: `dart test` löst Pakete neu auf und findet das Flutter-SDK nicht („integration_test from sdk“), wenn package_config veraltet ist (2× beim Merge, WP167/WP172) – Gate soll vorher `flutter pub get` ausführen; Commit-Hook prüft check_sizes nicht (WP172)
+- E2E auf main rot (Befund WP169 2026-10-28, mit alten und neuen WAVs gleich): voice_note D1 (de-05, `voice_note_e2e_test.dart:106`), overlay_e2e, overlay_fresh_conversation („Expected length 2“), voice_barge_in; wp140_voice ohne WAVs unter `wake-e2e/` – Kandidat für ein E2E-Reparaturpaket
 - Tests/Gate: Goldens zeigen Material-Icons als Kästchen (WP154); E2E „SemanticsHandle active“ rot am Testende (WP163); E2E-Messung „während Antwort 2“ (WP165); lokales Gate fand `directives_ordering`/`prefer_const` nicht, erst CI (WP158, WP167); Commit-Hooks führen kein Gate aus (WP159); SIGINT-Freigabe, kein actions/cache (WP97)
 - Build/Release: Debug-Fallback-Warnung in `check_apk.sh`, versionCode-Anstieg, Tag-Schutzregel `v*` (WP131); CI-Filter: nur `tool/check_apk.sh` startet apk-Job nicht (WP91); `cleanup_wt.sh` löscht Urteilsdateien (WP110)
 - Modelle/Messung: Scorer-Leck `</think>`, `fr-clarify-liste`, `live30.txt` (WP112); Fallback je Rolle als eigenes Paket; STT-Messung mit echten Aufnahmen (K99)

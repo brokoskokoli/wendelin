@@ -6,6 +6,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../../di/wake_providers.dart';
 import '../../../l10n/l10n.dart';
+import '../../../platform/wake/wake_stage2_gap.dart';
 import '../../../voice/wake/wake_enroller.dart';
 import '../../../voice/wake/wake_storage.dart';
 import '../../design/design.dart';
@@ -18,7 +19,7 @@ import 'wake_models.dart';
 import 'wake_service_section.dart';
 import 'wake_test_screen.dart';
 
-/// Einstellungen → Sprache → Aktivierungswort (WP60): „Wendelin lernt deine
+/// Einstellungen → Aktivierungswort (WP60): „Wendelin lernt deine
 /// Stimme“. Einlernen (etwa 3 min), Kalibrieren (etwa 30 min, empfohlen),
 /// weitere Personen, Ausprobieren, der Dienst-Schalter und die Nachprüfung
 /// (WP50 b: [WakeServiceSection]).
@@ -34,6 +35,13 @@ class WakeWordScreen extends ConsumerWidget {
       title: context.l10n.onboardingWakeWord,
       intro: context.l10n.wakeWordIntro,
       children: [
+        // WP173: the model first; switching on needs it.
+        SettingsSection(
+          title: context.l10n.wakeWordTrainedModel,
+          children: [
+            ModelDownloadRow(model: SpeechModelCatalog.wakeClassifierWendelin),
+          ],
+        ),
         WakeServiceSection(
           onEnroll: installed
               ? () => unawaited(_enroll(context, ref, speakers, null))
@@ -49,27 +57,7 @@ class WakeWordScreen extends ConsumerWidget {
             ),
           ],
         ),
-        SettingsSection(
-          title: context.l10n.wakeWordLearned,
-          children: [
-            if (speakers.isEmpty)
-              SettingsRow(
-                title: context.l10n.wakeWordNoVoice,
-                detail: context.l10n.wakeWordNoVoiceHint,
-              ),
-            for (final (i, s) in speakers.indexed)
-              _SpeakerRow(speaker: s, number: i + 1),
-          ],
-        ),
-        WideButton(
-          speakers.isEmpty
-              ? context.l10n.wakeWordEnroll
-              : context.l10n.wakeWordEnrollMore,
-          onPressed: installed
-              ? () => unawaited(_enroll(context, ref, speakers, null))
-              : null,
-        ),
-        if (!installed) const WakeModelsNotice(),
+        ..._learned(context, ref, speakers, installed: installed),
         WideButton(
           context.l10n.wakeWordCalibrate,
           onPressed: installed && speakers.isNotEmpty
@@ -82,7 +70,23 @@ class WakeWordScreen extends ConsumerWidget {
               ? () => unawaited(_test(context, ref, speakers))
               : null,
         ),
-        if (installed) const WakeModelsNotice(optional: true),
+        WakeStage2GapNotice(
+          // The voice that lacks the sequences, not just the first one.
+          onEnroll: speakers.isEmpty
+              ? null
+              : () => unawaited(
+                  _enroll(
+                    context,
+                    ref,
+                    speakers,
+                    ref.read(wakeSpeakerWithoutSequencesProvider) ??
+                        speakers.first,
+                  ),
+                ),
+        ),
+        if (installed &&
+            ref.watch(wakeStage2GapProvider) != WakeStage2Gap.modelMissing)
+          const WakeModelsNotice(optional: true),
         if (speakers.isNotEmpty)
           WideButton(
             context.l10n.wakeWordDeleteAll,
@@ -92,6 +96,36 @@ class WakeWordScreen extends ConsumerWidget {
     );
   }
 }
+
+/// The learned voices and the enroll button (with the missing-models notice).
+List<Widget> _learned(
+  BuildContext context,
+  WidgetRef ref,
+  List<WakeSpeaker> speakers, {
+  required bool installed,
+}) => [
+  SettingsSection(
+    title: context.l10n.wakeWordLearned,
+    children: [
+      if (speakers.isEmpty)
+        SettingsRow(
+          title: context.l10n.wakeWordNoVoice,
+          detail: context.l10n.wakeWordNoVoiceHint,
+        ),
+      for (final (i, s) in speakers.indexed)
+        _SpeakerRow(speaker: s, number: i + 1),
+    ],
+  ),
+  WideButton(
+    speakers.isEmpty
+        ? context.l10n.wakeWordEnroll
+        : context.l10n.wakeWordEnrollMore,
+    onPressed: installed
+        ? () => unawaited(_enroll(context, ref, speakers, null))
+        : null,
+  ),
+  if (!installed) const WakeModelsNotice(),
+];
 
 String speakerLabel(AppLocalizations l, WakeSpeaker s, int number) =>
     s.name.isEmpty ? l.wakeWordPerson(number) : s.name;

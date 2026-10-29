@@ -9,7 +9,6 @@ import '../../../di/wake_providers.dart';
 import '../../../l10n/l10n.dart';
 import '../../../platform/wake/wake_detector.dart';
 import '../../design/design.dart';
-import '../model_download_row.dart';
 import '../settings_page.dart';
 
 /// Whether the trained classifier is needed for [choice] but not loaded
@@ -91,7 +90,6 @@ class WakeDetectorSection extends ConsumerWidget {
                   : l.wakeDetectorNothingToHearAuto,
               style: WText.caption,
             ),
-          ModelDownloadRow(model: SpeechModelCatalog.wakeClassifierWendelin),
         ],
       ],
     );

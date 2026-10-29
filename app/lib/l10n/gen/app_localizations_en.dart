@@ -3339,6 +3339,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get areaSpeechDetail => 'Speech recognition, voice, pace';
 
   @override
+  String get areaWakeWord => 'Wake word';
+
+  @override
+  String get areaWakeWordDetail => 'Teach “Hey Wendelin”, model, service';
+
+  @override
   String get costsIntro =>
       'Based on the prices in the model catalog, in US dollars.';
 
@@ -3493,12 +3499,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providersAdd => '+ Provider';
 
   @override
+  String get providersAdvanced => 'Advanced settings';
+
+  @override
   String providersBudget(String v) {
     return 'Budget $v/month';
   }
-
-  @override
-  String get providersChoice => 'Provider choice';
 
   @override
   String get providersDeleteBody => 'Profile and stored key are removed.';
@@ -3512,10 +3518,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String providersError(String error) {
     return 'Error: $error';
   }
-
-  @override
-  String get providersIntro =>
-      'The default gets every request for which no routing rule applies. If it fails, Wendelin says so clearly and never switches to another provider on its own.';
 
   @override
   String get providersMakeDefault => 'Make default';
@@ -4271,6 +4273,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get stationNeedModel => 'Wake word off in the station';
+
+  @override
+  String get stationNeedModelBody =>
+      'Without the Wendelin model the station does not listen for the wake word. Load the model and it is ready here.';
+
+  @override
+  String get stationNeedModelLink => 'To the wake word';
+
+  @override
   String get stationNoEvents => 'No appointments coming up.';
 
   @override
@@ -4767,12 +4779,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceScreenLanguageDefaultChip => 'Default of the language';
-
-  @override
-  String get voiceScreenLearnsVoice => 'Wendelin learns your voice';
-
-  @override
-  String get voiceScreenLearnsVoiceDetail => 'Train, calibrate and try out';
 
   @override
   String voiceScreenLikeApp(String v) {
@@ -5307,6 +5313,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get wakeNotifGapAction => 'Load model';
+
+  @override
+  String get wakeNotifGapNoSeqAction => 'Enroll again';
+
+  @override
+  String get wakeNotifGapNoSeqText =>
+      'Wake word cannot be checked reliably – please enroll it again';
+
+  @override
+  String get wakeNotifGapText =>
+      'Wake word cannot be checked – load the recognition model';
+
+  @override
   String get wakeNotifListeningText =>
       'The microphone is on. Audio stays on the device.';
 
@@ -5364,7 +5384,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeServiceSectionEnableDetail =>
-      'Wendelin listens in the background for “Hey Wendelin”.';
+      'Wendelin listens in the background for “Hey Wendelin”. In station mode it is always on with the Wendelin model.';
 
   @override
   String get wakeServiceSectionEndedEngine => 'Ended: recognition failed';
@@ -5401,6 +5421,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get wakeServiceSectionEnrollFirstBody =>
       'Without a trained voice, Wendelin does not recognize the wake word.';
+
+  @override
+  String get wakeServiceSectionLoadModel => 'Load model';
+
+  @override
+  String get wakeServiceSectionNeedModel => 'Load the model first';
+
+  @override
+  String get wakeServiceSectionNeedModelBody =>
+      'The wake word can only be switched on once the Wendelin model is loaded (see the top of this page).';
 
   @override
   String get wakeServiceSectionNotAssistant => 'Wendelin is not your assistant';
@@ -5449,6 +5479,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get wakeServiceSectionWhisperDetail =>
       'Wendelin only listens if the verification confirms the wake word. It covers the whole of stage 2: verifier B, Parakeet or Whisper, depending on what is enrolled and loaded. Turn it off if it is too strict for your voice; there will be more false triggers then.';
+
+  @override
+  String get wakeStage2GapLoad => 'Download recognition model';
+
+  @override
+  String get wakeStage2GapNotice =>
+      'The second check cannot decide: “Hey Wendelin” has no recognition model, and the learned voice has no sequences for the checker yet. Hits are therefore dropped. Download the recognition model or train the voice again.';
+
+  @override
+  String get wakeStage2NoSeqEnroll => 'Enroll wake word again';
+
+  @override
+  String get wakeStage2NoSeqNotice =>
+      'The second check is unreliable: the enrolled voice has no sequences for the checker yet, so only the recognition model is asked. That can drop real calls. Enroll the wake word again.';
 
   @override
   String wakeTestAgo(String v, int inSeconds) {
@@ -5590,6 +5634,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get wakeWordTemplatesOutdated =>
       'These templates are outdated (the comparison was improved). Please train again.';
+
+  @override
+  String get wakeWordTrainedModel => 'Wendelin model';
 
   @override
   String get wakeWordTryNow => 'Try it now';

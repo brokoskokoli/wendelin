@@ -1975,6 +1975,8 @@
   "areaRoutingDetail": "Regeln, Testfeld, Import und Export",
   "areaSpeech": "Sprache",
   "areaSpeechDetail": "Spracherkennung, Stimme, Tempo",
+  "areaWakeWord": "Aktivierungswort",
+  "areaWakeWordDetail": "„Hey Wendelin“ einlernen, Modell, Dienst",
   "costsIntro": "Nach den Preisen im Modellkatalog, in US-Dollar.",
   "costsMonth": "Monat {v}",
   "@costsMonth": {
@@ -2090,6 +2092,7 @@
   "providerSetupProviderSetupTestConnection": "Verbindung testen",
   "providerSetupProviderSetupTesting": "Teste …",
   "providersAdd": "+ Provider",
+  "providersAdvanced": "Erweiterte Einstellungen",
   "providersBudget": "Budget {v}/Monat",
   "@providersBudget": {
     "placeholders": {
@@ -2098,7 +2101,6 @@
       }
     }
   },
-  "providersChoice": "Anbieterwahl",
   "providersDeleteBody": "Profil und gespeicherter Key werden entfernt.",
   "providersDeleteTitle": "„{name}“ löschen?",
   "@providersDeleteTitle": {
@@ -2116,7 +2118,6 @@
       }
     }
   },
-  "providersIntro": "Der Standard bekommt jede Anfrage, für die keine Routing-Regel greift. Scheitert er, sagt Wendelin das klar und wechselt nie von selbst zu einem anderen Anbieter.",
   "providersMakeDefault": "Als Standard",
   "providersNone": "Noch kein Provider eingerichtet.",
   "providersProfiles": "Profile",
@@ -2533,6 +2534,9 @@
       }
     }
   },
+  "stationNeedModel": "Aktivierungswort in der Station aus",
+  "stationNeedModelBody": "Ohne das Wendelin-Modell hört die Station nicht auf das Aktivierungswort. Lade das Modell, dann ist es hier bereit.",
+  "stationNeedModelLink": "Zum Aktivierungswort",
   "stationNoEvents": "Keine Termine in Sicht.",
   "stationNoTasks": "Keine fälligen Aufgaben.",
   "stationOverdue": "überfällig",
@@ -2795,8 +2799,6 @@
   "voiceScreenKeepModelLabel": "Modell im Speicher halten",
   "voiceScreenLanguageDefault": "Standard der Sprache",
   "voiceScreenLanguageDefaultChip": "Standard der Sprache",
-  "voiceScreenLearnsVoice": "Wendelin lernt deine Stimme",
-  "voiceScreenLearnsVoiceDetail": "Einlernen, kalibrieren und ausprobieren",
   "voiceScreenLikeApp": "Wie die App ({v})",
   "@voiceScreenLikeApp": {
     "placeholders": {
@@ -3146,6 +3148,10 @@
       }
     }
   },
+  "wakeNotifGapAction": "Modell laden",
+  "wakeNotifGapNoSeqAction": "Neu einlernen",
+  "wakeNotifGapNoSeqText": "Aktivierungswort kann nicht sicher geprüft werden – bitte neu einlernen",
+  "wakeNotifGapText": "Aktivierungswort kann nicht geprüft werden – Erkennungsmodell laden",
   "wakeNotifListeningText": "Das Mikrofon ist an. Audio bleibt auf dem Gerät.",
   "wakeNotifListeningTitle": "Wendelin hört auf „Hey Wendelin“",
   "wakeNotifNoRole": "Wendelin muss der Assistent sein, damit das Aktivierungswort nach einem Neustart laufen kann.",
@@ -3170,7 +3176,7 @@
   "wakeServiceSectionChimeDetail": "Ein kurzer Ton, wenn Wendelin das Wort erkannt hat.",
   "wakeServiceSectionChooseAssistant": "Assistenten wählen",
   "wakeServiceSectionEnable": "Aktivierungswort einschalten",
-  "wakeServiceSectionEnableDetail": "Wendelin hört im Hintergrund auf „Hey Wendelin“.",
+  "wakeServiceSectionEnableDetail": "Wendelin hört im Hintergrund auf „Hey Wendelin“. Im Stationsmodus ist es mit dem Wendelin-Modell immer an.",
   "wakeServiceSectionEndedEngine": "Beendet: Die Erkennung ist ausgefallen",
   "wakeServiceSectionEndedModel": "Beendet: Ein Modell für die Wake-Erkennung fehlt",
   "wakeServiceSectionEndedNoPermission": "Beendet: Mikrofon-Berechtigung fehlt",
@@ -3181,6 +3187,9 @@
   "wakeServiceSectionEndedTimeout": "Vom System beendet (Zeitlimit von Android)",
   "wakeServiceSectionEnrollFirst": "Erst Stimme einlernen",
   "wakeServiceSectionEnrollFirstBody": "Ohne eingelernte Stimme erkennt Wendelin das Aktivierungswort nicht.",
+  "wakeServiceSectionLoadModel": "Modell laden",
+  "wakeServiceSectionNeedModel": "Erst Modell laden",
+  "wakeServiceSectionNeedModelBody": "Das Aktivierungswort lässt sich erst einschalten, wenn das Wendelin-Modell geladen ist (siehe oben auf dieser Seite).",
   "wakeServiceSectionNotAssistant": "Wendelin ist nicht dein Assistent",
   "wakeServiceSectionNotAssistantBody": "Android erlaubt das Zuhören im Hintergrund nur dem Standard-Assistenten. Wähle Wendelin als Assistenten.",
   "wakeServiceSectionOnlyCharging": "Nur beim Laden",
@@ -3202,6 +3211,10 @@
   "wakeServiceSectionWhen": "Wann zuhören?",
   "wakeServiceSectionWhisper": "Nachprüfung (Stufe 2)",
   "wakeServiceSectionWhisperDetail": "Wendelin hört nur zu, wenn die Nachprüfung das Aktivierungswort bestätigt. Sie umfasst die ganze Stufe 2: Prüfer B, Parakeet oder Whisper, je nachdem, was eingelernt und geladen ist. Schalte sie aus, wenn sie mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.",
+  "wakeStage2GapLoad": "Erkennungsmodell laden",
+  "wakeStage2GapNotice": "Die zweite Prüfung kann nicht entscheiden: Für „Hey Wendelin“ fehlt ein Erkennungsmodell, und die eingelernte Stimme hat noch keine Folgen für den Prüfer. Treffer werden deshalb verworfen. Lade das Erkennungsmodell oder lerne die Stimme neu ein.",
+  "wakeStage2NoSeqEnroll": "Aktivierungswort neu einlernen",
+  "wakeStage2NoSeqNotice": "Die zweite Prüfung ist unsicher: Die eingelernte Stimme hat noch keine Folgen für den Prüfer, und es wird nur das Erkennungsmodell gefragt. Das kann echte Rufe verwerfen. Lerne das Aktivierungswort neu ein.",
   "wakeTestAgo": "{v} · {inSeconds} s",
   "@wakeTestAgo": {
     "placeholders": {
@@ -3316,6 +3329,7 @@
   },
   "wakeWordTemplatesMissing": "Vorlagen fehlen. Bitte neu einlernen.",
   "wakeWordTemplatesOutdated": "Die Vorlagen sind veraltet (der Vergleich wurde verbessert). Bitte neu einlernen.",
+  "wakeWordTrainedModel": "Wendelin-Modell",
   "wakeWordTryNow": "Jetzt ausprobieren",
   "wakeWordWhoCalibrate": "Wen kalibrieren?",
   "wakeWordWhoJoins": "Wer kommt dazu?",

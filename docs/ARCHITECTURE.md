@@ -5,7 +5,7 @@ Wo liegt was, und welche Dateien gehören zu einer Änderung? Das ist nur der In
 ## Bereiche
 
 - **Pakete** (`packages/`, reines Dart): Einstiegsdateien und wichtige Typen je Paket. [packages.md](architecture/packages.md); Abhängigkeiten je Paket erzeugt: [generated/packages.md](architecture/generated/packages.md).
-- **App** (`app/lib`): Ordner und ihre Aufgaben, die vier Einstiege. [app.md](architecture/app.md)
+- **App** (`app/lib`): Ordner und ihre Aufgaben, die fünf Einstiege. [app.md](architecture/app.md)
 - **Ports**: wo ein Port liegt und wer ihn in der App umsetzt. [ports.md](architecture/ports.md)
 - **App-Verdrahtung**: Start, Provider, Integrationsregistry, Overlay-Engine, Wake-Word-Dienst. [wiring.md](architecture/wiring.md)
 - **Integrationen**: erzeugte Liste aus der Registry in [generated/integrations.md](architecture/generated/integrations.md); nicht ableitbare Angaben je Integration in einer eigenen Datei [integrations/](architecture/integrations/README.md) (`<id>.md`, keine gemeinsame Tabelle).
@@ -15,6 +15,7 @@ Wo liegt was, und welche Dateien gehören zu einer Änderung? Das ist nur der In
 - **Voice-Pipeline** (ADR 0007, 0008). [voice.md](architecture/voice.md)
 - **Plattformkanäle**: Kotlin-Kanäle und ihre Dart-Seite. [channels.md](architecture/channels.md)
 - **HTTP-Stacks** (N3). [http.md](architecture/http.md)
+- **Werkzeug-Interna** (CI-Jobs, Claude-Code-Hooks, Emulator-Sperre). [tooling.md](architecture/tooling.md)
 - **Release und Signatur** (WP131): Schlüssel, Secrets, Tag-Release, Umstieg vom Debug-Schlüssel. [RELEASE.md](RELEASE.md)
 - **Checklisten „Feature → Dateien“**: neue Integration, Einstellungsseite, Kanal u. a. [checklists.md](architecture/checklists.md)
 

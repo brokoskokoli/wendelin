@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
+import 'package:wendelin/ui/overlay/assistant_overlay.dart';
 import 'package:wendelin/ui/overlay/unlock_window.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin_core/testing.dart';
@@ -80,13 +81,16 @@ void main() {
     expect(llm.requests, hasLength(1), reason: 'erst nach dem Entsperren');
     final entries = c.read(agentControllerProvider).entries;
     expect(entries.whereType<UserEntry>().single.text, 'Wie spät ist es');
-    expect(find.textContaining('Es ist zehn Uhr.'), findsOneWidget);
     expect(
       tts.spoken.any((t) => t.contains('Es ist zehn Uhr.')),
       isTrue,
       reason: 'die Antwort wird vorgelesen wie eine Sprachantwort',
     );
-    expect(platform.finished, 0, reason: 'Overlay bleibt offen');
+    expect(
+      platform.finished,
+      1,
+      reason: 'WP172: nach der Antwort schliesst es',
+    );
     expect(c.read(lockedPendingProvider), isNull);
     expect(c.read(lockedModeProvider), isFalse);
     expect(c.read(lockedExchangeProvider), isNull, reason: 'WP163: Entsperren');
@@ -144,6 +148,7 @@ void main() {
     }
 
     testWidgets('Keyguard-Übergang schließt das Overlay nicht', (tester) async {
+      AssistantOverlayScreen.closeWhenIdle = false; // grace period under test, the sheet must outlive the fast answer (WP172)
       final c = await locked(tester);
       // Während der Keyguard zu sehen ist: Lebenszyklus, Plattform-Schließen,
       // Tippen außerhalb des Sheets.
@@ -206,6 +211,7 @@ void main() {
 
     testWidgets('Home in der Frist nach dem Entsperren: schließt nach der '
         'Frist', (tester) async {
+      AssistantOverlayScreen.closeWhenIdle = false; // grace period under test, the sheet must outlive the fast answer (WP172)
       final c = await locked(tester);
       final binding = tester.binding;
       platform.unlockGate!.complete(true);
@@ -221,6 +227,7 @@ void main() {
 
     testWidgets('Home in der Frist, dann zurück: die Anfrage läuft sofort, '
         'ohne die Frist abzuwarten', (tester) async {
+      AssistantOverlayScreen.closeWhenIdle = false; // grace period under test, the sheet must outlive the fast answer (WP172)
       final c = await locked(tester);
       final binding = tester.binding;
       _leave(binding);
@@ -237,6 +244,7 @@ void main() {
 
     testWidgets('Keyguard-Aufblitzen (hidden, dann resumed) bricht die '
         'laufende Anfrage nicht ab', (tester) async {
+      AssistantOverlayScreen.closeWhenIdle = false; // grace period under test, the sheet must outlive the fast answer (WP172)
       llm = FakeLlmProvider([
         ScriptedTurn.text('Es ist zehn Uhr.'),
       ], eventDelay: const Duration(milliseconds: 400));

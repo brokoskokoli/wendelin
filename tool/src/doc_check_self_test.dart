@@ -5,9 +5,69 @@ import 'dart:io';
 import 'doc_check.dart';
 import 'doc_idents.dart';
 import 'doc_paths.dart';
+import 'doc_stand.dart';
 import 'gen_docs.dart';
 import 'gen_docs_tables.dart';
 import 'self_check.dart';
+
+const _ok = '# WP1 Eins\n> Stand: gültig\n';
+
+/// Mutation: m5-Datei ohne Stand-Zeile wird gemeldet.
+void standChecks(SelfCheck t) {
+  t.group('doc_stand');
+  final tmp = Directory.systemTemp.createTempSync('doc_stand_');
+  try {
+    const f = 'docs/testing/m5/wp1.md';
+    List<String> errs() =>
+        standErrors([f, 'docs/testing/m5/README.md'], root: tmp.path);
+    File('${tmp.path}/$f')
+      ..parent.createSync(recursive: true)
+      ..writeAsStringSync(_ok);
+    t.eq(errs(), <String>[], 'mit Stand-Zeile ohne Befund');
+    File('${tmp.path}/$f').writeAsStringSync('# WP1 Eins\n');
+    t.eq(errs().length, 1, 'ohne Stand-Zeile rot');
+    File('${tmp.path}/$f').writeAsStringSync('# WP1\n> Stand: bald\n');
+    t.eq(errs().length, 1, 'ungültiger Stand rot');
+    _standFormat(t, (c) {
+      File('${tmp.path}/$f').writeAsStringSync(c);
+      return errs().length;
+    });
+  } finally {
+    tmp.deleteSync(recursive: true);
+  }
+}
+
+/// Strenges Stand-Format: Zeile 2, Klammergrund, WP-Nummer; Index-Suffix.
+void _standFormat(SelfCheck t, int Function(String) errCount) {
+  String doc(String stand, {int line = 2}) =>
+      '# WP1\n${line == 2 ? '' : '\n'}> Stand: $stand\n';
+  for (final ok in [
+    'gültig',
+    'teilweise überholt (x)',
+    'überholt durch WP12b',
+  ]) {
+    t.eq(errCount(doc(ok)), 0, 'Stand „$ok“ gültig');
+  }
+  for (final bad in [
+    'teilweise überholt',
+    'überholt durch',
+    'überholt durch WP',
+  ]) {
+    t.eq(errCount(doc(bad)), 1, 'Stand „$bad“ rot');
+  }
+  t.eq(errCount(doc('gültig', line: 3)), 1, 'Stand-Zeile in Zeile 3 rot');
+  t.eq(standSuffix(doc('gültig')), '', 'Suffix: gültig leer');
+  t.eq(
+    standSuffix(doc('teilweise überholt (x)')),
+    ' (teilweise überholt)',
+    'Suffix: teilweise überholt',
+  );
+  t.eq(
+    standSuffix(doc('überholt durch WP2')),
+    ' (überholt)',
+    'Suffix: überholt',
+  );
+}
 
 void docCheckChecks(SelfCheck t) {
   t.group('doc_check');
@@ -34,7 +94,7 @@ void docCheckChecks(SelfCheck t) {
       "import 'a_spec.dart';\n\nfinal x = [\n  aSpec,\n];\n",
     );
     put('app/lib/di/integrations/a_spec.dart', "const s = Spec(id: 'a');\n");
-    put('docs/testing/m5/wp1.md', '# WP1 Eins\n');
+    put('docs/testing/m5/wp1.md', _ok);
     put('docs/architecture/other.md', '# Anderes\n');
     put('docs/architecture/packages.md', '# Pakete\n');
     put(
@@ -81,11 +141,11 @@ void docCheckChecks(SelfCheck t) {
     );
 
     // Mutation: toter Link in einer Gerätetest-Datei (docs/testing/m5/).
-    put('docs/testing/m5/wp1.md', '# WP1 Eins\n\n[x](gone.md)\n');
+    put('docs/testing/m5/wp1.md', '$_ok\n[x](gone.md)\n');
     t.eq(errors(), [
-      'docs/testing/m5/wp1.md:3: Link `gone.md` ist tot',
+      'docs/testing/m5/wp1.md:4: Link `gone.md` ist tot',
     ], 'toter Link in docs/testing/m5 wird gemeldet');
-    put('docs/testing/m5/wp1.md', '# WP1 Eins\n');
+    put('docs/testing/m5/wp1.md', _ok);
     t.eq(errors(), <String>[], 'm5-Datei nach Korrektur ohne Befund');
     _deadPathInRuleDocs(t, put, errors);
     _identChecks(t, put, errors, root);
@@ -146,7 +206,7 @@ void _staleChecks(
   writeGenerated(root);
 
   // Mutation: m5-Datei ohne Indexeintrag.
-  put('docs/testing/m5/wp2.md', '# WP2 Zwei\n');
+  put('docs/testing/m5/wp2.md', '# WP2 Zwei\n> Stand: gültig\n');
   t.eq(staleGenerated(root), [
     'docs/testing/m5/README.md',
   ], 'm5-Datei ohne Indexeintrag macht den Index veraltet');
@@ -179,6 +239,27 @@ void _deadPathInRuleDocs(
     put(d, '# $d\n');
     t.eq(errors(), <String>[], '$d nach Korrektur ohne Befund');
   }
+  _relativeDeadPath(t, put, errors);
+  _conceptDocs(t, put, errors);
+}
+
+/// Relativer toter Pfad (ohne Repo-Wurzel) in einem Regel-Dokument ist rot;
+/// ein Vermerk „nur im Git-Verlauf“ gilt nur für seine Zeile.
+void _relativeDeadPath(
+  SelfCheck t,
+  void Function(String, String) put,
+  List<String> Function() errors,
+) {
+  const d = 'docs/architecture/x.md';
+  put(d, '# x\n\nSiehe `nichtda.md`.\n');
+  t.eq(errors(), [
+    '$d:3: Pfad `nichtda.md` existiert nicht',
+  ], 'relativer toter Pfad in Regel-Dokument wird gemeldet');
+  put(d, '# x\n\nalt `gone.md` (nur im Git-Verlauf)\nneu `tool/gone.sh`\n');
+  t.eq(errors(), [
+    '$d:4: Pfad `tool/gone.sh` existiert nicht',
+  ], 'Vermerk „nur im Git-Verlauf“ wirkt nur auf seine Zeile');
+  put(d, '# x\n');
 }
 
 /// Bezeichner-Check: unbekannter Name rot, bekannter grün, Allowlist ist eine Ratsche.
@@ -278,4 +359,31 @@ void _tableChecks(SelfCheck t) {
     ch.contains('| `x` | `a.dart` | `X.kt` | `go(p, q)` | – |'),
     'Kanal-Tabelle: Dateien und Methoden mit Argumenten ($ch)',
   );
+}
+
+/// Konzept und Änderungsarchiv: erfundene Repo-Pfade sind rot, Fremdes und
+/// als „nur im Git-Verlauf“ gekennzeichnete Dateien nicht.
+void _conceptDocs(
+  SelfCheck t,
+  void Function(String, String) put,
+  List<String> Function() errors,
+) {
+  const concept = 'Voice Agent App – Gesamtkonzept.md';
+  put(
+    concept,
+    '# K\n\nsiehe `docs/gibt-es-nicht.md`, `tools/list`, `Tasks.md`\n',
+  );
+  t.eq(errors(), [
+    '$concept:3: Pfad `docs/gibt-es-nicht.md` existiert nicht',
+  ], 'erfundener Pfad im Konzept wird gemeldet, Fremdes nicht');
+  put(concept, '# K\n');
+  put('docs/concept-changelog/M9.md', 'Plan `docs/work-packages/M9.md`\n');
+  t.eq(errors(), [
+    'docs/concept-changelog/M9.md:1: Pfad `docs/work-packages/M9.md` existiert nicht',
+  ], 'toter Pfad im Änderungsarchiv wird gemeldet');
+  put(
+    'docs/concept-changelog/M9.md',
+    'Plan `docs/work-packages/M9.md` (nur im Git-Verlauf)\n',
+  );
+  t.eq(errors(), <String>[], '„nur im Git-Verlauf“ ist ausgenommen');
 }

@@ -46,6 +46,7 @@ class StationActivity : WendelinActivity(), SensorEventListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        StationState.created()
         // Personal content (appointment titles): no screenshots, hidden in the app switcher.
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
@@ -69,16 +70,18 @@ class StationActivity : WendelinActivity(), SensorEventListener {
     }
 
     // Visible means: counts for the wake word routing. Home or a dark screen clears it.
+    // [StationState.open] (wake word forced on) stays until onDestroy (WP171).
     override fun onStart() {
         super.onStart()
-        StationState.active = true
+        StationState.started()
         // WP129: the wake engine takes the station detector (model) while the station is up.
         WakeStarter.sync(this, "station")
     }
 
     override fun onStop() {
-        StationState.active = false
-        WakeStarter.sync(this, "station-end")
+        StationState.stopped()
+        // Only the detector model follows visibility; the service stays (open).
+        WakeStarter.sync(this, "station-stop")
         super.onStop()
     }
 
@@ -145,7 +148,8 @@ class StationActivity : WendelinActivity(), SensorEventListener {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             onBackInvokedDispatcher.unregisterOnBackInvokedCallback(backCallback)
         }
-        StationState.active = false
+        // A recreate (configuration change) is no end: the new instance sets open again.
+        if (StationState.destroyed(isChangingConfigurations)) WakeStarter.sync(this, "station-end")
         super.onDestroy()
     }
 }

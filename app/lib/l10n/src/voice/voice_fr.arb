@@ -84,8 +84,6 @@
   "voiceScreenKeepModelLabel": "Garder le modèle en mémoire",
   "voiceScreenLanguageDefault": "Voix par défaut de la langue",
   "voiceScreenLanguageDefaultChip": "Voix par défaut de la langue",
-  "voiceScreenLearnsVoice": "Wendelin apprend votre voix",
-  "voiceScreenLearnsVoiceDetail": "Entraîner, calibrer et essayer",
   "voiceScreenLikeApp": "Comme l’application ({v})",
   "voiceScreenListen": "Écouter un échantillon",
   "voiceScreenMetrics": "Mesures",

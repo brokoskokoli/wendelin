@@ -38,6 +38,10 @@ Einheitliche Begriffe für `app/lib/l10n/app_{de,en,fr}.arb`. Neue Texte folgen 
 | Audit-Protokoll | audit log | journal d’audit | Protokoll der ausgeführten Aktionen |
 | GPU-Prüfung: Aus / Vorher / Nachher | GPU check: Off / Before / After | vérification du GPU : Désactivée / Avant / Après | Modi der GPU-Prüfung über NVIDIA |
 | Nachweis (GPU) | evidence | preuve | GPU-Nachweis = GPU evidence / preuve GPU |
+| Sicherheitsstufe (A–D) | security level (A to D) | niveau de sécurité (A à D) | Stufe je Tool bzw. Gerät (ADR 0022). Nicht verwechseln mit der Plattform-Stufe der Attestierung (TCB): dort „Plattform-Sicherheitsstufe (TCB)“; in neuen Texten die TCB-Stufe „Patch-Stand“ / „patch level“ / « niveau de correctifs » nennen |
+| Sprechererkennung | speaker recognition | reconnaissance du locuteur | |
+| Stationsmodus | station mode | mode station | |
+| Entwicklermodus | developer mode | mode développeur | |
 | Token (Home Assistant) | token | jeton | „Long-Lived Access Token“ bleibt englisch/ Home-Assistant-Begriff |
 
 Tonfall: Deutsch duzt („Schalte ein …“), Englisch ist knapp und im Imperativ, Französisch siezt („Activez …“, „vous“). Apostrophe in ARB-Texten immer als ’ schreiben, keine geschweiften Klammern im Text.

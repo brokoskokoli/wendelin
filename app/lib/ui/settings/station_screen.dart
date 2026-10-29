@@ -3,10 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../di/wake_providers.dart';
+import '../../di/wake_service.dart';
 import '../../l10n/l10n.dart';
 import '../../station/station_prefs.dart';
 import '../../station/station_providers.dart';
 import '../design/design.dart';
+import '../routes.dart';
 import 'settings_page.dart';
 
 /// Settings → Stationsmodus: screen behaviour, quiet hours and the areas the
@@ -14,6 +17,12 @@ import 'settings_page.dart';
 class StationSettingsScreen extends ConsumerWidget {
   /// Creates the screen.
   const StationSettingsScreen({super.key});
+
+  /// WP173: the station forces the wake word only with the trained model (or a word the
+  /// user switched on himself); otherwise it stays off (Kotlin `no-model`).
+  static bool _needsModel(WidgetRef ref) =>
+      !ref.watch(wakeClassifierInstalledProvider) &&
+      !(ref.watch(wakeServiceProvider).value?.enabled ?? false);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,6 +34,7 @@ class StationSettingsScreen extends ConsumerWidget {
       title: l.stationTitle,
       intro: l.stationSettingsIntro,
       children: [
+        if (_needsModel(ref)) const _NeedModel(),
         SettingsSection(
           title: l.stationScreenSection,
           children: [
@@ -144,4 +154,28 @@ class _HourRow extends StatelessWidget {
       },
     ),
   );
+}
+
+/// Hint of the station settings: no trained model, so the station does not listen (WP173).
+class _NeedModel extends StatelessWidget {
+  const _NeedModel();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Column(
+      key: const ValueKey('stationNeedModel'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SettingsRow(title: l.stationNeedModel, detail: l.stationNeedModelBody),
+        LinkButton(
+          l.stationNeedModelLink,
+          onPressed: () => unawaited(
+            Navigator.of(context).pushNamed<void>(AppRoutes.wakeWord),
+          ),
+          external: false,
+        ),
+      ],
+    );
+  }
 }

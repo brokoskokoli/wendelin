@@ -259,7 +259,7 @@
   "wakeServiceSectionChimeDetail": "Ein kurzer Ton, wenn Wendelin das Wort erkannt hat.",
   "wakeServiceSectionChooseAssistant": "Assistenten wählen",
   "wakeServiceSectionEnable": "Aktivierungswort einschalten",
-  "wakeServiceSectionEnableDetail": "Wendelin hört im Hintergrund auf „Hey Wendelin“.",
+  "wakeServiceSectionEnableDetail": "Wendelin hört im Hintergrund auf „Hey Wendelin“. Im Stationsmodus ist es mit dem Wendelin-Modell immer an.",
   "wakeServiceSectionEndedEngine": "Beendet: Die Erkennung ist ausgefallen",
   "wakeServiceSectionEndedModel": "Beendet: Ein Modell für die Wake-Erkennung fehlt",
   "wakeServiceSectionEndedNoPermission": "Beendet: Mikrofon-Berechtigung fehlt",
@@ -270,6 +270,10 @@
   "wakeServiceSectionEndedTimeout": "Vom System beendet (Zeitlimit von Android)",
   "wakeServiceSectionEnrollFirst": "Erst Stimme einlernen",
   "wakeServiceSectionEnrollFirstBody": "Ohne eingelernte Stimme erkennt Wendelin das Aktivierungswort nicht.",
+  "wakeServiceSectionNeedModel": "Erst Modell laden",
+  "wakeServiceSectionNeedModelBody": "Das Aktivierungswort lässt sich erst einschalten, wenn das Wendelin-Modell geladen ist (siehe oben auf dieser Seite).",
+  "wakeServiceSectionLoadModel": "Modell laden",
+  "wakeWordTrainedModel": "Wendelin-Modell",
   "wakeServiceSectionNotAssistant": "Wendelin ist nicht dein Assistent",
   "wakeServiceSectionNotAssistantBody": "Android erlaubt das Zuhören im Hintergrund nur dem Standard-Assistenten. Wähle Wendelin als Assistenten.",
   "wakeServiceSectionOnlyCharging": "Nur beim Laden",
@@ -426,5 +430,13 @@
         "type": "String"
       }
     }
-  }
+  },
+  "wakeNotifGapText": "Aktivierungswort kann nicht geprüft werden – Erkennungsmodell laden",
+  "wakeNotifGapAction": "Modell laden",
+  "wakeStage2GapNotice": "Die zweite Prüfung kann nicht entscheiden: Für „Hey Wendelin“ fehlt ein Erkennungsmodell, und die eingelernte Stimme hat noch keine Folgen für den Prüfer. Treffer werden deshalb verworfen. Lade das Erkennungsmodell oder lerne die Stimme neu ein.",
+  "wakeStage2GapLoad": "Erkennungsmodell laden",
+  "wakeNotifGapNoSeqText": "Aktivierungswort kann nicht sicher geprüft werden – bitte neu einlernen",
+  "wakeNotifGapNoSeqAction": "Neu einlernen",
+  "wakeStage2NoSeqNotice": "Die zweite Prüfung ist unsicher: Die eingelernte Stimme hat noch keine Folgen für den Prüfer, und es wird nur das Erkennungsmodell gefragt. Das kann echte Rufe verwerfen. Lerne das Aktivierungswort neu ein.",
+  "wakeStage2NoSeqEnroll": "Aktivierungswort neu einlernen"
 }

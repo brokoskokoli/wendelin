@@ -3,11 +3,15 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show debugPrint, immutable;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
+import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../l10n/gen/app_localizations.dart';
 import '../platform/wake/wake_platform.dart';
+import '../platform/wake/wake_stage2_gap.dart';
 import 'core_providers.dart';
 import 'preferences.dart';
+import 'voice_providers.dart';
+import 'voice_settings_providers.dart';
 import 'wake_providers.dart';
 
 // The wake word service switch (WP50): the settings live in the database;
@@ -62,6 +66,17 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
       // No settings yet (plain provider tests): the texts follow the system.
       debugPrint('wake-texts listen=skipped type=${e.runtimeType}');
     }
+    // WP171: what stage 2 needs changed (recognition model installed or
+    // removed, voice enrolled or deleted): the engine checks the gap again.
+    ref
+      ..listen(
+        modelStatesProvider.select(wakeStage2RecognizerInstalled),
+        (_, _) => unawaited(ref.read(wakePlatformProvider).recheckStage2()),
+      )
+      ..listen(
+        wakeSpeakersProvider,
+        (_, _) => unawaited(ref.read(wakePlatformProvider).recheckStage2()),
+      );
     return WakeServiceSettings(
       enabled: await settings.get(wakeEnabledKey) ?? false,
       condition: WakeCondition.parse(await settings.get(wakeConditionKey)),
@@ -116,10 +131,29 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
     return true;
   }
 
-  /// Switches the service on or off. Without a learned voice it cannot be
+  /// Whether the trained classifier model is on the disk (WP173). Read from
+  /// the files, not from the UI state; unreadable counts as missing.
+  Future<bool> _classifierInstalled() async {
+    try {
+      final service = await ref.read(speechModelServiceProvider.future);
+      final m = ref
+          .read(speechModelCatalogProvider)
+          .byId(SpeechModelCatalog.wakeClassifierWendelin.id);
+      return m != null && await service.isInstalled(m);
+    } on Object catch (e) {
+      debugPrint('wake-enable classifier=unreadable type=${e.runtimeType}');
+      return false;
+    }
+  }
+
+  /// Switches the service on or off. Switching on needs the trained
+  /// classifier model (WP173, every detection mode; `false` without it, also
+  /// if it cannot be read). Switching off always works. Without a learned voice it cannot be
   /// switched on (`false`, WP50 Nachtrag) when the templates path is the one
   /// that listens; the installed classifier model needs no voice (WP140).
   Future<bool> setEnabled({required bool enabled}) async {
+    if (enabled && !await _classifierInstalled()) return false;
+    if (!ref.mounted) return false;
     if (enabled &&
         ref.read(wakeNeedsVoiceProvider) &&
         (await ref.read(wakeSpeakersProvider.future)).isEmpty) {
@@ -165,5 +199,9 @@ Map<String, String> wakeNotificationTexts(AppLocalizations t) => {
   'reenableTitle': t.wakeNotifReenableTitle,
   'reenableAction': t.wakeNotifReenableAction,
   'noRole': t.wakeNotifNoRole,
+  'gapText': t.wakeNotifGapText,
+  'gapAction': t.wakeNotifGapAction,
+  'gapNoSeqText': t.wakeNotifGapNoSeqText,
+  'gapNoSeqAction': t.wakeNotifGapNoSeqAction,
   'ended': t.wakeNotifEnded('{reason}'),
 };
