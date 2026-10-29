@@ -92,8 +92,8 @@ void main() {
       await pump(tester, env);
       expect(find.byType(OnboardingScreen), findsOneWidget);
       expect(find.byType(MainScreen), findsNothing);
-      await tapText(tester, 'Weiter');
-      expect(find.text('Anbieter eingerichtet'), findsOneWidget);
+      await tapText(tester, 'Los geht’s');
+      expect(find.textContaining('Anbieter eingerichtet:'), findsOneWidget);
       await tapText(tester, 'Weiter');
       expect(find.text('Bereit'), findsOneWidget);
     });
@@ -119,7 +119,7 @@ void main() {
       final storage = openInMemoryStorage();
       final env = await envOn(storage);
       await pump(tester, env);
-      await tapText(tester, 'Weiter');
+      await tapText(tester, 'Los geht’s');
       expect(
         await storage.settings.get(AppSettings.setupWizardPage),
         'provider',
@@ -155,7 +155,7 @@ void main() {
       final env = await envOn(storage, speech: false);
       final c = await pump(tester, env);
       // „done“ is shown only behind met required pages: speech is not met.
-      expect(find.text('Spracherkennung laden'), findsOneWidget);
+      expect(find.text('Spracherkennung'), findsOneWidget);
       expect(await c.read(setupWizardPageProvider.notifier).finish(), isFalse);
       expect(c.read(setupWizardDoneProvider), isFalse);
       expect(

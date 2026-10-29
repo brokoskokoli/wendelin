@@ -1,27 +1,23 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../di/list_access.dart';
 import '../../di/preferences.dart';
-import '../../di/profiles.dart';
 import '../../di/providers.dart';
 import '../../di/setup_status.dart';
 import '../../di/setup_wizard.dart';
-import '../../di/voice_settings_providers.dart';
 import '../../di/wake_service.dart';
 import '../../l10n/l10n.dart';
 import '../../voice/recognizer_config.dart';
 import '../design/design.dart';
 import '../routes.dart';
-import '../settings/app_language_screen.dart';
 import '../settings/integrations_screen.dart';
-import '../settings/provider_setup_screen.dart';
 import '../settings/settings_page.dart';
-import 'voice_download_step.dart';
+import 'setup_provider_page.dart';
+import 'setup_speech_page.dart';
+import 'setup_welcome_page.dart';
 
 /// The setup wizard (WP174), the frame of the first start and of the
 /// update: seven pages (welcome, provider, speech, wake word, integrations,
@@ -34,13 +30,6 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   /// Creates the wizard.
   const OnboardingScreen({super.key});
 
-  /// Languages offered for speech.
-  static const languages = [
-    ('de', 'Deutsch'),
-    ('fr', 'Français'),
-    ('en', 'English'),
-  ];
-
   @override
   ConsumerState<OnboardingScreen> createState() => _OnboardingState();
 }
@@ -51,12 +40,6 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
   void _next() => unawaited(_wizard.advance());
 
   void _finish() => unawaited(_wizard.finish());
-
-  Future<void> _setUpProvider() async {
-    await Navigator.of(context).push<ProviderProfile>(
-      MaterialPageRoute(builder: (_) => const ProviderSetupScreen()),
-    );
-  }
 
   /// Opens a settings menu; back leads here again (see [WizardBackScope]).
   void _open(String route) =>
@@ -72,118 +55,14 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
         if (!didPop) unawaited(_wizard.back());
       },
       child: switch (page) {
-        SetupPage.welcome => _language(),
-        SetupPage.provider => _provider(facts),
-        SetupPage.speech => VoiceDownloadStep(onNext: _next, skippable: false),
+        SetupPage.welcome => SetupWelcomePage(onNext: _next),
+        SetupPage.provider => SetupProviderPage(onNext: _next),
+        SetupPage.speech => SetupSpeechPage(onNext: _next),
         SetupPage.wakeWord => _wake(facts),
         SetupPage.integrations => _integrations(),
         SetupPage.personalization => _personalization(facts),
         SetupPage.done => _done(facts),
       },
-    );
-  }
-
-  String _uiLanguageName(String code) {
-    final l = context.l10n;
-    return switch (code) {
-      'de' => l.languageGerman,
-      'en' => l.languageEnglish,
-      'fr' => l.languageFrench,
-      _ => l.appLanguageSystem,
-    };
-  }
-
-  Widget _language() {
-    final current = ref.watch(languageProvider);
-    final uiCurrent = ref.watch(uiLanguageProvider);
-    return SettingsPage(
-      title: context.l10n.onboardingWelcome,
-      showBack: false,
-      centered: true,
-      intro: context.l10n.onboardingWelcomeIntro,
-      children: [
-        const Center(child: WendelinLockup()),
-        SectionCard(
-          children: [
-            for (final (code, name) in OnboardingScreen.languages)
-              SettingsRow(
-                title: name,
-                onTap: () =>
-                    unawaited(ref.read(languageProvider.notifier).set(code)),
-                trailing: current == code
-                    ? CheckStatusIcon(
-                        CheckStatus.ok,
-                        semanticLabel: context.l10n.selected,
-                      )
-                    : null,
-              ),
-          ],
-        ),
-        Text(context.l10n.onboardingInterfaceLanguage, style: WText.caption),
-        SectionCard(
-          children: [
-            for (final code in AppLanguageScreen.codes)
-              SettingsRow(
-                title: _uiLanguageName(code),
-                onTap: () =>
-                    unawaited(ref.read(uiLanguageProvider.notifier).set(code)),
-                trailing: uiCurrent == code
-                    ? CheckStatusIcon(
-                        CheckStatus.ok,
-                        semanticLabel: context.l10n.selected,
-                      )
-                    : null,
-              ),
-          ],
-        ),
-        PrimaryButton(context.l10n.next, onPressed: _next),
-      ],
-    );
-  }
-
-  Widget _provider(SetupFacts facts) {
-    final profiles = ref.watch(profilesProvider).value?.profiles ?? const [];
-    final ready = facts.stateOf(SetupPage.provider) == PageState.met;
-    return SettingsPage(
-      title: context.l10n.onboardingLanguageModel,
-      centered: true,
-      intro: context.l10n.onboardingProviderIntro,
-      children: [
-        StatusCard(
-          key: const ValueKey('providerStatus'),
-          status: ready ? CheckStatus.ok : CheckStatus.pending,
-          title: ready
-              ? context.l10n.setupProviderReady
-              : context.l10n.setupProviderMissing,
-        ),
-        if (profiles.isNotEmpty)
-          SectionCard(
-            children: [
-              for (final p in profiles)
-                SettingsRow(title: p.name, trailing: PrivacyChip(p.privacy)),
-            ],
-          ),
-        if (ready) ...[
-          PrimaryButton(context.l10n.next, onPressed: _next),
-          WideButton(
-            context.l10n.onboardingSetUpAnotherProvider,
-            onPressed: () => unawaited(_setUpProvider()),
-          ),
-        ] else ...[
-          PrimaryButton(
-            context.l10n.mainSetUpProvider,
-            onPressed: () => unawaited(_setUpProvider()),
-          ),
-          WideButton(context.l10n.next, onPressed: null),
-        ],
-        if (kDebugMode && profiles.isEmpty)
-          WideButton(
-            context.l10n.onboardingDemoNoProvider,
-            onPressed: () => unawaited(
-              ref.read(demoModeProvider.notifier).set(enabled: true),
-            ),
-          ),
-      ],
     );
   }
 
@@ -275,42 +154,6 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
       PrimaryButton(
         context.l10n.setupDoneAction,
         onPressed: facts.canFinish ? _finish : null,
-      ),
-    ],
-  );
-}
-
-/// The question „keep listening after answers?“ (conversation mode). Not
-/// part of the seven pages of WP174; kept for the pages of part B/C.
-class ConversationQuestion extends ConsumerWidget {
-  /// Creates the question; [onAnswered] runs after the answer is stored.
-  const ConversationQuestion({super.key, required this.onAnswered});
-
-  /// Goes on after the answer.
-  final VoidCallback onAnswered;
-
-  Future<void> _set(WidgetRef ref, {required bool on}) async {
-    await ref
-        .read(voiceSettingsProvider.notifier)
-        .change(
-          (s) => s.copyWith(conversationMode: on, conversationAsked: true),
-        );
-    onAnswered();
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => SettingsPage(
-    title: context.l10n.onboardingConversation,
-    centered: true,
-    intro: context.l10n.onboardingConversationIntro,
-    children: [
-      PrimaryButton(
-        context.l10n.onboardingKeepListening,
-        onPressed: () => unawaited(_set(ref, on: true)),
-      ),
-      WideButton(
-        context.l10n.onboardingTapOnly,
-        onPressed: () => unawaited(_set(ref, on: false)),
       ),
     ],
   );

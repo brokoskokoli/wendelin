@@ -9,6 +9,7 @@ import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/ui/onboarding/onboarding_screen.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
+import 'package:wendelin_core/wendelin_core.dart';
 
 import '../screens/screen_goldens_test.dart' show mainScreenSample, phalaEnv;
 import '../settings/integrations_screen_test.dart' show settle;
@@ -58,18 +59,42 @@ void main() {
         );
       });
 
-      testWidgets('Onboarding Schritt 0', (tester) async {
-        final env = TestEnv(
-          startup: StartupSettings(setupWizardDone: false, uiLanguage: lang),
-          storedProfiles: true,
-        );
-        await _pump(tester, env);
-        expect(find.byType(OnboardingScreen), findsOneWidget);
-        await expectLater(
-          find.byKey(goldenKey),
-          matchesGoldenFile('goldens/l10n/onboarding_$lang.png'),
-        );
-      });
+      // WP174 part B: the three required pages of the setup wizard.
+      for (final (page, file) in [
+        ('welcome', 'onboarding'),
+        ('provider', 'onboarding_anbieter'),
+        ('speech', 'onboarding_sprache'),
+      ]) {
+        testWidgets('Einrichtungsassistent $page', (tester) async {
+          final env = TestEnv(
+            startup: StartupSettings(
+              setupWizardDone: false,
+              setupWizardPage: page,
+              uiLanguage: lang,
+            ),
+            storedProfiles: true,
+          );
+          // Provider page: still without a provider; speech page needs one.
+          if (page == 'speech') {
+            await env.storage.providerProfiles.save(
+              ProviderProfile(
+                id: 'p1',
+                name: 'Mein Claude',
+                type: ProviderType.anthropic,
+                defaultModel: 'claude-haiku-5-5',
+                privacy: PrivacyLevel.standard,
+                authMethod: const NoAuth(),
+              ),
+            );
+          }
+          await _pump(tester, env);
+          expect(find.byType(OnboardingScreen), findsOneWidget);
+          await expectLater(
+            find.byKey(goldenKey),
+            matchesGoldenFile('goldens/l10n/${file}_$lang.png'),
+          );
+        });
+      }
     });
   }
 }

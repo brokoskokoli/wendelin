@@ -3103,21 +3103,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get onboardingConversation => 'Conversation';
 
   @override
-  String get onboardingConversationIntro =>
-      'Wendelin doit-il continuer à écouter brièvement après ses réponses, pour que vous puissiez poser une question sans toucher l’écran ? Vous pouvez modifier ce réglage à tout moment sous Paramètres → Voix.';
-
-  @override
   String get onboardingDemoNoProvider => 'Démo sans fournisseur';
-
-  @override
-  String get onboardingInterfaceLanguage =>
-      'Langue de l’interface de l’application';
-
-  @override
-  String get onboardingKeepListening => 'Oui, continuer à écouter';
-
-  @override
-  String get onboardingLanguageModel => 'Modèle de langage';
 
   @override
   String get onboardingLearnAndEnable => 'Entraîner et activer';
@@ -3135,9 +3121,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Configurer un autre fournisseur';
 
   @override
-  String get onboardingTapOnly => 'Non, seulement après un appui';
-
-  @override
   String get onboardingWakeIntro =>
       'Wendelin peut écouter « Hey Wendelin » même quand le téléphone est posé. Pour cela, il apprend d’abord votre voix (environ 3 minutes). Vous pouvez aussi le faire plus tard dans les paramètres.';
 
@@ -3149,7 +3132,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get onboardingWelcomeIntro =>
-      'Wendelin est ton assistant vocal. La configuration comporte sept pages. Dans quelle langue lui parles-tu ?';
+      'Wendelin est votre assistant vocal personnel. Il vous écoute, s’occupe de vos tâches et reste aussi privé que possible. La configuration prend quelques minutes.';
 
   @override
   String get onboardingWhatMayWendelinDo => 'Que peut faire Wendelin ?';
@@ -3179,7 +3162,18 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucun fournisseur configuré pour l’instant';
 
   @override
-  String get setupProviderReady => 'Fournisseur configuré';
+  String get setupProviderOpen => 'Ajouter un fournisseur';
+
+  @override
+  String setupProviderReadyNamed(String name) {
+    return 'Fournisseur configuré : $name';
+  }
+
+  @override
+  String get setupProviderTitle => 'Fournisseur d’IA';
+
+  @override
+  String get setupRetry => 'Réessayer';
 
   @override
   String get setupSpeakerMissing => 'Aucune voix enregistrée pour l’instant';
@@ -3191,10 +3185,26 @@ class AppLocalizationsFr extends AppLocalizations {
   String get setupSpeakerReady => 'Ta voix est enregistrée';
 
   @override
+  String get setupSpeechDownload => 'Télécharger';
+
+  @override
+  String get setupSpeechIntro =>
+      'Wendelin reconnaît la parole sur l’appareil, sans internet et sans Google. Choisissez un modèle de reconnaissance et téléchargez-le une fois, de préférence en Wi-Fi. Silero VAD détecte quand vous parlez et en fait partie.';
+
+  @override
+  String get setupSpeechModel => 'Modèle de reconnaissance';
+
+  @override
+  String get setupSpeechTitle => 'Reconnaissance vocale';
+
+  @override
   String get setupWakeMissing => 'Mot d’activation non configuré';
 
   @override
   String get setupWakeReady => 'Mot d’activation configuré et en ordre';
+
+  @override
+  String get setupWelcomeAction => 'C’est parti';
 
   @override
   String get auditEntrySession => 'Session';
@@ -4721,19 +4731,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get voiceDownloadAnd => ' et ';
 
   @override
-  String voiceDownloadBundled(String displayName, String v) {
-    return '$displayName en fait partie ($v) et est téléchargé aussi. « small » reconnaît bien mieux l’allemand, le français et les noms. « base » est rapide et prévu pour les appareils peu puissants. Autres modèles : Paramètres → Voix.';
-  }
-
-  @override
-  String get voiceDownloadContinueInBackground => 'Continuer en arrière-plan';
-
-  @override
   String get voiceDownloadContinueLoading => 'Reprendre le chargement';
-
-  @override
-  String get voiceDownloadIntro =>
-      'Wendelin reconnaît la parole sur l’appareil, sans internet et sans Google. Choisissez le modèle et téléchargez-le une fois, de préférence en Wi-Fi.';
 
   @override
   String get voiceDownloadLoad => 'Charger';
@@ -4752,11 +4750,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String voiceDownloadLoadingPercentOf(String v, String size) {
     return 'Chargement … $v % sur $size';
-  }
-
-  @override
-  String voiceDownloadPreselectedBase(String v) {
-    return '« base » est présélectionné parce que l’appareil a peu de mémoire ($v Go). « small » demande nettement plus de mémoire pour la reconnaissance.';
   }
 
   @override
@@ -4785,9 +4778,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String voiceDownloadStillNeeded(String v) {
     return 'Encore nécessaire : $v';
   }
-
-  @override
-  String get voiceDownloadTitle => 'Charger la reconnaissance vocale';
 
   @override
   String get voiceDownloadUnpacking => 'Décompression …';

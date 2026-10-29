@@ -3,12 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/app_settings.dart';
-import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
-import 'package:wendelin/di/setup_status.dart';
 import 'package:wendelin/di/setup_wizard.dart';
 import 'package:wendelin/di/startup.dart';
-import 'package:wendelin/di/voice_settings_providers.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/onboarding/onboarding_screen.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
@@ -68,22 +65,6 @@ Future<void> tapText(WidgetTester tester, String text) async {
 }
 
 void main() {
-  testWidgets(
-    'Seite Willkommen: App-Sprache wählbar, wirkt sofort, Sprechsprache bleibt',
-    (tester) async {
-      final env = firstStart();
-      final c = await pumpApp(tester, env);
-      expect(find.text('App-Sprache der Oberfläche'), findsOneWidget);
-      await tester.tap(find.text('English').last);
-      await settle(tester);
-      expect(c.read(uiLanguageProvider), 'en');
-      expect(c.read(languageProvider), isNot('en'));
-      expect(find.text('Welcome'), findsOneWidget);
-      expect(find.text('Next'), findsOneWidget);
-      expect(await env.storage.settings.get(AppSettings.uiLanguage), 'en');
-    },
-  );
-
   testWidgets('erster Start: alle sieben Seiten bis zum Hauptbildschirm', (
     tester,
   ) async {
@@ -93,16 +74,12 @@ void main() {
     expect(find.byType(MainScreen), findsNothing);
     expect(find.text('Willkommen'), findsOneWidget);
 
-    await tester.tap(find.text('Français').first);
-    await settle(tester);
-    expect(c.read(languageProvider), 'fr');
-    expect(await env.storage.settings.get(AppSettings.language), 'fr');
+    await tapText(tester, 'Los geht’s');
+
+    expect(find.text('Anbieter eingerichtet: Mein Claude'), findsOneWidget);
     await tapText(tester, 'Weiter');
 
-    expect(find.text('Anbieter eingerichtet'), findsOneWidget);
-    await tapText(tester, 'Weiter');
-
-    expect(find.text('Spracherkennung laden'), findsOneWidget);
+    expect(find.text('Spracherkennung'), findsOneWidget);
     expect(find.text('Bereit'), findsOneWidget);
     await tapText(tester, 'Weiter');
 
@@ -143,10 +120,10 @@ void main() {
       );
       final env = firstStart(factory: f);
       await pumpApp(tester, env);
-      await tester.tap(find.text('Weiter'));
+      await tester.tap(find.text('Los geht’s'));
       await settle(tester);
       expect(find.text('Noch kein Anbieter eingerichtet'), findsOneWidget);
-      await tester.tap(find.text('Provider einrichten'));
+      await tester.tap(find.text('Anbieter eintragen'));
       await settle(tester);
       expect(find.byType(ProviderSetupScreen), findsOneWidget);
       await tester.tap(find.text('Claude'));
@@ -163,60 +140,19 @@ void main() {
       await settle(tester);
       // Back on the provider page, which now says so; no automatic jump.
       expect(find.byType(ProviderSetupScreen), findsNothing);
-      expect(find.text('Anbieter eingerichtet'), findsOneWidget);
+      expect(find.text('Anbieter eingerichtet: Claude'), findsOneWidget);
       expect(await env.storage.providerProfiles.defaultProfile(), isNotNull);
       await tapText(tester, 'Weiter');
-      expect(find.text('Spracherkennung laden'), findsOneWidget);
+      expect(find.text('Spracherkennung'), findsOneWidget);
     },
   );
-
-  testWidgets('Pflichtseite Anbieter: ohne Anbieter geht Weiter nicht', (
-    tester,
-  ) async {
-    final env = firstStart();
-    final c = await pumpApp(tester, env);
-    await tester.tap(find.text('Weiter'));
-    await settle(tester);
-    expect(find.text('Später'), findsNothing);
-    final next = find.widgetWithText(OutlinedButton, 'Weiter');
-    expect(tester.widget<OutlinedButton>(next).onPressed, isNull);
-    expect(await c.read(setupWizardPageProvider.notifier).advance(), isFalse);
-    await settle(tester);
-    expect(find.text('Noch kein Anbieter eingerichtet'), findsOneWidget);
-    expect(c.read(setupWizardPageProvider), SetupPage.provider);
-  });
-
-  testWidgets('Pflichtseite Sprache: ohne Modelle kein Später, kein Weiter', (
-    tester,
-  ) async {
-    final env = firstStart(page: 'speech');
-    await seedProvider(env);
-    final c = await pumpApp(tester, env);
-    expect(find.text('Spracherkennung laden'), findsOneWidget);
-    expect(find.text('Später'), findsNothing);
-    expect(find.text('Weiter'), findsNothing);
-    expect(await c.read(setupWizardPageProvider.notifier).advance(), isFalse);
-
-    // Only the recognition model, no VAD: still not met.
-    env.speechModels.installed.add('whisper-small');
-    await c.read(modelStatesProvider.notifier).refresh();
-    await settle(tester);
-    expect(find.text('Weiter'), findsNothing);
-    expect(await c.read(setupWizardPageProvider.notifier).advance(), isFalse);
-
-    env.speechModels.installed.add('silero-vad');
-    await c.read(modelStatesProvider.notifier).refresh();
-    await settle(tester);
-    await tapText(tester, 'Weiter');
-    expect(find.text('Aktivierungswort'), findsOneWidget);
-  });
 
   testWidgets('Demo ohne Provider überspringt den Assistenten (Debug)', (
     tester,
   ) async {
     final env = firstStart();
     final c = await pumpApp(tester, env);
-    await tester.tap(find.text('Weiter'));
+    await tester.tap(find.text('Los geht’s'));
     await settle(tester);
     await tester.tap(find.text('Demo ohne Provider'));
     await settle(tester);
@@ -235,7 +171,7 @@ void main() {
         realDemoPorts: true,
       );
       final c = await pumpApp(tester, env);
-      await tester.tap(find.text('Weiter'));
+      await tester.tap(find.text('Los geht’s'));
       await settle(tester);
       await tester.tap(find.text('Demo ohne Provider'));
       await settle(tester);
@@ -253,25 +189,6 @@ void main() {
     await settle(tester);
     expect(find.byType(OnboardingScreen), findsNothing);
     expect(find.byType(MainScreen), findsOneWidget);
-  });
-
-  testWidgets('ConversationQuestion speichert die Antwort', (tester) async {
-    final env = TestEnv();
-    var answered = 0;
-    setView(tester, screenSize);
-    await tester.pumpWidget(
-      env.app(home: ConversationQuestion(onAnswered: () => answered++)),
-    );
-    await settle(tester);
-    await tester.tap(find.text('Ja, weiter zuhören'));
-    await settle(tester);
-    final c = ProviderScope.containerOf(
-      tester.element(find.byType(ConversationQuestion)),
-    );
-    final voice = await c.read(voiceSettingsProvider.future);
-    expect(voice.conversationMode, isTrue);
-    expect(voice.conversationAsked, isTrue);
-    expect(answered, 1);
   });
 
   group('Zurück im Assistenten (Seiten)', () {
@@ -307,12 +224,12 @@ void main() {
       await pumpApp(tester, env);
       final pops = recordSystemPop(tester);
       expect(find.byTooltip('Zurück'), findsNothing, reason: 'Seite 1');
+      await tapText(tester, 'Los geht’s');
       await tapText(tester, 'Weiter');
-      await tapText(tester, 'Weiter');
-      expect(find.text('Spracherkennung laden'), findsOneWidget);
+      expect(find.text('Spracherkennung'), findsOneWidget);
 
       await back(tester);
-      expect(find.text('Sprachmodell'), findsOneWidget);
+      expect(find.text('KI-Anbieter'), findsOneWidget);
       expect(pops.where((m) => m == 'SystemNavigator.pop'), isEmpty);
       await back(tester);
       expect(find.text('Willkommen'), findsOneWidget);
@@ -346,14 +263,14 @@ void main() {
       tester,
     ) async {
       await pumpApp(tester, firstStart());
-      await tester.tap(find.text('Weiter'));
+      await tester.tap(find.text('Los geht’s'));
       await settle(tester);
-      await tester.tap(find.text('Provider einrichten'));
+      await tester.tap(find.text('Anbieter eintragen'));
       await settle(tester);
       expect(find.byType(ProviderSetupScreen), findsOneWidget);
       await back(tester);
       expect(find.byType(ProviderSetupScreen), findsNothing);
-      expect(find.text('Sprachmodell'), findsOneWidget);
+      expect(find.text('KI-Anbieter'), findsOneWidget);
     });
   });
 
@@ -363,7 +280,7 @@ void main() {
     await pumpApp(tester, firstStart());
     setView(tester, screenSize);
     await tester.pump();
-    await tester.tap(find.text('Weiter'));
+    await tester.tap(find.text('Los geht’s'));
     await settle(tester);
     final intro = find.textContaining('Wendelin braucht');
     // Last element in debug builds: „Demo ohne Provider“.

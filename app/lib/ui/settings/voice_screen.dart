@@ -9,7 +9,7 @@ import '../../di/voice_providers.dart';
 import '../../l10n/l10n.dart';
 import '../../platform/device_memory.dart';
 import '../design/design.dart';
-import '../onboarding/voice_download_step.dart';
+import '../onboarding/download_plan.dart';
 import '../routes.dart';
 import '../voice/microphone_access.dart';
 import 'model_download_row.dart';

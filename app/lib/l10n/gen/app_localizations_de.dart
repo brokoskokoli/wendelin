@@ -3083,20 +3083,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get onboardingConversation => 'Gespräch';
 
   @override
-  String get onboardingConversationIntro =>
-      'Soll Wendelin nach seinen Antworten kurz weiter zuhören, damit du ohne Tippen nachfragen kannst? Das lässt sich jederzeit unter Einstellungen → Sprache ändern.';
-
-  @override
   String get onboardingDemoNoProvider => 'Demo ohne Provider';
-
-  @override
-  String get onboardingInterfaceLanguage => 'App-Sprache der Oberfläche';
-
-  @override
-  String get onboardingKeepListening => 'Ja, weiter zuhören';
-
-  @override
-  String get onboardingLanguageModel => 'Sprachmodell';
 
   @override
   String get onboardingLearnAndEnable => 'Einlernen und einschalten';
@@ -3113,9 +3100,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get onboardingSetUpAnotherProvider => 'Weiteren Provider einrichten';
 
   @override
-  String get onboardingTapOnly => 'Nein, nur nach Tippen';
-
-  @override
   String get onboardingWakeIntro =>
       'Wendelin kann auf „Hey Wendelin“ hören, auch wenn das Telefon liegt. Dafür lernt er zuerst deine Stimme (etwa 3 Minuten). Das geht auch später in den Einstellungen.';
 
@@ -3127,7 +3111,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboardingWelcomeIntro =>
-      'Wendelin ist dein Sprachassistent. Die Einrichtung hat sieben Seiten. In welcher Sprache sprichst du mit ihm?';
+      'Wendelin ist dein persönlicher Sprachassistent. Er hört zu, erledigt Dinge für dich und bleibt dabei so privat wie möglich. Die Einrichtung dauert ein paar Minuten.';
 
   @override
   String get onboardingWhatMayWendelinDo => 'Was darf Wendelin?';
@@ -3156,7 +3140,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get setupProviderMissing => 'Noch kein Anbieter eingerichtet';
 
   @override
-  String get setupProviderReady => 'Anbieter eingerichtet';
+  String get setupProviderOpen => 'Anbieter eintragen';
+
+  @override
+  String setupProviderReadyNamed(String name) {
+    return 'Anbieter eingerichtet: $name';
+  }
+
+  @override
+  String get setupProviderTitle => 'KI-Anbieter';
+
+  @override
+  String get setupRetry => 'Erneut versuchen';
 
   @override
   String get setupSpeakerMissing => 'Noch keine Stimme eingelernt';
@@ -3168,10 +3163,26 @@ class AppLocalizationsDe extends AppLocalizations {
   String get setupSpeakerReady => 'Deine Stimme ist eingelernt';
 
   @override
+  String get setupSpeechDownload => 'Herunterladen';
+
+  @override
+  String get setupSpeechIntro =>
+      'Wendelin erkennt Sprache auf dem Gerät, ohne Internet und ohne Google. Wähle ein Erkennungsmodell und lade es einmal herunter, am besten im WLAN. Silero VAD erkennt, wann du sprichst, und gehört dazu.';
+
+  @override
+  String get setupSpeechModel => 'Erkennungsmodell';
+
+  @override
+  String get setupSpeechTitle => 'Spracherkennung';
+
+  @override
   String get setupWakeMissing => 'Aktivierungswort nicht eingerichtet';
 
   @override
   String get setupWakeReady => 'Aktivierungswort eingerichtet und in Ordnung';
+
+  @override
+  String get setupWelcomeAction => 'Los geht’s';
 
   @override
   String get auditEntrySession => 'Sitzung';
@@ -4694,19 +4705,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get voiceDownloadAnd => ' und ';
 
   @override
-  String voiceDownloadBundled(String displayName, String v) {
-    return '$displayName gehört dazu ($v) und wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen deutlich besser. „base“ ist schnell und für schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.';
-  }
-
-  @override
-  String get voiceDownloadContinueInBackground => 'Im Hintergrund weiterladen';
-
-  @override
   String get voiceDownloadContinueLoading => 'Weiterladen';
-
-  @override
-  String get voiceDownloadIntro =>
-      'Wendelin erkennt Sprache auf dem Gerät, ohne Internet und ohne Google. Wähle das Modell und lade es einmal, am besten im WLAN.';
 
   @override
   String get voiceDownloadLoad => 'Laden';
@@ -4725,11 +4724,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String voiceDownloadLoadingPercentOf(String v, String size) {
     return 'Lädt … $v % von $size';
-  }
-
-  @override
-  String voiceDownloadPreselectedBase(String v) {
-    return 'Vorausgewählt ist „base“, weil das Gerät wenig Arbeitsspeicher hat ($v GB). „small“ braucht beim Erkennen deutlich mehr Speicher.';
   }
 
   @override
@@ -4757,9 +4751,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String voiceDownloadStillNeeded(String v) {
     return 'Noch nötig: $v';
   }
-
-  @override
-  String get voiceDownloadTitle => 'Spracherkennung laden';
 
   @override
   String get voiceDownloadUnpacking => 'Wird entpackt …';
