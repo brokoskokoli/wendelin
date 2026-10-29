@@ -118,7 +118,7 @@
   "wakeServiceSectionChimeDetail": "A short sound when Wendelin has recognized the word.",
   "wakeServiceSectionChooseAssistant": "Choose assistant",
   "wakeServiceSectionEnable": "Turn on wake word",
-  "wakeServiceSectionEnableDetail": "Wendelin listens in the background for “Hey Wendelin”. In station mode it is always on.",
+  "wakeServiceSectionEnableDetail": "Wendelin listens in the background for “Hey Wendelin”. In station mode it is always on with the Wendelin model.",
   "wakeServiceSectionEndedEngine": "Ended: recognition failed",
   "wakeServiceSectionEndedModel": "Ended: a model for wake detection is missing",
   "wakeServiceSectionEndedNoPermission": "Ended: microphone permission missing",

@@ -200,6 +200,20 @@ object WakePolicy {
         else -> WakeDecision.Start
     }
 
+    /** WP173: [decide] with the model check done here ([filesDir] = the app's files directory), so the wiring is testable. */
+    fun decideWithFiles(
+        settings: WakeSettings,
+        holdsRole: Boolean,
+        micGranted: Boolean,
+        charging: Boolean,
+        nowMs: Long,
+        station: Boolean,
+        filesDir: java.io.File?,
+    ): WakeDecision = decide(
+        settings, holdsRole, micGranted, charging, nowMs, station,
+        stationModelInstalled = classifierInstalled(filesDir),
+    )
+
     /** WP173: the trained classifier file inside the app's files directory (same place as `FileModelStore`). */
     fun classifierFile(filesDir: java.io.File): java.io.File =
         java.io.File(filesDir, "models/$CLASSIFIER_ID/$CLASSIFIER_FILE")
@@ -211,7 +225,8 @@ object WakePolicy {
         false
     }
 
-    // Model id and file of `WakeClassifierCatalog` (wake_classifier_catalog.dart); WakePolicyTest pins both.
+    // Model id and file of `WakeClassifierCatalog` (wake_classifier_catalog.dart); WakePolicyTest pins both
+    // and app/test/app/wake_policy_model_name_test.dart compares them with the Dart catalog.
     const val CLASSIFIER_ID = "wake-classifier-wendelin"
     const val CLASSIFIER_FILE = "wendelin_wp130_a.onnx"
 

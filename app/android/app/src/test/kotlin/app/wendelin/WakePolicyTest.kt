@@ -109,8 +109,28 @@ class WakePolicyTest {
             // A directory of that name (or a `.part` file) is not the model.
             java.io.File(f.path + ".part").writeText("x")
             assertFalse(WakePolicy.classifierInstalled(dir))
+            assertTrue(f.mkdirs())
+            assertFalse("a directory is not the model", WakePolicy.classifierInstalled(dir))
+            assertTrue(f.delete())
             f.writeText("x")
             assertTrue(WakePolicy.classifierInstalled(dir))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun decideWithFilesChecksTheModelInTheFilesDirectory() {
+        val off = WakeSettings(enabled = false)
+        val dir = java.nio.file.Files.createTempDirectory("wp173d").toFile()
+        try {
+            fun d(files: java.io.File?) = WakePolicy.decideWithFiles(off, true, true, true, now, true, files)
+            assertEquals(WakeDecision.Skip("no-model"), d(dir))
+            assertEquals(WakeDecision.Skip("no-model"), d(null))
+            val f = WakePolicy.classifierFile(dir)
+            f.parentFile!!.mkdirs()
+            f.writeText("x")
+            assertEquals(WakeDecision.Start, d(dir))
         } finally {
             dir.deleteRecursively()
         }

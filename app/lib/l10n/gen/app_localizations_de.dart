@@ -5401,7 +5401,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get wakeServiceSectionEnableDetail =>
-      'Wendelin hört im Hintergrund auf „Hey Wendelin“. Im Stationsmodus ist es immer an.';
+      'Wendelin hört im Hintergrund auf „Hey Wendelin“. Im Stationsmodus ist es mit dem Wendelin-Modell immer an.';
 
   @override
   String get wakeServiceSectionEndedEngine =>

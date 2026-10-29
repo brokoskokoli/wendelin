@@ -5379,7 +5379,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeServiceSectionEnableDetail =>
-      'Wendelin listens in the background for “Hey Wendelin”. In station mode it is always on.';
+      'Wendelin listens in the background for “Hey Wendelin”. In station mode it is always on with the Wendelin model.';
 
   @override
   String get wakeServiceSectionEndedEngine => 'Ended: recognition failed';

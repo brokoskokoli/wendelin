@@ -17,14 +17,14 @@ import android.os.Build
  */
 object WakeStarter {
     /** The start/stop decision with the live state of the device (also used by [WakeWordService]). */
-    fun decide(context: Context, settings: WakeSettings): WakeDecision = WakePolicy.decide(
+    fun decide(context: Context, settings: WakeSettings): WakeDecision = WakePolicy.decideWithFiles(
         settings,
         holdsRole = RecognizerSwitch.holdsAssistantRole(context),
         micGranted = micGranted(context),
         charging = isCharging(context),
         nowMs = System.currentTimeMillis(),
         station = StationState.open,
-        stationModelInstalled = WakePolicy.classifierInstalled(context.filesDir),
+        filesDir = context.filesDir,
     )
 
     fun sync(context: Context, source: String) {

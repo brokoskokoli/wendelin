@@ -9186,7 +9186,7 @@ abstract class AppLocalizations {
   /// No description provided for @wakeServiceSectionEnableDetail.
   ///
   /// In de, this message translates to:
-  /// **'Wendelin hört im Hintergrund auf „Hey Wendelin“. Im Stationsmodus ist es immer an.'**
+  /// **'Wendelin hört im Hintergrund auf „Hey Wendelin“. Im Stationsmodus ist es mit dem Wendelin-Modell immer an.'**
   String get wakeServiceSectionEnableDetail;
 
   /// No description provided for @wakeServiceSectionEndedEngine.
