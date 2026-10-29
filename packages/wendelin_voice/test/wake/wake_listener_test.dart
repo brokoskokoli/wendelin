@@ -25,6 +25,7 @@ void main() {
     Set<int> hits = const {},
     Duration tail = Duration.zero,
     Duration acceptDelay = Duration.zero,
+    Duration preRoll = const Duration(milliseconds: 300),
   }) {
     // Die Tests prüfen den Inhalt der Samples; die Pegelnormalisierung der
     // Stufe 2 hat eigene Tests (verify_normalize_test.dart).
@@ -36,6 +37,7 @@ void main() {
       engine: engine,
       verifier: v ?? verifier,
       verifyTail: tail,
+      preRoll: preRoll,
     );
     found = [];
     listener.detections.listen(found.add);

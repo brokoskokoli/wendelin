@@ -9,7 +9,9 @@ Int16List ramp(int from, int n) =>
 void main() {
   group('PreRollBuffer', () {
     test('liefert genau die letzten 300 ms, sample-genau', () {
-      final b = PreRollBuffer(); // 4800 Samples
+      final b = PreRollBuffer(
+        capacity: const Duration(milliseconds: 300),
+      ); // 4800 Samples
       var next = 0;
       for (var i = 0; i < 23; i++) {
         b.add(ramp(next, 480)); // 30 ms Frames
@@ -34,24 +36,21 @@ void main() {
       expect(b.length, 160);
     });
 
-    test(
-      'Obergrenze: Kapazität über 5 s wird abgelehnt, Puffer wächst nie',
-      () {
-        expect(
-          () => PreRollBuffer(capacity: const Duration(seconds: 6)),
-          throwsArgumentError,
-        );
-        expect(
-          () => PreRollBuffer(capacity: Duration.zero),
-          throwsArgumentError,
-        );
-        final b = PreRollBuffer();
-        for (var i = 0; i < 1000; i++) {
-          b.add(ramp(0, 480));
-        }
-        expect(b.length, 4800);
-      },
-    );
+    test('Obergrenze und Standard: 5–6 s werden unterstützt, ungültig wird abgelehnt', () {
+      expect(
+        () => PreRollBuffer(capacity: const Duration(minutes: 5)),
+        throwsArgumentError,
+      );
+      expect(() => PreRollBuffer(capacity: Duration.zero), throwsArgumentError);
+      final b6 = PreRollBuffer(capacity: const Duration(seconds: 6));
+      expect(b6.capacity, const Duration(seconds: 6));
+      final b = PreRollBuffer();
+      expect(b.capacity, const Duration(seconds: 5));
+      for (var i = 0; i < 1000; i++) {
+        b.add(ramp(0, 480));
+      }
+      expect(b.length, 5 * 16000);
+    });
 
     test('snapshot(last) und clear', () {
       final b = PreRollBuffer()..add(ramp(0, 1000));

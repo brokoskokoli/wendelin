@@ -16,6 +16,8 @@ import 'wake_verifier.dart';
 import 'wake_verifier_b.dart';
 import 'wake_word_engine.dart';
 
+part 'wake_word_listener_candidate.dart';
+
 /// A confirmed wake word.
 @immutable
 final class WakeWordDetection {
@@ -110,7 +112,7 @@ final class WakeWordListener {
     this.verifier,
     this.keywords = const [KeywordSpec.wendelin],
     this.lockout = const Duration(milliseconds: 1500),
-    this.preRoll = PreRollBuffer.defaultCapacity,
+    this.preRoll = AudioRingBuffer.defaultCapacity,
     this.verifyWindow = WakeClassifierRules.verifyWindow,
     this.verifyTail = WakeClassifierRules.verifyTail,
     this.verifyTimeout = const Duration(seconds: 8),
@@ -160,11 +162,13 @@ final class WakeWordListener {
   final _stateChanges = StreamController<WakeListenerState>.broadcast(
     sync: true,
   );
-  // Window + tail + 2 s of slack for an engine that lags behind the
-  // microphone, at most the buffer limit.
-  late final PreRollBuffer _ring = PreRollBuffer(
-    capacity: _min(
-      PreRollBuffer.maxCapacity,
+
+  /// Minimum ring buffer capacity (WP178: rolling 5–6 s).
+  static const minBufferCapacity = Duration(seconds: 5);
+
+  late final AudioRingBuffer _ring = AudioRingBuffer(
+    capacity: _max(
+      minBufferCapacity,
       _max(preRoll, verifyWindow + verifyTail + const Duration(seconds: 2)),
     ),
   );
@@ -183,19 +187,15 @@ final class WakeWordListener {
   VoiceException? _failure;
   int _position = 0; // samples fed to the engine
   int _lockedUntil = 0;
-  bool _verifying = false;
-  final List<Int16List> _since = [];
   int _candidates = 0;
   int _confirmed = 0;
   int _generation = 0;
   int _processed = 0;
   Future<void> _chain = Future.value();
 
-  /// Samples of audio currently held in memory (ring and post-hit
-  /// collection); 0 after stop or pause.
+  /// Samples of audio currently held in memory (ring buffer); 0 after stop or pause.
   @visibleForTesting
-  int get bufferedSamples =>
-      _ring.length + _since.fold<int>(0, (n, f) => n + f.length);
+  int get bufferedSamples => _ring.length;
 
   /// Confirmed wake words.
   Stream<WakeWordDetection> get detections => _detections.stream;
@@ -236,12 +236,10 @@ final class WakeWordListener {
   void _listen() {
     engine.reset();
     _ring.clear();
-    _since.clear();
     _position = 0;
     _processed = 0;
     _chain = Future.value();
     _lockedUntil = 0;
-    _verifying = false;
     _shadow.reset();
     if (devClips?.archive != null) attachWindowSink(engine, _onWindow);
     final gen = ++_generation;
@@ -268,7 +266,6 @@ final class WakeWordListener {
     if (gen != _generation) return;
     _ring.add(frame);
     _dev.feed(frame);
-    if (_verifying) _since.add(frame);
     _position += frame.length;
     if (_tailWait != null && _position >= _tailTarget) {
       _tailWait!.complete();
@@ -291,133 +288,36 @@ final class WakeWordListener {
     }
   }
 
-  // WP155/WP171: a window; a case is archived once its run is over.
-  void _onWindow(WakeWindowScores w) {
-    try {
-      if (!_dev.on) {
-        _shadow.reset();
-        return;
-      }
-      final miss = _shadow.onWindow(w);
-      if (miss == null) return;
-      final c = noteShadowCase(devClips, miss, _above);
-      if (c == null) return;
-      _dev.startCase(
-        () => _candidateClip(miss.clipEnd, 'near-miss', c, only: true),
-        c,
-      );
-    } on Object {
-      // Never into the voice path.
-    }
-  }
-
-  void _startCandidateClip(int end, DevArchiveCase? arch) {
-    if (arch != null) {
-      _dev.startCase(() => _candidateClip(end, 'wake-cand', arch), arch);
-    } else {
-      _dev.start(() => _candidateClip(end, 'wake-cand', null));
-    }
-  }
-
   Future<void> _onCandidate(WakeWordHit hit, int gen) async {
     _candidates++;
     final end = hit.endSample;
     final peaks = _shadow.candidate(end);
     final arch = noteWakeCandidate(devClips, hit, shadow: peaks, above: _above);
     _startCandidateClip(end, arch);
-    final v = verifier;
-    final tail = v == null || hit.direct ? 0 : durationToSamples(verifyTail);
-    if (tail > 0 && _position < end + tail) {
-      _tailTarget = end + tail;
-      final wait = _tailWait = Completer<void>();
-      await wait.future.timeout(verifyTimeout, onTimeout: () {});
-      _tailWait = null;
-      if (gen != _generation) {
-        arch?.finish('dropped', {'reason': 'stopped'});
-        return;
-      }
-    }
-    // From here on the frames are collected for the consumer, the snapshot
-    // holds everything up to now (engine lag included).
-    _verifying = true;
-    _since.clear();
-    final snap = _ring.snapshot();
-    final snapStart = _position - snap.length;
-    int rel(int abs) => (abs - snapStart).clamp(0, snap.length);
-    final lead = Int16List.sublistView(
-      snap,
-      rel(end - durationToSamples(verifyWindow)),
-      rel(end + tail),
-    );
-    var ok = true;
-    var verdict = hit.direct ? 'direct' : (v == null ? 'unchecked' : 'ok');
-    if (v != null && !hit.direct) {
-      try {
-        final at = rel(end) - rel(end - durationToSamples(verifyWindow));
-        devClips?.emitMarked('wake-verify', lead, 'wakeEnd', at);
-        noteVerifyClip(devClips, arch, 'wake-verify', lead, 'wakeEnd', at);
-        ok =
-            await (v is WakeEndAwareVerifier
-                    ? v.confirmAt(lead, at)
-                    : v.confirm(lead))
-                .timeout(verifyTimeout);
-        verdict = ok ? 'ok' : 'no';
-      } on Object {
-        ok = false; // a failing or slow verifier must not trigger
-        verdict = 'error';
-      }
-      noteWakeVerdict(devClips, arch, v, verdict);
-    }
+    // WP178: Hold buffer during verification so it grows with incoming audio
+    // without dropping the candidate audio or subsequent command.
+    _ring.hold();
+    final tail = verifier == null || hit.direct
+        ? 0
+        : durationToSamples(verifyTail);
+    if (!await _waitForTail(end, tail, gen, arch)) return;
+
+    final res = await _verifyCandidate(hit, end, tail, arch, gen);
     if (gen != _generation) {
+      _ring.release(discard: true);
       arch?.finish('dropped', {'reason': 'stopped'});
       return;
     }
-    finishWakeCase(arch, verdict, ok);
-    _verifying = false;
+    finishWakeCase(arch, res.verdict, res.ok);
     _lockedUntil = _processed + durationToSamples(lockout);
-    final since = List.of(_since);
-    _since.clear();
-    if (!ok) return;
-    _confirmed++;
-    final preStart = rel(end - durationToSamples(preRoll));
-    final pre = Int16List.sublistView(snap, preStart);
-    final total = pre.length + since.fold<int>(0, (n, f) => n + f.length);
-    final out = Int16List(total)..setAll(0, pre);
-    var at = pre.length;
-    for (final f in since) {
-      out.setAll(at, f);
-      at += f.length;
+    if (!res.ok) {
+      // Discard excess audio older than capacity and resume rolling.
+      _ring.release(discard: true);
+      return;
     }
-    _detections.add(
-      WakeWordDetection(
-        hit: hit,
-        preRoll: out,
-        latency: samplesToDuration(_position - end),
-        wakeEnd: (end - (snapStart + preStart)).clamp(0, out.length),
-        position: snapStart + snap.length + (total - pre.length),
-      ),
-    );
-  }
-
-  // The candidate at stream position [end] with what lies around it (WP148).
-  DevAround _candidateClip(
-    int end,
-    String event,
-    DevArchiveCase? archiveCase, {
-    bool only = false,
-  }) {
-    final snap = _ring.snapshot();
-    final start = _position - snap.length;
-    int rel(int abs) => (abs - start).clamp(0, snap.length);
-    final span = durationToSamples(devClipSpan);
-    return DevAround(
-      event: event,
-      before: Int16List.sublistView(snap, rel(end - span), rel(end)),
-      already: Int16List.sublistView(snap, rel(end)),
-      afterWanted: span,
-      archiveCase: archiveCase,
-      archiveOnly: only,
-    );
+    _ring.release(discard: false);
+    _confirmed++;
+    _emitDetection(hit, end);
   }
 
   /// Releases the microphone; [resume] continues. No-op unless listening.
@@ -455,8 +355,6 @@ final class WakeWordListener {
     _dev.flush();
     // No audio stays in memory while the microphone is released.
     _ring.clear();
-    _since.clear();
-    _verifying = false;
     _tailWait?.complete();
     _tailWait = null;
     final sub = _sub;
@@ -498,5 +396,4 @@ final class WakeWordListener {
   }
 }
 
-Duration _min(Duration a, Duration b) => a < b ? a : b;
 Duration _max(Duration a, Duration b) => a > b ? a : b;
