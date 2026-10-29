@@ -15,7 +15,8 @@ final class StartupSettings {
     this.enabledIntegrations = const {},
     this.demoMode = false,
     this.showThinking = false,
-    this.onboardingDone = true,
+    this.setupWizardDone = true,
+    this.setupWizardPage,
     this.language = 'de',
     this.uiLanguage = 'system',
     this.developerMode = false,
@@ -41,9 +42,13 @@ final class StartupSettings {
   /// Show reasoning text.
   final bool showThinking;
 
-  /// Whether the onboarding is done (`true` by default so tests and the
-  /// demo start on the main screen; [load] reads the stored value).
-  final bool onboardingDone;
+  /// Whether the setup wizard (WP174) is finished (`true` by default so tests
+  /// and the demo start on the main screen; [load] reads the stored value,
+  /// missing = not done).
+  final bool setupWizardDone;
+
+  /// Stored page name of the wizard (`SetupPage.name`), `null` = start.
+  final String? setupWizardPage;
 
   /// Preferred language.
   final String language;
@@ -102,7 +107,8 @@ final class StartupSettings {
       enabledIntegrations: enabled,
       demoMode: await settings.get(AppSettings.demoMode) ?? false,
       showThinking: await settings.get(AppSettings.showThinking) ?? false,
-      onboardingDone: await settings.get(AppSettings.onboardingDone) ?? false,
+      setupWizardDone: await settings.get(AppSettings.setupWizardDone) ?? false,
+      setupWizardPage: await settings.get(AppSettings.setupWizardPage),
       language: await settings.get(AppSettings.language) ?? 'de',
       uiLanguage: await settings.get(AppSettings.uiLanguage) ?? 'system',
       developerMode: await settings.get(AppSettings.developerMode) ?? false,

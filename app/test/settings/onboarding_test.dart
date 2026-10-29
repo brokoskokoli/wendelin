@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/di/setup_status.dart';
+import 'package:wendelin/di/setup_wizard.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/voice_settings_providers.dart';
 import 'package:wendelin/ui/design/design.dart';
@@ -18,10 +20,32 @@ import '../support/test_env.dart';
 import '../ui/helpers.dart';
 import 'integrations_screen_test.dart' show settle;
 
-TestEnv firstStart({RecordingFactory? factory}) => TestEnv(
-  startup: const StartupSettings(onboardingDone: false),
-  storedProfiles: true,
-  llmFactory: (factory ?? RecordingFactory()).call,
+TestEnv firstStart({
+  RecordingFactory? factory,
+  String? page,
+  bool withSpeech = false,
+}) {
+  final env = TestEnv(
+    startup: StartupSettings(setupWizardDone: false, setupWizardPage: page),
+    storedProfiles: true,
+    llmFactory: (factory ?? RecordingFactory()).call,
+  );
+  if (withSpeech) {
+    env.speechModels.installed.addAll(['whisper-small', 'silero-vad']);
+  }
+  return env;
+}
+
+Future<void> seedProvider(TestEnv env) =>
+    env.storage.providerProfiles.save(testProfile());
+
+ProviderProfile testProfile() => ProviderProfile(
+  id: 'p1',
+  name: 'Mein Claude',
+  type: ProviderType.anthropic,
+  defaultModel: 'claude-haiku-5-5',
+  privacy: PrivacyLevel.standard,
+  authMethod: const NoAuth(),
 );
 
 /// Tall enough for the integrations step (more tiles than fit in 1400).
@@ -36,9 +60,16 @@ Future<ProviderContainer> pumpApp(WidgetTester tester, TestEnv env) async {
   );
 }
 
+Future<void> tapText(WidgetTester tester, String text) async {
+  await tester.ensureVisible(find.text(text));
+  await tester.pump();
+  await tester.tap(find.text(text));
+  await settle(tester);
+}
+
 void main() {
   testWidgets(
-    'Schritt 0: App-Sprache wählbar, wirkt sofort, Sprechsprache bleibt',
+    'Seite Willkommen: App-Sprache wählbar, wirkt sofort, Sprechsprache bleibt',
     (tester) async {
       final env = firstStart();
       final c = await pumpApp(tester, env);
@@ -53,39 +84,31 @@ void main() {
     },
   );
 
-  testWidgets('erster Start: Sprache, später Provider, Integrationen, Fertig', (
+  testWidgets('erster Start: alle sieben Seiten bis zum Hauptbildschirm', (
     tester,
   ) async {
-    final env = firstStart();
+    final env = firstStart(withSpeech: true);
+    await seedProvider(env);
     final c = await pumpApp(tester, env);
     expect(find.byType(MainScreen), findsNothing);
     expect(find.text('Willkommen'), findsOneWidget);
-    expect(find.textContaining('Whisper'), findsNothing);
 
     await tester.tap(find.text('Français').first);
     await settle(tester);
     expect(c.read(languageProvider), 'fr');
     expect(await env.storage.settings.get(AppSettings.language), 'fr');
-    await tester.tap(find.text('Weiter'));
-    await settle(tester);
+    await tapText(tester, 'Weiter');
 
-    expect(find.text('Sprachmodell'), findsOneWidget);
-    await tester.tap(find.text('Später'));
-    await settle(tester);
+    expect(find.text('Anbieter eingerichtet'), findsOneWidget);
+    await tapText(tester, 'Weiter');
 
     expect(find.text('Spracherkennung laden'), findsOneWidget);
-    await tester.tap(find.text('Später'));
-    await settle(tester);
+    expect(find.text('Bereit'), findsOneWidget);
+    await tapText(tester, 'Weiter');
 
-    // Gesprächsmodus (M4, Entscheidung 2): eigener Schritt, Antwort wird
-    // gespeichert, die Nachfrage im Hauptbildschirm kommt dann nie.
-    expect(find.text('Gespräch'), findsOneWidget);
-    expect(find.textContaining('Einstellungen → Sprache'), findsOneWidget);
-    await tester.tap(find.text('Ja, weiter zuhören'));
-    await settle(tester);
-    final voice = await c.read(voiceSettingsProvider.future);
-    expect(voice.conversationMode, isTrue);
-    expect(voice.conversationAsked, isTrue);
+    expect(find.text('Aktivierungswort'), findsOneWidget);
+    expect(find.text('Aktivierungswort nicht eingerichtet'), findsOneWidget);
+    await tapText(tester, 'Ohne fortfahren');
 
     expect(find.text('Was darf Wendelin?'), findsOneWidget);
     await tester.runAsync(() => c.read(toolRegistryProvider).refresh());
@@ -99,49 +122,96 @@ void main() {
     );
     await settle(tester);
     expect(c.read(enabledIntegrationsProvider), contains('clipboard'));
+    await tapText(tester, 'Weiter');
 
-    // Letzter Schritt (WP50 b): Aktivierungswort, überspringbar.
-    await tester.scrollUntilVisible(find.text('Weiter'), 200);
-    // A longer list (Waze, WP164 B) leaves the button at the screen edge.
-    await tester.ensureVisible(find.text('Weiter'));
-    await tester.pump();
-    await tester.tap(find.text('Weiter'));
-    await settle(tester);
-    expect(find.text('Aktivierungswort'), findsOneWidget);
-    await tester.tap(find.text('Überspringen'));
-    await settle(tester);
+    expect(find.text('Personalisierung'), findsOneWidget);
+    await tapText(tester, 'Ohne fortfahren');
+
+    expect(find.text('Fertig'), findsOneWidget);
+    expect(find.byType(MainScreen), findsNothing);
+    await tapText(tester, 'Los geht’s');
     expect(find.byType(MainScreen), findsOneWidget);
-    expect(await env.storage.settings.get(AppSettings.onboardingDone), isTrue);
+    expect(await env.storage.settings.get(AppSettings.setupWizardDone), isTrue);
+    expect(c.read(setupWizardDoneProvider), isTrue);
   });
 
-  testWidgets('Provider im Onboarding einrichten', (tester) async {
-    final f = RecordingFactory(
-      models: const [ModelInfo(id: 'claude-haiku-5-5')],
-    );
-    final env = firstStart(factory: f);
-    await pumpApp(tester, env);
+  testWidgets(
+    'Provider im Assistenten einrichten: Seite zeigt es, dann Weiter',
+    (tester) async {
+      final f = RecordingFactory(
+        models: const [ModelInfo(id: 'claude-haiku-5-5')],
+      );
+      final env = firstStart(factory: f);
+      await pumpApp(tester, env);
+      await tester.tap(find.text('Weiter'));
+      await settle(tester);
+      expect(find.text('Noch kein Anbieter eingerichtet'), findsOneWidget);
+      await tester.tap(find.text('Provider einrichten'));
+      await settle(tester);
+      expect(find.byType(ProviderSetupScreen), findsOneWidget);
+      await tester.tap(find.text('Claude'));
+      await settle(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey('apiKey')),
+        'testschluessel-x',
+      );
+      await tester.tap(find.text('Verbindung testen'));
+      await settle(tester);
+      await tester.tap(find.text('Modell prüfen'));
+      await settle(tester);
+      await tester.tap(find.text('Speichern'));
+      await settle(tester);
+      // Back on the provider page, which now says so; no automatic jump.
+      expect(find.byType(ProviderSetupScreen), findsNothing);
+      expect(find.text('Anbieter eingerichtet'), findsOneWidget);
+      expect(await env.storage.providerProfiles.defaultProfile(), isNotNull);
+      await tapText(tester, 'Weiter');
+      expect(find.text('Spracherkennung laden'), findsOneWidget);
+    },
+  );
+
+  testWidgets('Pflichtseite Anbieter: ohne Anbieter geht Weiter nicht', (
+    tester,
+  ) async {
+    final env = firstStart();
+    final c = await pumpApp(tester, env);
     await tester.tap(find.text('Weiter'));
     await settle(tester);
-    await tester.tap(find.text('Provider einrichten'));
+    expect(find.text('Später'), findsNothing);
+    final next = find.widgetWithText(OutlinedButton, 'Weiter');
+    expect(tester.widget<OutlinedButton>(next).onPressed, isNull);
+    expect(await c.read(setupWizardPageProvider.notifier).advance(), isFalse);
     await settle(tester);
-    expect(find.byType(ProviderSetupScreen), findsOneWidget);
-    await tester.tap(find.text('Claude'));
-    await settle(tester);
-    await tester.enterText(
-      find.byKey(const ValueKey('apiKey')),
-      'testschluessel-x',
-    );
-    await tester.tap(find.text('Verbindung testen'));
-    await settle(tester);
-    await tester.tap(find.text('Modell prüfen'));
-    await settle(tester);
-    await tester.tap(find.text('Speichern'));
-    await settle(tester);
-    expect(find.text('Spracherkennung laden'), findsOneWidget);
-    expect(await env.storage.providerProfiles.defaultProfile(), isNotNull);
+    expect(find.text('Noch kein Anbieter eingerichtet'), findsOneWidget);
+    expect(c.read(setupWizardPageProvider), SetupPage.provider);
   });
 
-  testWidgets('Demo ohne Provider beendet das Onboarding (Debug)', (
+  testWidgets('Pflichtseite Sprache: ohne Modelle kein Später, kein Weiter', (
+    tester,
+  ) async {
+    final env = firstStart(page: 'speech');
+    await seedProvider(env);
+    final c = await pumpApp(tester, env);
+    expect(find.text('Spracherkennung laden'), findsOneWidget);
+    expect(find.text('Später'), findsNothing);
+    expect(find.text('Weiter'), findsNothing);
+    expect(await c.read(setupWizardPageProvider.notifier).advance(), isFalse);
+
+    // Only the recognition model, no VAD: still not met.
+    env.speechModels.installed.add('whisper-small');
+    await c.read(modelStatesProvider.notifier).refresh();
+    await settle(tester);
+    expect(find.text('Weiter'), findsNothing);
+    expect(await c.read(setupWizardPageProvider.notifier).advance(), isFalse);
+
+    env.speechModels.installed.add('silero-vad');
+    await c.read(modelStatesProvider.notifier).refresh();
+    await settle(tester);
+    await tapText(tester, 'Weiter');
+    expect(find.text('Aktivierungswort'), findsOneWidget);
+  });
+
+  testWidgets('Demo ohne Provider überspringt den Assistenten (Debug)', (
     tester,
   ) async {
     final env = firstStart();
@@ -152,7 +222,6 @@ void main() {
     await settle(tester);
     expect(find.byType(MainScreen), findsOneWidget);
     expect(c.read(demoModeProvider), isTrue);
-    expect(c.read(onboardingDoneProvider), isTrue);
   });
 
   testWidgets(
@@ -160,7 +229,7 @@ void main() {
     'während des Aufbaus (Regression WP11)',
     (tester) async {
       final env = TestEnv(
-        startup: const StartupSettings(onboardingDone: false),
+        startup: const StartupSettings(setupWizardDone: false),
         storedProfiles: true,
         llmFactory: RecordingFactory().call,
         realDemoPorts: true,
@@ -176,7 +245,7 @@ void main() {
     },
   );
 
-  testWidgets('nach dem Onboarding startet die App im Hauptbildschirm', (
+  testWidgets('nach dem Assistenten startet die App im Hauptbildschirm', (
     tester,
   ) async {
     setView(tester, screenSize);
@@ -186,7 +255,26 @@ void main() {
     expect(find.byType(MainScreen), findsOneWidget);
   });
 
-  group('B4: Zurück im Onboarding', () {
+  testWidgets('ConversationQuestion speichert die Antwort', (tester) async {
+    final env = TestEnv();
+    var answered = 0;
+    setView(tester, screenSize);
+    await tester.pumpWidget(
+      env.app(home: ConversationQuestion(onAnswered: () => answered++)),
+    );
+    await settle(tester);
+    await tester.tap(find.text('Ja, weiter zuhören'));
+    await settle(tester);
+    final c = ProviderScope.containerOf(
+      tester.element(find.byType(ConversationQuestion)),
+    );
+    final voice = await c.read(voiceSettingsProvider.future);
+    expect(voice.conversationMode, isTrue);
+    expect(voice.conversationAsked, isTrue);
+    expect(answered, 1);
+  });
+
+  group('Zurück im Assistenten (Seiten)', () {
     /// Records `SystemNavigator.pop` (Android closes the app).
     List<String> recordSystemPop(WidgetTester tester) {
       final calls = <String>[];
@@ -211,16 +299,16 @@ void main() {
       await settle(tester);
     }
 
-    testWidgets('Geste: ab Schritt 2 einen Schritt zurück, in Schritt 1 zu', (
+    testWidgets('Geste: ab Seite 2 eine Seite zurück, auf Seite 1 zu', (
       tester,
     ) async {
-      await pumpApp(tester, firstStart());
+      final env = firstStart(withSpeech: true);
+      await seedProvider(env);
+      await pumpApp(tester, env);
       final pops = recordSystemPop(tester);
-      expect(find.byTooltip('Zurück'), findsNothing, reason: 'Schritt 1');
-      await tester.tap(find.text('Weiter'));
-      await settle(tester);
-      await tester.tap(find.text('Später'));
-      await settle(tester);
+      expect(find.byTooltip('Zurück'), findsNothing, reason: 'Seite 1');
+      await tapText(tester, 'Weiter');
+      await tapText(tester, 'Weiter');
       expect(find.text('Spracherkennung laden'), findsOneWidget);
 
       await back(tester);
@@ -234,37 +322,27 @@ void main() {
       expect(
         pops.where((m) => m == 'SystemNavigator.pop'),
         hasLength(1),
-        reason: 'Schritt 1: Android schließt die App',
+        reason: 'Seite 1: Android schließt die App',
       );
     });
 
-    testWidgets('Pfeil ab Schritt 2, auch im letzten Schritt', (tester) async {
-      await pumpApp(tester, firstStart());
-      await tester.tap(find.text('Weiter'));
+    testWidgets('Pfeil ab Seite 2, auch auf der letzten Seite', (tester) async {
+      final env = firstStart(page: 'done', withSpeech: true);
+      await seedProvider(env);
+      await pumpApp(tester, env);
+      expect(find.text('Fertig'), findsOneWidget);
+      await tester.tap(find.byTooltip('Zurück'));
       await settle(tester);
-      expect(find.byTooltip('Zurück'), findsOneWidget);
-      await tester.tap(find.text('Später'));
-      await settle(tester);
-      await tester.tap(find.text('Später'));
-      await settle(tester);
-      await tester.tap(find.text('Nein, nur nach Tippen'));
+      expect(find.text('Personalisierung'), findsOneWidget);
+      await tester.tap(find.byTooltip('Zurück'));
       await settle(tester);
       expect(find.text('Was darf Wendelin?'), findsOneWidget);
-      await tester.tap(find.byTooltip('Zurück'));
-      await settle(tester);
-      expect(find.text('Gespräch'), findsOneWidget);
-      await tester.tap(find.byTooltip('Zurück'));
-      await settle(tester);
-      expect(find.text('Spracherkennung laden'), findsOneWidget);
-      await tester.tap(find.byTooltip('Zurück'));
-      await settle(tester);
-      expect(find.text('Sprachmodell'), findsOneWidget);
       final size = tester.getSize(find.byTooltip('Zurück'));
       expect(size.width, greaterThanOrEqualTo(WSize.touchMin));
       expect(size.height, greaterThanOrEqualTo(WSize.touchMin));
     });
 
-    testWidgets('Zurück aus der Provider-Einrichtung bleibt im Schritt 2', (
+    testWidgets('Zurück aus der Provider-Einrichtung bleibt auf der Seite', (
       tester,
     ) async {
       await pumpApp(tester, firstStart());
@@ -279,7 +357,7 @@ void main() {
     });
   });
 
-  testWidgets('Provider-Schritt: Inhalt vertikal mittig, solange er passt', (
+  testWidgets('Provider-Seite: Inhalt vertikal mittig, solange er passt', (
     tester,
   ) async {
     await pumpApp(tester, firstStart());
@@ -296,9 +374,9 @@ void main() {
     final box = find.ancestor(of: intro, matching: find.byType(InfoBox));
     final top = tester.getTopLeft(box).dy - area.top;
     final below = area.bottom - tester.getBottomLeft(last).dy;
-    // Equal space above and below the content, a lot of it on a phone.
+    // Equal space above and below the content.
     expect(top, closeTo(below, 1));
-    expect(top, greaterThan(100));
+    expect(top, greaterThan(40));
     expect(
       area.bottom,
       closeTo(

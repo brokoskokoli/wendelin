@@ -257,7 +257,7 @@ void main() {
         try {
           await reset.providerProfiles.delete('phala');
           await reset.settings.remove(voiceSettingsKey);
-          await reset.settings.remove(AppSettings.onboardingDone);
+          await reset.settings.remove(AppSettings.setupWizardDone);
           await reset.settings.remove(
             AppSettings.integrationEnabled('calendar'),
           );
@@ -269,7 +269,7 @@ void main() {
         await SecureSecretStore().delete('provider.phala.apiKey');
       });
       final setup = WendelinStorage(driftDatabase(name: 'wendelin'));
-      await setup.settings.set(AppSettings.onboardingDone, true);
+      await setup.settings.set(AppSettings.setupWizardDone, true);
       await setup.settings.set(
         AppSettings.integrationEnabled('calendar'),
         true,

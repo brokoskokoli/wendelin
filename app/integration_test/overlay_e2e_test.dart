@@ -75,7 +75,7 @@ void main() {
       }
       await setup.settings.remove(RoutingSettings.rules);
       await setup.settings.remove(RoutingSettings.privateRuleNotice);
-      await setup.settings.set(AppSettings.onboardingDone, true);
+      await setup.settings.set(AppSettings.setupWizardDone, true);
       await setup.settings.set(
         AppSettings.integrationEnabled('obsidian'),
         true,

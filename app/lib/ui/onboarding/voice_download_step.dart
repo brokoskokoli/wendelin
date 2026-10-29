@@ -117,10 +117,18 @@ final class DownloadPlan {
 /// further models come from Einstellungen → Sprache.
 class VoiceDownloadStep extends ConsumerStatefulWidget {
   /// Creates the step; [onNext] goes to the next step.
-  const VoiceDownloadStep({super.key, required this.onNext});
+  const VoiceDownloadStep({
+    super.key,
+    required this.onNext,
+    this.skippable = true,
+  });
 
   /// Next onboarding step.
   final VoidCallback onNext;
+
+  /// Offers „Später“ / „Im Hintergrund weiter“ (off in the setup wizard,
+  /// where the page is required).
+  final bool skippable;
 
   @override
   ConsumerState<VoiceDownloadStep> createState() => _VoiceDownloadState();
@@ -229,12 +237,13 @@ class _VoiceDownloadState extends ConsumerState<VoiceDownloadStep> {
             plan.loadLabel(context.l10n),
             onPressed: plan.canLoad ? () => _load(plan) : null,
           ),
-          WideButton(
-            plan.busy
-                ? context.l10n.voiceDownloadContinueInBackground
-                : context.l10n.later,
-            onPressed: widget.onNext,
-          ),
+          if (widget.skippable)
+            WideButton(
+              plan.busy
+                  ? context.l10n.voiceDownloadContinueInBackground
+                  : context.l10n.later,
+              onPressed: widget.onNext,
+            ),
         ],
       ],
     );

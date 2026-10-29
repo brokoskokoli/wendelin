@@ -60,7 +60,7 @@ void main() {
 
       testWidgets('Onboarding Schritt 0', (tester) async {
         final env = TestEnv(
-          startup: StartupSettings(onboardingDone: false, uiLanguage: lang),
+          startup: StartupSettings(setupWizardDone: false, uiLanguage: lang),
           storedProfiles: true,
         );
         await _pump(tester, env);

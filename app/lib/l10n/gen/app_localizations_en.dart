@@ -3093,9 +3093,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingSetUpAnotherProvider => 'Set up another provider';
 
   @override
-  String get onboardingSkip => 'Skip';
-
-  @override
   String get onboardingTapOnly => 'No, only after tapping';
 
   @override
@@ -3110,10 +3107,51 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingWelcomeIntro =>
-      'Wendelin is your voice assistant. Setup takes six steps. Which language do you speak with it?';
+      'Wendelin is your voice assistant. Setup has seven pages. Which language do you speak with it?';
 
   @override
   String get onboardingWhatMayWendelinDo => 'What may Wendelin do?';
+
+  @override
+  String get setupContinueWithout => 'Continue without';
+
+  @override
+  String get setupDoneAction => 'Let’s go';
+
+  @override
+  String get setupDoneIntro =>
+      'Wendelin is set up. You can find everything else in Settings at any time.';
+
+  @override
+  String get setupDoneTitle => 'Done';
+
+  @override
+  String get setupPersonalizationIntro =>
+      'Do you want Wendelin to recognize you by your voice? It learns your voice from a few sentences. This is optional and can also be done later in Settings.';
+
+  @override
+  String get setupPersonalizationTitle => 'Personalization';
+
+  @override
+  String get setupProviderMissing => 'No provider set up yet';
+
+  @override
+  String get setupProviderReady => 'Provider set up';
+
+  @override
+  String get setupSpeakerMissing => 'No voice enrolled yet';
+
+  @override
+  String get setupSpeakerOpen => 'Enroll voice';
+
+  @override
+  String get setupSpeakerReady => 'Your voice is enrolled';
+
+  @override
+  String get setupWakeMissing => 'Wake word not set up';
+
+  @override
+  String get setupWakeReady => 'Wake word set up and working';
 
   @override
   String get auditEntrySession => 'Session';

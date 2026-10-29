@@ -5314,12 +5314,6 @@ abstract class AppLocalizations {
   /// **'Weiteren Provider einrichten'**
   String get onboardingSetUpAnotherProvider;
 
-  /// No description provided for @onboardingSkip.
-  ///
-  /// In de, this message translates to:
-  /// **'Überspringen'**
-  String get onboardingSkip;
-
   /// No description provided for @onboardingTapOnly.
   ///
   /// In de, this message translates to:
@@ -5347,7 +5341,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeIntro.
   ///
   /// In de, this message translates to:
-  /// **'Wendelin ist dein Sprachassistent. In sechs Schritten ist er eingerichtet. Welche Sprache sprichst du mit ihm?'**
+  /// **'Wendelin ist dein Sprachassistent. Die Einrichtung hat sieben Seiten. In welcher Sprache sprichst du mit ihm?'**
   String get onboardingWelcomeIntro;
 
   /// No description provided for @onboardingWhatMayWendelinDo.
@@ -5355,6 +5349,84 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Was darf Wendelin?'**
   String get onboardingWhatMayWendelinDo;
+
+  /// No description provided for @setupContinueWithout.
+  ///
+  /// In de, this message translates to:
+  /// **'Ohne fortfahren'**
+  String get setupContinueWithout;
+
+  /// No description provided for @setupDoneAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Los geht’s'**
+  String get setupDoneAction;
+
+  /// No description provided for @setupDoneIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendelin ist eingerichtet. Alles Weitere findest du jederzeit in den Einstellungen.'**
+  String get setupDoneIntro;
+
+  /// No description provided for @setupDoneTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Fertig'**
+  String get setupDoneTitle;
+
+  /// No description provided for @setupPersonalizationIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Möchtest du, dass Wendelin dich an der Stimme erkennt? Dann lernt es deine Stimme mit ein paar Sätzen. Das ist freiwillig und geht auch später in den Einstellungen.'**
+  String get setupPersonalizationIntro;
+
+  /// No description provided for @setupPersonalizationTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Personalisierung'**
+  String get setupPersonalizationTitle;
+
+  /// No description provided for @setupProviderMissing.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch kein Anbieter eingerichtet'**
+  String get setupProviderMissing;
+
+  /// No description provided for @setupProviderReady.
+  ///
+  /// In de, this message translates to:
+  /// **'Anbieter eingerichtet'**
+  String get setupProviderReady;
+
+  /// No description provided for @setupSpeakerMissing.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Stimme eingelernt'**
+  String get setupSpeakerMissing;
+
+  /// No description provided for @setupSpeakerOpen.
+  ///
+  /// In de, this message translates to:
+  /// **'Stimme einlernen'**
+  String get setupSpeakerOpen;
+
+  /// No description provided for @setupSpeakerReady.
+  ///
+  /// In de, this message translates to:
+  /// **'Deine Stimme ist eingelernt'**
+  String get setupSpeakerReady;
+
+  /// No description provided for @setupWakeMissing.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktivierungswort nicht eingerichtet'**
+  String get setupWakeMissing;
+
+  /// No description provided for @setupWakeReady.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktivierungswort eingerichtet und in Ordnung'**
+  String get setupWakeReady;
 
   /// No description provided for @auditEntrySession.
   ///

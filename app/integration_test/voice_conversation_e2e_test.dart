@@ -38,7 +38,7 @@ void main() {
       });
 
       final setup = WendelinStorage(driftDatabase(name: 'wendelin'));
-      await setup.settings.set(AppSettings.onboardingDone, true);
+      await setup.settings.set(AppSettings.setupWizardDone, true);
       await setup.settings.set(
         voiceSettingsKey,
         const VoiceSettings(sttModel: 'whisper-base', conversationMode: true),

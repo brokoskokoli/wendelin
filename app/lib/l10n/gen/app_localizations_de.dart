@@ -3113,9 +3113,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get onboardingSetUpAnotherProvider => 'Weiteren Provider einrichten';
 
   @override
-  String get onboardingSkip => 'Überspringen';
-
-  @override
   String get onboardingTapOnly => 'Nein, nur nach Tippen';
 
   @override
@@ -3130,10 +3127,51 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboardingWelcomeIntro =>
-      'Wendelin ist dein Sprachassistent. In sechs Schritten ist er eingerichtet. Welche Sprache sprichst du mit ihm?';
+      'Wendelin ist dein Sprachassistent. Die Einrichtung hat sieben Seiten. In welcher Sprache sprichst du mit ihm?';
 
   @override
   String get onboardingWhatMayWendelinDo => 'Was darf Wendelin?';
+
+  @override
+  String get setupContinueWithout => 'Ohne fortfahren';
+
+  @override
+  String get setupDoneAction => 'Los geht’s';
+
+  @override
+  String get setupDoneIntro =>
+      'Wendelin ist eingerichtet. Alles Weitere findest du jederzeit in den Einstellungen.';
+
+  @override
+  String get setupDoneTitle => 'Fertig';
+
+  @override
+  String get setupPersonalizationIntro =>
+      'Möchtest du, dass Wendelin dich an der Stimme erkennt? Dann lernt es deine Stimme mit ein paar Sätzen. Das ist freiwillig und geht auch später in den Einstellungen.';
+
+  @override
+  String get setupPersonalizationTitle => 'Personalisierung';
+
+  @override
+  String get setupProviderMissing => 'Noch kein Anbieter eingerichtet';
+
+  @override
+  String get setupProviderReady => 'Anbieter eingerichtet';
+
+  @override
+  String get setupSpeakerMissing => 'Noch keine Stimme eingelernt';
+
+  @override
+  String get setupSpeakerOpen => 'Stimme einlernen';
+
+  @override
+  String get setupSpeakerReady => 'Deine Stimme ist eingelernt';
+
+  @override
+  String get setupWakeMissing => 'Aktivierungswort nicht eingerichtet';
+
+  @override
+  String get setupWakeReady => 'Aktivierungswort eingerichtet und in Ordnung';
 
   @override
   String get auditEntrySession => 'Sitzung';

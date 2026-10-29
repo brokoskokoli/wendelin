@@ -99,7 +99,7 @@ void main() {
       print('WP64 eingelernt: ${enroller.accepted} Aufnahmen');
 
       final setup = WendelinStorage(driftDatabase(name: 'wendelin'));
-      await setup.settings.set(AppSettings.onboardingDone, true);
+      await setup.settings.set(AppSettings.setupWizardDone, true);
       await setup.settings.set(
         voiceSettingsKey,
         const VoiceSettings(

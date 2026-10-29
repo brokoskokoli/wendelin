@@ -19,6 +19,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 import '../support/test_env.dart';
 import '../ui/helpers.dart';
 import 'integrations_screen_test.dart';
+import 'onboarding_test.dart' show seedProvider;
 
 const spotifyPkg = 'com.spotify.music';
 
@@ -249,7 +250,11 @@ void main() {
       'ausgegraut', (tester) async {
     final opened = <Uri>[];
     final env = TestEnv(
-      startup: const StartupSettings(onboardingDone: false),
+      startup: const StartupSettings(
+        setupWizardDone: false,
+        setupWizardPage: 'integrations',
+      ),
+      storedProfiles: true,
       extraOverrides: specOverrides([
         spotifySpec(spotify()),
         IntegrationSpec(
@@ -264,21 +269,15 @@ void main() {
       ], opened),
     );
     env.apps.uninstall(spotifyPkg);
+    // The required pages before are met, the wizard starts at the integrations.
+    await seedProvider(env);
+    env.speechModels.installed.addAll(['whisper-small', 'silero-vad']);
     setView(tester, const Size(390, 1800));
     await tester.pumpWidget(env.app());
     await settle(tester);
     final c = ProviderScope.containerOf(
       tester.element(find.byType(OnboardingScreen)),
     );
-    for (final step in [
-      'Weiter',
-      'Später',
-      'Später',
-      'Nein, nur nach Tippen',
-    ]) {
-      await tester.tap(find.text(step));
-      await settle(tester);
-    }
     expect(find.text('Was darf Wendelin?'), findsOneWidget);
     await tester.runAsync(() => c.read(toolRegistryProvider).refresh());
     await tester.pumpAndSettle();

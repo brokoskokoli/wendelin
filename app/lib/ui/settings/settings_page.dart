@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
+import 'wizard_back.dart';
 
 /// Page frame of the settings: back button, title, optional intro, content.
 class SettingsPage extends StatelessWidget {
@@ -64,11 +65,27 @@ class SettingsPage extends StatelessWidget {
       ],
     ];
     const gap = SizedBox(height: WSpace.l18 - WSize.tapTargetInset);
-    if (!centered) {
-      return Scaffold(
-        body: ListView(padding: _padding, children: [header, gap, ...content]),
-      );
-    }
+    final Widget page = centered
+        ? _centered(header, gap, content)
+        : Scaffold(
+            body: ListView(
+              padding: _padding,
+              children: [header, gap, ...content],
+            ),
+          );
+    // While the setup wizard is open, back leads to it from here, also
+    // from sub pages (WP174).
+    final toWizard = WizardBackScope.leadsToWizard(context);
+    return PopScope(
+      canPop: !toWizard,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && toWizard) WizardBackScope.backToWizard(context);
+      },
+      child: page,
+    );
+  }
+
+  Widget _centered(Widget header, Widget gap, List<Widget> content) {
     return Scaffold(
       body: CustomScrollView(
         slivers: [

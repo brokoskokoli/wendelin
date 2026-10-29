@@ -154,7 +154,7 @@ void main() {
         try {
           await reset.providerProfiles.delete('phala');
           await reset.settings.remove(voiceSettingsKey);
-          await reset.settings.remove(AppSettings.onboardingDone);
+          await reset.settings.remove(AppSettings.setupWizardDone);
           // Die Migration beim ersten Laden legt Regeln (Ziel Phala) und den
           // Hinweis „Neu: Regel Privat“ an; der Hinweis verdrängt sonst in
           // overlay_e2e die Antwort aus dem sichtbaren Bereich.
@@ -166,7 +166,7 @@ void main() {
         await SecureSecretStore().delete('provider.phala.apiKey');
       });
       final setup = WendelinStorage(driftDatabase(name: 'wendelin'));
-      await setup.settings.set(AppSettings.onboardingDone, true);
+      await setup.settings.set(AppSettings.setupWizardDone, true);
       await setup.settings.set(
         voiceSettingsKey,
         const VoiceSettings(sttModel: 'whisper-base'),

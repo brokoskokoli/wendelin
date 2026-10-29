@@ -48,11 +48,17 @@ abstract final class AppSettings {
   static SettingKey<bool> integrationEnabled(String id) =>
       SettingKey.boolean('integration.$id.enabled', defaultValue: false);
 
-  /// Onboarding finished (or skipped).
-  static final onboardingDone = SettingKey.boolean(
-    'onboarding.done',
+  /// The setup wizard was finished (WP174). A new key on purpose: the
+  /// former key `onboarding.done` is no longer read, so older installations
+  /// see the wizard once.
+  static final setupWizardDone = SettingKey.boolean(
+    'setup.wizard.done',
     defaultValue: false,
   );
+
+  /// Page the setup wizard is on (`SetupPage.name`), to continue after a
+  /// restart.
+  static final setupWizardPage = SettingKey.string('setup.wizard.page');
 
   /// Language of speech in/out and prompts (`de`, `fr`, `en`).
   static final language = SettingKey.string('app.language', defaultValue: 'de');
