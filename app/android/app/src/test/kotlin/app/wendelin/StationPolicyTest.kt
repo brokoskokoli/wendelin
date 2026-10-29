@@ -122,6 +122,7 @@ class StationPolicyTest {
 
     private fun decideWith(open: Boolean) = WakePolicy.decide(
         off, holdsRole = true, micGranted = true, charging = false, nowMs = 0, station = open,
+        stationModelInstalled = true,
     )
 
     @Test

@@ -77,9 +77,7 @@ void main() {
     expect(find.text('Zum Aktivierungswort'), findsOneWidget);
   });
 
-  testWidgets('Station mit Modell: kein Hinweis', (
-    tester,
-  ) async {
+  testWidgets('Station mit Modell: kein Hinweis', (tester) async {
     await pumpStation(tester, model: true);
     expect(find.byKey(const ValueKey('stationNeedModel')), findsNothing);
   });
