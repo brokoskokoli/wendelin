@@ -5416,6 +5416,12 @@ abstract class AppLocalizations {
   /// **'Wendelin erkennt Sprache auf dem Gerät, ohne Internet und ohne Google. Wähle ein Erkennungsmodell und lade es einmal herunter, am besten im WLAN. Silero VAD erkennt, wann du sprichst, und gehört dazu.'**
   String get setupSpeechIntro;
 
+  /// No description provided for @setupSpeechLowMemory.
+  ///
+  /// In de, this message translates to:
+  /// **'Wenig Arbeitsspeicher ({v} GB): Vorausgewählt ist „Whisper base“. „Whisper small“ und Parakeet brauchen beim Erkennen deutlich mehr Speicher.'**
+  String setupSpeechLowMemory(String v);
+
   /// No description provided for @setupSpeechModel.
   ///
   /// In de, this message translates to:

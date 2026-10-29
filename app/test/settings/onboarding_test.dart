@@ -6,6 +6,7 @@ import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/setup_wizard.dart';
 import 'package:wendelin/di/startup.dart';
+import 'package:wendelin/di/voice_settings_providers.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/onboarding/onboarding_screen.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
@@ -21,8 +22,13 @@ TestEnv firstStart({
   RecordingFactory? factory,
   String? page,
   bool withSpeech = false,
+  int? memory,
 }) {
   final env = TestEnv(
+    extraOverrides: [
+      if (memory != null)
+        deviceMemoryProvider.overrideWith((ref) async => memory),
+    ],
     startup: StartupSettings(setupWizardDone: false, setupWizardPage: page),
     storedProfiles: true,
     llmFactory: (factory ?? RecordingFactory()).call,

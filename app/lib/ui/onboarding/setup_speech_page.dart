@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../di/core_providers.dart';
 import '../../di/setup_status.dart';
 import '../../di/setup_wizard.dart';
 import '../../di/voice_providers.dart';
 import '../../l10n/l10n.dart';
+import '../../platform/device_memory.dart';
 import '../design/design.dart';
 import '../settings/model_download_row.dart';
 import '../settings/settings_page.dart';
@@ -42,16 +44,25 @@ class _SetupSpeechState extends ConsumerState<SetupSpeechPage> {
     );
   }
 
-  /// The stored model is the settings default (Whisper small) and nothing
-  /// of it is on the device: the wizard suggests Parakeet instead, once.
-  void _suggestDefault(VoiceSettings settings, ModelState state) {
-    if (_defaulted || state.phase == ModelPhase.unknown) return;
+  /// Nothing is stored yet and the default model is not on the device: the
+  /// wizard suggests Parakeet (Whisper base on a device with little RAM),
+  /// once, and stores it.
+  Future<void> _suggestDefault(ModelState state) async {
+    if (_defaulted || state.phase != ModelPhase.absent) return;
     _defaulted = true;
-    if (settings.sttModel != const VoiceSettings().sttModel ||
-        state.phase != ModelPhase.absent) {
-      return;
-    }
-    unawaited(_choose(SpeechModelCatalog.parakeetV3.id));
+    // Only while nothing is stored: a model chosen on purpose (stored once
+    // the wizard or the settings changed it) is never overridden.
+    final stored = await ref
+        .read(storageProvider)
+        .settings
+        .get(voiceSettingsKey);
+    if (stored != null || !mounted) return;
+    final memory = await ref.read(deviceMemoryProvider.future);
+    await _choose(
+      isLowMemory(memory)
+          ? SpeechModelCatalog.whisperBase.id
+          : SpeechModelCatalog.parakeetV3.id,
+    );
   }
 
   Future<void> _choose(String id) => ref
@@ -79,7 +90,7 @@ class _SetupSpeechState extends ConsumerState<SetupSpeechPage> {
         ? context.l10n.voiceDownloadLoadingPercent(
             '${(plan.progress * 100).floor()}',
           )
-        : plan.error,
+        : null, // the failure text is shown in the model's row only
   );
 
   @override
@@ -92,11 +103,16 @@ class _SetupSpeechState extends ConsumerState<SetupSpeechPage> {
     final chosen =
         catalog.byId(settings?.sttModel ?? '') ?? SpeechModelCatalog.parakeetV3;
     if (settings != null) {
-      _suggestDefault(
-        settings,
-        states[chosen.id] ?? const ModelState(ModelPhase.unknown),
+      unawaited(
+        _suggestDefault(
+          states[chosen.id] ?? const ModelState(ModelPhase.unknown),
+        ),
       );
     }
+    final memory = ref.watch(deviceMemoryProvider).value;
+    final lowMemory = isLowMemory(memory)
+        ? decimal1(l, memory! / (1024 * 1024 * 1024))
+        : null;
     const vad = SpeechModelCatalog.sileroVad;
     final plan = DownloadPlan.of([chosen, vad], states);
     final facts = ref.watch(setupFactsProvider);
@@ -133,6 +149,8 @@ class _SetupSpeechState extends ConsumerState<SetupSpeechPage> {
             const ModelDownloadRow(model: vad, deletable: false),
           ],
         ),
+        if (lowMemory != null && chosen.id == SpeechModelCatalog.whisperBase.id)
+          Text(l.setupSpeechLowMemory(lowMemory), style: WText.caption),
         _status(plan),
         if (canGoOn)
           PrimaryButton(l.next, onPressed: widget.onNext)

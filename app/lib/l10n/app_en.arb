@@ -1061,6 +1061,14 @@
   "setupSpeakerReady": "Your voice is enrolled",
   "setupSpeechDownload": "Download",
   "setupSpeechIntro": "Wendelin recognizes speech on the device, without internet and without Google. Choose a recognition model and download it once, ideally on Wi-Fi. Silero VAD detects when you are speaking and is part of it.",
+  "setupSpeechLowMemory": "Little memory ({v} GB): “Whisper base” is preselected. “Whisper small” and Parakeet need much more memory while recognizing.",
+  "@setupSpeechLowMemory": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
   "setupSpeechModel": "Recognition model",
   "setupSpeechTitle": "Speech recognition",
   "setupWakeMissing": "Wake word not set up",

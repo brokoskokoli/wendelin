@@ -125,6 +125,41 @@ void main() {
       expect(find.textContaining('Noch nötig: Parakeet v3'), findsOneWidget);
     });
 
+    testWidgets('bewusst gewähltes Whisper small wird nicht überschrieben', (
+      tester,
+    ) async {
+      final env = firstStart(page: 'speech');
+      await env.storage.settings.set(
+        voiceSettingsKey,
+        const VoiceSettings(sttModel: 'whisper-small'),
+      );
+      final c = await speechPage(tester, env);
+      expect(c.read(voiceSettingsProvider).value!.sttModel, 'whisper-small');
+      expect(find.textContaining('Noch nötig: Whisper small'), findsOne);
+    });
+
+    testWidgets('wenig RAM: Whisper base vorausgewählt, Hinweis', (
+      tester,
+    ) async {
+      final env = firstStart(page: 'speech', memory: 3 * 1024 * 1024 * 1024);
+      final c = await speechPage(tester, env);
+      expect(c.read(voiceSettingsProvider).value!.sttModel, 'whisper-base');
+      expect(
+        (await env.storage.settings.get(voiceSettingsKey))!.sttModel,
+        'whisper-base',
+      );
+      expect(find.textContaining('Wenig Arbeitsspeicher (3,0 GB)'), findsOne);
+    });
+
+    testWidgets('genug RAM: kein Hinweis', (tester) async {
+      final c = await speechPage(
+        tester,
+        firstStart(page: 'speech', memory: 8 * 1024 * 1024 * 1024),
+      );
+      expect(c.read(voiceSettingsProvider).value!.sttModel, _parakeet);
+      expect(find.textContaining('Wenig Arbeitsspeicher'), findsNothing);
+    });
+
     testWidgets('Auswahl zeigt nur Erkennungsmodelle und setzt sttModel', (
       tester,
     ) async {
@@ -201,7 +236,11 @@ void main() {
         const ModelDownloadException(DownloadErrorKind.network, 'Netz weg.'),
       );
       await settle(tester);
-      expect(find.text('Netz weg.'), findsWidgets);
+      expect(
+        find.text('Netz weg.'),
+        findsOneWidget,
+        reason: 'nur in der Zeile',
+      );
       expect(enabled(tester, 'Weiter'), isFalse);
       expect(enabled(tester, 'Erneut versuchen'), isTrue);
       await tester.tap(find.widgetWithText(FilledButton, 'Erneut versuchen'));

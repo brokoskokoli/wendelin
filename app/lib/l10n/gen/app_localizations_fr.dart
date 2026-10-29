@@ -3192,6 +3192,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'Wendelin reconnaît la parole sur l’appareil, sans internet et sans Google. Choisissez un modèle de reconnaissance et téléchargez-le une fois, de préférence en Wi-Fi. Silero VAD détecte quand vous parlez et en fait partie.';
 
   @override
+  String setupSpeechLowMemory(String v) {
+    return 'Peu de mémoire ($v Go) : « Whisper base » est présélectionné. « Whisper small » et Parakeet demandent nettement plus de mémoire pour la reconnaissance.';
+  }
+
+  @override
   String get setupSpeechModel => 'Modèle de reconnaissance';
 
   @override
