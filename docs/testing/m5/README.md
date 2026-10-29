@@ -47,6 +47,7 @@ Jedes Arbeitspaket mit Gerätebezug (M5 und M6) legt hier seine eigene Datei `<w
 - [WP165 – Kein Kommunikationsmodus mehr (Gerätetest)](wp165.md)
 - [WP166/WP167 – Spotify: dort weiterspielen, wo schon etwas läuft](wp166.md)
 - [WP171 – Weckwort: zweite Prüfung mit Rückfall, Station, Schatten-Erkenner (Gerätetest)](wp171.md)
+- [WP172 – Overlay schließt nach dem Zuhören selbst (Gerätetest)](wp172.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)
 - [WP85 Kontakte, SMS und Anrufe (`contacts`)](wp85.md)

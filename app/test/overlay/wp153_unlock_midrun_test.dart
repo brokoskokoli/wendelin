@@ -9,6 +9,7 @@ import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
+import 'package:wendelin/ui/overlay/assistant_overlay.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin_core/testing.dart';
@@ -43,6 +44,13 @@ void main() {
     voiceLogSink = logs.add;
   });
   tearDown(() => voiceLogSink = savedSink);
+
+  // The `by` of every close the overlay logged.
+  List<String> closes() => [
+    for (final l in logs)
+      if (l.contains('overlay-close'))
+        RegExp(r'by=(\S+)').firstMatch(l)!.group(1)!,
+  ];
 
   Future<ProviderContainer> open(
     WidgetTester tester,
@@ -83,11 +91,12 @@ void main() {
     expect(stt.calls, hasLength(1), reason: 'kein neuer Trigger');
     expect(llm.requests, hasLength(1), reason: 'Anfrage lief weiter');
     expect(c.read(voiceControllerProvider).stopCount, 0);
-    expect(platform.finished, 0, reason: 'Fenster bleibt offen');
+    // WP172: the window closes after the answer, not by the unlock.
+    expect(platform.finished, 1, reason: 'schliesst erst nach der Antwort');
     final entries = c.read(agentControllerProvider).entries;
     expect(entries.whereType<UserEntry>().single.text, 'Wie spät ist es');
     expect(logs.where((l) => l.contains('voice-cancelled')), isEmpty);
-    expect(logs.where((l) => l.contains('overlay-close')), isEmpty);
+    expect(closes(), ['idle']);
     expect(tts.spoken.any((s) => s.contains('zehn')), isTrue);
   });
 
@@ -119,7 +128,8 @@ void main() {
       reason: 'gesprochen',
     );
     expect(c.read(voiceControllerProvider).stopCount, 0);
-    expect(platform.finished, 0);
+    expect(platform.finished, 1, reason: 'WP172: schliesst nach der Antwort');
+    expect(closes(), ['idle']);
     expect(
       logs.where((l) => l.contains('voice-cancelled reason=tap')),
       isEmpty,
@@ -146,6 +156,7 @@ void main() {
 
   testWidgets('Entsperren bei laufender getippter Anfrage (ohne gemerkte): '
       'kein neuer Trigger, der Lauf geht weiter', (tester) async {
+    AssistantOverlayScreen.closeWhenIdle = false; // the test cancels the voice itself (not the overlay), nothing runs yet (WP172)
     platform.unlockSucceeds = true;
     llm = FakeLlmProvider([ScriptedTurn.hang()]);
     env = TestEnv(providerConfig: scripted(llm), enabled: const {'memory'});
@@ -186,11 +197,12 @@ void main() {
     platform.trigger();
     await _pump(tester, 100);
     expect(c.read(voiceControllerProvider).stopCount, 0);
-    expect(platform.finished, 0);
+    // The retrigger itself did not close; the answer to the new request does.
+    expect(closes(), ['idle']);
+    expect(platform.finished, 1);
     expect(
       logs.where((l) => l.contains('voice-cancelled reason=tap')),
       isEmpty,
     );
-    expect(logs.where((l) => l.contains('overlay-close')), isEmpty);
   });
 }

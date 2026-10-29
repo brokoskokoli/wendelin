@@ -40,6 +40,9 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   // The overlay tests read their container after the close (WP145 frees it
   // for real in overlay_teardown_test.dart).
   setUp(() => AssistantOverlayScreen.tearDownEngine = (_, _) async {});
+  // WP172: the overlay closes itself after the answer (default); tests that
+  // need the sheet afterwards switch it off locally.
+  setUp(() => AssistantOverlayScreen.closeWhenIdle = true);
   await testMain();
 }
 
