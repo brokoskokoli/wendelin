@@ -46,10 +46,10 @@ TestEnv _env({Set<String>? enabled, bool onboardingDone = true}) => TestEnv(
       : null,
   startup: StartupSettings(
     uiLanguage: 'en',
-    // The app defaults speech to German on every fresh install
-    // (StartupSettings.language), so the shot picks English explicitly.
+    // Speech follows the system language without a stored choice; the shot
+    // picks English explicitly so it does not depend on the test locale.
     language: 'en',
-    onboardingDone: onboardingDone,
+    setupWizardDone: onboardingDone,
     enabledIntegrations:
         enabled ?? const {'calendar', 'memory', 'web', 'alarms', 'clipboard'},
   ),
