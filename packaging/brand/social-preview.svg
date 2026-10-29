@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Link preview (1280 x 640): GitHub social preview (uploaded by hand in Settings -> General) and
+     og:image / twitter:image of the website. Rendered by tool/make_website_images.sh with resvg.
+     Colours are the app's (app/lib/ui/theme/app_theme.dart). Keep 40 px clear at the edges. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="1280" height="640" viewBox="0 0 1280 640">
+  <defs>
+    <linearGradient id="spBackground" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1A1D21"/>
+      <stop offset="0.6" stop-color="#101214"/>
+      <stop offset="1" stop-color="#0B0C0E"/>
+    </linearGradient>
+    <radialGradient id="spGlow" cx="240" cy="320" r="460" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5B7BFF" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#5B7BFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="spTagline" x1="100" y1="0" x2="900" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8FA4FF"/>
+      <stop offset="1" stop-color="#EDEBE6"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#spBackground)"/>
+  <rect width="1280" height="640" fill="url(#spGlow)"/>
+
+  <!-- lockup (mark + wordmark as outlines, so no font is needed), 556 x 148 scaled by 1.5 -->
+  <image x="100" y="130" width="834" height="222" xlink:href="../../app/assets/logo/wendelin-lockup-on-dark.svg"/>
+
+  <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+    <text x="100" y="424" font-size="44" font-weight="700" fill="#EDEBE6">A personal voice assistant for Android.</text>
+    <text x="100" y="482" font-size="44" font-weight="700" fill="url(#spTagline)">Local speech. A language model you choose.</text>
+    <text x="100" y="548" font-size="27" fill="#A3A8AE">Free, open source · Android 10+ · No Google Play Services needed</text>
+  </g>
+</svg>

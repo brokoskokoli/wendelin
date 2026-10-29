@@ -10,3 +10,7 @@ tags:
   # auf einer Plattform zuerst hier nachsehen. Auslassen mit
   # `flutter test --exclude-tags platform-sensitive`.
   platform-sensitive: {}
+  # Renders README/website screenshots (WP169, tool/make_screenshots.sh);
+  # nothing is compared. The tests skip themselves unless SCREENSHOT_DIR is
+  # set, so gate and CI do not render anything.
+  screenshots: {}

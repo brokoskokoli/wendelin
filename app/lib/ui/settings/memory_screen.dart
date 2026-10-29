@@ -102,7 +102,7 @@ class MemoryScreen extends ConsumerWidget {
     final ok = await confirm(
       context,
       title: context.l10n.memoryForgetTitle,
-      message: '„${e.text}“',
+      message: context.l10n.quotedText(e.text),
       yes: context.l10n.memoryForget,
     );
     if (!ok) return;

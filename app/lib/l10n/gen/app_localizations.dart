@@ -2368,6 +2368,12 @@ abstract class AppLocalizations {
   /// **'Öffnen'**
   String get open;
 
+  /// No description provided for @quotedText.
+  ///
+  /// In de, this message translates to:
+  /// **'„{text}“'**
+  String quotedText(String text);
+
   /// No description provided for @remove.
   ///
   /// In de, this message translates to:
