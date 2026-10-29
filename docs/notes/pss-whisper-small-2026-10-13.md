@@ -1,5 +1,7 @@
 # Speicher mit whisper-small auf dem Emulator (WP30, B14, 2026-10-13)
 
+> Historisch (2026-10-28): Messung zu WP30, Stand 2026-10-13. Keine Referenz für den heutigen Stand.
+
 ## Aufbau
 - **Gerät:** AVD `Wendelin_AOSP_35` (AOSP ohne Google Play, Android 15, arm64) mit eigenem Serial `emulator-5584`, gestartet mit `-no-audio`. Das Mikrofon liefert deshalb Stille.
 - **Build:** Release-APK (`flutter build apk --release --target-platform android-arm64`) mit dem Stand von WP30 nach dem Review: Vorwärmen nur bei Sprachnutzung, Freigabe im Hintergrund, Overlay teilt das Whisper der App, nur die zuletzt genutzte sherpa-Stimme bleibt geladen.

@@ -311,6 +311,7 @@ void _identityCases(
     'Name „Mia Berger“ (richtige Mail): rot, nur brokoskokoli erlaubt',
   );
   _identityGuardHook(t, r);
+  _commitMsgGuard(t, r);
   _identityTrailers(t, r, branch);
 }
 
@@ -329,6 +330,49 @@ void _identityGuardHook(SelfCheck t, Sandbox r) {
   t.isTrue(
     hook(sbName) == 0 && hook('Mia Berger') != 0,
     'identity-guard: nur brokoskokoli, „Mia Berger“ abgelehnt',
+  );
+}
+
+/// Der Commit-Hook nimmt dieselben Trailer an und lehnt dieselben ab.
+void _commitMsgGuard(SelfCheck t, Sandbox r) {
+  final guard = File('tool/hooks/commit-msg-guard.sh').absolute.path;
+  int hook(String msg) {
+    final f = File('${r.dir.path}/.msg')..writeAsStringSync('$msg\n');
+    return Process.runSync('sh', [guard, f.path]).exitCode;
+  }
+
+  String re(String f) => RegExp(
+    r"^\s*(?:trailer_re|TRAILER_RE)='([^']*)'",
+    multiLine: true,
+  ).firstMatch(File(f).readAsStringSync())!.group(1)!;
+  t.eq(
+    re('tool/hooks/commit-msg-guard.sh'),
+    re('tool/check_commit_identity.sh'),
+    'commit-msg-guard und check_commit_identity: gleiches Trailer-Muster',
+  );
+  for (final m in ['Sonnet 4.6', 'Opus 5.5 (1M context)', 'Haiku 4.5']) {
+    t.eq(
+      hook('x\n\nCo-Authored-By: Claude $m <noreply@anthropic.com>'),
+      0,
+      'commit-msg-guard: Trailer Claude $m ok',
+    );
+  }
+  for (final m in [
+    'Co-Authored-By: Jemand <noreply@anthropic.com>',
+    'Co-Authored-By: Claude Sonnet 4.6 <x@example.org>',
+    'Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com> extra',
+    'Co-Authored-By: Claude <noreply@anthropic.com>',
+    'Co-Authored-By: Claude Gpt 4 <noreply@anthropic.com>',
+  ]) {
+    t.isTrue(hook('x\n\n$m') != 0, 'commit-msg-guard: rot: $m');
+  }
+  t.isTrue(
+    hook(
+          'x\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n'
+          'Claude-Session: https://claude.ai/code/session_x',
+        ) !=
+        0,
+    'commit-msg-guard: Session-Zeile rot',
   );
 }
 
@@ -361,13 +405,34 @@ void _identityTrailers(
     1,
     'zweiter Trailer mit anderem Namen: rot',
   );
+  // Jedes Claude-Modell ist als Trailer gültig (WP170), alles andere nicht.
+  const okTrailers = [
+    'Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>',
+    'Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>',
+    'Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>',
+    'Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>',
+  ];
+  const badTrailers = [
+    'Co-Authored-By: Jemand <noreply@anthropic.com>',
+    'Co-Authored-By: Claude Sonnet 4.6 <claude@example.org>',
+    'Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com> extra',
+    'Co-Authored-By: Claude <noreply@anthropic.com>',
+    'Co-Authored-By: Claude Gpt 4 <noreply@anthropic.com>',
+    'Co-Authored-By: Claude Sonnet 4.6 (<x@y.de>) <noreply@anthropic.com>',
+    'Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com.evil.org>',
+    'Co-Authored-By:  Claude Sonnet 4.6 <noreply@anthropic.com>',
+    'Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropicXcom>',
+  ];
+  for (final (i, tr) in okTrailers.indexed) {
+    t.eq(branch('okm$i', () => c('x\n\n$tr')), 0, 'Trailer ok: $tr');
+  }
+  for (final (i, tr) in badTrailers.indexed) {
+    t.eq(branch('badm$i', () => c('x\n\n$tr')), 1, 'Trailer rot: $tr');
+  }
   t.eq(
-    branch(
-      'wrong',
-      () => c('x\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>'),
-    ),
+    branch('mixed', () => c('x\n\n${okTrailers[0]}\n${okTrailers[3]}')),
     1,
-    'abweichende Schreibweise des Trailers: rot',
+    'zwei gültige Modell-Trailer: rot',
   );
   t.eq(branch('none', () => c('x')), 1, 'kein Trailer: rot');
   t.eq(

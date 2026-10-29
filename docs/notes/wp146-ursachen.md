@@ -1,5 +1,7 @@
 # WP146: Ursachenanalyse (nachgereicht, 2026-10-25)
 
+> Historisch (2026-10-28): Der Gesprächston ist mit K132/WP165 entfernt, `ChannelSpeechRoutePort` gibt es nicht mehr. Die Analyse gibt den Stand vom 2026-10-25 wieder.
+
 Zu den Punkten 1 bis 5 des Pakets und zum Hotword-Bias. Beleg-Arten: **Test rot auf altem Code** (Stand `66dd0608`, in einem Scratch-Worktree mit der Testdatei vom Branch bzw. einem kleinen Beleg-Test), **Log** (Zeilen aus dem Paketbefund, Rohlog liegt nicht vor), **Messung** (`docs/notes/hotword-bias-2026-10-25.md`), **Code** (Datei:Zeile auf `66dd0608`). Wo nur eine Art vorliegt, steht es dabei. „Vermutet, nicht belegt“ heißt: kein Beleg, dass es die Wirkung hat.
 
 ## Punkt 1: Lücke bei der Übergabe (600 bis 700 ms)

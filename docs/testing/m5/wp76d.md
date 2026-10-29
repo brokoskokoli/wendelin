@@ -1,4 +1,5 @@
 # WP76d Tinfoil (TEE)
+> Stand: gültig
 
 Voraussetzung: ein Tinfoil-Konto mit API-Key (nur am Telefon des Maintainers, nie im Repo). Router und Modelle: inference.tinfoil.sh, Standardmodell `gpt-oss-120b`.
 

@@ -1,5 +1,7 @@
 # „Stopp“/„Wendelin“ während der Ausgabe: Gegenprüfung (WP113, K84)
 
+> Historisch (2026-10-28): Das Stopp-Wort ist entfallen (K107), und die Prüfung beim Unterbrechen übernimmt seit K124 Prüfer B. Der Text beschreibt den Stand von WP113.
+
 Anlass: Gerätetest 2026-10-20 (T20-B.1). Mit Aufschlag +0,05 (`thr=0.90 sthr=0.95`) erreichte „Stopp“ nie die Schwelle (gemessen 0,72–0,94). Mit 0,00 gab es Fehlabbrüche (3× `keyword-wake` bei sim 0,85–0,86) und zweimal wurde `wake` gewertet, obwohl `stop` über `sthr` lag.
 
 ## Ablauf

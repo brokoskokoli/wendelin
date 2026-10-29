@@ -3,7 +3,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'attestation_types.dart';
 
 /// Maps stage results onto the traffic light (concept: Fehlerverhalten,
-/// `M4.md`):
+/// früherer Plan M4, nur im Git-Verlauf):
 /// - any `fail` is red;
 /// - `unavailable` (network) is yellow while retries remain; the session
 ///   attestation is yellow (nothing is sent, the next request retries), a

@@ -13,7 +13,7 @@
 #
 # Das Skript liest nur logcat, es ändert nichts auf dem Gerät; echte Geräte
 # sind deshalb erlaubt. Gerät: DEVICE bzw. ANDROID_SERIAL, sonst das einzige
-# verbundene. Anleitung: docs/testing/m2-device.md, Abschnitt Laufzeit.
+# verbundene. Anleitung: früher m2-device.md (nur im Git-Verlauf).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

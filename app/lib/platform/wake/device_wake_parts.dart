@@ -68,8 +68,7 @@ final class LazyWhisperVerifier implements WakeVerifier {
 
 /// Stage 2 on Parakeet v3 with the hotword „Wendelin“ (WP129, WP133 `hw2`):
 /// loaded in an own isolate at the first candidate and freed [idleRelease]
-/// after the last one. Whisper (the recognizer engines) is not touched, so
-/// „Stopp“ and the template path keep their model.
+/// after the last one. Whisper (the recognizer engines) is not touched.
 final class LazyParakeetVerifier implements WakeVerifier {
   /// Creates the verifier; [files] returns the paths of the installed model
   /// with the hotwords file, or `null` if Parakeet is not installed.

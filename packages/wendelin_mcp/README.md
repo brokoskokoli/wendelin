@@ -17,7 +17,7 @@ Reines Dart (`package:http`, `crypto`), keine Flutter-Importe. Abhängigkeiten: 
 
 - Integrations-Id `mcp_<slug>`. Der Slug kommt aus `McpNaming.slugFor(name, taken: …)`: nur `[a-z0-9]`, Umlaute umschrieben, höchstens 16 Zeichen, eindeutig. Die App legt ihn beim Anlegen fest und speichert ihn in der Konfiguration.
 - Tool-Namen `mcp_<slug>__<tool>`, höchstens 64 Zeichen. Enthält ein Name unzulässige Zeichen oder ist er zu lang, wird er gekürzt und bekommt `_` plus 6 Hex-Zeichen SHA-256 des Originalnamens. Die Zuordnung ist stabil und kollisionsfrei.
-- `tools` ist synchron und zeigt den Stand des letzten `loadTools()` (Cache zuerst, `refresh: true` fragt den Server). Bei `notifications/tools/list_changed` lädt die Integration neu und meldet sich über `toolsChanged`. Die App registriert sie dann neu, weil die Registry die Tools beim Registrieren kopiert.
+- `tools` ist synchron und zeigt den Stand des letzten `loadTools()` (Cache zuerst, `refresh: true` fragt den Server). Bei „notifications/tools/list_changed“ lädt die Integration neu und meldet sich über `toolsChanged`. Die App registriert sie dann neu, weil die Registry die Tools beim Registrieren kopiert.
 - Vom Nutzer abgeschaltete Tools (`McpToolOverride(enabled: false)`) fehlen in `tools` (siehe `skippedTools`).
 - `inputSchema` geht unverändert ans Modell, nur `type: object` wird bei Bedarf ergänzt. Die Argumentprüfung der Tool-Laufzeit setzt `type, properties, required, enum, items, minimum, maximum, minLength, maxLength, format: date-time, additionalProperties` durch. Alles andere (`pattern`, `anyOf`/`oneOf`/`allOf`, `$ref`/`$defs`, `const`, `minItems`, Tupel-`items`, andere `format`-Werte …) steht mit Pfad in `McpTool.unsupportedSchemaParts`, damit die App es anzeigen kann. Geprüft wird es dann nur vom Server, dessen Fehler das Modell als Tool-Ergebnis sieht.
 - Ergebnisse:
@@ -73,7 +73,7 @@ Ausgelassene Tools stehen mit Grund in `McpIntegration.skippedTools`, dazu zähl
 
 ## Netz
 
-- `https` überall. `http` nur ins Heimnetz: RFC 1918, `100.64.0.0/10` (Tailscale), `*.ts.net`, `*.local`, `*.home.arpa`, Loopback, `10.0.2.2` (Emulator), IPv6 ULA und Link-local. Die Prüfung läuft ohne DNS.
+- `https` überall. `http` nur ins Heimnetz: RFC 1918, „100.64.0.0/10“ (Tailscale), `*.ts.net`, `*.local`, `*.home.arpa`, Loopback, `10.0.2.2` (Emulator), IPv6 ULA und Link-local. Die Prüfung läuft ohne DNS.
 - Keine Zugangsdaten in der URL. Weiterleitungen werden nur auf denselben Origin verfolgt (höchstens 3), ebenso muss das Legacy-`endpoint` auf demselben Origin liegen.
 - OAuth-Endpunkte nur über `https`, `http` allein für Loopback.
 - Zeitlimits (`McpTimeouts`): 10 s bis zu den Headern, 30 s je Austausch, Antworten höchstens 1 MB, bei SSE schon vor dem Parser geprüft. Abbruch über `CancelToken`.
@@ -85,7 +85,7 @@ Ausgelassene Tools stehen mit Grund in `McpIntegration.skippedTools`, dazu zähl
 - Kein stdio (ADR 0010). stdio-Server laufen auf dem Homeserver hinter einem stdio-zu-HTTP-Proxy.
 - Keine `resources`, `prompts`, Sampling, Elicitation oder Roots. Server-Anfragen bekommen `-32601`, `ping` ein leeres Ergebnis.
 - Es gibt keinen stehenden `GET`-Stream. `list_changed` kommt deshalb nur während eines Aufrufs an, ergänzend gilt das Cache-Höchstalter (24 h).
-- Beim Abbruch wird die HTTP-Verbindung geschlossen. Ein `notifications/cancelled` geht nicht an den Server.
+- Beim Abbruch wird die HTTP-Verbindung geschlossen. Ein „notifications/cancelled“ geht nicht an den Server.
 - Legacy-SSE initialisiert je Vorgang neu (eine Sitzung pro Verbindung).
 - Die Netzprüfung löst keine Namen auf. Ein öffentlicher Name mit privater Adresse braucht `https` oder einen Heimnetz-Suffix.
 

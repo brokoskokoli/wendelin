@@ -7,12 +7,14 @@
 #     AFTER (github.sha), PR_HEAD (github.event.pull_request.head.sha).
 #     main: BEFORE..AFTER (ohne brauchbares BEFORE: der letzte Commit);
 #     sonst merge-base(origin/main, Kopf)..Kopf. Braucht fetch-depth 0.
-# Erlaubt ist nur die noreply-Identität, genau eine Zeile Co-Authored-By (in der
-# freigegebenen Schreibweise) und keine Claude-Session-Zeile. Ein leerer Bereich
+# Erlaubt ist nur die noreply-Identität, genau eine Zeile Co-Authored-By (als
+# Claude-Modell-Trailer) und keine Claude-Session-Zeile. Ein leerer Bereich
 # ist grün. Exit 1 mit einer Zeile je Verstoß.
 set -u
 EMAIL='16724498+brokoskokoli@users.noreply.github.com'
-TRAILER='Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>'
+# Trailer = Claude-Modell des committenden Agenten (WP170); Muster eng und identisch zu
+# tool/hooks/commit-msg-guard.sh halten. Alles andere ist rot (fail-closed).
+TRAILER_RE='^Co-Authored-By: Claude (Opus|Sonnet|Haiku|Fable)( [0-9]+(\.[0-9]+)*)?( \([0-9A-Za-z ]+\))? <noreply@anthropic\.com>$'
 if [ "${1:-}" = --ci ]; then
   zero=0000000000000000000000000000000000000000
   if [ "${REF:-}" = refs/heads/main ]; then
@@ -46,8 +48,8 @@ IDENT
   msg=$(git log -1 --format=%B "$c")
   count=$(printf '%s\n' "$msg" | grep -ciE '^Co-Authored-By:')
   [ "$count" -eq 1 ] || fail "$c" "$count Co-Authored-By-Trailer (genau einer erwartet)"
-  if [ "$count" -ge 1 ] && printf '%s\n' "$msg" | grep -iE '^Co-Authored-By:' | grep -vqxF "$TRAILER"; then
-    fail "$c" "Co-Authored-By nicht als '$TRAILER'"
+  if [ "$count" -ge 1 ] && printf '%s\n' "$msg" | grep -iE '^Co-Authored-By:' | grep -vqE "$TRAILER_RE"; then
+    fail "$c" "Co-Authored-By nicht als 'Claude <Modell> <noreply@anthropic.com>'"
   fi
   if printf '%s\n' "$msg" | grep -qiE '^Claude-Session:|claude\.ai/code/session'; then
     fail "$c" "Claude-Session-Zeile in der Nachricht"

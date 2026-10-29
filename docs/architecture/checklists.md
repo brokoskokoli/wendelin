@@ -18,7 +18,7 @@
 **Neuer Kotlin-Kanal**
 1. Kotlin-Klasse in `app/android/app/src/main/kotlin/app/wendelin/`, registriert in `WendelinActivity.kt` (Basis von `MainActivity.kt` und `AssistantActivity.kt`).
 2. Dart-Seite in `app/lib/platform/` mit Kanalname als Konstante in `app/lib/platform/channels.dart`, Test mit Mock-Handler unter `app/test/platform/`.
-3. Kanal und alle Methoden in `app/channels.json` eintragen (sonst ist `tool/check_channels.dart` rot), Zeile in der Tabelle oben.
+3. Kanal und alle Methoden in `app/channels.json` eintragen (sonst ist `tool/check_channels.dart` rot); die Kanaltabelle wird erzeugt.
 4. Logik ohne Android-Typen in eine reine Kotlin-Klasse (wie `CalendarRows.kt`, `VaultTree.kt`, Argumente über `ChannelArgs.kt`) mit JUnit-Test unter `app/android/app/src/test/kotlin/app/wendelin/`.
 
 **Neue Provider-Art**

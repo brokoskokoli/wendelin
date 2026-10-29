@@ -40,5 +40,5 @@ Echtzeitfaktor auf dem Host (1 Thread, Apple Silicon): 0,016 bis 0,028, das hei�
 ## Offen / Maintainer
 1. 20 bis 30 Aufnahmen nach `tool/record_wake_fixtures.md` (`~/wendelin-fixtures/wake/`, Ordner existierte nicht), Messung wiederholen und Tabelle ergänzen.
 2. Emulator-Messungen (CPU, PSS, Foreground-Service nach Sleep/Doze, `onReady`-Start nach Neustart, `BOOT_COMPLETED`, `showSession`-Übergabe, AEC-Verfügbarkeit): offen. Der Emulator `emulator-5580` lief mit fremden E2E-Prozessen, außerdem braucht es eine Spike-APK mit Service; das war im Rahmen dieses Laufs nicht ohne Belegungskonflikt möglich.
-3. Prüfliste für das echte Telefon aus WP42 (30× Wake aus 1 m/3 m, 8 h Alltag, HyperOS, AEC-Messplan).
+3. Prüfliste für das echte Telefon aus WP42 (30× Wake aus 1 m/3 m, 8 h Alltag, Hersteller-Akkusparer, AEC-Messplan).
 4. Plan B (Folgepaket) einplanen.

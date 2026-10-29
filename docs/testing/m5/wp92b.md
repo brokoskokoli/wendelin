@@ -1,4 +1,5 @@
 # WP92b Personen: Anrede, Gedächtnis, Agent
+> Stand: gültig
 
 Voraussetzung: WP92a eingerichtet (Modell geladen, Schalter „Sprechererkennung“ an, mindestens zwei Personen eingelernt, z. B. Maintainer und eine zweite Stimme), zwei Provider-Profile (Standard und ein weiteres, z. B. Claude), Integration „Gedächtnis“ aktiv.
 
@@ -19,7 +20,7 @@ Voraussetzung: WP92a eingerichtet (Modell geladen, Schalter „Sprechererkennung
 
 ```sh
 adb -s emulator-5554 install -r app/build/app/outputs/flutter-apk/app-debug.apk
-~/ai/james-wt/handoff/wp92a-e2e/prepare.sh emulator-5554
+../james-wt/handoff/wp92a-e2e/prepare.sh emulator-5554
 WENDELIN_WP92A_DIR=wp92a tool/e2e_android.sh integration_test/speaker_persons_e2e_test.dart
 ```
 

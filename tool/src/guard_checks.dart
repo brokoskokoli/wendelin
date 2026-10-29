@@ -15,6 +15,7 @@ import 'self_check.dart';
 Future<void> guardChecks(SelfCheck t) async {
   channelChecks(t);
   docCheckChecks(t);
+  standChecks(t);
   kotlinUnitChecks(t);
   kotlinReportsClearChecks(t);
   ratchetChecks(t);

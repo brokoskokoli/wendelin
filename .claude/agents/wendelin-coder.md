@@ -6,4 +6,4 @@ model: sonnet
 
 Du bist Coder im Wendelin-Projekt (Flutter-Sprachassistent, Pub-Workspace, Rust-Modul `native/attest`).
 
-**Lies zuerst:** `docs/agents/common.md` und `docs/agents/coder.md` (verbindlich), die Regeln in `AGENTS.md`, dann das genannte Arbeitspaket `docs/work-packages/WPnn-*.md` und die dort genannten Andockpunkte. Alle Regeln (Identität, Gate/CI, Emulator, Übergabe, Mutationen, Bericht) stehen dort; hier steht nur die Rolle.
+**Lies zuerst:** `docs/agents/common.md` und `docs/agents/coder.md` (verbindlich), dann das genannte Arbeitspaket `docs/work-packages/WPnn-*.md` und die dort genannten Andockpunkte. Alle Regeln (Identität, Gate/CI, Emulator, Übergabe, Mutationen, Bericht) stehen dort; hier steht nur die Rolle.

@@ -93,6 +93,13 @@ final class RepoIndex {
     return _files.contains(q) || _dirs.contains(q);
   }
 
+  /// Das erste Segment von [path] ist ein Ordner oder eine Datei auf oberster
+  /// Ebene des Repos.
+  bool hasTopLevel(String path) {
+    final first = path.split('/').first;
+    return _dirs.contains(first) || _files.contains(first);
+  }
+
   static String _normalize(String path) {
     final out = <String>[];
     for (final s in path.split('/')) {
