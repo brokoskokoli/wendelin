@@ -21,7 +21,7 @@ Lies zuerst `common.md` (Identität, Arbeitsort, Übergabe) dann dein Arbeitspak
   - `dispose`: `dispose`/`close`, Zeroize von Schlüsseln und Aufnahmen sowie Timeouts sind vorhanden (Streams, Controller, Prozesse, Netz).
   - `negativtest`: Je Fehlerpfad gibt es einen Negativtest.
   - `texte`: Keine festen Texte außerhalb l10n (Fragmente unter `app/lib/l10n/src/`, Gate-Check `check_texts`, Allowlist `tool/text_allowlist.yaml` nur abbauen).
-  - `doku`: Doku und ADR sind nachgezogen (`docs/architecture/`, Paket-README, `docs/testing/m5/<wp>.md`; neue grundlegende Entscheidung = eigene ADR).
+  - `doku`: Doku und ADR sind nachgezogen (`docs/architecture/`, Paket-README, `docs/testing/m5/<wp>.md`, Konvention samt „Gerätetest: nicht nötig“ in `docs/testing/README.md`; neue grundlegende Entscheidung = eigene ADR).
   - `berechtigung`: Neue Berechtigung oder exportierte Komponente → Allowlist in `tool/check_apk.sh` (Gate-Check `check_manifest` läuft bei Manifest-Änderung in `--changed`) und K-Eintrag im Konzept (als Abweichung melden).
 - **Mutationen:** vor dem Abschluss 3–5 Mutationen an den kritischen Prüfungen selbst ausführen (Verfahren: `docs/work-packages/REVIEW.md`, Schritt 4) und im Bericht nennen.
 - **Nachbesserung:** Bekommst du eine Befundliste, arbeitest du nur die Befunde ab. Keine Nebenbaustellen. Mutationen aus den Befunden führst du selbst aus und belegst, dass der neue Test rot wird.

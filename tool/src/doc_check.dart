@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'doc_idents.dart';
 import 'doc_paths.dart';
+import 'doc_stand.dart';
 import 'gen_docs.dart';
 import 'ratchet.dart';
 
@@ -78,6 +79,7 @@ DocCheck checkDocs(List<String> files, {String root = '.'}) {
     }
   }
   errors.addAll(identErrors(files, root: root));
+  errors.addAll(standErrors(files, root: root));
   return (errors: errors, count: count, docs: docsToCheck.length);
 }
 
@@ -140,3 +142,15 @@ String _dirOf(String path) {
   final i = path.lastIndexOf('/');
   return i < 0 ? '' : path.substring(0, i);
 }
+
+/// m5-Anleitungen ohne gültige Stand-Zeile (zweite Zeile).
+List<String> standErrors(List<String> files, {String root = '.'}) => [
+  for (final f in files)
+    if (f.startsWith('docs/testing/m5/') &&
+        f.endsWith('.md') &&
+        !f.endsWith('/README.md') &&
+        File('$root/$f').existsSync() &&
+        standOf(File('$root/$f').readAsStringSync()) == null)
+      '$f:2: Stand-Zeile fehlt (`> Stand: gültig | teilweise überholt (…) | '
+          'überholt durch WPnn`)',
+];

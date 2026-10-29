@@ -2,7 +2,7 @@
 
 # Geräte-Prüflisten je Paket
 
-Jedes Arbeitspaket mit Gerätebezug (M5 und M6) legt hier seine eigene Datei `<wp>.md` an (Überschrift `# WPnn Titel`); dieser Index wird erzeugt (`tool/regen_generated.sh`). Befehle am Telefon führt nur der Maintainer aus.
+Jedes Arbeitspaket mit Gerätebezug (M5 und M6) legt hier seine eigene Datei `<wp>.md` an (Überschrift `# WPnn Titel`, zweite Zeile `> Stand: …`); dieser Index wird erzeugt (`tool/regen_generated.sh`). Befehle am Telefon führt nur der Maintainer aus.
 
 - [WP103 Bessere Sprache](wp103.md)
 - [WP104 Liegengebliebene Gerätetests (Standort, Aufgaben, Home Assistant, Sprachen)](wp104.md)
@@ -27,11 +27,11 @@ Jedes Arbeitspaket mit Gerätebezug (M5 und M6) legt hier seine eigene Datei `<w
 - [WP142 – Einlernen: „Hey Wendelin“, weniger echte Rufe abgelehnt (Gerätetest)](wp142.md)
 - [WP143 – Modell v8a (Stimmenset clean) und Prüfer B als Stufe 2 (Gerätetest)](wp143.md)
 - [WP145 – Nativer Speicher über Overlay-Zyklen (Gerätetest)](wp145.md)
-- [WP146 – Spracherkennung nach dem Wake Word (Gerätetest)](wp146.md)
+- [WP146 – Spracherkennung nach dem Wake Word (Gerätetest)](wp146.md) (teilweise überholt)
 - [WP148 – Entwicklermodus (Gerätetest)](wp148.md)
 - [WP149 – Wake-Übergabe ohne Audiolücke (Gerätetest)](wp149.md)
 - [WP150 – Home Assistant: Zahl als Text und Wiederholungsabbruch (Gerätetest)](wp150.md)
-- [WP151 – Unterbrechen mit Weckwort während der Antwort (Gerätetest)](wp151.md)
+- [WP151 – Unterbrechen mit Weckwort während der Antwort (Gerätetest)](wp151.md) (teilweise überholt)
 - [WP153 – Gesperrtes Gerät: Entsperren und weitermachen (Gerätetest)](wp153.md)
 - [WP154 – Sicherheitsstufe je Tool und Home-Assistant-Gerät (Gerätetest)](wp154.md)
 - [WP155 – Weckwort-Archiv im Entwicklermodus (Gerätetest)](wp155.md)
@@ -40,7 +40,7 @@ Jedes Arbeitspaket mit Gerätebezug (M5 und M6) legt hier seine eigene Datei `<w
 - [WP158 – Fehler beim Mikrofonstart, Stationskanal (Gerätetest)](wp158.md)
 - [WP159 Einrichtung: GPU-Prüfung nur mit Nachweis (Teil A)](wp159.md)
 - [WP160 – Stufe je Geräteart, Sprechererkennung-Diagnose, Stufen für MCP/HTTP-Tools (Gerätetest)](wp160.md)
-- [WP161 – Spotify spielt auf dem Handy und prüft die Wiedergabe](wp161.md)
+- [WP161 – Spotify spielt auf dem Handy und prüft die Wiedergabe](wp161.md) (teilweise überholt)
 - [WP162 – Lizenzen der Sprachmodelle als Unterseite (Gerätetest)](wp162.md)
 - [WP163 Gesperrt: Anfrage und Antwort im Overlay](wp163.md)
 - [WP164 Kontakt-Felder, Waze, Navigation zum Kontakt](wp164.md)

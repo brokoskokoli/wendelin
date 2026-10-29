@@ -3,6 +3,7 @@
 // Hinweis, sie nicht von Hand zu ändern.
 import 'dart:io';
 
+import 'doc_stand.dart';
 import 'gen_docs_tables.dart';
 
 const _head =
@@ -174,19 +175,16 @@ String _m5Index(String root) {
     ..writeln(
       'Jedes Arbeitspaket mit Gerätebezug (M5 und M6) legt hier seine '
       'eigene Datei `<wp>.md` an '
-      '(Überschrift `# WPnn Titel`); dieser Index wird erzeugt '
+      '(Überschrift `# WPnn Titel`, zweite Zeile `> Stand: …`); dieser Index wird erzeugt '
       '(`tool/regen_generated.sh`). Befehle am Telefon führt nur der '
       'Maintainer aus.',
     )
     ..writeln();
   for (final f in files) {
+    final text = _read(root, 'docs/testing/m5/$f');
     final title =
-        RegExp(
-          r'^# (.+)$',
-          multiLine: true,
-        ).firstMatch(_read(root, 'docs/testing/m5/$f'))?.group(1) ??
-        f;
-    b.writeln('- [$title]($f)');
+        RegExp(r'^# (.+)$', multiLine: true).firstMatch(text)?.group(1) ?? f;
+    b.writeln('- [$title]($f)${standSuffix(text)}');
   }
   return b.toString();
 }

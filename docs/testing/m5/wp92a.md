@@ -1,4 +1,5 @@
 # WP92a Sprechererkennung
+> Stand: gültig
 
 Voraussetzung: Emulator oder Gerät, Mikrofon erlaubt, Netz für den Modelldownload (CAM++, ca. 28 MB).
 

@@ -9,6 +9,29 @@ import 'gen_docs.dart';
 import 'gen_docs_tables.dart';
 import 'self_check.dart';
 
+const _ok = '# WP1 Eins\n> Stand: gültig\n';
+
+/// Mutation: m5-Datei ohne Stand-Zeile wird gemeldet.
+void standChecks(SelfCheck t) {
+  t.group('doc_stand');
+  final tmp = Directory.systemTemp.createTempSync('doc_stand_');
+  try {
+    const f = 'docs/testing/m5/wp1.md';
+    List<String> errs() =>
+        standErrors([f, 'docs/testing/m5/README.md'], root: tmp.path);
+    File('${tmp.path}/$f')
+      ..parent.createSync(recursive: true)
+      ..writeAsStringSync(_ok);
+    t.eq(errs(), <String>[], 'mit Stand-Zeile ohne Befund');
+    File('${tmp.path}/$f').writeAsStringSync('# WP1 Eins\n');
+    t.eq(errs().length, 1, 'ohne Stand-Zeile rot');
+    File('${tmp.path}/$f').writeAsStringSync('# WP1\n> Stand: bald\n');
+    t.eq(errs().length, 1, 'ungültiger Stand rot');
+  } finally {
+    tmp.deleteSync(recursive: true);
+  }
+}
+
 void docCheckChecks(SelfCheck t) {
   t.group('doc_check');
   final tmp = Directory.systemTemp.createTempSync('doc_check_');
@@ -34,7 +57,7 @@ void docCheckChecks(SelfCheck t) {
       "import 'a_spec.dart';\n\nfinal x = [\n  aSpec,\n];\n",
     );
     put('app/lib/di/integrations/a_spec.dart', "const s = Spec(id: 'a');\n");
-    put('docs/testing/m5/wp1.md', '# WP1 Eins\n');
+    put('docs/testing/m5/wp1.md', _ok);
     put('docs/architecture/other.md', '# Anderes\n');
     put('docs/architecture/packages.md', '# Pakete\n');
     put(
@@ -81,11 +104,11 @@ void docCheckChecks(SelfCheck t) {
     );
 
     // Mutation: toter Link in einer Gerätetest-Datei (docs/testing/m5/).
-    put('docs/testing/m5/wp1.md', '# WP1 Eins\n\n[x](gone.md)\n');
+    put('docs/testing/m5/wp1.md', '$_ok\n[x](gone.md)\n');
     t.eq(errors(), [
-      'docs/testing/m5/wp1.md:3: Link `gone.md` ist tot',
+      'docs/testing/m5/wp1.md:4: Link `gone.md` ist tot',
     ], 'toter Link in docs/testing/m5 wird gemeldet');
-    put('docs/testing/m5/wp1.md', '# WP1 Eins\n');
+    put('docs/testing/m5/wp1.md', _ok);
     t.eq(errors(), <String>[], 'm5-Datei nach Korrektur ohne Befund');
     _deadPathInRuleDocs(t, put, errors);
     _identChecks(t, put, errors, root);
@@ -146,7 +169,7 @@ void _staleChecks(
   writeGenerated(root);
 
   // Mutation: m5-Datei ohne Indexeintrag.
-  put('docs/testing/m5/wp2.md', '# WP2 Zwei\n');
+  put('docs/testing/m5/wp2.md', '# WP2 Zwei\n> Stand: gültig\n');
   t.eq(staleGenerated(root), [
     'docs/testing/m5/README.md',
   ], 'm5-Datei ohne Indexeintrag macht den Index veraltet');

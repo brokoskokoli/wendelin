@@ -1,4 +1,5 @@
 # WP92b Personen: Anrede, Gedächtnis, Agent
+> Stand: gültig
 
 Voraussetzung: WP92a eingerichtet (Modell geladen, Schalter „Sprechererkennung“ an, mindestens zwei Personen eingelernt, z. B. Maintainer und eine zweite Stimme), zwei Provider-Profile (Standard und ein weiteres, z. B. Claude), Integration „Gedächtnis“ aktiv.
 
