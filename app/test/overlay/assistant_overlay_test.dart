@@ -488,6 +488,7 @@ void main() {
   testWidgets(
     'Assistent ausgelöst: hört zu (TriggerKind.assistant), Antwort im Sheet',
     (tester) async {
+      AssistantOverlayScreen.closeWhenIdle = false; // the test reads the sheet after the answer (WP172: it would close)
       final tts = FakeTextToSpeech();
       final env = TestEnv(
         providerConfig: scripted(
@@ -525,6 +526,7 @@ void main() {
     'Wake Word (WP50): TriggerKind.wakeWord; ohne wakeEnd wird der Pre-Roll '
     'verworfen (WP73)',
     (tester) async {
+      AssistantOverlayScreen.closeWhenIdle = false; // the test reads the sheet after the answer (WP172: it would close)
       final platform = FakeAssistantPlatform()
         ..wakeHandoff = Int16List.fromList(List.filled(8000, 300));
       final stt = FakeSpeechToText(const [
@@ -571,6 +573,7 @@ void main() {
     'Wake Word ohne Pause, Gerätepegel (WP73): Pre-Roll nur das Wort, '
     'Sprache mit normalem Pegel: kein Ton',
     (tester) async {
+      AssistantOverlayScreen.closeWhenIdle = false; // the test reads the sheet after the answer (WP172: it would close)
       var plays = 0;
       Int16List level(int ms, int amp) =>
           Int16List.fromList(List.filled(ms * 16, amp));
@@ -617,6 +620,7 @@ void main() {
     'Wake Word ohne Pause (WP68): Anfrage steckt im Handoff, kein Ton, '
     'Wake Word nicht im Audio',
     (tester) async {
+      AssistantOverlayScreen.closeWhenIdle = false; // the test reads the sheet after the answer (WP172: it would close)
       var plays = 0;
       Int16List cat(List<Int16List> parts) =>
           Int16List.fromList([for (final p in parts) ...p]);
@@ -850,6 +854,7 @@ void main() {
   });
 
   testWidgets('jeder Aufruf beginnt ein neues Gespräch (WP67)', (tester) async {
+    AssistantOverlayScreen.closeWhenIdle = false; // the test reads the sheet after the answer (WP172: it would close)
     final provider = FakeLlmProvider([
       ScriptedTurn.text('Eins'),
       ScriptedTurn.text('Zwei'),
