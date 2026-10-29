@@ -7,6 +7,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-29
+
+Continuous audio ring buffer and selectable stage 2 wake word verifiers.
+
+### Added
+
+- **Continuous audio ring buffer** – rolling ring buffer (≥ 5 s) for all microphone recordings. When waiting for the wake word, audio rolls continuously in memory; when a candidate triggers, incoming audio is held throughout stage 2 verification (Parakeet/Whisper/model loading).
+- **Seamless fast command recognition** – commands spoken immediately after the wake word ("Wendelin <command>" in a single breath) are captured gaplessly from the buffer without losing audio.
+- **Uninterrupted microphone capture** – recording keeps running across speech output and interaction phases instead of restarting repeatedly.
+- **Selectable stage 2 wake word verification** – verifier B (voice templates) and the speech recognition model can be toggled independently with OR logic.
+
 ## [0.1.1] - 2026-10-29
 
 Easier to set up, more reliable wake word.
@@ -44,6 +55,7 @@ Download the APK below and install it. On Android 13 and later, you may have to 
 Certificate fingerprint (SHA-256): `A9:E9:5A:13:98:34:19:23:4B:DB:8F:CA:F6:0F:1B:84:18:88:36:86:7B:F8:DC:38:99:15:B5:25:39:DC:09:7B`
 APK checksum: see `SHA256SUMS`.
 
-[Unreleased]: https://github.com/brokoskokoli/wendelin/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/brokoskokoli/wendelin/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/brokoskokoli/wendelin/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/brokoskokoli/wendelin/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/brokoskokoli/wendelin/releases/tag/v0.1.0

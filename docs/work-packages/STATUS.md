@@ -36,6 +36,7 @@ Stand: 2026-10-29; läuft: keins; Release v0.1.0 (2fd52524); der nächste RC bra
 | WP173 | Einstellungen umbauen: Routing unter Anbieter, „Erweiterte Einstellungen“, Sprache/Aktivierungswort getrennt, Modell oben | gemergt 955fbe2b | K141 offen, K139 angepasst. Gerätetest `docs/testing/m5/wp173.md`; Folgepunkte: Modell-Anzeigenamen im Katalog nicht lokalisiert; wake_service_e2e WAKE_RUNS=10 hing einmal; click-tile ohne add-tile startete Station einmal nicht |
 | WP174 | Einrichtungsassistent beim ersten Start | gemergt 7efb9d62 | K142 offen. Kein E2E (Maintainer testet selbst): Gerätetest `docs/testing/m5/wp174.md`. Folgepunkte: Aktivierungswort-Engine fest 'de' (`device_wake_parts.dart:32`); Systemsprachwechsel erst nach Neustart; Personalisierung ohne Primärknopf; mehrere Systemsprachen → erste unterstützte |
 | WP177 | Weckwort: Wählbare Stufe-2-Prüfer (Prüfer B und Spracherkennungsmodell mit ODER-Logik) | gemergt 79e989f1 | K143 bestätigt (2026-10-29). |
+| WP178 | Durchgehender Audio-Ringpuffer (5–6 s) für Mikrofon und Weckwort | gemergt 1ac966a0 | K144 offen. CI grün, Review FREIGABE. |
 
 ## Offen
 
