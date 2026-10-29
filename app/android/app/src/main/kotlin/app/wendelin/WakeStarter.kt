@@ -24,6 +24,7 @@ object WakeStarter {
             micGranted = micGranted(context),
             charging = isCharging(context),
             nowMs = System.currentTimeMillis(),
+            station = StationState.open,
         )
         when (decision) {
             WakeDecision.Start -> start(context, source)

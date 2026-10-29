@@ -23,6 +23,16 @@ class WakeTexts(private val stored: (String) -> String?) {
     val reenableTitle get() = t("reenableTitle")
     val reenableAction get() = t("reenableAction")
     val noRole get() = t("noRole")
+    val gapText get() = t("gapText")
+    val gapAction get() = t("gapAction")
+    val gapNoSeqText get() = t("gapNoSeqText")
+    val gapNoSeqAction get() = t("gapNoSeqAction")
+
+    /** Notification text for the stage 2 [gap] reason (`no_sequences`: enroll again; else model). */
+    fun gapTextFor(gap: String): String = if (gap == "no_sequences") gapNoSeqText else gapText
+
+    /** Button label for the stage 2 [gap] reason. */
+    fun gapActionFor(gap: String): String = if (gap == "no_sequences") gapNoSeqAction else gapAction
 
     fun pausedText(time: String) = t("pausedText").replace("{time}", time)
 
@@ -46,6 +56,10 @@ class WakeTexts(private val stored: (String) -> String?) {
             "reenableTitle" to "Aktivierungswort ist aus",
             "reenableAction" to "Wieder einschalten",
             "noRole" to "Wendelin muss der Assistent sein, damit das Aktivierungswort nach einem Neustart laufen kann.",
+            "gapText" to "Aktivierungswort kann nicht geprüft werden – Erkennungsmodell laden",
+            "gapAction" to "Modell laden",
+            "gapNoSeqText" to "Aktivierungswort kann nicht sicher geprüft werden – bitte neu einlernen",
+            "gapNoSeqAction" to "Neu einlernen",
             "ended" to "Das Aktivierungswort wurde beendet ({reason}). Tippe, um es wieder einzuschalten.",
         )
 

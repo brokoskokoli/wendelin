@@ -5,13 +5,20 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/voice_settings_providers.dart';
+import 'package:wendelin/di/wake_providers.dart';
 import 'package:wendelin/platform/voice/nemo_sherpa.dart';
 import 'package:wendelin/platform/voice/whisper_registry.dart';
 import 'package:wendelin/platform/voice/whisper_sherpa.dart';
 import 'package:wendelin/platform/voice/whisper_stt.dart';
 import 'package:wendelin/platform/wake/device_wake_parts.dart';
 import 'package:wendelin/platform/wake/wake_detector.dart';
+import 'package:wendelin/platform/wake/wake_host.dart';
+import 'package:wendelin/voice/wake/wake_storage.dart';
+import 'package:wendelin_storage/testing.dart';
+import 'package:wendelin_voice/fakes.dart' show FakeSpeechModelService;
 import 'package:wendelin_voice/wendelin_voice.dart';
+
+import '../recognizer/recognizer_host_test.dart' show FakeEngines;
 
 const _tokens =
     '<unk> 0\n<|pnc|> 1\n▁W 2\nend 3\nel 4\nin 5\ne 9\nn 10\nd 11\nl 12\n'
@@ -312,6 +319,134 @@ void main() {
     });
   });
 
+  // WP171: the check before the start (same rule as the notice in the
+  // settings): a voice without sequences and no recognizer installed.
+  group('DeviceWakeParts.stage2Gap', () {
+    WakeTemplates voice({bool sequences = false, String id = 'a'}) =>
+        WakeTemplates(
+          speakerId: id,
+          featureVersion: 'v',
+          threshold: 0.5,
+          embeddings: [
+            Float32List.fromList([1, 0]),
+          ],
+          sequences: [
+            if (sequences)
+              WakeTemplateSequence(
+                word: WakeTemplates.wordHw,
+                values: Float32List(192),
+              ),
+          ],
+        );
+
+    Future<DeviceWakeParts> parts({
+      required List<WakeTemplates> voices,
+      required bool parakeet,
+      required bool whisper,
+      bool b = true,
+    }) async {
+      final store = SecretWakeTemplateStore(InMemorySecretStore());
+      await store.saveSpeakers([
+        for (final t in voices) WakeSpeaker(id: t.speakerId, name: ''),
+      ]);
+      for (final t in voices) {
+        await store.save(t);
+      }
+      final hw = install();
+      final engines = FakeEngines()..missing = !whisper;
+      return DeviceWakeParts(
+        ProviderContainer(
+          overrides: [
+            speechModelServiceProvider.overrideWith(
+              (_) async => _Svc(dir, installed: parakeet),
+            ),
+            wakeStoreProvider.overrideWithValue(store),
+          ],
+        ),
+        hotwordsDirectory: () async => hw,
+        engines: () async => engines,
+        useVerifierB: b,
+      );
+    }
+
+    test('Stimme ohne Folgen, kein Modell: Lücke', () async {
+      final p = await parts(voices: [voice()], parakeet: false, whisper: false);
+      expect(await p.stage2Gap(), WakeStage2Gap.modelMissing);
+      await p.dispose();
+    });
+
+    test(
+      'Stimme ohne Folgen, nur Parakeet oder nur Whisper: neu einlernen',
+      () async {
+        final a = await parts(
+          voices: [voice()],
+          parakeet: true,
+          whisper: false,
+        );
+        expect(await a.stage2Gap(), WakeStage2Gap.noSequences);
+        await a.dispose();
+        final w = await parts(
+          voices: [voice()],
+          parakeet: false,
+          whisper: true,
+        );
+        expect(await w.stage2Gap(), WakeStage2Gap.noSequences);
+        await w.dispose();
+      },
+    );
+
+    test('zwei Stimmen, eine ohne Folgen, Modell da: neu einlernen', () async {
+      final p = await parts(
+        voices: [
+          voice(sequences: true),
+          voice(id: 'b'),
+        ],
+        parakeet: true,
+        whisper: false,
+      );
+      expect(await p.stage2Gap(), WakeStage2Gap.noSequences);
+      await p.dispose();
+    });
+
+    test('B aus, Modell da: keine Lücke (Neueinlernen hilft nicht)', () async {
+      final p = await parts(
+        voices: [voice()],
+        parakeet: true,
+        whisper: false,
+        b: false,
+      );
+      expect(await p.stage2Gap(), isNull);
+      await p.dispose();
+    });
+
+    test('alle Stimmen mit Folgen: B entscheidet, keine Lücke', () async {
+      final p = await parts(
+        voices: [voice(sequences: true)],
+        parakeet: false,
+        whisper: false,
+      );
+      expect(await p.stage2Gap(), isNull);
+      await p.dispose();
+    });
+
+    test('B aus: Folgen zählen nicht, ohne Modell Lücke', () async {
+      final p = await parts(
+        voices: [voice(sequences: true)],
+        parakeet: false,
+        whisper: false,
+        b: false,
+      );
+      expect(await p.stage2Gap(), WakeStage2Gap.modelMissing);
+      await p.dispose();
+    });
+
+    test('keine Stimme eingelernt: keine Lücke', () async {
+      final p = await parts(voices: [], parakeet: false, whisper: false);
+      expect(await p.stage2Gap(), isNull);
+      await p.dispose();
+    });
+  });
+
   group('DeviceWakeParts.verifier', () {
     ProviderContainer container(bool installed) => ProviderContainer(
       overrides: [
@@ -321,12 +456,165 @@ void main() {
       ],
     );
 
-    test('Vorlagen-Weg: Whisper', () {
-      final parts = DeviceWakeParts(container(true));
-      expect(parts.verifier(), isA<LazyWhisperVerifier>());
+    // WP171: stage 2 is always verifier B; without enrolled sequences it
+    // hands the clip to the installed recognizer, in both detector paths.
+    for (final detector in WakeDetector.values) {
+      group('Stufe 2 im Pfad ${detector.name}', () {
+        test('nur Parakeet installiert: Kandidat wird bestätigt', () async {
+          final hw = install();
+          final backend = _Backend('Wendelin');
+          final engines = FakeEngines()..missing = true;
+          final parts = DeviceWakeParts(
+            container(true),
+            hotwordsDirectory: () async => hw,
+            parakeetStart: (_) async => backend,
+            engines: () async => engines,
+            useVerifierB: true,
+          );
+          final v = parts.verifier(detector: detector);
+          expect(await v.confirm(_tone(900)), isTrue);
+          expect(v.kind, 'parakeet');
+          expect(engines.checked, isEmpty, reason: 'Whisper nie gefragt');
+          await parts.dispose();
+        });
+
+        test('nur Whisper installiert: Kandidat wird bestätigt', () async {
+          final engines = FakeEngines(
+            transcripts: const [Transcript(text: 'Wendelin')],
+          );
+          final parts = DeviceWakeParts(
+            container(false),
+            hotwordsDirectory: () async => Directory('${dir.path}/hw'),
+            parakeetStart: (_) async => fail('Parakeet darf nicht starten'),
+            engines: () async => engines,
+            useVerifierB: true,
+          );
+          final v = parts.verifier(detector: detector);
+          expect(await v.confirm(_tone(900)), isTrue);
+          expect(v.kind, 'whisper');
+          await parts.dispose();
+        });
+
+        test('kein Modell: abgelehnt mit modelMissing', () async {
+          final engines = FakeEngines()..missing = true;
+          final parts = DeviceWakeParts(
+            container(false),
+            hotwordsDirectory: () async => Directory('${dir.path}/hw'),
+            parakeetStart: (_) async => fail('Parakeet darf nicht starten'),
+            engines: () async => engines,
+            useVerifierB: true,
+          );
+          final v = parts.verifier(detector: detector);
+          await expectLater(
+            v.confirm(_tone(900)),
+            throwsA(
+              isA<VoiceException>().having(
+                (e) => e.kind,
+                'kind',
+                VoiceErrorKind.modelMissing,
+              ),
+            ),
+          );
+          await parts.dispose();
+        });
+      });
+    }
+
+    test('Rückfall bleibt warm: ein Laden je Haltezeit (fakeAsync, WP171)', () {
+      final hw = install();
+      fakeAsync((async) {
+        var starts = 0;
+        final backend = _Backend('Wendelin');
+        final parts = DeviceWakeParts(
+          container(true),
+          hotwordsDirectory: () async => hw,
+          parakeetStart: (_) async {
+            starts++;
+            return backend;
+          },
+          idleRelease: const Duration(seconds: 60),
+          engines: () async => FakeEngines()..missing = true,
+          useVerifierB: false,
+        );
+        final v = parts.verifier();
+        void check() {
+          v.confirm(_tone(900));
+          async.flushMicrotasks();
+        }
+
+        check();
+        async.elapse(const Duration(seconds: 50));
+        check(); // second candidate inside idleRelease: still loaded
+        expect(starts, 1);
+        expect(backend.disposed, isFalse);
+        expect(parts.fallbackStats.loads, 1);
+        expect(parts.fallbackStats.checks, 2);
+        // The timer restarts at the last check: 59 s later still loaded.
+        async.elapse(const Duration(seconds: 59));
+        expect(backend.disposed, isFalse);
+        async.elapse(const Duration(seconds: 2));
+        async.flushMicrotasks();
+        expect(backend.disposed, isTrue);
+        check(); // new candidate after idleRelease: second load
+        expect(starts, 2);
+        expect(parts.fallbackStats.loads, 2);
+        expect(parts.fallbackStats.checks, 3);
+      });
+    });
+
+    test('Whisper-Rückfall bleibt warm: ein Laden je Haltezeit (WP171)', () {
+      fakeAsync((async) {
+        var starts = 0;
+        late _Backend backend;
+        final parts = DeviceWakeParts(
+          ProviderContainer(
+            overrides: [
+              speechModelServiceProvider.overrideWith(
+                (_) async =>
+                    FakeSpeechModelService()
+                      ..installed.addAll({'whisper-base', 'silero-vad'}),
+              ),
+            ],
+          ),
+          hotwordsDirectory: () async => Directory('${dir.path}/hw'),
+          parakeetStart: (_) async => fail('Parakeet darf nicht starten'),
+          whisperStart: (_) async {
+            starts++;
+            return backend = _Backend('Wendelin');
+          },
+          idleRelease: const Duration(seconds: 60),
+          useVerifierB: false,
+        );
+        final v = parts.verifier();
+        void check() {
+          v.confirm(_tone(900));
+          async.flushMicrotasks();
+        }
+
+        check();
+        async.elapse(const Duration(seconds: 50));
+        check(); // second candidate inside idleRelease: still loaded
+        expect(starts, 1);
+        expect(backend.disposed, isFalse);
+        expect(parts.fallbackStats.loads, 1);
+        expect(parts.fallbackStats.checks, 2);
+        async.elapse(const Duration(seconds: 59));
+        expect(backend.disposed, isFalse);
+        async.elapse(const Duration(seconds: 2));
+        async.flushMicrotasks();
+        expect(backend.disposed, isTrue);
+        check(); // after idleRelease: loaded anew
+        expect(starts, 2);
+        expect(parts.fallbackStats.loads, 2);
+      });
+    });
+
+    test('Vorlagen-Weg wie Modell-Weg: Prüfer B (WP171)', () {
+      final parts = DeviceWakeParts(container(true), useVerifierB: true);
+      expect(parts.verifier(), isA<VerifierBWakeVerifier>());
       expect(
         parts.verifier(detector: WakeDetector.templates),
-        isA<LazyWhisperVerifier>(),
+        isA<VerifierBWakeVerifier>(),
       );
     });
 

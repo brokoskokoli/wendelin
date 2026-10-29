@@ -17,7 +17,8 @@ class WakePolicyTest {
         role: Boolean = true,
         mic: Boolean = true,
         charging: Boolean = true,
-    ) = WakePolicy.decide(s, role, mic, charging, now)
+        station: Boolean = false,
+    ) = WakePolicy.decide(s, role, mic, charging, now, station)
 
     @Test
     fun startsWhenEverythingFits() {
@@ -57,6 +58,36 @@ class WakePolicyTest {
             "wake-conflict reason=recording handoff=kept action=keep",
             WakePolicy.conflictLog("recording", true, false),
         )
+    }
+
+    @Test
+    fun stationKeepsTheWakeWordOnWhateverTheSettingsSay() {
+        val off = WakeSettings(enabled = false)
+        assertEquals(WakeDecision.Start, decide(off, station = true))
+        val chargingOnly = on.copy(mode = WakeMode.CHARGING)
+        assertEquals(WakeDecision.Start, decide(chargingOnly, charging = false, station = true))
+        assertEquals(WakeDecision.Start, decide(off.copy(mode = WakeMode.CHARGING), charging = false, station = true))
+        // Without the station nothing changes.
+        assertEquals(WakeDecision.Skip("disabled"), decide(off))
+        assertEquals(WakeDecision.Skip("not-charging"), decide(chargingOnly, charging = false))
+    }
+
+    @Test
+    fun stationStillNeedsRoleMicAndRespectsAPause() {
+        val off = WakeSettings(enabled = false)
+        assertEquals(WakeDecision.Skip("no-role"), decide(off, role = false, station = true))
+        assertEquals(WakeDecision.Skip("no-permission"), decide(off, mic = false, station = true))
+        assertEquals(WakeDecision.Skip("paused"), decide(on.copy(pausedUntilMs = now + 1), station = true))
+    }
+
+    @Test
+    fun forcedByStationOnlyWhenTheSettingsWouldNotStart() {
+        val chargingOnly = on.copy(mode = WakeMode.CHARGING)
+        assertTrue(WakePolicy.forcedByStation(WakeSettings(enabled = false), true, true))
+        assertTrue(WakePolicy.forcedByStation(chargingOnly, false, true))
+        assertFalse(WakePolicy.forcedByStation(chargingOnly, true, true))
+        assertFalse(WakePolicy.forcedByStation(on.copy(mode = WakeMode.ALWAYS), false, true))
+        assertFalse(WakePolicy.forcedByStation(WakeSettings(enabled = false), true, false))
     }
 
     @Test
@@ -100,6 +131,23 @@ class WakePolicyTest {
         assertEquals(WakeMode.ALWAYS, WakeMode.parse("always"))
         assertEquals(WakeMode.CHARGING, WakeMode.parse("nonsense"))
         assertEquals(WakeMode.CHARGING, WakeMode.parse(null))
+    }
+
+    @Test
+    fun stationFlagFollowsOpenNotActive() {
+        // WP171: screen dark = activity stopped (active false), the station is still open: the detector stays.
+        val (oldOpen, oldActive) = StationState.open to StationState.active
+        try {
+            StationState.open = true
+            StationState.active = false
+            assertEquals(true, WakeSettings().runArgsForStation()["station"])
+            StationState.open = false
+            StationState.active = true
+            assertEquals(false, WakeSettings().runArgsForStation()["station"])
+        } finally {
+            StationState.open = oldOpen
+            StationState.active = oldActive
+        }
     }
 
     @Test
@@ -373,6 +421,15 @@ class WakePolicyTest {
         assertEquals("modelMissing", WakePolicy.failureReason("modelMissing"))
         assertEquals("engine-failed", WakePolicy.failureReason("no-templates"))
         assertEquals("engine-failed", WakePolicy.failureReason(null))
+    }
+
+    @Test
+    fun onlyTheKnownReasonSwitchesTheStage2GapNoticeOn() {
+        assertTrue(WakePolicy.stage2GapActive("model_missing"))
+        assertTrue(WakePolicy.stage2GapActive("no_sequences"))
+        assertFalse(WakePolicy.stage2GapActive(null))
+        assertFalse(WakePolicy.stage2GapActive("none"))
+        assertFalse(WakePolicy.stage2GapActive("voiceexception"))
     }
 
     @Test

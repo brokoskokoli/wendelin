@@ -119,8 +119,11 @@ class NotifyChannel(private val activity: Activity, messenger: BinaryMessenger) 
 
     companion object {
         const val CHANNEL = "app.wendelin/notify"
-        private const val EXTRA_OPEN = "app.wendelin.open"
+        const val EXTRA_OPEN = "app.wendelin.open"
         private const val CHANNEL_ID = "attestation"
+
+        /** [EXTRA_OPEN] value of the wake word notification: open the wake word settings (WP171). */
+        const val OPEN_WAKE_SETTINGS = "wake_word_settings"
         private const val PERMISSION_REQUEST = 4712
     }
 }

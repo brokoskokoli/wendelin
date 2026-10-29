@@ -17,9 +17,27 @@ enum class StationEvent {
     VOICE,
 }
 
-/** Whether the station is up. Read by the wake word routing: the station is never the chat. */
+/**
+ * Whether the station is up. [active] follows visibility (onStart/onStop) and is read by the wake
+ * word routing: the station is never the chat. [open] (WP171) holds from onCreate to onDestroy,
+ * also with a dark screen, lock or home: it alone keeps the wake word forced on. Both are static,
+ * so a process death resets them.
+ */
 object StationState {
     @Volatile var active = false
+    @Volatile var open = false
+
+    fun created() { open = true }
+    fun started() { active = true }
+    fun stopped() { active = false }
+
+    /** Returns whether the station ended (false for a recreate: the new instance sets [open] again). */
+    fun destroyed(changingConfigurations: Boolean): Boolean {
+        active = false
+        if (changingConfigurations) return false
+        open = false
+        return true
+    }
 }
 
 /** Pure rules of the station mode; the activity and the channels only apply them. */

@@ -5325,6 +5325,20 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get wakeNotifGapAction => 'Modell laden';
+
+  @override
+  String get wakeNotifGapNoSeqAction => 'Neu einlernen';
+
+  @override
+  String get wakeNotifGapNoSeqText =>
+      'Aktivierungswort kann nicht sicher geprüft werden – bitte neu einlernen';
+
+  @override
+  String get wakeNotifGapText =>
+      'Aktivierungswort kann nicht geprüft werden – Erkennungsmodell laden';
+
+  @override
   String get wakeNotifListeningText =>
       'Das Mikrofon ist an. Audio bleibt auf dem Gerät.';
 
@@ -5382,7 +5396,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get wakeServiceSectionEnableDetail =>
-      'Wendelin hört im Hintergrund auf „Hey Wendelin“.';
+      'Wendelin hört im Hintergrund auf „Hey Wendelin“. Im Stationsmodus ist es immer an.';
 
   @override
   String get wakeServiceSectionEndedEngine =>
@@ -5470,6 +5484,20 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get wakeServiceSectionWhisperDetail =>
       'Wendelin hört nur zu, wenn die Nachprüfung das Aktivierungswort bestätigt. Sie umfasst die ganze Stufe 2: Prüfer B, Parakeet oder Whisper, je nachdem, was eingelernt und geladen ist. Schalte sie aus, wenn sie mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.';
+
+  @override
+  String get wakeStage2GapLoad => 'Erkennungsmodell laden';
+
+  @override
+  String get wakeStage2GapNotice =>
+      'Die zweite Prüfung kann nicht entscheiden: Für „Hey Wendelin“ fehlt ein Erkennungsmodell, und die eingelernte Stimme hat noch keine Folgen für den Prüfer. Treffer werden deshalb verworfen. Lade das Erkennungsmodell oder lerne die Stimme neu ein.';
+
+  @override
+  String get wakeStage2NoSeqEnroll => 'Aktivierungswort neu einlernen';
+
+  @override
+  String get wakeStage2NoSeqNotice =>
+      'Die zweite Prüfung ist unsicher: Die eingelernte Stimme hat noch keine Folgen für den Prüfer, und es wird nur das Erkennungsmodell gefragt. Das kann echte Rufe verwerfen. Lerne das Aktivierungswort neu ein.';
 
   @override
   String wakeTestAgo(String v, int inSeconds) {

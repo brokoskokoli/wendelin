@@ -35,6 +35,7 @@ class WakeWordService : Service() {
     private val hitFlow = WakeHitFlow(this, main, handoffCheck, ::stopMic) { engine?.send("overlayClosed", null) }
     private val overlapGuard = TimedGuard(main)
 
+    private val gap = WakeGapState(this) { engine != null }
     /** WP149: while [overlapGuard] is armed the hit is taken with the capture kept open. */
     private val conflicts = WakeConflictReaction(overlapGuard, ::stopMic)
     private val micDeferral = WakeMicDeferral(main, hasMic = { mic != null }, startMic = ::startMic)
@@ -50,7 +51,7 @@ class WakeWordService : Service() {
         val action = intent?.action ?: ACTION_START
         val source = intent?.getStringExtra(EXTRA_SOURCE) ?: "?"
         // Whoever starts this service promises a notification within seconds.
-        if (!goForeground(WakeNotifications.listening(this))) {
+        if (!goForeground(gap.notification())) {
             VoiceLog.i("wake-start result=fgs-denied source=$source")
             stopSelf()
             return START_NOT_STICKY
@@ -91,8 +92,9 @@ class WakeWordService : Service() {
             holdsRole = RecognizerSwitch.holdsAssistantRole(this),
             micGranted = WakeStarter.micGranted(this),
             charging = WakeStarter.isCharging(this),
-            nowMs = System.currentTimeMillis(),
+            nowMs = System.currentTimeMillis(), station = StationState.open,
         )
+        val forced = WakePolicy.forcedLog(settings, WakeStarter.isCharging(this), StationState.open)
         if (decision is WakeDecision.Skip) {
             if (decision.reason == "paused") {
                 enterPause(settings.pausedUntilMs)
@@ -104,13 +106,13 @@ class WakeWordService : Service() {
         }
         if (engine != null) {
             // Already listening: only the settings may have changed.
-            engine?.send("run", settings.runArgs(StationState.active))
-            VoiceLog.i("wake-start result=ok source=$source again=true")
+            engine?.send("run", settings.runArgsForStation())
+            VoiceLog.i("wake-start result=ok source=$source again=true" + forced)
             return
         }
         val e = RecognizerEngine(this, ::onEngineCall, "wakeWordMain", ENGINE_CHANNEL)
         engine = e
-        e.send("run", settings.runArgs(StationState.active))
+        e.send("run", settings.runArgsForStation())
         watcher = WakeConflictWatcher(this, main, { mic?.sessionId ?: 0 }) { reason ->
             // Do not depend on Dart alone: a call or foreign recording closes the microphone here
             // (WP149: not the app's own AudioRecord in the hand-over overlap).
@@ -119,8 +121,8 @@ class WakeWordService : Service() {
         }.also { it.start() }
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "wendelin:wake").also { it.acquire() }
-        WakeNotifications.update(this, WakeNotifications.listening(this))
-        VoiceLog.i("wake-start result=ok source=$source mode=${settings.mode.key}")
+        WakeNotifications.update(this, gap.notification())
+        VoiceLog.i("wake-start result=ok source=$source mode=${settings.mode.key}" + forced)
     }
 
     /** Calls from the Dart side of the engine (main thread). */
@@ -133,6 +135,7 @@ class WakeWordService : Service() {
                 stopMic()
             }
             "hit" -> onHit(call)
+            "stage2Gap" -> gap.onReport(call.argument<String>("reason"))
             "failed" -> {
                 val reported = call.argument<String>("reason")
                 VoiceLog.i("wake-failed reason=${reported ?: "?"}")
@@ -275,6 +278,7 @@ class WakeWordService : Service() {
         watcher?.stop()
         watcher = null
         conflicts.reset()
+        gap.reset()
         stopMic()
         // A hit that was being handed over dies with the service (else `capturing` stays set).
         WakeHandoff.clear()
@@ -372,14 +376,10 @@ class WakeWordService : Service() {
             instance?.closeMicForHandoff()
         }
 
-        fun onHandoffTaken() {
-            instance?.handoffTaken()
-        }
+        fun onHandoffTaken() { instance?.handoffTaken() }
 
         /** WP146: taken with the capture kept open (the service records until [finishHandoff]). */
-        fun onHandoffKept() {
-            instance?.handoffKept()
-        }
+        fun onHandoffKept() { instance?.handoffKept() }
 
         /** WP146: the app's microphone is up; stops the service and returns the audio since the take. */
         fun finishHandoff(): WakeHandoff.Taken? = instance?.finishHandoff() ?: WakeHandoff.finish()
@@ -412,6 +412,9 @@ class WakeWordService : Service() {
             s.main.post { s.engine?.send("devMode", args) }
         }
 
+        /** WP171: the app changed what stage 2 needs (model, voice); the engine checks the gap again. */
+        fun onRecheck() { instance?.let { s -> s.main.post { s.engine?.send("recheck", null) } } }
+
         /** The assistant overlay was closed: the service listens again. */
         fun onOverlayClosed() {
             val s = instance ?: return
@@ -423,3 +426,10 @@ class WakeWordService : Service() {
 /** Channel arguments of `run` for the wake engine: stage 2, detector choice, station flag (WP129), developer mode (WP148). */
 internal fun WakeSettings.runArgs(stationActive: Boolean): Map<String, Any> =
     mapOf("verify" to verify, "detector" to detector, "station" to stationActive, "dev" to devMode)
+
+/**
+ * `run` arguments for the current station state. The flag follows [StationState.open], not `active` (WP171): with the
+ * screen dark the activity is stopped (`active` false), but the place is still the station and automatic detector
+ * choice must keep the classifier. Routing of a hit stays on `active`.
+ */
+internal fun WakeSettings.runArgsForStation(): Map<String, Any> = runArgs(StationState.open)
