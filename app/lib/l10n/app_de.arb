@@ -1968,7 +1968,7 @@
   "areaSpeech": "Sprache",
   "areaSpeechDetail": "Spracherkennung, Stimme, Tempo",
   "areaWakeWord": "Aktivierungswort",
-  "areaWakeWordDetail": "Hey Wendelin einlernen, Modell, Dienst",
+  "areaWakeWordDetail": "„Hey Wendelin“ einlernen, Modell, Dienst",
   "costsIntro": "Nach den Preisen im Modellkatalog, in US-Dollar.",
   "costsMonth": "Monat {v}",
   "@costsMonth": {

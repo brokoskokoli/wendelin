@@ -177,7 +177,43 @@ copy_in() { # <quelle auf dem Rechner> <ziel relativ zu files/>
   adb shell "cat $TMP/x | run-as $PKG sh -c 'cat > files/$2'"
   adb shell rm -f "$TMP/x"
 }
+# Trainiertes Wake-Modell (WP129, seit WP173 Voraussetzung zum Einschalten):
+# fehlt <MODELS>/wake-classifier-wendelin/, kommt die Datei aus der Release-URL
+# des Katalogs (SHA-256 geprüft); gelingt das nicht, bricht der Lauf ab. Läuft
+# auch, wenn files/e2e/ready schon steht (WENDELIN_KEEP).
+prepare_classifier() {
+  [ -d "$MODELS/wake-features" ] && [ -d "$MODELS/wake-e2e" ] || return 0
+  local cat="$ROOT/packages/wendelin_voice/lib/src/models"
+  local file dir url sha
+  file=$(sed -n "s/.*static const file = '\(.*\)';/\1/p" "$cat/wake_classifier_catalog.dart")
+  url=$(grep -o "\$_wendelinRelease/[^']*" "$cat/wake_classifier_catalog.dart" | head -1)
+  url="https://github.com/brokoskokoli/wendelin/releases/download${url#\$_wendelinRelease}"
+  url="${url//\$file/$file}"
+  sha=$(grep -A4 "name: file," "$cat/wake_classifier_catalog.dart" | sed -n "s/.*'\([0-9a-f]\{64\}\)'.*/\1/p")
+  if [ -z "$file" ] || [ -z "$sha" ] || [ "${url#https://}" = "$url" ]; then
+    echo "FEHLER: Katalogeintrag des Wake-Modells nicht lesbar ($cat/wake_classifier_catalog.dart)" >&2
+    exit 1
+  fi
+  dir="$MODELS/wake-classifier-wendelin"
+  if [ ! -f "$dir/$file" ]; then
+    echo "Lade das Wake-Modell ($file) aus dem Release …"
+    mkdir -p "$dir"
+    if ! curl -fsSL --retry 2 -o "$dir/$file.part" "$url" \
+      || [ "$(shasum -a 256 "$dir/$file.part" | cut -d' ' -f1)" != "$sha" ]; then
+      rm -f "$dir/$file.part"
+      echo "FEHLER: Wake-Modell nicht ladbar oder SHA-256 falsch ($url). Ohne dieses Modell lässt sich das Aktivierungswort nicht einschalten; Datei von Hand nach $dir legen." >&2
+      exit 1
+    fi
+    mv "$dir/$file.part" "$dir/$file"
+  fi
+  if ! in_app test -f "files/models/wake-classifier-wendelin/$file" 2>/dev/null; then
+    adb shell mkdir -p "$TMP"
+    in_app mkdir -p files/models/wake-classifier-wendelin
+    copy_in "$dir/$file" "models/wake-classifier-wendelin/$file"
+  fi
+}
 prepare_voice() {
+  prepare_classifier
   in_app test -f files/e2e/ready 2>/dev/null && return 0
   echo "Kopiere Modelle und WAVs in die App-Daten …"
   adb shell mkdir -p "$TMP"
@@ -199,15 +235,6 @@ prepare_voice() {
     for f in "$MODELS"/wake-e2e/*.wav; do
       copy_in "$f" "e2e/wake/$(basename "$f")"
     done
-    # Trainiertes Modell (WP129), falls vorhanden: <dir>/wake-classifier-wendelin/.
-    if [ -d "$MODELS/wake-classifier-wendelin" ]; then
-      in_app mkdir -p files/models/wake-classifier-wendelin
-      for f in "$MODELS"/wake-classifier-wendelin/*; do
-        copy_in "$f" "models/wake-classifier-wendelin/$(basename "$f")"
-      done
-    else
-      echo "WARNUNG: $MODELS/wake-classifier-wendelin fehlt; seit WP173 lässt sich das Aktivierungswort ohne dieses Modell nicht einschalten (Wake-Tests schlagen fehl)" >&2
-    fi
     # „Stopp“ (WP64b), falls vorhanden.
     for f in "$MODELS"/wake-e2e-stop/*.wav; do
       [ -f "$f" ] && copy_in "$f" "e2e/wake/$(basename "$f")"

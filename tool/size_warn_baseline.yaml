@@ -17,7 +17,7 @@ app/lib/ui/settings/routing/condition_builder.dart: 605
 app/lib/ui/settings/speaker/speaker_person_screen.dart#_PersonState.build: 104
 app/lib/ui/settings/voice_screen.dart#VoiceScreen.build: 85
 app/lib/ui/settings/voice_voices_screen.dart#VoiceVoicesScreen.build: 102
-app/lib/ui/settings/wake/wake_service_section.dart#_State.build: 108
+app/lib/ui/settings/wake/wake_service_section.dart#_State.build: 86
 app/lib/voice/voice_confirmation.dart#_VoiceConfirmation._confirmByVoice: 142
 app/lib/voice/voice_controller.dart: 674
 app/lib/voice/voice_controller.dart#VoiceController: 589

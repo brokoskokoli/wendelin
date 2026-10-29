@@ -132,6 +132,48 @@ class _State extends ConsumerState<WakeServiceSection> {
         .download(SpeechModelCatalog.wakeClassifierWendelin.id),
   );
 
+  List<Widget> _needModel() => [
+    SettingsRow(
+      key: const ValueKey('wakeNeedModel'),
+      title: context.l10n.wakeServiceSectionNeedModel,
+      detail: context.l10n.wakeServiceSectionNeedModelBody,
+    ),
+    LinkButton(
+      context.l10n.wakeServiceSectionLoadModel,
+      onPressed: _loadModel,
+      external: false,
+    ),
+  ];
+
+  Widget _soundSection({
+    required bool tone,
+    required bool verify,
+  }) => SettingsSection(
+    title: context.l10n.wakeServiceSectionSoundCheck,
+    children: [
+      SettingsRow(
+        title: context.l10n.wakeServiceSectionChime,
+        detail: context.l10n.wakeServiceSectionChimeDetail,
+        trailing: WSwitch(
+          value: tone,
+          semanticLabel: context.l10n.wakeServiceSectionChime,
+          onChanged: (v) =>
+              unawaited(ref.read(wakeToneProvider.notifier).set(enabled: v)),
+        ),
+      ),
+      SettingsRow(
+        title: context.l10n.wakeServiceSectionWhisper,
+        detail: context.l10n.wakeServiceSectionWhisperDetail,
+        trailing: WSwitch(
+          value: verify,
+          semanticLabel: context.l10n.wakeServiceSectionWhisper,
+          onChanged: (v) =>
+              unawaited(ref.read(wakeVerifyProvider.notifier).set(enabled: v)),
+        ),
+      ),
+    ],
+  );
+
   Future<void> _chooseRole() async {
     final opened = await ref
         .read(assistantPlatformProvider)
@@ -209,18 +251,7 @@ class _State extends ConsumerState<WakeServiceSection> {
                 onChanged: locked ? null : (v) => unawaited(_toggle(on: v)),
               ),
             ),
-            if (noModel && !settings.enabled) ...[
-              SettingsRow(
-                key: const ValueKey('wakeNeedModel'),
-                title: context.l10n.wakeServiceSectionNeedModel,
-                detail: context.l10n.wakeServiceSectionNeedModelBody,
-              ),
-              LinkButton(
-                context.l10n.wakeServiceSectionLoadModel,
-                onPressed: _loadModel,
-                external: false,
-              ),
-            ],
+            if (noModel && !settings.enabled) ..._needModel(),
             if (noRole) ...[
               SettingsRow(
                 key: ValueKey('wakeNeedRole'),
@@ -259,33 +290,7 @@ class _State extends ConsumerState<WakeServiceSection> {
             ),
           ],
         ),
-        SettingsSection(
-          title: context.l10n.wakeServiceSectionSoundCheck,
-          children: [
-            SettingsRow(
-              title: context.l10n.wakeServiceSectionChime,
-              detail: context.l10n.wakeServiceSectionChimeDetail,
-              trailing: WSwitch(
-                value: tone,
-                semanticLabel: context.l10n.wakeServiceSectionChime,
-                onChanged: (v) => unawaited(
-                  ref.read(wakeToneProvider.notifier).set(enabled: v),
-                ),
-              ),
-            ),
-            SettingsRow(
-              title: context.l10n.wakeServiceSectionWhisper,
-              detail: context.l10n.wakeServiceSectionWhisperDetail,
-              trailing: WSwitch(
-                value: verify,
-                semanticLabel: context.l10n.wakeServiceSectionWhisper,
-                onChanged: (v) => unawaited(
-                  ref.read(wakeVerifyProvider.notifier).set(enabled: v),
-                ),
-              ),
-            ),
-          ],
-        ),
+        _soundSection(tone: tone, verify: verify),
         if (settings.enabled || !noRole) const BatteryHints(),
       ],
     );

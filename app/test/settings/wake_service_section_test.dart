@@ -196,6 +196,36 @@ void main() {
     expect(s.wake.configured.last.enabled, isFalse);
   });
 
+  testWidgets(
+    'Modell nach dem Laden der Seite verschwunden: Hinweis, Schalter bleibt aus',
+    (tester) async {
+      final (s, c) = await pump(tester, Setup());
+      expect(switchLocked(tester), isFalse);
+      // The disk changed behind the page's back.
+      s.env.speechModels.installed.clear();
+      await tester.tap(
+        find.byWidgetPredicate(
+          (w) =>
+              w is WSwitch && w.semanticLabel == 'Aktivierungswort einschalten',
+        ),
+      );
+      await settle(tester);
+      await tester.tap(find.text('Einschalten'));
+      await settle(tester);
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.textContaining('erst einschalten'),
+        ),
+        findsOneWidget,
+      );
+      expect((await c.read(wakeServiceProvider.future)).enabled, isFalse);
+      // The states were read again: the page now shows the lock and the link.
+      expect(switchLocked(tester), isTrue);
+      expect(find.byKey(const ValueKey('wakeNeedModel')), findsOneWidget);
+    },
+  );
+
   testWidgets('Das Modell steht ganz oben, nur einmal', (tester) async {
     await pump(tester, Setup());
     final name = SpeechModelCatalog.wakeClassifierWendelin.displayName;

@@ -57,27 +57,7 @@ class WakeWordScreen extends ConsumerWidget {
             ),
           ],
         ),
-        SettingsSection(
-          title: context.l10n.wakeWordLearned,
-          children: [
-            if (speakers.isEmpty)
-              SettingsRow(
-                title: context.l10n.wakeWordNoVoice,
-                detail: context.l10n.wakeWordNoVoiceHint,
-              ),
-            for (final (i, s) in speakers.indexed)
-              _SpeakerRow(speaker: s, number: i + 1),
-          ],
-        ),
-        WideButton(
-          speakers.isEmpty
-              ? context.l10n.wakeWordEnroll
-              : context.l10n.wakeWordEnrollMore,
-          onPressed: installed
-              ? () => unawaited(_enroll(context, ref, speakers, null))
-              : null,
-        ),
-        if (!installed) const WakeModelsNotice(),
+        ..._learned(context, ref, speakers, installed: installed),
         WideButton(
           context.l10n.wakeWordCalibrate,
           onPressed: installed && speakers.isNotEmpty
@@ -116,6 +96,36 @@ class WakeWordScreen extends ConsumerWidget {
     );
   }
 }
+
+/// The learned voices and the enroll button (with the missing-models notice).
+List<Widget> _learned(
+  BuildContext context,
+  WidgetRef ref,
+  List<WakeSpeaker> speakers, {
+  required bool installed,
+}) => [
+  SettingsSection(
+    title: context.l10n.wakeWordLearned,
+    children: [
+      if (speakers.isEmpty)
+        SettingsRow(
+          title: context.l10n.wakeWordNoVoice,
+          detail: context.l10n.wakeWordNoVoiceHint,
+        ),
+      for (final (i, s) in speakers.indexed)
+        _SpeakerRow(speaker: s, number: i + 1),
+    ],
+  ),
+  WideButton(
+    speakers.isEmpty
+        ? context.l10n.wakeWordEnroll
+        : context.l10n.wakeWordEnrollMore,
+    onPressed: installed
+        ? () => unawaited(_enroll(context, ref, speakers, null))
+        : null,
+  ),
+  if (!installed) const WakeModelsNotice(),
+];
 
 String speakerLabel(AppLocalizations l, WakeSpeaker s, int number) =>
     s.name.isEmpty ? l.wakeWordPerson(number) : s.name;

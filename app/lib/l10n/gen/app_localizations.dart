@@ -5755,7 +5755,7 @@ abstract class AppLocalizations {
   /// No description provided for @areaWakeWordDetail.
   ///
   /// In de, this message translates to:
-  /// **'Hey Wendelin einlernen, Modell, Dienst'**
+  /// **'„Hey Wendelin“ einlernen, Modell, Dienst'**
   String get areaWakeWordDetail;
 
   /// No description provided for @costsIntro.

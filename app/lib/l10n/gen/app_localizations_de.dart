@@ -3357,7 +3357,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get areaWakeWord => 'Aktivierungswort';
 
   @override
-  String get areaWakeWordDetail => 'Hey Wendelin einlernen, Modell, Dienst';
+  String get areaWakeWordDetail => '„Hey Wendelin“ einlernen, Modell, Dienst';
 
   @override
   String get costsIntro => 'Nach den Preisen im Modellkatalog, in US-Dollar.';
