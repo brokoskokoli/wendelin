@@ -60,8 +60,10 @@ abstract final class AppSettings {
   /// restart.
   static final setupWizardPage = SettingKey.string('setup.wizard.page');
 
-  /// Language of speech in/out and prompts (`de`, `fr`, `en`).
-  static final language = SettingKey.string('app.language', defaultValue: 'de');
+  /// Language of speech in/out and prompts (`de`, `fr`, `en`). No default:
+  /// without a stored choice it follows the system language
+  /// ([systemLanguageCode], resolved in `StartupSettings.load`).
+  static final language = SettingKey.string('app.language');
 
   /// Language of the app UI: `system`, `de`, `en` or `fr` (WP79); independent
   /// of [language].

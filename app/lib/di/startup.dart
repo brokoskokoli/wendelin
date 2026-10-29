@@ -1,7 +1,10 @@
+import 'dart:ui' show Locale, PlatformDispatcher;
+
 import 'package:flutter/foundation.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
+import '../l10n/l10n.dart';
 import '../station/station_prefs.dart';
 import 'app_settings.dart';
 import 'preference_models.dart';
@@ -92,11 +95,14 @@ final class StartupSettings {
   /// Station mode settings (WP99).
   final StationPrefs station;
 
-  /// Reads the settings for the integrations [integrationIds].
+  /// Reads the settings for the integrations [integrationIds]. Without a
+  /// stored choice, [language] follows the system language ([systemLocales],
+  /// default: the platform's): `de`/`en`/`fr`, anything else `en`.
   static Future<StartupSettings> load(
     SettingsRepository settings,
-    Iterable<String> integrationIds,
-  ) async {
+    Iterable<String> integrationIds, {
+    List<Locale>? systemLocales,
+  }) async {
     final enabled = <String>{};
     for (final id in integrationIds) {
       if (await settings.get(AppSettings.integrationEnabled(id)) ?? false) {
@@ -109,7 +115,11 @@ final class StartupSettings {
       showThinking: await settings.get(AppSettings.showThinking) ?? false,
       setupWizardDone: await settings.get(AppSettings.setupWizardDone) ?? false,
       setupWizardPage: await settings.get(AppSettings.setupWizardPage),
-      language: await settings.get(AppSettings.language) ?? 'de',
+      language:
+          await settings.get(AppSettings.language) ??
+          systemLanguageCode(
+            systemLocales ?? PlatformDispatcher.instance.locales,
+          ),
       uiLanguage: await settings.get(AppSettings.uiLanguage) ?? 'system',
       developerMode: await settings.get(AppSettings.developerMode) ?? false,
       assistant: AssistantPrefs(

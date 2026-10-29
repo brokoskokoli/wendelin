@@ -33,6 +33,12 @@ Locale resolveUiLocale(List<Locale>? locales, Iterable<Locale> supported) {
   return const Locale('en');
 }
 
+/// The language code (`de`, `en`, `fr`) for the system locales [locales]:
+/// the one place that maps the system language to the languages of the app
+/// (UI, speech input, speech output); anything unsupported gives `en`.
+String systemLanguageCode(List<Locale>? locales) =>
+    resolveUiLocale(locales, AppLocalizations.supportedLocales).languageCode;
+
 /// Access to the texts. Without localizations in the tree (plain widget
 /// tests) the German texts are used.
 extension WendelinL10n on BuildContext {
