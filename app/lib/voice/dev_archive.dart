@@ -42,7 +42,7 @@ const devArchiveMaxPending = 16;
 /// equal, a build can set `--dart-define=WENDELIN_VERSION`).
 const devArchiveAppVersion = String.fromEnvironment(
   'WENDELIN_VERSION',
-  defaultValue: '0.1.0+1',
+  defaultValue: '0.1.1+2',
 );
 
 final _info = <String, Map<String, Object?>>{};
