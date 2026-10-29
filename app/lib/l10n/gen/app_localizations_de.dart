@@ -4290,6 +4290,16 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get stationNeedModel => 'Aktivierungswort in der Station aus';
+
+  @override
+  String get stationNeedModelBody =>
+      'Ohne das Wendelin-Modell hört die Station nicht auf das Aktivierungswort. Lade das Modell, dann ist es hier bereit.';
+
+  @override
+  String get stationNeedModelLink => 'Zum Aktivierungswort';
+
+  @override
   String get stationNoEvents => 'Keine Termine in Sicht.';
 
   @override

@@ -32,7 +32,7 @@ Namen in „Anführungszeichen“ sind Beschriftungen in der App. Der Einstellun
 - [ ] **0.9 Akku-Ausnahmen (HyperOS).** Einstellungen → **Assistent** → Abschnitt „Zuverlässig öffnen“. Notiere die angezeigten Hinweise (z. B. „Akku-Optimierung aktiv“, „App-Standby: selten genutzt“, Herstellerhinweis): ______________. *Erwartet:* Ein Text „Das ist eine Checkliste, kein Status.“ und die Knöpfe „Keine Einschränkung erlauben“ und „Einstellungen des Herstellers öffnen“ bzw. „Akku-Einstellungen öffnen“. **Für die Messung „vorher/nachher“ in Block 13 ändere hier noch nichts**; ist 13.3 (Vorher-Messung) erledigt, folgt 0.9a.
 - [ ] **0.9a Ausnahmen erteilen (nach 13.3).** „Keine Einschränkung erlauben“ tippen und den Systemdialog bestätigen. „Einstellungen des Herstellers öffnen“ bzw. „Akku-Einstellungen öffnen“: **Autostart** für Wendelin an, Akkusparer auf **„Keine Einschränkungen“**; zusätzlich Wendelin in „Letzte Apps“ sperren (Karte lang drücken, Schloss). Zurück in die App. *Erwartet:* Die Hinweise aktualisieren sich beim Zurückkehren (erledigte Punkte verschwinden bzw. wechseln).
 - [ ] **0.10 Sprachmodelle.** Einstellungen → **Sprache**: Spracherkennungsmodell (Whisper) installiert, Sprachausgabe an, Stimme gewählt. Sprache stimmt (Deutsch).
-- [ ] **0.11 Wake Word einlernen (kurz).** Einstellungen → **Sprache** → Abschnitt „Aktivierungswort“ → „Wendelin lernt deine Stimme“. Zuerst die Merkmalsmodelle laden („Merkmalsmodelle“, WLAN), dann „Stimme einlernen“. Das ausführliche Einlernen, Kalibrieren und Ausprobieren prüft Block 9; hier nur sicherstellen, dass mindestens eine Stimme eingelernt ist (Voraussetzung für 10.x).
+- [ ] **0.11 Wake Word einlernen (kurz).** Einstellungen → **Aktivierungswort** → „Wendelin lernt deine Stimme“. Zuerst die Merkmalsmodelle laden („Merkmalsmodelle“, WLAN), dann „Stimme einlernen“. Das ausführliche Einlernen, Kalibrieren und Ausprobieren prüft Block 9; hier nur sicherstellen, dass mindestens eine Stimme eingelernt ist (Voraussetzung für 10.x).
 - [ ] **0.12 Messwerte-Kopf.** Telefon mit Netz (WLAN), Akku ≥ 80 %, kein Energiesparmodus, Display-Auto-Aus nach 30 s oder kürzer.
 
 ## 1. Routing: Profile, Regeln, kein automatischer Wechsel
@@ -137,7 +137,7 @@ Die Taschenlampe ist eine eingebaute Integration („flashlight“, Tools an/aus
 
 ## 9. Wake Word einlernen, kalibrieren, ausprobieren (WP58, WP60)
 
-Einstellungen → **Sprache** → Abschnitt „Aktivierungswort“ → „Wendelin lernt deine Stimme“. Gespeichert werden nur Zahlenwerte (Embeddings), nie Audio.
+Einstellungen → **Aktivierungswort** → „Wendelin lernt deine Stimme“. Gespeichert werden nur Zahlenwerte (Embeddings), nie Audio.
 
 - [ ] **9.1 Merkmalsmodelle laden.** Abschnitt „Merkmalsmodelle“: laden (WLAN). *Erwartet:* Fortschritt, danach „Stimme einlernen“ ist freigeschaltet (vorher Hinweis „Dafür müssen zuerst die Merkmalsmodelle geladen sein.“).
 - [ ] **9.2 Stimme einlernen.** „Stimme einlernen“, Name optional. Sage nach der Aufforderung „Hey Wendelin“ (Hinweise der Schritte: nah, aus ein bis zwei Metern, leise wie abends, wie im Alltag). *Erwartet:* Fortschritt „x von y“ (etwa 15 bis 20 Aufnahmen), Rückmeldungen „Gehört.“, „Zu leise. Bitte etwas lauter.“, „Zu früh angefangen …“, „Nichts gehört …“; zu leise oder abgeschnittene Aufnahmen werden verworfen. Am Ende „Alle Aufnahmen sind da.“ und **Speichern**. Dauer ungefähr 3 Minuten: ____ min. Danach steht die Stimme unter „Gelernte Stimmen“ mit „n Aufnahmen · Schwelle 0.xx“ (vorläufig etwa 0,85).
@@ -151,7 +151,7 @@ Einstellungen → **Sprache** → Abschnitt „Aktivierungswort“ → „Wendel
 
 ## 10. Wake-Word-Dienst (WP50)
 
-Der Dienst läuft als Vordergrunddienst (Typ Mikrofon, dauerhafte Benachrichtigung „Wendelin hört auf „Hey Wendelin““ mit den Knöpfen „Pause 1 h“ und „Aus“). Er wird über die Assistentenrolle gestartet (auch nach Neustart) und braucht mindestens eine eingelernte Stimme. Der Bildschirm kann aus und das Telefon gesperrt sein. Die Bedienung sitzt oben auf der Seite „Aktivierungswort“ (Einstellungen → Aktivierungswort → „Wendelin lernt deine Stimme“), Abschnitt „Zuhören im Hintergrund“ mit Zeile „Status“ und Schalter „Aktivierungswort einschalten“.
+Der Dienst läuft als Vordergrunddienst (Typ Mikrofon, dauerhafte Benachrichtigung „Wendelin hört auf „Hey Wendelin““ mit den Knöpfen „Pause 1 h“ und „Aus“). Er wird über die Assistentenrolle gestartet (auch nach Neustart) und braucht mindestens eine eingelernte Stimme. Der Bildschirm kann aus und das Telefon gesperrt sein. Die Bedienung sitzt oben auf der Seite „Aktivierungswort“ (Einstellungen → Aktivierungswort), Abschnitt „Zuhören im Hintergrund“ mit Zeile „Status“ und Schalter „Aktivierungswort einschalten“.
 
 - [ ] **10.1 Ohne Einlernen kein Dienst.** (Nur wenn du vorher alle Stimmen gelöscht hast.) Dienst einschalten. *Erwartet:* Er lässt sich nicht einschalten, Hinweis „Erst Stimme einlernen“ mit Knopf „Zum Einlernen“.
 - [ ] **10.2 Ohne Rolle gesperrt.** Assistentenrolle in den Android-Einstellungen kurz auf „Keiner“ stellen. *Erwartet:* Der Schalter ist gesperrt; es erscheint „Wendelin ist nicht dein Assistent“ mit dem Knopf „Assistenten wählen“. Rolle wieder auf Wendelin setzen.

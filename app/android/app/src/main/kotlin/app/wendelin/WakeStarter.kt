@@ -25,6 +25,7 @@ object WakeStarter {
             charging = isCharging(context),
             nowMs = System.currentTimeMillis(),
             station = StationState.open,
+            stationModelInstalled = WakePolicy.classifierInstalled(context.filesDir),
         )
         when (decision) {
             WakeDecision.Start -> start(context, source)

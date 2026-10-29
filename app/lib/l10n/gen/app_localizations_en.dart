@@ -4268,6 +4268,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get stationNeedModel => 'Wake word off in the station';
+
+  @override
+  String get stationNeedModelBody =>
+      'Without the Wendelin model the station does not listen for the wake word. Load the model and it is ready here.';
+
+  @override
+  String get stationNeedModelLink => 'To the wake word';
+
+  @override
   String get stationNoEvents => 'No appointments coming up.';
 
   @override

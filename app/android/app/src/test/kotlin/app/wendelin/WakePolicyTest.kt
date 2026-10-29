@@ -18,7 +18,8 @@ class WakePolicyTest {
         mic: Boolean = true,
         charging: Boolean = true,
         station: Boolean = false,
-    ) = WakePolicy.decide(s, role, mic, charging, now, station)
+        model: Boolean = true,
+    ) = WakePolicy.decide(s, role, mic, charging, now, station, model)
 
     @Test
     fun startsWhenEverythingFits() {
@@ -70,6 +71,49 @@ class WakePolicyTest {
         // Without the station nothing changes.
         assertEquals(WakeDecision.Skip("disabled"), decide(off))
         assertEquals(WakeDecision.Skip("not-charging"), decide(chargingOnly, charging = false))
+    }
+
+    @Test
+    fun stationWithoutTheModelDoesNotForceTheWord() {
+        // WP173: the guard of the switch must not be bypassed by the station.
+        val off = WakeSettings(enabled = false)
+        assertEquals(WakeDecision.Skip("no-model"), decide(off, station = true, model = false))
+        assertEquals(
+            WakeDecision.Skip("no-model"),
+            decide(off.copy(mode = WakeMode.CHARGING), charging = false, station = true, model = false),
+        )
+        // A word the user switched on himself stays on, model or not.
+        assertEquals(WakeDecision.Start, decide(on, station = true, model = false))
+        assertEquals(WakeDecision.Start, decide(on, station = false, model = false))
+        // Without the station it is still "disabled"; "no-model" takes the place of "disabled" (first).
+        assertEquals(WakeDecision.Skip("disabled"), decide(off, model = false))
+        assertEquals(WakeDecision.Skip("no-model"), decide(off, role = false, station = true, model = false))
+        // Unknown state is "not installed" (fail-closed default).
+        assertEquals(
+            WakeDecision.Skip("no-model"),
+            WakePolicy.decide(off, true, true, true, now, station = true),
+        )
+    }
+
+    @Test
+    fun classifierInstalledReadsTheModelFileAndFailsClosed() {
+        assertEquals("wake-classifier-wendelin", WakePolicy.CLASSIFIER_ID)
+        assertEquals("wendelin_wp130_a.onnx", WakePolicy.CLASSIFIER_FILE)
+        val dir = java.nio.file.Files.createTempDirectory("wp173").toFile()
+        try {
+            assertFalse(WakePolicy.classifierInstalled(dir))
+            assertFalse(WakePolicy.classifierInstalled(null))
+            val f = WakePolicy.classifierFile(dir)
+            assertEquals("models/wake-classifier-wendelin/wendelin_wp130_a.onnx", f.relativeTo(dir).path)
+            f.parentFile!!.mkdirs()
+            // A directory of that name (or a `.part` file) is not the model.
+            java.io.File(f.path + ".part").writeText("x")
+            assertFalse(WakePolicy.classifierInstalled(dir))
+            f.writeText("x")
+            assertTrue(WakePolicy.classifierInstalled(dir))
+        } finally {
+            dir.deleteRecursively()
+        }
     }
 
     @Test

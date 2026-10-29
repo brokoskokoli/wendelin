@@ -4319,6 +4319,16 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get stationNeedModel => 'Mot d’activation inactif dans la station';
+
+  @override
+  String get stationNeedModelBody =>
+      'Sans le modèle Wendelin, la station n’écoute pas le mot d’activation. Chargez le modèle et il sera prêt ici.';
+
+  @override
+  String get stationNeedModelLink => 'Vers le mot d’activation';
+
+  @override
   String get stationNoEvents => 'Aucun rendez-vous à venir.';
 
   @override

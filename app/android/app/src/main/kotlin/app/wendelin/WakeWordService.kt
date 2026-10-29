@@ -93,6 +93,7 @@ class WakeWordService : Service() {
             micGranted = WakeStarter.micGranted(this),
             charging = WakeStarter.isCharging(this),
             nowMs = System.currentTimeMillis(), station = StationState.open,
+            stationModelInstalled = WakePolicy.classifierInstalled(filesDir),
         )
         val forced = WakePolicy.forcedLog(settings, WakeStarter.isCharging(this), StationState.open)
         if (decision is WakeDecision.Skip) {

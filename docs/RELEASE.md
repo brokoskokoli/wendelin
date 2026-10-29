@@ -101,7 +101,7 @@ Die App erlaubt kein System-Backup (`allowBackup="false"`). Es gibt **keinen Ges
 
 | Daten | Sicherung | Wiederherstellung |
 | --- | --- | --- |
-| Routing-Regeln | Einstellungen → Provider → Erweiterte Einstellungen → Routing → Export (JSON) | Import mit Vorschau |
+| Routing-Regeln | Einstellungen → Provider → Erweiterte Einstellungen → Routing → Export (JSON); sichtbar erst ab zwei Profilen (mit einem Profil fehlt der Eintrag, Regeln und Export sind dann nicht erreichbar) | Import mit Vorschau |
 | MCP-Server | Einstellungen → MCP → Export (ohne Tokens und Passwörter) | Import, Tokens neu eingeben |
 | HTTP-Tools | Einstellungen → HTTP-Tools → Export (ohne Secrets) | Import, Secrets neu eingeben, „Ohne Nachfrage“ ist danach aus |
 | Gedächtnis | Einstellungen → Gedächtnis → Export als Markdown | kein Import: Einträge per Hand oder per Sprache neu anlegen |

@@ -7335,6 +7335,24 @@ abstract class AppLocalizations {
   /// **'{hour} Uhr'**
   String stationHour(int hour);
 
+  /// No description provided for @stationNeedModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktivierungswort in der Station aus'**
+  String get stationNeedModel;
+
+  /// No description provided for @stationNeedModelBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Ohne das Wendelin-Modell hört die Station nicht auf das Aktivierungswort. Lade das Modell, dann ist es hier bereit.'**
+  String get stationNeedModelBody;
+
+  /// No description provided for @stationNeedModelLink.
+  ///
+  /// In de, this message translates to:
+  /// **'Zum Aktivierungswort'**
+  String get stationNeedModelLink;
+
   /// No description provided for @stationNoEvents.
   ///
   /// In de, this message translates to:

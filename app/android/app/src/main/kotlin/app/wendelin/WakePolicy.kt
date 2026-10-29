@@ -177,6 +177,10 @@ object WakePolicy {
      * paused, not charging (only in mode [WakeMode.CHARGING]).
      * WP171: while the station runs ([station]) the wake word is always on: `disabled` and
      * `not-charging` do not apply (role, microphone and a pause the user set still do).
+     * WP173: the station forces the word only with the trained model installed
+     * ([stationModelInstalled], [classifierInstalled]); without it (or when that cannot be told:
+     * default `false`) it skips with `no-model`, like the Dart guard of the switch. A word the user
+     * switched on himself ([WakeSettings.enabled]) is not touched.
      */
     fun decide(
         settings: WakeSettings,
@@ -185,14 +189,31 @@ object WakePolicy {
         charging: Boolean,
         nowMs: Long,
         station: Boolean = false,
+        stationModelInstalled: Boolean = false,
     ): WakeDecision = when {
         !settings.enabled && !station -> WakeDecision.Skip("disabled")
+        !settings.enabled && !stationModelInstalled -> WakeDecision.Skip("no-model")
         !holdsRole -> WakeDecision.Skip("no-role")
         !micGranted -> WakeDecision.Skip("no-permission")
         settings.pausedUntilMs > nowMs -> WakeDecision.Skip("paused")
         settings.mode == WakeMode.CHARGING && !charging && !station -> WakeDecision.Skip("not-charging")
         else -> WakeDecision.Start
     }
+
+    /** WP173: the trained classifier file inside the app's files directory (same place as `FileModelStore`). */
+    fun classifierFile(filesDir: java.io.File): java.io.File =
+        java.io.File(filesDir, "models/$CLASSIFIER_ID/$CLASSIFIER_FILE")
+
+    /** WP173: whether the classifier is installed; any error counts as not installed (fail-closed). */
+    fun classifierInstalled(filesDir: java.io.File?): Boolean = try {
+        filesDir != null && classifierFile(filesDir).isFile
+    } catch (e: Exception) {
+        false
+    }
+
+    // Model id and file of `WakeClassifierCatalog` (wake_classifier_catalog.dart); WakePolicyTest pins both.
+    const val CLASSIFIER_ID = "wake-classifier-wendelin"
+    const val CLASSIFIER_FILE = "wendelin_wp130_a.onnx"
 
     /** WP171: whether the station alone keeps the service on (the settings would not): log `forced=station`. */
     fun forcedByStation(settings: WakeSettings, charging: Boolean, station: Boolean): Boolean =

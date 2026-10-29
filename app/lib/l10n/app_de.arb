@@ -2526,6 +2526,9 @@
       }
     }
   },
+  "stationNeedModel": "Aktivierungswort in der Station aus",
+  "stationNeedModelBody": "Ohne das Wendelin-Modell hört die Station nicht auf das Aktivierungswort. Lade das Modell, dann ist es hier bereit.",
+  "stationNeedModelLink": "Zum Aktivierungswort",
   "stationNoEvents": "Keine Termine in Sicht.",
   "stationNoTasks": "Keine fälligen Aufgaben.",
   "stationOverdue": "überfällig",

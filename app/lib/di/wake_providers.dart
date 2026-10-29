@@ -224,7 +224,7 @@ final wakeShadowFeaturesFactoryProvider = Provider<WakeShadowFeaturesFactory>(
 );
 
 const _missingText =
-    'Die Wake-Modelle fehlen (Einstellungen → Sprache → Aktivierungswort).';
+    'Die Wake-Modelle fehlen (Einstellungen → Aktivierungswort).';
 
 WakeFeatureExtractor Function() _featuresFactory(
   Ref ref, {
