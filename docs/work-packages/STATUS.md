@@ -35,6 +35,7 @@ Stand: 2026-10-29; läuft: keins; Release v0.1.0 (2fd52524); der nächste RC bra
 | WP172 | Overlay schließt nach dem Zuhören ohne Äußerung, Weckwort wieder bereit | gemergt 12e05a0c | K140 offen. Ursache: Overlay reagierte nicht auf idle, Weckwort pausiert bis overlayClosed. Gerätetest `docs/testing/m5/wp172.md` (echtes Weckwort, Resume, TTS); Soll: 2 nahezu äquivalente Mutationen; Sprachstart beim Modell-Laden von Tastatur nicht abgebrochen (`voice_controller.dart:203-210`) |
 | WP173 | Einstellungen umbauen: Routing unter Anbieter, „Erweiterte Einstellungen“, Sprache/Aktivierungswort getrennt, Modell oben | gemergt 955fbe2b | K141 offen, K139 angepasst. Gerätetest `docs/testing/m5/wp173.md`; Folgepunkte: Modell-Anzeigenamen im Katalog nicht lokalisiert; wake_service_e2e WAKE_RUNS=10 hing einmal; click-tile ohne add-tile startete Station einmal nicht |
 | WP174 | Einrichtungsassistent beim ersten Start | gemergt 7efb9d62 | K142 offen. Kein E2E (Maintainer testet selbst): Gerätetest `docs/testing/m5/wp174.md`. Folgepunkte: Aktivierungswort-Engine fest 'de' (`device_wake_parts.dart:32`); Systemsprachwechsel erst nach Neustart; Personalisierung ohne Primärknopf; mehrere Systemsprachen → erste unterstützte |
+| WP177 | Weckwort: Wählbare Stufe-2-Prüfer (Prüfer B und Spracherkennungsmodell mit ODER-Logik) | gemergt 79e989f1 | K143 bestätigt (2026-10-29). |
 
 ## Offen
 
