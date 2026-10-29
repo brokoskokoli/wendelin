@@ -6,7 +6,7 @@ Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) 
 
 Parallelität: bis zu 4 Paket-Sitzungen, je 1 Sub-Agent (AGENTS.md); Standard 2, solange der Maintainer am Rechner ist.
 
-Stand: 2026-10-29; läuft: WP174; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
+Stand: 2026-10-29; läuft: keins; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
 
 ## Meilensteine
 
@@ -34,7 +34,7 @@ Stand: 2026-10-29; läuft: WP174; Release v0.1.0 (2fd52524); der nächste RC bra
 | WP171 | Weckwort: Stufe 2 immer Prüfer B, Rückfall auf installiertes Modell, Hinweis statt stillem Verwerfen | gemergt 8d2d699d | K138/K139 offen. Gerätetest `docs/testing/m5/wp171.md` (Benachrichtigungs-Tipp, Akku/fbLoads, Schatten-Fälle); Akku-Messung nur bei Auffälligkeit; `wake_align_test.dart:428` flaky unter Last; Overlay `start-failed reason=no-models` im E2E-Aufbau klären |
 | WP172 | Overlay schließt nach dem Zuhören ohne Äußerung, Weckwort wieder bereit | gemergt 12e05a0c | K140 offen. Ursache: Overlay reagierte nicht auf idle, Weckwort pausiert bis overlayClosed. Gerätetest `docs/testing/m5/wp172.md` (echtes Weckwort, Resume, TTS); Soll: 2 nahezu äquivalente Mutationen; Sprachstart beim Modell-Laden von Tastatur nicht abgebrochen (`voice_controller.dart:203-210`) |
 | WP173 | Einstellungen umbauen: Routing unter Anbieter, „Erweiterte Einstellungen“, Sprache/Aktivierungswort getrennt, Modell oben | gemergt 955fbe2b | K141 offen, K139 angepasst. Gerätetest `docs/testing/m5/wp173.md`; Folgepunkte: Modell-Anzeigenamen im Katalog nicht lokalisiert; wake_service_e2e WAKE_RUNS=10 hing einmal; click-tile ohne add-tile startete Station einmal nicht |
-| WP174 | Einrichtungsassistent beim ersten Start (Anbieter, Sprache Pflicht; Weckwort, Integrationen, Personalisierung optional) | in Arbeit | Wunsch Maintainer 2026-10-28 |
+| WP174 | Einrichtungsassistent beim ersten Start | gemergt 7efb9d62 | K142 offen. Kein E2E (Maintainer testet selbst): Gerätetest `docs/testing/m5/wp174.md`. Folgepunkte: Aktivierungswort-Engine fest 'de' (`device_wake_parts.dart:32`); Systemsprachwechsel erst nach Neustart; Personalisierung ohne Primärknopf; mehrere Systemsprachen → erste unterstützte |
 
 ## Offen
 
@@ -49,7 +49,7 @@ Aktuell rc11 bis rc13 = Release v0.1.0 (Testprotokoll-Blöcke T31-WP158 bis T31-
 
 ### Offene Konzeptänderungen (Status offen, Änderungsprotokoll im Konzept)
 
-K138 offen, K139 offen, K140 offen, K141 offen. K115 ist zurückgestellt.
+K138 offen, K139 offen, K140 offen, K141 offen, K142 offen. K115 ist zurückgestellt.
 
 ### Bekannte Folgepunkte und Backlog
 
