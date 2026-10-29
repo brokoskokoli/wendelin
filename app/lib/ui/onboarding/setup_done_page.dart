@@ -30,7 +30,6 @@ class SetupDonePage extends ConsumerWidget {
         : CheckStatus.pending;
     return SettingsPage(
       title: l.setupDoneTitle,
-      centered: true,
       intro: l.setupDoneIntro,
       children: [
         StatusCard(

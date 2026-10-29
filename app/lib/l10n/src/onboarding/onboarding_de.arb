@@ -1,10 +1,10 @@
 {
   "onboardingConversation": "Gespräch",
-  "onboardingDemoNoProvider": "Demo ohne Provider",
+  "onboardingDemoNoProvider": "Demo ohne Anbieter",
   "onboardingLearnAndEnable": "Einlernen und einschalten",
   "onboardingPermissionsIntro": "Schalte nur ein, was du brauchst. Berechtigungen fragt Android erst jetzt beim Einschalten.",
-  "onboardingProviderIntro": "Wendelin braucht einen Provider, z. B. Claude mit deinem API-Key oder ein eigenes Modell auf dem Homeserver.",
-  "onboardingSetUpAnotherProvider": "Weiteren Provider einrichten",
+  "onboardingProviderIntro": "Wendelin braucht einen Anbieter, z. B. Claude mit deinem API-Key oder ein eigenes Modell auf dem Homeserver.",
+  "onboardingSetUpAnotherProvider": "Weiteren Anbieter einrichten",
   "onboardingWakeIntro": "Wendelin kann auf „Hey Wendelin“ hören, auch wenn das Telefon liegt. Dafür lernt er zuerst deine Stimme (etwa 3 Minuten). Das geht auch später in den Einstellungen.",
   "onboardingWakeWord": "Aktivierungswort",
   "onboardingWelcome": "Willkommen",

@@ -5263,7 +5263,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingDemoNoProvider.
   ///
   /// In de, this message translates to:
-  /// **'Demo ohne Provider'**
+  /// **'Demo ohne Anbieter'**
   String get onboardingDemoNoProvider;
 
   /// No description provided for @onboardingLearnAndEnable.
@@ -5281,13 +5281,13 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingProviderIntro.
   ///
   /// In de, this message translates to:
-  /// **'Wendelin braucht einen Provider, z. B. Claude mit deinem API-Key oder ein eigenes Modell auf dem Homeserver.'**
+  /// **'Wendelin braucht einen Anbieter, z. B. Claude mit deinem API-Key oder ein eigenes Modell auf dem Homeserver.'**
   String get onboardingProviderIntro;
 
   /// No description provided for @onboardingSetUpAnotherProvider.
   ///
   /// In de, this message translates to:
-  /// **'Weiteren Provider einrichten'**
+  /// **'Weiteren Anbieter einrichten'**
   String get onboardingSetUpAnotherProvider;
 
   /// No description provided for @onboardingWakeIntro.
@@ -8096,12 +8096,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Laden'**
   String get voiceDownloadLoad;
-
-  /// No description provided for @voiceDownloadLoadAgain.
-  ///
-  /// In de, this message translates to:
-  /// **'Erneut laden'**
-  String get voiceDownloadLoadAgain;
 
   /// No description provided for @voiceDownloadLoading.
   ///

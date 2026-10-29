@@ -87,21 +87,8 @@ class _PersonalState extends ConsumerState<SetupPersonalizationPage> {
             onNext: widget.onNext,
             nextLabel: l.setupSkip,
           )
-        else ...[
-          PrimaryButton(
-            plan.loadLabel(l),
-            onPressed: plan.canLoad
-                ? () {
-                    for (final m in plan.missing) {
-                      unawaited(
-                        ref.read(modelStatesProvider.notifier).download(m.id),
-                      );
-                    }
-                  }
-                : null,
-          ),
+        else
           WideButton(l.setupSkip, onPressed: widget.onNext),
-        ],
       ],
     );
   }

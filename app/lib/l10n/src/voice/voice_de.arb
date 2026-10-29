@@ -66,7 +66,6 @@
   "voiceDownloadAnd": " und ",
   "voiceDownloadContinueLoading": "Weiterladen",
   "voiceDownloadLoad": "Laden",
-  "voiceDownloadLoadAgain": "Erneut laden",
   "voiceDownloadLoading": "Lädt …",
   "voiceDownloadLoadingPercent": "Lädt … {v} %",
   "@voiceDownloadLoadingPercent": {

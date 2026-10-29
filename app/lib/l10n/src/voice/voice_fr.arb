@@ -31,7 +31,6 @@
   "voiceDownloadAnd": " et ",
   "voiceDownloadContinueLoading": "Reprendre le chargement",
   "voiceDownloadLoad": "Charger",
-  "voiceDownloadLoadAgain": "Recharger",
   "voiceDownloadLoading": "Chargement …",
   "voiceDownloadLoadingPercent": "Chargement … {v} %",
   "voiceDownloadLoadingPercentOf": "Chargement … {v} % sur {size}",

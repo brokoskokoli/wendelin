@@ -49,6 +49,7 @@ class OptionalActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = context.l10n;
     return Column(
+      spacing: WSpace.l18,
       children: [
         if (met) ...[
           PrimaryButton(l.next, onPressed: onNext),
@@ -81,7 +82,6 @@ class SetupWakePage extends ConsumerWidget {
         PageState.met;
     return SettingsPage(
       title: l.onboardingWakeWord,
-      centered: true,
       intro: l.onboardingWakeIntro,
       children: [
         StatusCard(

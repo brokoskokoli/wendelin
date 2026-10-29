@@ -4,7 +4,8 @@ import 'package:flutter/widgets.dart';
 /// open. As long as it is, back (arrow and system gesture) on every page
 /// the wizard opened leads straight back to the wizard, also from sub
 /// pages; afterwards navigation is the normal one. Sits above the
-/// navigator; without it (plain page tests) nothing changes.
+/// navigator; without it (plain page tests) nothing changes. Takes effect
+/// only on pages built with `SettingsPage`, which reads this scope.
 class WizardBackScope extends InheritedWidget {
   /// Creates the scope.
   const WizardBackScope({

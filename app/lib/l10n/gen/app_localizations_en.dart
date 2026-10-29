@@ -4699,9 +4699,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceDownloadLoad => 'Load';
 
   @override
-  String get voiceDownloadLoadAgain => 'Load again';
-
-  @override
   String get voiceDownloadLoading => 'Loading …';
 
   @override

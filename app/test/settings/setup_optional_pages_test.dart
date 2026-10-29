@@ -150,8 +150,12 @@ void main() {
     ) async {
       await _pump(tester, 'personalization');
       expect(enabled(tester, 'Überspringen'), isTrue);
-      expect(enabled(tester, 'Herunterladen'), isTrue);
-      await tester.tap(find.widgetWithText(FilledButton, 'Herunterladen'));
+      expect(
+        find.text('Laden'),
+        findsOneWidget,
+        reason: 'nur ein Download-Knopf',
+      );
+      await tester.tap(find.text('Laden'));
       await tester.pump();
       expect(_env.speechModels.running.keys, [_camPlus]);
       expect(enabled(tester, 'Überspringen'), isTrue, reason: 'beim Laden');
@@ -161,7 +165,7 @@ void main() {
       tester,
     ) async {
       await _pump(tester, 'personalization');
-      await tester.tap(find.widgetWithText(FilledButton, 'Herunterladen'));
+      await tester.tap(find.text('Laden'));
       await tester.pump();
       _env.speechModels.fail(
         _camPlus,
@@ -169,9 +173,9 @@ void main() {
       );
       await settle(tester);
       expect(find.text('Netz weg.'), findsOneWidget);
-      expect(enabled(tester, 'Erneut versuchen'), isTrue);
+      expect(find.text('Erneut versuchen'), findsOneWidget);
       expect(enabled(tester, 'Überspringen'), isTrue);
-      await tester.tap(find.widgetWithText(FilledButton, 'Erneut versuchen'));
+      await tester.tap(find.text('Erneut versuchen'));
       await tester.pump();
       expect(_env.speechModels.running.keys, [_camPlus]);
     });
@@ -181,7 +185,7 @@ void main() {
     ) async {
       await _pump(tester, 'personalization', camPlus: true);
       expect(find.text('Noch keine Stimme eingelernt'), findsOneWidget);
-      expect(find.text('Herunterladen'), findsNothing);
+      expect(find.text('Laden'), findsNothing);
       await tapText(tester, 'Stimme einlernen');
       expect(find.byType(SpeakerScreen), findsOneWidget);
       await systemBack(tester);

@@ -4751,9 +4751,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get voiceDownloadLoad => 'Charger';
 
   @override
-  String get voiceDownloadLoadAgain => 'Recharger';
-
-  @override
   String get voiceDownloadLoading => 'Chargement …';
 
   @override

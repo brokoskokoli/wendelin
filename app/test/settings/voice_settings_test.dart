@@ -104,8 +104,8 @@ void main() {
         env.speechModels.fail('whisper-base', error);
         await settle(tester);
         expect(find.textContaining(text), findsOneWidget);
-        expect(action(base, 'Erneut laden'), findsOneWidget);
-        await tester.tap(action(base, 'Erneut laden'));
+        expect(action(base, 'Erneut versuchen'), findsOneWidget);
+        await tester.tap(action(base, 'Erneut versuchen'));
         await tester.pump();
         expect(find.textContaining(text), findsNothing);
         expect(env.speechModels.running.keys, ['whisper-base']);

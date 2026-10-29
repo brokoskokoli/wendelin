@@ -91,7 +91,7 @@ class ModelDownloadRow extends ConsumerWidget {
       ModelPhase.absent => (
         state.error == null
             ? context.l10n.voiceDownloadLoad
-            : context.l10n.voiceDownloadLoadAgain,
+            : context.l10n.retry,
         () => unawaited(notifier.download(model.id)),
       ),
     };

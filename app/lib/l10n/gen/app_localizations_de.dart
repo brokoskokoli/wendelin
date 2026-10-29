@@ -3083,7 +3083,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get onboardingConversation => 'Gespräch';
 
   @override
-  String get onboardingDemoNoProvider => 'Demo ohne Provider';
+  String get onboardingDemoNoProvider => 'Demo ohne Anbieter';
 
   @override
   String get onboardingLearnAndEnable => 'Einlernen und einschalten';
@@ -3094,10 +3094,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboardingProviderIntro =>
-      'Wendelin braucht einen Provider, z. B. Claude mit deinem API-Key oder ein eigenes Modell auf dem Homeserver.';
+      'Wendelin braucht einen Anbieter, z. B. Claude mit deinem API-Key oder ein eigenes Modell auf dem Homeserver.';
 
   @override
-  String get onboardingSetUpAnotherProvider => 'Weiteren Provider einrichten';
+  String get onboardingSetUpAnotherProvider => 'Weiteren Anbieter einrichten';
 
   @override
   String get onboardingWakeIntro =>
@@ -4723,9 +4723,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get voiceDownloadLoad => 'Laden';
-
-  @override
-  String get voiceDownloadLoadAgain => 'Erneut laden';
 
   @override
   String get voiceDownloadLoading => 'Lädt …';

@@ -156,21 +156,21 @@ void main() {
     },
   );
 
-  testWidgets('Demo ohne Provider überspringt den Assistenten (Debug)', (
+  testWidgets('Demo ohne Anbieter überspringt den Assistenten (Debug)', (
     tester,
   ) async {
     final env = firstStart();
     final c = await pumpApp(tester, env);
     await tester.tap(find.text('Los geht’s'));
     await settle(tester);
-    await tester.tap(find.text('Demo ohne Provider'));
+    await tester.tap(find.text('Demo ohne Anbieter'));
     await settle(tester);
     expect(find.byType(MainScreen), findsOneWidget);
     expect(c.read(demoModeProvider), isTrue);
   });
 
   testWidgets(
-    'Demo ohne Provider mit echten Demo-Ports (Vault): kein Provider-Update '
+    'Demo ohne Anbieter mit echten Demo-Ports (Vault): kein Provider-Update '
     'während des Aufbaus (Regression WP11)',
     (tester) async {
       final env = TestEnv(
@@ -182,7 +182,7 @@ void main() {
       final c = await pumpApp(tester, env);
       await tester.tap(find.text('Los geht’s'));
       await settle(tester);
-      await tester.tap(find.text('Demo ohne Provider'));
+      await tester.tap(find.text('Demo ohne Anbieter'));
       await settle(tester);
       expect(tester.takeException(), isNull);
       expect(find.byType(MainScreen), findsOneWidget);
@@ -292,8 +292,8 @@ void main() {
     await tester.tap(find.text('Los geht’s'));
     await settle(tester);
     final intro = find.textContaining('Wendelin braucht');
-    // Last element in debug builds: „Demo ohne Provider“.
-    final last = find.widgetWithText(OutlinedButton, 'Demo ohne Provider');
+    // Last element in debug builds: „Demo ohne Anbieter“.
+    final last = find.widgetWithText(OutlinedButton, 'Demo ohne Anbieter');
     final area = tester.getRect(
       find.ancestor(of: intro, matching: find.byType(Column)).first,
     );
