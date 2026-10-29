@@ -5404,12 +5404,6 @@ abstract class AppLocalizations {
   /// **'Noch keine Stimme eingelernt'**
   String get setupSpeakerMissing;
 
-  /// No description provided for @setupSpeakerModelReady.
-  ///
-  /// In de, this message translates to:
-  /// **'Erkennungsmodell geladen'**
-  String get setupSpeakerModelReady;
-
   /// No description provided for @setupSpeakerOpen.
   ///
   /// In de, this message translates to:

@@ -3163,9 +3163,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get setupSpeakerMissing => 'Noch keine Stimme eingelernt';
 
   @override
-  String get setupSpeakerModelReady => 'Erkennungsmodell geladen';
-
-  @override
   String get setupSpeakerOpen => 'Stimme einlernen';
 
   @override

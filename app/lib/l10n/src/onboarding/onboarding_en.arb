@@ -24,7 +24,6 @@
   "setupRetry": "Try again",
   "setupSkip": "Skip",
   "setupSpeakerMissing": "No voice enrolled yet",
-  "setupSpeakerModelReady": "Recognition model downloaded",
   "setupSpeakerOpen": "Enroll voice",
   "setupSpeakerReady": "Your voice is enrolled",
   "setupSpeechDownload": "Download",

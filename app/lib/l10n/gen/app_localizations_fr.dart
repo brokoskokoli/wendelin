@@ -3185,9 +3185,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get setupSpeakerMissing => 'Aucune voix enregistrée pour l’instant';
 
   @override
-  String get setupSpeakerModelReady => 'Modèle de reconnaissance téléchargé';
-
-  @override
   String get setupSpeakerOpen => 'Enregistrer la voix';
 
   @override

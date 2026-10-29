@@ -1849,7 +1849,6 @@
   "setupRetry": "Erneut versuchen",
   "setupSkip": "Überspringen",
   "setupSpeakerMissing": "Noch keine Stimme eingelernt",
-  "setupSpeakerModelReady": "Erkennungsmodell geladen",
   "setupSpeakerOpen": "Stimme einlernen",
   "setupSpeakerReady": "Deine Stimme ist eingelernt",
   "setupSpeechDownload": "Herunterladen",

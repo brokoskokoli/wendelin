@@ -3143,9 +3143,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupSpeakerMissing => 'No voice enrolled yet';
 
   @override
-  String get setupSpeakerModelReady => 'Recognition model downloaded';
-
-  @override
   String get setupSpeakerOpen => 'Enroll voice';
 
   @override

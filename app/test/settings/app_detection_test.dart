@@ -246,8 +246,8 @@ void main() {
     );
   });
 
-  testWidgets('Onboarding: nur Integrationen der Plattform, fehlende Apps '
-      'ausgegraut', (tester) async {
+  testWidgets('Onboarding: Integrationsseite führt nur ins Menü, '
+      'keine Kacheln', (tester) async {
     final opened = <Uri>[];
     final env = TestEnv(
       startup: const StartupSettings(
@@ -282,12 +282,11 @@ void main() {
     await tester.runAsync(() => c.read(toolRegistryProvider).refresh());
     await tester.pumpAndSettle();
 
-    expect(find.text('Kurzbefehle'), findsNothing, reason: 'nur iOS');
-    final t = tileWidget(tester, 'Spotify');
-    expect(t.status, IntegrationStatus.unavailable);
-    expect(t.detail, 'App nicht installiert');
-    await tester.tap(find.text('Im Store'));
-    await tester.pumpAndSettle();
-    expect(opened, hasLength(1));
+    // The page only leads to the menu; the tiles (platform filter, store
+    // hint) are covered by the settings tests above.
+    expect(find.text('Integrationen öffnen'), findsOneWidget);
+    expect(find.text('Spotify'), findsNothing);
+    expect(find.text('Kurzbefehle'), findsNothing);
+    expect(opened, isEmpty);
   });
 }

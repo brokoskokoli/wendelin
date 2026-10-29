@@ -39,8 +39,11 @@ class _PersonalState extends ConsumerState<SetupPersonalizationPage> {
   void initState() {
     super.initState();
     // A download interrupted by closing the app continues here.
+    final states = ref.read(modelStatesProvider.notifier);
     unawaited(
-      Future(() => ref.read(modelStatesProvider.notifier).resumePartial()),
+      Future(() {
+        if (mounted) states.resumePartial();
+      }),
     );
   }
 

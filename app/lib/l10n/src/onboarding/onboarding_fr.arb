@@ -24,7 +24,6 @@
   "setupRetry": "Réessayer",
   "setupSkip": "Passer",
   "setupSpeakerMissing": "Aucune voix enregistrée pour l’instant",
-  "setupSpeakerModelReady": "Modèle de reconnaissance téléchargé",
   "setupSpeakerOpen": "Enregistrer la voix",
   "setupSpeakerReady": "Ta voix est enregistrée",
   "setupSpeechDownload": "Télécharger",

@@ -13,6 +13,7 @@ import 'package:wendelin/ui/onboarding/onboarding_screen.dart';
 import 'package:wendelin/ui/routes.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
 import 'package:wendelin/ui/settings/speaker/speaker_screen.dart';
+import 'package:wendelin/ui/settings/wake/wake_enroll_screen.dart';
 import 'package:wendelin_storage/fakes.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
@@ -264,6 +265,33 @@ void main() {
       expect(navigator(tester).canPop(), isFalse);
     });
 
+    testWidgets('aus der Einlern-Unterseite des Aktivierungsworts: '
+        'AppBar- und System-Zurück führen auf den Assistenten', (tester) async {
+      await onWakePage(tester);
+      for (final viaAppBar in [true, false]) {
+        await tapText(tester, 'Einlernen und einschalten');
+        unawaited(
+          navigator(tester).push<void>(
+            MaterialPageRoute(
+              builder: (_) =>
+                  const WakeEnrollScreen(speakerId: 'sp1', name: 'A'),
+            ),
+          ),
+        );
+        await settle(tester);
+        expect(find.byType(WakeEnrollScreen), findsOneWidget);
+        if (viaAppBar) {
+          await tester.tap(find.byTooltip('Zurück').first);
+          await settle(tester);
+        } else {
+          await systemBack(tester);
+        }
+        expect(find.byType(WakeEnrollScreen), findsNothing);
+        expect(find.byType(OnboardingScreen), findsOneWidget);
+        expect(navigator(tester).canPop(), isFalse);
+      }
+    });
+
     testWidgets('Personalisierung: Stimme einlernen und zurück', (
       tester,
     ) async {
@@ -272,7 +300,9 @@ void main() {
         AppSettings.setupWizardPage,
         'personalization',
       );
-      await pump(tester, await envOn(storage));
+      final env = await envOn(storage);
+      env.speechModels.installed.add('speaker-campplus');
+      await pump(tester, env);
       expect(find.text('Noch keine Stimme eingelernt'), findsOneWidget);
       await tapText(tester, 'Stimme einlernen');
       expect(find.byType(SpeakerScreen), findsOneWidget);
