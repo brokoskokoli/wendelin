@@ -19,8 +19,12 @@ enum class WakeMode(val key: String) {
 data class WakeSettings(
     val enabled: Boolean = false,
     val mode: WakeMode = WakeMode.CHARGING,
-    /** Stage 2 (Whisper check) on or off, `wake.verify` of the app. */
+    /** Stage 2 check on or off, `wake.verify` of the app. */
     val verify: Boolean = true,
+    /** Stage 2: verifier B enabled (WP177). */
+    val verifyB: Boolean = true,
+    /** Stage 2: speech recognition model enabled (WP177). */
+    val verifyModel: Boolean = false,
     /** Stage 1 detection choice (WP129): `auto`, `templates` or `model`. */
     val detector: String = "auto",
     /** „Pause 1 h“: nothing starts before this time (epoch ms), 0 = not paused. */
@@ -47,6 +51,8 @@ data class WakeSettings(
             enabled = on,
             mode = (args?.get("mode") as? String)?.let { WakeMode.parse(it) } ?: mode,
             verify = args?.get("verify") as? Boolean ?: verify,
+            verifyB = args?.get("verifyB") as? Boolean ?: verifyB,
+            verifyModel = args?.get("verifyModel") as? Boolean ?: verifyModel,
             detector = (args?.get("detector") as? String)?.takeIf { it in DETECTORS } ?: detector,
             pausedUntilMs = if (on) pausedUntilMs else 0L,
             offByUser = if (args?.containsKey("enabled") == true) false else offByUser,

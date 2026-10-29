@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart'
     show ValueListenable, visibleForTesting;
@@ -15,9 +14,11 @@ import 'service_audio_input.dart';
 import 'wake_alive_log.dart';
 import 'wake_detector.dart';
 import 'wake_gap_tracker.dart';
+import 'wake_host_logging.dart';
 import 'wake_stage2_gap.dart';
 
 export '../channels.dart' show wakeEngineChannelName;
+export 'wake_host_logging.dart' show wakePreRoll;
 export 'wake_stage2_gap.dart';
 
 /// What the wake word host needs from the device (replaced in tests).
@@ -34,15 +35,19 @@ abstract interface class WakeParts {
     bool shadow = false,
   });
 
-  /// Stage 2 (WP171, both detectors): verifier B with the enrolled sequences;
-  /// if it cannot decide, the installed recognizer (Parakeet preferred, else
-  /// Whisper), loaded when needed and freed again.
-  WakeVerifier verifier({WakeDetector detector = WakeDetector.templates});
+  /// Stage 2 (WP171, WP177, both detectors): verifier B with the enrolled sequences
+  /// and/or the installed recognizer (Parakeet preferred, else Whisper), loaded
+  /// when needed and freed again.
+  WakeVerifier verifier({
+    WakeDetector detector = WakeDetector.templates,
+    bool verifierB = true,
+    bool recognizer = false,
+  });
 
-  /// WP171: whether stage 2 cannot decide right now (a learned voice without
+  /// WP171, WP177: whether stage 2 cannot decide right now (a learned voice without
   /// sequences for verifier B and neither Parakeet nor Whisper installed),
   /// checked before any candidate. `null`: it can (or unknown).
-  Future<WakeStage2Gap?> stage2Gap();
+  Future<WakeStage2Gap?> stage2Gap({bool verifierB = true, bool? recognizer});
 
   /// WP171: loads and checks of the recognizer fallback, for `wake-alive`.
   WakeFallbackStats get fallbackStats;
@@ -91,7 +96,9 @@ final class WakeHost {
 
   WakeWordListener? _listener;
   bool _verify = true;
-  _LoggingVerifier? _verifier;
+  bool _verifyB = true;
+  bool _verifyModel = false;
+  LoggingWakeVerifier? _verifier;
   WakeDetector _detector = WakeDetector.templates;
   bool _station = false;
   // WP171: whether the run was built with the developer-mode shadow detector
@@ -104,9 +111,14 @@ final class WakeHost {
   Timer? _alive;
   Future<void> _ops = Future.value();
   bool _ending = false;
+  final _sweeper = WakeDevSweeper();
+
+  /// Completes when the last cleaning after "off" is over (tests).
+  @visibleForTesting
+  Future<void> get sweepIdle => _sweeper.sweepIdle;
 
   late final _gaps = WakeGapTracker(
-    check: () => parts.stage2Gap(),
+    check: () => parts.stage2Gap(verifierB: _verifyB, recognizer: _verifyModel),
     send: (reason) => _call('stage2Gap', {'reason': reason}),
   );
 
@@ -126,31 +138,31 @@ final class WakeHost {
         : const <Object?, Object?>{};
     switch (call.method) {
       case 'devMode':
-        // WP148: the app (via Kotlin) switched the developer mode; only an
-        // explicit `true` turns it on.
-        devLogEnabled = args['on'] == true;
-        _devGen++;
-        // WP155: switched off and asked to clean up: once the writes under
-        // way here are over (they stop at the flag), delete what the app's
-        // own deletion may have missed.
-        if (args['on'] == false && args['clear'] == true) {
-          _sweep = _sweepAfterOff(deleteArchive: args['archive'] == true);
-          unawaited(_sweep);
-        }
+        _sweeper.onDevMode(
+          on: args['on'] == true,
+          clear: args['clear'] == true,
+          archive: args['archive'] == true,
+        );
         // WP171: the shadow detector is built with the run: restart on a switch.
         await _serial(
           () => _listener == null
               ? Future<void>.value()
-              : _run(verify: _verify, choice: _choice, station: _station),
+              : _run(
+                  verify: _verify,
+                  verifyB: _verifyB,
+                  verifyModel: _verifyModel,
+                  choice: _choice,
+                  station: _station,
+                ),
         );
       case 'run':
         // The flag as Kotlin has stored it; anything else is off.
-        devLogEnabled = args['dev'] == true;
-        _devGen++;
-        unawaited(cleanDevAudio());
+        _sweeper.onRun(dev: args['dev'] == true);
         await _serial(
           () => _run(
             verify: args['verify'] != false,
+            verifyB: args['verifyB'] != false,
+            verifyModel: args['verifyModel'] == true,
             choice: WakeDetectorChoice.parse(args['detector']),
             station: args['station'] == true,
           ),
@@ -195,6 +207,8 @@ final class WakeHost {
 
   Future<void> _run({
     required bool verify,
+    bool verifyB = true,
+    bool verifyModel = false,
     WakeDetectorChoice choice = WakeDetectorChoice.auto,
     bool station = false,
   }) async {
@@ -203,6 +217,8 @@ final class WakeHost {
     final shadow = devLogEnabled;
     if (_listener != null &&
         _verify == verify &&
+        _verifyB == verifyB &&
+        _verifyModel == verifyModel &&
         _detector == detector &&
         _station == station &&
         _shadow == shadow) {
@@ -210,6 +226,8 @@ final class WakeHost {
     }
     await _stopListener();
     _verify = verify;
+    _verifyB = verifyB;
+    _verifyModel = verifyModel;
     _choice = choice;
     _shadow = shadow;
     _detector = detector;
@@ -254,10 +272,14 @@ final class WakeHost {
     });
     final listener = WakeWordListener(
       audio: audio,
-      engine: _LoggingEngine(engine, _detector, verify: verify),
+      engine: LoggingWakeEngine(engine, _detector, verify: verify),
       verifier: verify
-          ? _verifier = _LoggingVerifier(
-              parts.verifier(detector: _detector),
+          ? _verifier = LoggingWakeVerifier(
+              parts.verifier(
+                detector: _detector,
+                verifierB: _verifyB,
+                recognizer: _verifyModel,
+              ),
               onGap: _gaps.onVerdict,
             )
           : null,
@@ -405,27 +427,6 @@ final class WakeHost {
     }
   }
 
-  /// After the developer mode went off: waits for the writes of this
-  /// isolate, then deletes (unless the mode came back on meanwhile).
-  Future<void> _sweepAfterOff({required bool deleteArchive}) async {
-    // The mode may come back on (and write) at any step: every step checks
-    // the flag and the generation (off, on, off again is a new mode too).
-    final gen = _devGen;
-    bool stale() => devLogEnabled || gen != _devGen;
-    await devArchiveIdle;
-    await devAudioIdle;
-    if (stale()) return;
-    await deleteDevAudio();
-    if (deleteArchive && !stale()) await clearDevArchive();
-  }
-
-  int _devGen = 0;
-  Future<void>? _sweep;
-
-  /// Completes when the last cleaning after "off" is over (tests).
-  @visibleForTesting
-  Future<void> get sweepIdle => _sweep ?? Future<void>.value();
-
   Future<void> _fail(String reason) async {
     if (_ending) return;
     _ending = true;
@@ -464,119 +465,6 @@ final class WakeHost {
       // The service is gone.
     } on MissingPluginException {
       // Same.
-    }
-  }
-}
-
-/// Audio before the wake word end handed to the overlay: the word (up to
-/// about a second) and room noise before it.
-const wakePreRoll = Duration(milliseconds: 2500);
-
-/// Logs every stage 1 candidate: score and rule, nothing else.
-final class _LoggingEngine implements WakeWordEngine, ShadowScoringWakeEngine {
-  _LoggingEngine(this.inner, this.detector, {required this.verify});
-
-  final WakeWordEngine inner;
-  final WakeDetector detector;
-
-  /// Whether stage 2 runs (else a candidate below `acceptFrom` goes on
-  /// `unchecked`).
-  final bool verify;
-
-  @override
-  Future<void> open(List<KeywordSpec> keywords) => inner.open(keywords);
-
-  // WP155: the window scores of the inner engine go to the listener.
-  @override
-  set scoreSink(void Function(int endSample, double score)? sink) {
-    if (inner case final ScoringWakeEngine e) e.scoreSink = sink;
-  }
-
-  // WP171: both detectors' view of each window.
-  @override
-  set windowSink(void Function(WakeWindowScores window)? sink) {
-    if (sink != null) return attachWindowSink(inner, sink);
-    switch (inner) {
-      case final ShadowScoringWakeEngine e:
-        e.windowSink = null;
-      case final ScoringWakeEngine e:
-        e.scoreSink = null;
-      default:
-    }
-  }
-
-  @override
-  Future<List<WakeWordHit>> accept(Int16List frame) async {
-    final hits = await inner.accept(frame);
-    for (final h in hits) {
-      voiceLog('wake-cand', {
-        'stage': 1,
-        'detector': detector.name,
-        'score': (h.score ?? h.confidence ?? 0).toStringAsFixed(3),
-        'rule': h.reason,
-        'direct': h.direct,
-      });
-      // WP141: how long stage 1 held the score and where the candidate goes
-      // on; also for candidates stage 2 rejects later (`wake-verify`).
-      voiceLog('wake-decision', {
-        'hold_ms': h.holdMs ?? 0,
-        'peak': (h.score ?? h.confidence ?? 0).toStringAsFixed(3),
-        'path': h.direct ? 'direct' : (verify ? 'stage2' : 'unchecked'),
-      });
-    }
-    return hits;
-  }
-
-  @override
-  void reset() => inner.reset();
-
-  @override
-  Future<void> close() => inner.close();
-}
-
-/// Logs the verdict of stage 2 (`ok`, `no`, or `skip` if it could not
-/// decide, which counts as not confirmed).
-final class _LoggingVerifier implements WakeEndAwareVerifier, VerdictDetail {
-  _LoggingVerifier(this.inner, {this.onGap});
-
-  final WakeVerifier inner;
-
-  /// Called after every candidate: the reason stage 2 could not decide, or
-  /// `null` if it did.
-  final void Function(WakeStage2Gap? gap)? onGap;
-
-  @override
-  String get kind => inner.kind;
-
-  // WP155: the numbers of the inner verifier (B) for the wake archive.
-  @override
-  Map<String, Object?> get lastDetail =>
-      inner is VerdictDetail ? (inner as VerdictDetail).lastDetail : const {};
-
-  @override
-  Future<bool> confirm(Int16List pcm) => confirmAt(pcm, -1);
-
-  /// [endSample] is the end of the decision window in [pcm] (`-1`: unknown,
-  /// then [inner.confirm] decides alone).
-  @override
-  Future<bool> confirmAt(Int16List pcm, int endSample) async {
-    try {
-      final i = inner;
-      final ok = endSample >= 0 && i is WakeEndAwareVerifier
-          ? await i.confirmAt(pcm, endSample)
-          : await i.confirm(pcm);
-      voiceLog('wake-verify', {'result': ok ? 'ok' : 'no'});
-      onGap?.call(null);
-      return ok;
-    } on Object catch (e) {
-      final missing =
-          e is VoiceException && e.kind == VoiceErrorKind.modelMissing;
-      voiceLog('wake-verify', {
-        'result': 'skip',
-        'error': missing ? 'model_missing' : errorCode(e),
-      });
-      onGap?.call(missing ? WakeStage2Gap.modelMissing : null);
-      return false;
     }
   }
 }

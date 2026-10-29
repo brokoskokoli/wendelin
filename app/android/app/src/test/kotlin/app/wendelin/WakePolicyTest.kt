@@ -219,10 +219,12 @@ class WakePolicyTest {
         val old = WakeSettings(enabled = true, mode = WakeMode.ALWAYS, verify = true, pausedUntilMs = 5)
         assertEquals(old, old.withArgs(null))
         assertEquals(old.copy(verify = false), old.withArgs(mapOf("verify" to false)))
+        assertEquals(old.copy(verifyB = false), old.withArgs(mapOf("verifyB" to false)))
+        assertEquals(old.copy(verifyModel = true), old.withArgs(mapOf("verifyModel" to true)))
         assertEquals(old.copy(detector = "model"), old.withArgs(mapOf("detector" to "model")))
         assertEquals(old, old.withArgs(mapOf("detector" to "bogus")))
         assertEquals(
-            mapOf("verify" to true, "detector" to "auto", "station" to true, "dev" to false),
+            mapOf("verify" to true, "verifyB" to true, "verifyModel" to false, "detector" to "auto", "station" to true, "dev" to false),
             WakeSettings().runArgs(stationActive = true),
         )
         // WP148: the developer mode goes to the engine with `run`, `configure` leaves it alone.

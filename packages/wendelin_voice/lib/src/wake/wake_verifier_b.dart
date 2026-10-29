@@ -356,15 +356,17 @@ final class VerifierBScorer {
   }
 }
 
-/// Stage 2 with verifier B (WP143): with enrolled sequences B decides, else
-/// (or on any error of B) the [fallback] (hw2) does. Never both for one clip.
+/// Stage 2 with verifier B (WP143, WP177): with enrolled sequences B decides;
+/// if B does not confirm (or without sequences / on error), the optional
+/// [fallback] (e.g. speech recognizer) decides if provided. Never calls the
+/// fallback when B confirms.
 final class VerifierBWakeVerifier
     implements WakeEndAwareVerifier, VerdictDetail {
   /// Creates the verifier.
   VerifierBWakeVerifier({
     required Future<List<WakeTemplates>> Function() templates,
     required WakeFeatureExtractor Function() features,
-    required this.fallback,
+    this.fallback,
     Float32List? mu,
     this.fallbackLabel = 'hw2',
     this.onDecision,
@@ -376,8 +378,9 @@ final class VerifierBWakeVerifier
          threshold: threshold,
        );
 
-  /// Decides without enrolled sequences and when B fails.
-  final WakeVerifier fallback;
+  /// Decides without enrolled sequences, when B fails, or when B does not confirm
+  /// and fallback is active. `null` when only verifier B is active.
+  final WakeVerifier? fallback;
 
   /// Name of the fallback in the log.
   final String fallbackLabel;
@@ -417,20 +420,30 @@ final class VerifierBWakeVerifier
   Future<bool> confirmAt(Int16List pcm, int endSample) async {
     _detail = const {};
     final s = await scorer.score(pcm, endSample);
-    if (s == null) return _viaFallback(pcm);
+    if (s == null) {
+      if (fallback != null) return _viaFallback(pcm);
+      _kind = 'b';
+      _detail = {'score': null, 'thr': threshold};
+      onDecision?.call('b', null, threshold);
+      return false;
+    }
     _kind = 'b';
     _detail = {'score': s, 'thr': threshold};
     onDecision?.call('b', s, threshold);
-    return s >= threshold;
+    if (s >= threshold) return true;
+    if (fallback != null) return _viaFallback(pcm);
+    return false;
   }
 
   Future<bool> _viaFallback(Int16List pcm) async {
+    final fb = fallback;
+    if (fb == null) return false;
     onDecision?.call(fallbackLabel, null, null);
-    _kind = fallback.kind;
-    final ok = await fallback.confirm(pcm);
+    _kind = fb.kind;
+    final ok = await fb.confirm(pcm);
     // The fallback may pick its engine while it confirms (Parakeet or
     // Whisper): [kind] is the one that decided.
-    _kind = fallback.kind;
+    _kind = fb.kind;
     return ok;
   }
 

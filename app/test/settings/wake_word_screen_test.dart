@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/wake_providers.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/platform/wake/wake_detector.dart';
-import 'package:wendelin/ui/design/design.dart' show WSwitch;
+import 'package:wendelin/ui/design/design.dart' show CheckStatusIcon;
 import 'package:wendelin/ui/settings/wake/wake_calibrate_screen.dart';
 import 'package:wendelin/ui/settings/wake/wake_enroll_screen.dart';
 import 'package:wendelin/ui/settings/wake/wake_models.dart';
@@ -298,18 +298,19 @@ void main() {
     ) async {
       final env = wakeEnv();
       final c = await pumpWake(tester, env, const WakeWordScreen());
-      final sw = find.descendant(
-        of: find.ancestor(
-          of: find.text('Nachprüfung (Stufe 2)'),
-          matching: find.byType(InkWell),
-        ),
-        matching: find.byType(WSwitch),
+      final bRow = find.byKey(const ValueKey('wakeStage2VerifierB'));
+      expect(bRow, findsOneWidget);
+      expect(
+        find.descendant(of: bRow, matching: find.byType(CheckStatusIcon)),
+        findsOneWidget,
       );
-      expect(tester.widget<WSwitch>(sw).value, isTrue);
       expect(await c.read(wakeVerifyProvider.future), isTrue);
-      await tester.tap(sw);
+      await tester.tap(bRow);
       await settle(tester);
-      expect(tester.widget<WSwitch>(sw).value, isFalse);
+      expect(
+        find.descendant(of: bRow, matching: find.byType(CheckStatusIcon)),
+        findsNothing,
+      );
       expect(await c.read(wakeVerifyProvider.future), isFalse);
       expect(await env.storage.settings.get(wakeVerifyKey), isFalse);
     });

@@ -362,9 +362,13 @@ final class DeviceWakeParts implements WakeParts {
     return sets;
   }
 
-  /// [detector] is not used: stage 2 is the same for both (WP171).
+  /// [detector] is not used: stage 2 is the same for both (WP171, WP177).
   @override
-  WakeVerifier verifier({WakeDetector detector = WakeDetector.templates}) {
+  WakeVerifier verifier({
+    WakeDetector detector = WakeDetector.templates,
+    bool verifierB = true,
+    bool recognizer = false,
+  }) {
     final whisper = LazyWhisperVerifier(
       engines: () async => _engines ??= await _newEngines(),
     );
@@ -372,7 +376,7 @@ final class DeviceWakeParts implements WakeParts {
     // if it cannot, the installed recognizer does (Parakeet when installed,
     // else Whisper), never Whisper alone.
     final parakeet = _parakeet ??= _newParakeet();
-    final recognizer = _CountingVerifier(
+    final recognizerVerifier = _CountingVerifier(
       PreferredWakeVerifier(
         preferred: parakeet,
         fallback: whisper,
@@ -380,14 +384,13 @@ final class DeviceWakeParts implements WakeParts {
       ),
       fallbackStats,
     );
-    // WP143: with enrolled sequences verifier B decides and neither Parakeet
-    // nor Whisper is touched (they are only loaded inside [recognizer]);
-    // without them, or on an error of B, [recognizer] (hw2) decides as before.
-    if (!useVerifierB) return recognizer;
-    return _verifierB ??= VerifierBWakeVerifier(
+    final bActive = verifierB && useVerifierB;
+    if (!bActive) return recognizerVerifier;
+    _verifierB?.close();
+    return _verifierB = VerifierBWakeVerifier(
       templates: _allTemplates,
       features: container.read(wakeFeaturesFactoryProvider),
-      fallback: recognizer,
+      fallback: recognizer ? recognizerVerifier : null,
       onDecision: (verifier, score, threshold) => voiceLog('wake-decision', {
         'verifier': verifier,
         // -1 (no usable sequence) would not pass the log filter.
@@ -399,14 +402,18 @@ final class DeviceWakeParts implements WakeParts {
     );
   }
 
-  /// The rule [wakeStage2GapOf], shared with the settings (WP171).
+  /// The rule [wakeStage2GapOf], shared with the settings (WP171, WP177).
   @override
-  Future<WakeStage2Gap?> stage2Gap() async {
+  Future<WakeStage2Gap?> stage2Gap({
+    bool verifierB = true,
+    bool? recognizer,
+  }) async {
     final sets = await _allTemplates();
     return wakeStage2GapOf(
       anyVoice: sets.isNotEmpty,
       anyWithoutSequences: sets.any((t) => !t.hasSequences),
-      verifierB: useVerifierB,
+      verifierB: verifierB && useVerifierB,
+      recognizer: recognizer,
       recognizerInstalled: await _recognizerInstalled(),
     );
   }

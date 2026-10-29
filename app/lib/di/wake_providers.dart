@@ -11,6 +11,7 @@ import '../platform/voice/onnx_wake_models.dart';
 import '../platform/voice/pcm.dart';
 import '../platform/voice/wake_feature_chain.dart';
 import '../platform/wake/wake_detector.dart';
+import '../platform/wake/wake_stage2_gap.dart';
 import '../voice/dev_archive.dart';
 import '../voice/dev_audio.dart';
 import '../voice/voice_log.dart';
@@ -27,31 +28,115 @@ import 'voice_providers.dart';
 // Personal wake word (WP60): templates, speakers, the second-stage setting
 // and the feature chain. WP50 builds the live engine from the same pieces.
 
-/// Setting „Nachprüfung mit Whisper“ (default on).
+/// Legacy setting key for stage 2 (boolean).
 final wakeVerifyKey = SettingKey.boolean('wake.verify', defaultValue: true);
+
+/// Setting „Prüfer B (Stimmvorlagen)“ (WP177, default on).
+final wakeVerifyBKey = SettingKey.boolean('wake.verify_b', defaultValue: true);
+
+/// Setting „Spracherkennungsmodell“ (WP177, default off).
+final wakeVerifyModelKey = SettingKey.boolean(
+  'wake.verify_model',
+  defaultValue: false,
+);
+
+/// The settings for stage 2 verification (verifier B, recognition model) (WP177).
+final wakeStage2Provider =
+    AsyncNotifierProvider<WakeStage2Notifier, WakeStage2Settings>(
+      WakeStage2Notifier.new,
+    );
+
+/// Stores and updates stage 2 verification settings (WP177).
+final class WakeStage2Notifier extends AsyncNotifier<WakeStage2Settings> {
+  @override
+  Future<WakeStage2Settings> build() async {
+    final settings = ref.read(storageProvider).settings;
+    final bExplicit = await settings.get(wakeVerifyBKey);
+    final modelExplicit = await settings.get(wakeVerifyModelKey);
+    if (bExplicit != null || modelExplicit != null) {
+      return WakeStage2Settings(
+        verifierB: bExplicit ?? true,
+        recognizer: modelExplicit ?? false,
+      );
+    }
+    // Migration: if stage 2 was completely switched off via `wake.verify == false`:
+    final legacyVerify = await settings.get(wakeVerifyKey);
+    if (legacyVerify == false) {
+      return const WakeStage2Settings(verifierB: false, recognizer: false);
+    }
+    return const WakeStage2Settings(verifierB: true, recognizer: false);
+  }
+
+  /// Toggles or sets verifier B.
+  Future<void> setVerifierB({required bool enabled}) async {
+    final cur = state.value ?? const WakeStage2Settings();
+    final next = WakeStage2Settings(
+      verifierB: enabled,
+      recognizer: cur.recognizer,
+    );
+    state = AsyncData(next);
+    final settings = ref.read(storageProvider).settings;
+    await settings.set(wakeVerifyBKey, enabled);
+    await settings.set(wakeVerifyKey, next.active);
+    ref.read(wakeVerifyProvider.notifier).state = AsyncData(next.active);
+  }
+
+  /// Toggles or sets speech recognition model check.
+  Future<void> setRecognizer({required bool enabled}) async {
+    final cur = state.value ?? const WakeStage2Settings();
+    final next = WakeStage2Settings(
+      verifierB: cur.verifierB,
+      recognizer: enabled,
+    );
+    state = AsyncData(next);
+    final settings = ref.read(storageProvider).settings;
+    await settings.set(wakeVerifyModelKey, enabled);
+    await settings.set(wakeVerifyKey, next.active);
+    ref.read(wakeVerifyProvider.notifier).state = AsyncData(next.active);
+  }
+}
 
 /// Templates and speakers in the encrypted secret store.
 final wakeStoreProvider = Provider<SecretWakeTemplateStore>(
   (ref) => SecretWakeTemplateStore(ref.watch(secretStoreProvider)),
 );
 
-/// Whether stage 2 (Whisper) confirms candidates in everyday use. Switch
-/// off if it is too strict with the real voice; the test mode always shows
-/// both stages. Default on.
+/// Whether stage 2 confirms candidates in everyday use (WP177: active if either
+/// verifier B or the recognition model is enabled). Switch off if too strict;
+/// default on.
 final wakeVerifyProvider = AsyncNotifierProvider<WakeVerifyNotifier, bool>(
   WakeVerifyNotifier.new,
 );
 
-/// Stores the setting.
+/// Stores the legacy setting and mirrors [wakeStage2Provider.active].
 final class WakeVerifyNotifier extends AsyncNotifier<bool> {
   @override
-  Future<bool> build() async =>
-      await ref.read(storageProvider).settings.get(wakeVerifyKey) ?? true;
+  Future<bool> build() async {
+    final settings = ref.read(storageProvider).settings;
+    final bExplicit = await settings.get(wakeVerifyBKey);
+    final modelExplicit = await settings.get(wakeVerifyModelKey);
+    if (bExplicit != null || modelExplicit != null) {
+      return (bExplicit ?? true) || (modelExplicit ?? false);
+    }
+    return await settings.get(wakeVerifyKey) ?? true;
+  }
 
   /// Switches stage 2 on or off.
   Future<void> set({required bool enabled}) async {
     state = AsyncData(enabled);
-    await ref.read(storageProvider).settings.set(wakeVerifyKey, enabled);
+    final settings = ref.read(storageProvider).settings;
+    await settings.set(wakeVerifyKey, enabled);
+    await settings.set(wakeVerifyBKey, enabled);
+    if (!enabled) {
+      await settings.set(wakeVerifyModelKey, false);
+    }
+    final cur =
+        ref.read(wakeStage2Provider).value ?? const WakeStage2Settings();
+    final next = WakeStage2Settings(
+      verifierB: enabled,
+      recognizer: enabled ? cur.recognizer : false,
+    );
+    ref.read(wakeStage2Provider.notifier).state = AsyncData(next);
   }
 }
 
@@ -348,20 +433,27 @@ final wakeEnrollPauseProvider = Provider<Duration>(
   (ref) => const Duration(milliseconds: 900),
 );
 
-/// Stage 2 of the barge-in (WP151): verifier B, or the [transcript] check
+/// Stage 2 of the barge-in (WP151, WP177): verifier B, or the [transcript] check
 /// alone while `mu` is a placeholder (no measurement yet, so no B).
 BargeVerifier chooseBargeVerifier({
   required BargeVerifier transcript,
   required VerifierBScorer scorer,
   required String Function() spokenText,
   required bool muIsPlaceholder,
-}) => muIsPlaceholder
-    ? transcript
-    : VerifierBBargeVerifier(
-        scorer: scorer,
-        fallback: transcript,
-        spokenText: spokenText,
-      );
+  bool verifierB = true,
+  bool? recognizer,
+}) {
+  final bActive = verifierB && !muIsPlaceholder;
+  if (!bActive) {
+    return transcript;
+  }
+  return VerifierBBargeVerifier(
+    scorer: scorer,
+    fallback: (recognizer ?? true) ? transcript : null,
+    echoVerifier: transcript,
+    spokenText: spokenText,
+  );
+}
 
 /// Barge-in on the wake word chain (WP50): „Wendelin“ interrupts the spoken
 /// answer in the conversation mode. `null` while the conversation
@@ -381,6 +473,10 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
   // keeps its old detector (`disposeWhenIdle`), whose verifier holds the
   // language fixed instead of reading a disposed ref.
   final verify = ref.watch(wakeVerifyProvider.select((v) => v.value ?? true));
+  final stage2 = ref.watch(
+    wakeStage2Provider.select((s) => s.value ?? const WakeStage2Settings()),
+  );
+  final activeVerify = verify && stage2.active;
   final language = ref.watch(languageProvider);
   // Held now: after a rebuild during the answer the old ref is disposed and
   // a later `ref.read` in the verifier would fail (check skipped).
@@ -417,7 +513,7 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
     // WP151: with enrolled „Hey Wendelin“ sequences verifier B decides (the
     // transcript misreads the short call at conversation volume); without
     // them the transcript check with the echo filter does.
-    verifier: verify
+    verifier: activeVerify
         ? (spoken) {
             final transcript = LazyBargeVerifier(
               stt: () => sttFuture!,
@@ -429,6 +525,8 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
               scorer: scorer,
               spokenText: spoken,
               muIsPlaceholder: wakeVerifierBMuIsPlaceholder,
+              verifierB: stage2.verifierB,
+              recognizer: stage2.recognizer,
             );
           }
         : null,

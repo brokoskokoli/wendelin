@@ -471,7 +471,7 @@ void main() {
             engines: () async => engines,
             useVerifierB: true,
           );
-          final v = parts.verifier(detector: detector);
+          final v = parts.verifier(detector: detector, recognizer: true);
           expect(await v.confirm(_tone(900)), isTrue);
           expect(v.kind, 'parakeet');
           expect(engines.checked, isEmpty, reason: 'Whisper nie gefragt');
@@ -489,7 +489,7 @@ void main() {
             engines: () async => engines,
             useVerifierB: true,
           );
-          final v = parts.verifier(detector: detector);
+          final v = parts.verifier(detector: detector, recognizer: true);
           expect(await v.confirm(_tone(900)), isTrue);
           expect(v.kind, 'whisper');
           await parts.dispose();
@@ -504,7 +504,7 @@ void main() {
             engines: () async => engines,
             useVerifierB: true,
           );
-          final v = parts.verifier(detector: detector);
+          final v = parts.verifier(detector: detector, recognizer: true);
           await expectLater(
             v.confirm(_tone(900)),
             throwsA(
@@ -632,7 +632,10 @@ void main() {
             return backend;
           },
         );
-        final v = parts.verifier(detector: WakeDetector.model);
+        final v = parts.verifier(
+          detector: WakeDetector.model,
+          recognizer: true,
+        );
         expect(await v.confirm(_tone(900)), isTrue);
         expect(v.kind, 'parakeet');
         expect((seen! as NemoFiles).hotwords!.score, 2.0);
@@ -652,7 +655,7 @@ void main() {
         hotwordsDirectory: () async => hw,
         parakeetStart: (_) async => fail('Parakeet darf nicht starten'),
       );
-      final v = parts.verifier(detector: WakeDetector.model);
+      final v = parts.verifier(detector: WakeDetector.model, recognizer: true);
       await expectLater(v.confirm(_tone(900)), throwsA(isA<Object>()));
       expect(v.kind, 'whisper');
     });
@@ -670,7 +673,10 @@ void main() {
             throw StateError('defekt');
           },
         );
-        final v = parts.verifier(detector: WakeDetector.model);
+        final v = parts.verifier(
+          detector: WakeDetector.model,
+          recognizer: true,
+        );
         // Whisper is not installed in this test: its error (not the one of
         // Parakeet) reaches the caller, so the same hit went to Whisper.
         await expectLater(
@@ -690,7 +696,7 @@ void main() {
         hotwordsDirectory: () async => Directory('${dir.path}/hw'),
         parakeetStart: (_) async => fail('Parakeet darf nicht starten'),
       );
-      final v = parts.verifier(detector: WakeDetector.model);
+      final v = parts.verifier(detector: WakeDetector.model, recognizer: true);
       // Whisper is not installed either in this test: the call fails, but
       // the recognizer that was asked is Whisper.
       await expectLater(v.confirm(_tone(900)), throwsA(isA<Object>()));

@@ -344,10 +344,12 @@ void main() {
       WakeFeatureExtractor f,
       List<WakeTemplates> t, {
       double? threshold,
+      WakeVerifier? fb,
+      bool withFallback = true,
     }) => VerifierBWakeVerifier(
       templates: () async => t,
       features: () => f,
-      fallback: fallback,
+      fallback: withFallback ? (fb ?? fallback) : null,
       mu: Float32List(96),
       onDecision: (v, s, t) => log.add((v, s, t)),
       threshold: threshold ?? 0.6815,
@@ -374,26 +376,45 @@ void main() {
       },
     );
 
-    test(
-      'Score knapp unter der Schwelle: abgelehnt, hw2 nicht gefragt',
-      () async {
-        final v = make(liveFeatures(axis(0)), [
-          templatesWith([row(0.68), row(0.68), row(0.68)]),
-        ]);
-        expect(await v.confirmAt(pcm, end), isFalse);
-        expect(fallback.calls, isEmpty);
-      },
-    );
+    test('Score knapp unter der Schwelle ohne Fallback: abgelehnt', () async {
+      final v = make(liveFeatures(axis(0)), [
+        templatesWith([row(0.68), row(0.68), row(0.68)]),
+      ], withFallback: false);
+      expect(await v.confirmAt(pcm, end), isFalse);
+      expect(fallback.calls, isEmpty);
+    });
+
+    test('Score knapp unter der Schwelle mit Fallback (ODER-Logik): Fallback entscheidet', () async {
+      final v = make(liveFeatures(axis(0)), [
+        templatesWith([row(0.68), row(0.68), row(0.68)]),
+      ], withFallback: true);
+      expect(await v.confirmAt(pcm, end), isTrue);
+      expect(fallback.calls, hasLength(1));
+    });
 
     test('Score genau auf der Schwelle zählt (>=)', () async {
       final tpl = [
         templatesWith([row(0.9)]),
       ];
-      await make(liveFeatures(axis(0)), tpl).confirmAt(pcm, end);
+      await make(
+        liveFeatures(axis(0)),
+        tpl,
+        withFallback: false,
+      ).confirmAt(pcm, end);
       final exact = log.single.$2!;
-      final on = make(liveFeatures(axis(0)), tpl, threshold: exact);
+      final on = make(
+        liveFeatures(axis(0)),
+        tpl,
+        threshold: exact,
+        withFallback: false,
+      );
       expect(await on.confirmAt(pcm, end), isTrue);
-      final above = make(liveFeatures(axis(0)), tpl, threshold: exact + 1e-9);
+      final above = make(
+        liveFeatures(axis(0)),
+        tpl,
+        threshold: exact + 1e-9,
+        withFallback: false,
+      );
       expect(await above.confirmAt(pcm, end), isFalse);
     });
 
@@ -420,7 +441,7 @@ void main() {
 
     for (final wFirst in [true, false]) {
       test(
-        'w hoch, HW unter der Schwelle: abgelehnt (w zuerst: $wFirst)',
+        'w hoch, HW unter der Schwelle: abgelehnt ohne Fallback (w zuerst: $wFirst)',
         () async {
           final w = WakeTemplateSequence(
             word: 'w',
@@ -438,7 +459,7 @@ void main() {
               embeddings: [Float32List(4)],
               sequences: wFirst ? [w, hw] : [hw, w],
             ),
-          ]);
+          ], withFallback: false);
           expect(await v.confirmAt(pcm, end), isFalse);
           expect(fallback.calls, isEmpty);
           expect(log.single.$2, closeTo(0.1, 1e-4)); // nur HW zählt
@@ -502,7 +523,7 @@ void main() {
     test('zu kurzer Clip (null-Folge): Score -1, abgelehnt', () async {
       final v = make(FakeWakeFeatureExtractor(), [
         templatesWith([row(0.9)]),
-      ]);
+      ], withFallback: false);
       expect(await v.confirmAt(pcm, end), isFalse);
       expect(log.single.$2, -1);
       expect(fallback.calls, isEmpty);
@@ -525,6 +546,7 @@ void main() {
             ],
           ),
         ],
+        withFallback: false,
       );
       expect(await v.confirmAt(pcm, end), isFalse);
       expect(log.single.$2, -1);

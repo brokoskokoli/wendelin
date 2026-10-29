@@ -66,10 +66,13 @@ final wakeStage2GapProvider = Provider<WakeStage2Gap?>((ref) {
     ref.watch(modelStatesProvider),
   );
   if (installed == null) return null;
+  final stage2 =
+      ref.watch(wakeStage2Provider).value ?? const WakeStage2Settings();
   return wakeStage2GapOf(
     anyVoice: sets.isNotEmpty,
     anyWithoutSequences: sets.any((t) => !t.hasSequences),
-    verifierB: !wakeVerifierBMuIsPlaceholder,
+    verifierB: stage2.verifierB && !wakeVerifierBMuIsPlaceholder,
+    recognizer: stage2.recognizer,
     recognizerInstalled: installed,
   );
 });

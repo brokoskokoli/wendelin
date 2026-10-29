@@ -26,6 +26,8 @@ void main() {
       'enabled': true,
       'mode': 'always',
       'verify': false,
+      'verifyB': true,
+      'verifyModel': false,
       'detector': 'auto',
     });
   });
