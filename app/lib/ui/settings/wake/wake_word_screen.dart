@@ -19,7 +19,7 @@ import 'wake_models.dart';
 import 'wake_service_section.dart';
 import 'wake_test_screen.dart';
 
-/// Einstellungen → Sprache → Aktivierungswort (WP60): „Wendelin lernt deine
+/// Einstellungen → Aktivierungswort (WP60): „Wendelin lernt deine
 /// Stimme“. Einlernen (etwa 3 min), Kalibrieren (etwa 30 min, empfohlen),
 /// weitere Personen, Ausprobieren, der Dienst-Schalter und die Nachprüfung
 /// (WP50 b: [WakeServiceSection]).

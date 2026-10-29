@@ -3378,6 +3378,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get areaSpeechDetail => 'Reconnaissance vocale, voix, débit';
 
   @override
+  String get areaWakeWord => 'Mot d’activation';
+
+  @override
+  String get areaWakeWordDetail =>
+      'Apprendre « Hey Wendelin », modèle, service';
+
+  @override
   String get costsIntro =>
       'D’après les prix du catalogue de modèles, en dollars américains.';
 
@@ -3534,12 +3541,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get providersAdd => '+ Fournisseur';
 
   @override
+  String get providersAdvanced => 'Paramètres avancés';
+
+  @override
   String providersBudget(String v) {
     return 'Budget $v/mois';
   }
-
-  @override
-  String get providersChoice => 'Choix du fournisseur';
 
   @override
   String get providersDeleteBody =>
@@ -3554,10 +3561,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String providersError(String error) {
     return 'Erreur : $error';
   }
-
-  @override
-  String get providersIntro =>
-      'Le fournisseur par défaut reçoit toute demande pour laquelle aucune règle de routage ne s’applique. S’il échoue, Wendelin le dit clairement et ne passe jamais de lui-même à un autre fournisseur.';
 
   @override
   String get providersMakeDefault => 'Définir par défaut';
@@ -4814,12 +4817,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get voiceScreenLanguageDefaultChip => 'Voix par défaut de la langue';
-
-  @override
-  String get voiceScreenLearnsVoice => 'Wendelin apprend votre voix';
-
-  @override
-  String get voiceScreenLearnsVoiceDetail => 'Entraîner, calibrer et essayer';
 
   @override
   String voiceScreenLikeApp(String v) {

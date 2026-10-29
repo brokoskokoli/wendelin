@@ -3334,6 +3334,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get areaSpeechDetail => 'Speech recognition, voice, pace';
 
   @override
+  String get areaWakeWord => 'Wake word';
+
+  @override
+  String get areaWakeWordDetail => 'Teach “Hey Wendelin”, model, service';
+
+  @override
   String get costsIntro =>
       'Based on the prices in the model catalog, in US dollars.';
 
@@ -3488,12 +3494,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providersAdd => '+ Provider';
 
   @override
+  String get providersAdvanced => 'Advanced settings';
+
+  @override
   String providersBudget(String v) {
     return 'Budget $v/month';
   }
-
-  @override
-  String get providersChoice => 'Provider choice';
 
   @override
   String get providersDeleteBody => 'Profile and stored key are removed.';
@@ -3507,10 +3513,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String providersError(String error) {
     return 'Error: $error';
   }
-
-  @override
-  String get providersIntro =>
-      'The default gets every request for which no routing rule applies. If it fails, Wendelin says so clearly and never switches to another provider on its own.';
 
   @override
   String get providersMakeDefault => 'Make default';
@@ -4762,12 +4764,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceScreenLanguageDefaultChip => 'Default of the language';
-
-  @override
-  String get voiceScreenLearnsVoice => 'Wendelin learns your voice';
-
-  @override
-  String get voiceScreenLearnsVoiceDetail => 'Train, calibrate and try out';
 
   @override
   String voiceScreenLikeApp(String v) {

@@ -3,40 +3,66 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart';
+import 'package:wendelin/ui/routes.dart';
 import 'package:wendelin/ui/settings/http_tool_editor_screen.dart';
 import 'package:wendelin/ui/settings/http_tools_screen.dart';
 import 'package:wendelin/ui/settings/integration_detail_screen.dart';
 import 'package:wendelin/ui/settings/mcp/mcp_servers_screen.dart';
-import 'package:wendelin/ui/settings/routing/routing_screen.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
+import 'package:wendelin/ui/settings/voice_screen.dart';
+import 'package:wendelin/ui/settings/wake/wake_word_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 import '../support/fake_user_integrations.dart';
 import '../support/test_env.dart';
+import '../ui/helpers.dart' show setView;
 import 'integrations_screen_test.dart';
 import 'other_screens_test.dart' show pumpPage;
 
 void main() {
-  testWidgets('Übersicht: Routing öffnet den Editor, MCP-Server und '
-      'HTTP-Tools stehen nicht im Hauptmenü (WP152)', (tester) async {
+  testWidgets('Übersicht: Routing nicht im Hauptmenü, Aktivierungswort nach '
+      'Sprache, MCP-Server und HTTP-Tools nicht im Hauptmenü (WP152, WP173)', (
+    tester,
+  ) async {
     await pumpPage(tester, TestEnv(), const SettingsScreen());
     final titles = [
       for (final (t, _, _) in SettingsScreen.areas(AppLocalizationsDe())) t,
     ];
-    expect(titles.take(4), [
+    expect(titles.take(3), [
       'Provider',
-      'Routing',
       'Integrationen',
       'Datenschutz und Logs',
     ]);
+    expect(titles, isNot(contains('Routing')));
+    expect(find.text('Routing'), findsNothing);
+    final i = titles.indexOf('Sprache');
+    expect(titles[i + 1], 'Aktivierungswort');
     expect(titles, isNot(contains('MCP-Server')));
     expect(titles, isNot(contains('HTTP-Tools')));
     expect(find.text('MCP-Server'), findsNothing);
     expect(find.text('HTTP-Tools'), findsNothing);
-    await tester.tap(find.text('Routing'));
+  });
+
+  testWidgets('Übersicht: Aktivierungswort öffnet die Aktivierungswort-Seite '
+      '(WP173)', (tester) async {
+    await pumpPage(tester, TestEnv(), const SettingsScreen());
+    await tester.tap(find.text('Aktivierungswort'));
     await settle(tester);
-    expect(find.byType(RoutingScreen), findsOneWidget);
+    expect(find.byType(WakeWordScreen), findsOneWidget);
+    expect(AppRoutes.wakeWord, '/settings/voice/wake');
+  });
+
+  testWidgets('Sprache-Seite ohne Aktivierungswort-Abschnitt (WP173)', (
+    tester,
+  ) async {
+    setView(tester, const Size(390, 6000));
+    await tester.pumpWidget(TestEnv().app(home: const VoiceScreen()));
+    await settle(tester);
+    // Sehr hoher Bildschirm: auch die unteren Abschnitte sind gebaut.
+    expect(find.text('Sprechfassung'), findsWidgets);
+    expect(find.text('Wendelin lernt deine Stimme'), findsNothing);
+    expect(find.text('Aktivierungswort'), findsNothing);
   });
 
   testWidgets('„+ MCP-Server“ und „+ HTTP-Tool“ öffnen ihre Bereiche', (

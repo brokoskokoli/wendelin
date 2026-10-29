@@ -1967,6 +1967,8 @@
   "areaRoutingDetail": "Regeln, Testfeld, Import und Export",
   "areaSpeech": "Sprache",
   "areaSpeechDetail": "Spracherkennung, Stimme, Tempo",
+  "areaWakeWord": "Aktivierungswort",
+  "areaWakeWordDetail": "Hey Wendelin einlernen, Modell, Dienst",
   "costsIntro": "Nach den Preisen im Modellkatalog, in US-Dollar.",
   "costsMonth": "Monat {v}",
   "@costsMonth": {
@@ -2082,6 +2084,7 @@
   "providerSetupProviderSetupTestConnection": "Verbindung testen",
   "providerSetupProviderSetupTesting": "Teste …",
   "providersAdd": "+ Provider",
+  "providersAdvanced": "Erweiterte Einstellungen",
   "providersBudget": "Budget {v}/Monat",
   "@providersBudget": {
     "placeholders": {
@@ -2090,7 +2093,6 @@
       }
     }
   },
-  "providersChoice": "Anbieterwahl",
   "providersDeleteBody": "Profil und gespeicherter Key werden entfernt.",
   "providersDeleteTitle": "„{name}“ löschen?",
   "@providersDeleteTitle": {
@@ -2108,7 +2110,6 @@
       }
     }
   },
-  "providersIntro": "Der Standard bekommt jede Anfrage, für die keine Routing-Regel greift. Scheitert er, sagt Wendelin das klar und wechselt nie von selbst zu einem anderen Anbieter.",
   "providersMakeDefault": "Als Standard",
   "providersNone": "Noch kein Provider eingerichtet.",
   "providersProfiles": "Profile",
@@ -2787,8 +2788,6 @@
   "voiceScreenKeepModelLabel": "Modell im Speicher halten",
   "voiceScreenLanguageDefault": "Standard der Sprache",
   "voiceScreenLanguageDefaultChip": "Standard der Sprache",
-  "voiceScreenLearnsVoice": "Wendelin lernt deine Stimme",
-  "voiceScreenLearnsVoiceDetail": "Einlernen, kalibrieren und ausprobieren",
   "voiceScreenLikeApp": "Wie die App ({v})",
   "@voiceScreenLikeApp": {
     "placeholders": {

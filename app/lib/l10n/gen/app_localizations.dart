@@ -5746,6 +5746,18 @@ abstract class AppLocalizations {
   /// **'Spracherkennung, Stimme, Tempo'**
   String get areaSpeechDetail;
 
+  /// No description provided for @areaWakeWord.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktivierungswort'**
+  String get areaWakeWord;
+
+  /// No description provided for @areaWakeWordDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Hey Wendelin einlernen, Modell, Dienst'**
+  String get areaWakeWordDetail;
+
   /// No description provided for @costsIntro.
   ///
   /// In de, this message translates to:
@@ -5967,17 +5979,17 @@ abstract class AppLocalizations {
   /// **'+ Provider'**
   String get providersAdd;
 
+  /// No description provided for @providersAdvanced.
+  ///
+  /// In de, this message translates to:
+  /// **'Erweiterte Einstellungen'**
+  String get providersAdvanced;
+
   /// No description provided for @providersBudget.
   ///
   /// In de, this message translates to:
   /// **'Budget {v}/Monat'**
   String providersBudget(String v);
-
-  /// No description provided for @providersChoice.
-  ///
-  /// In de, this message translates to:
-  /// **'Anbieterwahl'**
-  String get providersChoice;
 
   /// No description provided for @providersDeleteBody.
   ///
@@ -5996,12 +6008,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Fehler: {error}'**
   String providersError(String error);
-
-  /// No description provided for @providersIntro.
-  ///
-  /// In de, this message translates to:
-  /// **'Der Standard bekommt jede Anfrage, für die keine Routing-Regel greift. Scheitert er, sagt Wendelin das klar und wechselt nie von selbst zu einem anderen Anbieter.'**
-  String get providersIntro;
 
   /// No description provided for @providersMakeDefault.
   ///
@@ -8180,18 +8186,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Standard der Sprache'**
   String get voiceScreenLanguageDefaultChip;
-
-  /// No description provided for @voiceScreenLearnsVoice.
-  ///
-  /// In de, this message translates to:
-  /// **'Wendelin lernt deine Stimme'**
-  String get voiceScreenLearnsVoice;
-
-  /// No description provided for @voiceScreenLearnsVoiceDetail.
-  ///
-  /// In de, this message translates to:
-  /// **'Einlernen, kalibrieren und ausprobieren'**
-  String get voiceScreenLearnsVoiceDetail;
 
   /// No description provided for @voiceScreenLikeApp.
   ///

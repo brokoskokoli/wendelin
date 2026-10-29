@@ -13,7 +13,8 @@ import 'dev_archive_section.dart';
 import 'settings_page.dart';
 
 /// Settings overview: one row per area (concept: „Einstellungen“). MCP servers
-/// and HTTP tools are reached via „Integrationen“ only (routes stay).
+/// and HTTP tools are reached via „Integrationen“ only, routing via
+/// „Provider“ (routes stay).
 class SettingsScreen extends ConsumerWidget {
   /// Creates the overview.
   const SettingsScreen({super.key});
@@ -21,12 +22,12 @@ class SettingsScreen extends ConsumerWidget {
   /// Areas in display order: title, detail, route.
   static List<(String, String, String)> areas(AppLocalizations l) => [
     (l.areaProvider, l.areaProviderDetail, AppRoutes.providers),
-    (l.areaRouting, l.areaRoutingDetail, AppRoutes.routing),
     (l.areaIntegrations, l.areaIntegrationsDetail, AppRoutes.integrations),
     (l.areaPrivacy, l.areaPrivacyDetail, AppRoutes.privacy),
     (l.areaCosts, l.areaCostsDetail, AppRoutes.costs),
     (l.areaAssistant, l.areaAssistantDetail, AppRoutes.assistant),
     (l.areaSpeech, l.areaSpeechDetail, AppRoutes.voice),
+    (l.areaWakeWord, l.areaWakeWordDetail, AppRoutes.wakeWord),
     (l.stationTitle, l.stationSettingsDetail, AppRoutes.station),
     (l.appLanguageTitle, l.appLanguageDetail, AppRoutes.appLanguage),
   ];

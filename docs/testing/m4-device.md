@@ -151,7 +151,7 @@ Einstellungen → **Sprache** → Abschnitt „Aktivierungswort“ → „Wendel
 
 ## 10. Wake-Word-Dienst (WP50)
 
-Der Dienst läuft als Vordergrunddienst (Typ Mikrofon, dauerhafte Benachrichtigung „Wendelin hört auf „Hey Wendelin““ mit den Knöpfen „Pause 1 h“ und „Aus“). Er wird über die Assistentenrolle gestartet (auch nach Neustart) und braucht mindestens eine eingelernte Stimme. Der Bildschirm kann aus und das Telefon gesperrt sein. Die Bedienung sitzt oben auf der Seite „Aktivierungswort“ (Einstellungen → Sprache → Aktivierungswort → „Wendelin lernt deine Stimme“), Abschnitt „Zuhören im Hintergrund“ mit Zeile „Status“ und Schalter „Aktivierungswort einschalten“.
+Der Dienst läuft als Vordergrunddienst (Typ Mikrofon, dauerhafte Benachrichtigung „Wendelin hört auf „Hey Wendelin““ mit den Knöpfen „Pause 1 h“ und „Aus“). Er wird über die Assistentenrolle gestartet (auch nach Neustart) und braucht mindestens eine eingelernte Stimme. Der Bildschirm kann aus und das Telefon gesperrt sein. Die Bedienung sitzt oben auf der Seite „Aktivierungswort“ (Einstellungen → Aktivierungswort → „Wendelin lernt deine Stimme“), Abschnitt „Zuhören im Hintergrund“ mit Zeile „Status“ und Schalter „Aktivierungswort einschalten“.
 
 - [ ] **10.1 Ohne Einlernen kein Dienst.** (Nur wenn du vorher alle Stimmen gelöscht hast.) Dienst einschalten. *Erwartet:* Er lässt sich nicht einschalten, Hinweis „Erst Stimme einlernen“ mit Knopf „Zum Einlernen“.
 - [ ] **10.2 Ohne Rolle gesperrt.** Assistentenrolle in den Android-Einstellungen kurz auf „Keiner“ stellen. *Erwartet:* Der Schalter ist gesperrt; es erscheint „Wendelin ist nicht dein Assistent“ mit dem Knopf „Assistenten wählen“. Rolle wieder auf Wendelin setzen.
