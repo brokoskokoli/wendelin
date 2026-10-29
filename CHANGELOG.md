@@ -7,6 +7,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-29
+
+Easier to set up, more reliable wake word.
+
+### Added
+
+- **Setup assistant** – on first start, an assistant walks through the essentials: AI provider and speech recognition (required), then optionally the wake word, integrations and personalisation. Existing installations see it once after the update, with finished steps already ticked.
+
+### Changed
+
+- **Tidier settings** – the wake word has its own menu entry with the download of the trained model at the top; it can only be switched on with that model. Routing moved under "Providers" → "Advanced settings".
+- **More reliable wake word** – the second check is always done by the own verifier; if it cannot decide, the installed recognition model (Parakeet or Whisper) helps. A missing model is reported clearly instead of silently dropping hits. In station mode the wake word stays on while the station is open.
+- **The window closes itself** – when listening ends without speech, the assistant window closes and the wake word listens again right away. It only stays open for questions, confirmations or unlocking.
+- Without a saved choice, the app languages follow the system language (German, English, French; otherwise English).
+- Licence GPL-3.0-or-later, new README (English/German) and project page.
+
 ## [0.1.0] - 2026-10-28
 
 First release of Wendelin, a personal voice assistant for Android that does as much as possible on the device.
@@ -28,5 +44,6 @@ Download the APK below and install it. On Android 13 and later, you may have to 
 Certificate fingerprint (SHA-256): `A9:E9:5A:13:98:34:19:23:4B:DB:8F:CA:F6:0F:1B:84:18:88:36:86:7B:F8:DC:38:99:15:B5:25:39:DC:09:7B`
 APK checksum: see `SHA256SUMS`.
 
-[Unreleased]: https://github.com/brokoskokoli/wendelin/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/brokoskokoli/wendelin/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/brokoskokoli/wendelin/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/brokoskokoli/wendelin/releases/tag/v0.1.0
