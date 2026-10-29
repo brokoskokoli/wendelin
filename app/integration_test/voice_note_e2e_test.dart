@@ -137,14 +137,16 @@ void main() {
   // WP33/B6: D2 mit whisper-base. Der Skript-Provider übernimmt den
   // Notiznamen aus dem Transkript (wie ein Modell); gefunden wird die Notiz
   // über die Vokabular-Korrektur bzw. die phonetische Titelsuche. Nur
-  // b6-01 (Piper-Stimme thorsten): Die frühere say-Aufnahme anderer Stimmen
-  // (Reed/Flo) erkannte base schon „Notiz“ nicht mehr („Was steht in meiner
-  // Gute? Es ist mit der Intest.“); die Piper-Fixture ist neu zu prüfen.
+  // b6-01 (Piper-Stimme thorsten, Sprechrate 0.85, Manifest): „Wendelin“
+  // erkennt base als Eigenname nicht stabil („Notlitz-Bandlin-Test“, in 8 von
+  // 8 Proben falsch), darum heißt die Notiz hier Gartenarbeit (base und small
+  // hören „Was steht in meiner Notizgartenarbeit?“; der Name wird exakt
+  // aufgelöst, groß/klein egal).
   for (final fixture in ['b6-01']) {
-    testWidgets('whisper-base: D2 ($fixture) findet die Notiz Wendelin-Test', (
+    testWidgets('whisper-base: D2 ($fixture) findet die Notiz Gartenarbeit', (
       tester,
     ) async {
-      const note = 'Wendelin-Test.md';
+      const note = 'Gartenarbeit.md';
       if (await port.exists(note)) {
         await port.write(note, _b6Note);
       } else {
@@ -167,7 +169,7 @@ void main() {
       // Der Index kennt die Notiz (sonst baut ihn die erste Suche auf).
       await app.storage.notes.upsert(
         note,
-        title: 'Wendelin-Test',
+        title: 'Gartenarbeit',
         body: _b6Note,
         modifiedAt: DateTime.utc(2030, 3, 12),
       );
@@ -255,7 +257,7 @@ void main() {
   );
 }
 
-const _b6Note = '# Wendelin-Test\n\n## Status\n\noffen\n';
+const _b6Note = '# Gartenarbeit\n\n## Status\n\noffen\n';
 
 /// Plays a model that reads the note named in the spoken request: the
 /// first turn calls `obsidian__read_note` with the words after „Notiz“

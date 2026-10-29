@@ -29,7 +29,11 @@
 # Die erzeugten WAVs stehen deshalb teils unter CC0-1.0, die französischen
 # unter CC-BY-4.0 (REUSE.toml, Namensnennung wegen SIWIS); Texte: Manifest.
 #
-# Spalten im Manifest (Tab-getrennt): id, Sprache, Stimme, Text.
+# Spalten im Manifest (Tab-getrennt): id, Sprache, Stimme, Text, optional
+# Sprechgeschwindigkeit (sherpa `speed`, Standard 1.0, kleiner = langsamer; nur
+# für b6-01, damit Whisper base den Notiznamen sicher erkennt).
+# Hinweis: Die VITS-Ausgabe ist stochastisch (kein Seed); `--force` erzeugt bei
+# jedem Lauf leicht andere Aufnahmen, maßgeblich sind die eingecheckten WAVs.
 # Eigene Aufnahmen des Maintainers kommen als <id>.wav (gleiches Format)
 # mit einer Zeile und der Stimme "own" ins Manifest; das Skript überspringt
 # sie. Umwandeln z. B. mit
@@ -75,13 +79,13 @@ to16k() { # in out
 }
 
 tab="$(printf '\t')"
-grep -v '^#' "$dir/manifest.tsv" | while IFS="$tab" read -r id lang voice text; do
+grep -v '^#' "$dir/manifest.tsv" | while IFS="$tab" read -r id lang voice text speed; do
   [ -n "$id" ] || continue
   [ "$voice" = "own" ] && continue
   out="$dir/$id.wav"
   if [ -f "$out" ] && [ "$force" != "--force" ]; then continue; fi
   fetch_voice "$voice"
-  printf '%s\n' "$text" | "$PY" -I "$here/stt_tts.py" "$models/vits-piper-$voice" "$tmp/$id.wav"
+  printf '%s\n' "$text" | "$PY" -I "$here/stt_tts.py" "$models/vits-piper-$voice" "$tmp/$id.wav" "${speed:-1.0}"
   to16k "$tmp/$id.wav" "$out"
   echo "$id ($lang, $voice): $text"
 done

@@ -142,7 +142,7 @@ def fixtures(cache):
     for line in (FIX / "manifest.tsv").read_text().splitlines():
         if line.startswith("#") or not line.strip():
             continue
-        id_, lang, _voice, text = line.split("\t")
+        id_, lang, _voice, text = line.split("\t")[:4]
         if not re.match(r"^(de|fr|en)-\d\d$", id_) and not id_.startswith("b6-"):
             continue
         kind = "b6" if id_.startswith("b6-") else "short"

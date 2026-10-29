@@ -1,4 +1,4 @@
-# id	lang	piper-voice	text
+# id	lang	piper-voice	text	[speed]
 de-01	de	de_DE-thorsten-medium	Trag mir morgen um zehn Uhr Tauchen ein.
 de-02	de	de_DE-thorsten-medium	Wie wird das Wetter heute in Berlin?
 de-03	de	de_DE-thorsten-medium	Schreib Milch und Brot auf die Einkaufsliste.
@@ -35,7 +35,7 @@ en-09	en	en_US-ljspeech-medium	Create an appointment with the doctor on Thursday
 en-10	en	en_US-ljspeech-medium	Send the list to my brother.
 en-11	en	en_US-ljspeech-medium	Yes.
 en-12	en	en_US-ljspeech-medium	No.
-b6-01	de	de_DE-thorsten-medium	Was steht in meiner Notiz Wendelin-Test?
+b6-01	de	de_DE-thorsten-medium	Was steht in meiner Notiz Gartenarbeit?	0.85
 b6-02	de	de_DE-thorsten-medium	Was steht in meiner Notiz Wendelin-Test?
 b6-03	de	de_DE-thorsten-medium	Was steht in meiner Notiz Wendelin-Test?
 b6-04	de	de_DE-thorsten-medium	Ersetze in meiner Notiz Wendelin-Test den Abschnitt Status durch erledigt.
