@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../../di/voice_providers.dart';
 import '../../../di/wake_providers.dart';
 import '../../../di/wake_service.dart';
 import '../../../di/wake_settings.dart';
@@ -124,6 +126,12 @@ class _State extends ConsumerState<WakeServiceSection> {
     ref.invalidate(wakeStatusProvider);
   }
 
+  void _loadModel() => unawaited(
+    ref
+        .read(modelStatesProvider.notifier)
+        .download(SpeechModelCatalog.wakeClassifierWendelin.id),
+  );
+
   Future<void> _chooseRole() async {
     final opened = await ref
         .read(assistantPlatformProvider)
@@ -175,7 +183,10 @@ class _State extends ConsumerState<WakeServiceSection> {
     final tone = ref.watch(wakeToneProvider).value ?? true;
     final noRole = !status.holdsRole;
     final noVoice = speakers.isEmpty && ref.watch(wakeNeedsVoiceProvider);
-    final locked = (noRole || noVoice) && !settings.enabled;
+    // WP173: switching on needs the trained model (switching off never
+    // does, and an already switched-on service stays on).
+    final noModel = !ref.watch(wakeClassifierInstalledProvider);
+    final locked = (noRole || noVoice || noModel) && !settings.enabled;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: WSpace.l18,
@@ -198,6 +209,18 @@ class _State extends ConsumerState<WakeServiceSection> {
                 onChanged: locked ? null : (v) => unawaited(_toggle(on: v)),
               ),
             ),
+            if (noModel && !settings.enabled) ...[
+              SettingsRow(
+                key: const ValueKey('wakeNeedModel'),
+                title: context.l10n.wakeServiceSectionNeedModel,
+                detail: context.l10n.wakeServiceSectionNeedModelBody,
+              ),
+              LinkButton(
+                context.l10n.wakeServiceSectionLoadModel,
+                onPressed: _loadModel,
+                external: false,
+              ),
+            ],
             if (noRole) ...[
               SettingsRow(
                 key: ValueKey('wakeNeedRole'),

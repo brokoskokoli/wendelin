@@ -205,6 +205,8 @@ prepare_voice() {
       for f in "$MODELS"/wake-classifier-wendelin/*; do
         copy_in "$f" "models/wake-classifier-wendelin/$(basename "$f")"
       done
+    else
+      echo "WARNUNG: $MODELS/wake-classifier-wendelin fehlt; seit WP173 lässt sich das Aktivierungswort ohne dieses Modell nicht einschalten (Wake-Tests schlagen fehl)" >&2
     fi
     # „Stopp“ (WP64b), falls vorhanden.
     for f in "$MODELS"/wake-e2e-stop/*.wav; do

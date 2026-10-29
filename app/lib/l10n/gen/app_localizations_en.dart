@@ -5408,6 +5408,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Without a trained voice, Wendelin does not recognize the wake word.';
 
   @override
+  String get wakeServiceSectionLoadModel => 'Load model';
+
+  @override
+  String get wakeServiceSectionNeedModel => 'Load the model first';
+
+  @override
+  String get wakeServiceSectionNeedModelBody =>
+      'The wake word can only be switched on once the Wendelin model is loaded (see the top of this page).';
+
+  @override
   String get wakeServiceSectionNotAssistant => 'Wendelin is not your assistant';
 
   @override
@@ -5609,6 +5619,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get wakeWordTemplatesOutdated =>
       'These templates are outdated (the comparison was improved). Please train again.';
+
+  @override
+  String get wakeWordTrainedModel => 'Wendelin model';
 
   @override
   String get wakeWordTryNow => 'Try it now';

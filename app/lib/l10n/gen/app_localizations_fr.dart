@@ -5463,6 +5463,16 @@ class AppLocalizationsFr extends AppLocalizations {
       'Sans voix entraînée, Wendelin ne reconnaît pas le mot d’activation.';
 
   @override
+  String get wakeServiceSectionLoadModel => 'Charger le modèle';
+
+  @override
+  String get wakeServiceSectionNeedModel => 'Chargez d’abord le modèle';
+
+  @override
+  String get wakeServiceSectionNeedModelBody =>
+      'Le mot d’activation ne peut être activé qu’une fois le modèle Wendelin chargé (voir en haut de cette page).';
+
+  @override
   String get wakeServiceSectionNotAssistant =>
       'Wendelin n’est pas votre assistant';
 
@@ -5668,6 +5678,9 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get wakeWordTemplatesOutdated =>
       'Ces modèles sont périmés (la comparaison a été améliorée). Veuillez entraîner de nouveau.';
+
+  @override
+  String get wakeWordTrainedModel => 'Modèle Wendelin';
 
   @override
   String get wakeWordTryNow => 'Essayer maintenant';

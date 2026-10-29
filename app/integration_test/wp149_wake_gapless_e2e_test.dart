@@ -95,7 +95,13 @@ void main() {
         if (file.existsSync()) file.deleteSync();
       }
       await service.setCondition(WakeCondition.always);
-      expect(await service.setEnabled(enabled: true), isTrue);
+      expect(
+        await service.setEnabled(enabled: true),
+        isTrue,
+        reason:
+            'WP173: Einschalten braucht das Klassifikator-Modell; '
+            'WENDELIN_MODELS braucht wake-classifier-wendelin/',
+      );
       final platform = WakePlatform();
       final real0 = WendelinStorage(driftDatabase(name: 'wendelin'));
       await real0.settings.set(AppSettings.developerMode, true);

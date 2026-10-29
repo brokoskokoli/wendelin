@@ -9231,6 +9231,24 @@ abstract class AppLocalizations {
   /// **'Ohne eingelernte Stimme erkennt Wendelin das Aktivierungswort nicht.'**
   String get wakeServiceSectionEnrollFirstBody;
 
+  /// No description provided for @wakeServiceSectionLoadModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Modell laden'**
+  String get wakeServiceSectionLoadModel;
+
+  /// No description provided for @wakeServiceSectionNeedModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Erst Modell laden'**
+  String get wakeServiceSectionNeedModel;
+
+  /// No description provided for @wakeServiceSectionNeedModelBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Das Aktivierungswort lässt sich erst einschalten, wenn das Wendelin-Modell geladen ist (siehe oben auf dieser Seite).'**
+  String get wakeServiceSectionNeedModelBody;
+
   /// No description provided for @wakeServiceSectionNotAssistant.
   ///
   /// In de, this message translates to:
@@ -9572,6 +9590,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Die Vorlagen sind veraltet (der Vergleich wurde verbessert). Bitte neu einlernen.'**
   String get wakeWordTemplatesOutdated;
+
+  /// No description provided for @wakeWordTrainedModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendelin-Modell'**
+  String get wakeWordTrainedModel;
 
   /// No description provided for @wakeWordTryNow.
   ///

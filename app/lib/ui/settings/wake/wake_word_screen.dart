@@ -35,6 +35,13 @@ class WakeWordScreen extends ConsumerWidget {
       title: context.l10n.onboardingWakeWord,
       intro: context.l10n.wakeWordIntro,
       children: [
+        // WP173: the model first; switching on needs it.
+        SettingsSection(
+          title: context.l10n.wakeWordTrainedModel,
+          children: [
+            ModelDownloadRow(model: SpeechModelCatalog.wakeClassifierWendelin),
+          ],
+        ),
         WakeServiceSection(
           onEnroll: installed
               ? () => unawaited(_enroll(context, ref, speakers, null))
