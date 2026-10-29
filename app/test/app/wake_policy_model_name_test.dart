@@ -7,9 +7,8 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 /// second time; both must stay the same as the Dart catalog (WP173).
 void main() {
   test('WakePolicy.kt nennt dieselbe Modell-Id und Datei wie der Katalog', () {
-    final kt = File(
-      'android/app/src/main/kotlin/app/wendelin/WakePolicy.kt',
-    ).readAsStringSync();
+    final kt = File('android/app/src/main/kotlin/app/wendelin/WakePolicy.kt')
+        .readAsStringSync();
     String konst(String name) =>
         RegExp('const val $name = "([^"]+)"').firstMatch(kt)![1]!;
     expect(konst('CLASSIFIER_ID'), WakeClassifierCatalog.model.id);

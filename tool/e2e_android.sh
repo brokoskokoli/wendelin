@@ -180,7 +180,8 @@ copy_in() { # <quelle auf dem Rechner> <ziel relativ zu files/>
 # Trainiertes Wake-Modell (WP129, seit WP173 Voraussetzung zum Einschalten).
 # Zweiteilig: fetch_classifier läuft VOR dem Hintergrund-Helfer im Hauptprozess
 # (ein Fehler bricht den ganzen Lauf ab, set -e); push_classifier kopiert im
-# Helfer aufs Gerät (scheitert es, wiederholt der Helfer es, bis es klappt).
+# Helfer aufs Gerät (ein Kopierfehler bricht den Lauf nicht ab; die Wake-Tests
+# scheitern dann an ihrem Timeout).
 # fetch: fehlt <MODELS>/wake-classifier-wendelin/<Datei> oder stimmt ihr SHA-256
 # nicht mit dem Katalog, kommt sie aus der Release-URL (SHA-256 geprüft).
 CLS_FILE=""
@@ -223,7 +224,7 @@ push_classifier() {
   [ -n "$CLS_FILE" ] || return 0
   local want have
   want=$(wc -c <"$CLS_DIR/$CLS_FILE" | tr -d ' ')
-  have=$(in_app sh -c "wc -c < files/models/wake-classifier-wendelin/$CLS_FILE" 2>/dev/null | tr -d ' \r') || have=""
+  have=$(in_app stat -c %s "files/models/wake-classifier-wendelin/$CLS_FILE" 2>/dev/null | tr -d ' \r') || have=""
   if [ "$have" != "$want" ]; then
     adb shell mkdir -p "$TMP"
     in_app mkdir -p files/models/wake-classifier-wendelin
