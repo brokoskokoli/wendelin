@@ -3,13 +3,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/wake_providers.dart' show wakeStage2Provider;
 import 'package:wendelin/di/wake_service.dart';
 import 'package:wendelin/di/wake_settings.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/platform/assistant_platform.dart';
 import 'package:wendelin/platform/battery_platform.dart';
 import 'package:wendelin/platform/wake/wake_platform.dart';
-import 'package:wendelin/ui/design/design.dart' show WSwitch;
+import 'package:wendelin/ui/design/design.dart' show CheckStatusIcon, WSwitch;
 import 'package:wendelin/ui/settings/wake/wake_explain.dart';
 import 'package:wendelin/ui/settings/wake/wake_service_section.dart'
     show wakeStopText;
@@ -39,6 +40,8 @@ final class FakeWakePlatform extends WakePlatform {
     required bool enabled,
     required WakeCondition condition,
     required bool verify,
+    bool verifyB = true,
+    bool verifyModel = false,
     String detector = 'auto',
   }) async => configured.add((enabled: enabled, condition: condition));
 }
@@ -490,6 +493,79 @@ void main() {
       await tester.pumpWidget(env.app());
       await settle(tester);
       expect(wake.configured, isNotEmpty);
+    },
+  );
+
+  testWidgets(
+    'Stufe 2 Optionen: Prüfer B und Spracherkennungsmodell schaltbar',
+    (tester) async {
+      final (_, c) = await pump(tester, Setup());
+      final bFinder = find.byKey(const ValueKey('wakeStage2VerifierB'));
+      final recFinder = find.byKey(const ValueKey('wakeStage2Recognizer'));
+      expect(bFinder, findsOneWidget);
+      expect(recFinder, findsOneWidget);
+
+      // Initial: B ist an (mit Haken), Recognizer ist aus (ohne Haken).
+      expect(
+        find.descendant(of: bFinder, matching: find.byType(CheckStatusIcon)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: recFinder, matching: find.byType(CheckStatusIcon)),
+        findsNothing,
+      );
+      var stage2 = await c.read(wakeStage2Provider.future);
+      expect(stage2.verifierB, isTrue);
+      expect(stage2.recognizer, isFalse);
+      expect(stage2.active, isTrue);
+
+      // Recognizer antippen -> beide aktiv (ODER-Logik).
+      await tester.tap(recFinder);
+      await settle(tester);
+      expect(
+        find.descendant(of: bFinder, matching: find.byType(CheckStatusIcon)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: recFinder, matching: find.byType(CheckStatusIcon)),
+        findsOneWidget,
+      );
+      stage2 = await c.read(wakeStage2Provider.future);
+      expect(stage2.verifierB, isTrue);
+      expect(stage2.recognizer, isTrue);
+      expect(stage2.active, isTrue);
+
+      // Prüfer B abwählen -> nur noch Recognizer aktiv.
+      await tester.tap(bFinder);
+      await settle(tester);
+      expect(
+        find.descendant(of: bFinder, matching: find.byType(CheckStatusIcon)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: recFinder, matching: find.byType(CheckStatusIcon)),
+        findsOneWidget,
+      );
+      stage2 = await c.read(wakeStage2Provider.future);
+      expect(stage2.verifierB, isFalse);
+      expect(stage2.recognizer, isTrue);
+      expect(stage2.active, isTrue);
+
+      // Recognizer abwählen -> beide aus (Stufe 2 komplett inaktiv).
+      await tester.tap(recFinder);
+      await settle(tester);
+      expect(
+        find.descendant(of: bFinder, matching: find.byType(CheckStatusIcon)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: recFinder, matching: find.byType(CheckStatusIcon)),
+        findsNothing,
+      );
+      stage2 = await c.read(wakeStage2Provider.future);
+      expect(stage2.verifierB, isFalse);
+      expect(stage2.recognizer, isFalse);
+      expect(stage2.active, isFalse);
     },
   );
 }

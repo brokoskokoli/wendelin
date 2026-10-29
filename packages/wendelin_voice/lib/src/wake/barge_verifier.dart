@@ -123,7 +123,8 @@ final class VerifierBBargeVerifier implements BargeVerifier {
   /// Creates the verifier.
   VerifierBBargeVerifier({
     required this.scorer,
-    required this.fallback,
+    this.fallback,
+    this.echoVerifier,
     this.spokenText = _noText,
     this.minLevel = 150,
   });
@@ -136,8 +137,12 @@ final class VerifierBBargeVerifier implements BargeVerifier {
   /// Scores clips against the enrolled sequences.
   final VerifierBScorer scorer;
 
-  /// Decides when B cannot (no sequences, error).
-  final BargeVerifier fallback;
+  /// Decides when B does not confirm. `null` when only verifier B is active.
+  final BargeVerifier? fallback;
+
+  /// Verifier for echo filtering when the answer contains the wake word.
+  /// Defaults to [fallback].
+  final BargeVerifier? echoVerifier;
 
   /// Level of a loud block (finds the end of the word in the clip).
   final num minLevel;
@@ -149,13 +154,20 @@ final class VerifierBBargeVerifier implements BargeVerifier {
   }) async {
     // The answer says the wake word: only the text can tell echo from call.
     if (matchesWakeWord(spokenText())) {
-      return fallback.verify(pcm, candidate: candidate);
+      final ev = echoVerifier ?? fallback;
+      return ev != null
+          ? ev.verify(pcm, candidate: candidate)
+          : const BargeVerdict('no', null, null, 'b', null);
     }
     final end = speechEnd(pcm, minLevel);
     final s = end == 0 ? null : await scorer.score(pcm, end);
-    if (s == null) return fallback.verify(pcm, candidate: candidate);
-    return s >= scorer.threshold
-        ? BargeVerdict('wake', BargeInKeyword.wake, null, 'b', s)
-        : BargeVerdict('no', null, null, 'b', s);
+    if (s != null && s >= scorer.threshold) {
+      return BargeVerdict('wake', BargeInKeyword.wake, null, 'b', s);
+    }
+    final fb = fallback;
+    if (fb != null) {
+      return fb.verify(pcm, candidate: candidate);
+    }
+    return BargeVerdict('no', null, null, 'b', s);
   }
 }

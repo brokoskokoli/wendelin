@@ -5552,6 +5552,13 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get wakeServiceSectionRecognizer => 'Modèle de reconnaissance vocale';
+
+  @override
+  String get wakeServiceSectionRecognizerDetail =>
+      'Confirme le mot d\'activation à l\'aide du modèle de reconnaissance vocale. Idéal pour les espaces partagés où des personnes non enregistrées s\'adressent à l\'appareil.';
+
+  @override
   String get wakeServiceSectionRunning => 'En cours';
 
   @override
@@ -5566,6 +5573,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeServiceSectionToEnroll => 'Lancer l’entraînement';
+
+  @override
+  String get wakeServiceSectionVerifierB =>
+      'Vérificateur B (empreintes vocales)';
+
+  @override
+  String get wakeServiceSectionVerifierBDetail =>
+      'Confirme le mot d\'activation à l\'aide des empreintes vocales enregistrées. Ne fonctionne que pour les personnes connues dont la voix a été enregistrée.';
 
   @override
   String get wakeServiceSectionWhen => 'Quand écouter ?';

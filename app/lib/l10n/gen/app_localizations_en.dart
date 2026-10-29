@@ -5494,6 +5494,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get wakeServiceSectionRecognizer => 'Speech recognition model';
+
+  @override
+  String get wakeServiceSectionRecognizerDetail =>
+      'Confirms the wake word using the speech recognition model. Good for shared areas where people without enrolled voices interact with the device.';
+
+  @override
   String get wakeServiceSectionRunning => 'Running';
 
   @override
@@ -5508,6 +5515,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeServiceSectionToEnroll => 'Start training';
+
+  @override
+  String get wakeServiceSectionVerifierB => 'Verifier B (voice templates)';
+
+  @override
+  String get wakeServiceSectionVerifierBDetail =>
+      'Confirms the wake word using enrolled voice templates. Only works for known persons whose voice has been enrolled.';
 
   @override
   String get wakeServiceSectionWhen => 'When to listen?';

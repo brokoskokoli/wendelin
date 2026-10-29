@@ -11,6 +11,7 @@ import '../../../di/wake_settings.dart';
 import '../../../l10n/l10n.dart';
 import '../../../platform/assistant_platform.dart';
 import '../../../platform/wake/wake_platform.dart';
+import '../../../platform/wake/wake_stage2_gap.dart';
 import '../../design/design.dart';
 import '../battery_hints.dart';
 import '../settings_page.dart';
@@ -147,7 +148,7 @@ class _State extends ConsumerState<WakeServiceSection> {
 
   Widget _soundSection({
     required bool tone,
-    required bool verify,
+    required WakeStage2Settings stage2,
   }) => SettingsSection(
     title: context.l10n.wakeServiceSectionSoundCheck,
     children: [
@@ -162,14 +163,36 @@ class _State extends ConsumerState<WakeServiceSection> {
         ),
       ),
       SettingsRow(
-        title: context.l10n.wakeServiceSectionWhisper,
-        detail: context.l10n.wakeServiceSectionWhisperDetail,
-        trailing: WSwitch(
-          value: verify,
-          semanticLabel: context.l10n.wakeServiceSectionWhisper,
-          onChanged: (v) =>
-              unawaited(ref.read(wakeVerifyProvider.notifier).set(enabled: v)),
+        key: const ValueKey('wakeStage2VerifierB'),
+        title: context.l10n.wakeServiceSectionVerifierB,
+        detail: context.l10n.wakeServiceSectionVerifierBDetail,
+        onTap: () => unawaited(
+          ref
+              .read(wakeStage2Provider.notifier)
+              .setVerifierB(enabled: !stage2.verifierB),
         ),
+        trailing: stage2.verifierB
+            ? CheckStatusIcon(
+                CheckStatus.ok,
+                semanticLabel: context.l10n.selected,
+              )
+            : null,
+      ),
+      SettingsRow(
+        key: const ValueKey('wakeStage2Recognizer'),
+        title: context.l10n.wakeServiceSectionRecognizer,
+        detail: context.l10n.wakeServiceSectionRecognizerDetail,
+        onTap: () => unawaited(
+          ref
+              .read(wakeStage2Provider.notifier)
+              .setRecognizer(enabled: !stage2.recognizer),
+        ),
+        trailing: stage2.recognizer
+            ? CheckStatusIcon(
+                CheckStatus.ok,
+                semanticLabel: context.l10n.selected,
+              )
+            : null,
       ),
     ],
   );
@@ -208,6 +231,72 @@ class _State extends ConsumerState<WakeServiceSection> {
         : null,
   );
 
+  Widget _whenSection(WakeServiceSettings settings) => SettingsSection(
+    title: context.l10n.wakeServiceSectionWhen,
+    children: [
+      _condition(
+        settings,
+        WakeCondition.charging,
+        context.l10n.wakeServiceSectionOnlyCharging,
+        context.l10n.wakeServiceSectionOnlyChargingHint,
+      ),
+      _condition(
+        settings,
+        WakeCondition.always,
+        context.l10n.wakeServiceSectionAlways,
+        context.l10n.wakeServiceSectionAlwaysHint,
+      ),
+    ],
+  );
+
+  Widget _backgroundSection({
+    required WakeServiceSettings settings,
+    required WakeServiceStatus status,
+    required bool noRole,
+    required bool noVoice,
+    required bool noModel,
+    required bool locked,
+  }) => SettingsSection(
+    title: context.l10n.wakeServiceSectionBackground,
+    children: [
+      SettingsRow(
+        key: const ValueKey('wakeStatus'),
+        title: context.l10n.wakeServiceSectionStatus,
+        detail: wakeStatusText(context.l10n, settings, status),
+      ),
+      SettingsRow(
+        key: const ValueKey('wakeSwitch'),
+        title: context.l10n.wakeServiceSectionEnable,
+        detail: context.l10n.wakeServiceSectionEnableDetail,
+        trailing: WSwitch(
+          value: settings.enabled,
+          semanticLabel: context.l10n.wakeServiceSectionEnable,
+          onChanged: locked ? null : (v) => unawaited(_toggle(on: v)),
+        ),
+      ),
+      if (noModel && !settings.enabled) ..._needModel(),
+      if (noRole) ...[
+        SettingsRow(
+          key: ValueKey('wakeNeedRole'),
+          title: context.l10n.wakeServiceSectionNotAssistant,
+          detail: context.l10n.wakeServiceSectionNotAssistantBody,
+        ),
+        _action(
+          context.l10n.wakeServiceSectionChooseAssistant,
+          () => unawaited(_chooseRole()),
+        ),
+      ],
+      if (noVoice) ...[
+        SettingsRow(
+          key: ValueKey('wakeNeedVoice'),
+          title: context.l10n.wakeServiceSectionEnrollFirst,
+          detail: context.l10n.wakeServiceSectionEnrollFirstBody,
+        ),
+        _enrollLink(),
+      ],
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     // „Aus“ from the notification: the switch follows.
@@ -221,7 +310,8 @@ class _State extends ConsumerState<WakeServiceSection> {
     final status = ref.watch(wakeStatusProvider).value;
     if (settings == null || status == null) return const SizedBox.shrink();
     final speakers = ref.watch(wakeSpeakersProvider).value ?? const [];
-    final verify = ref.watch(wakeVerifyProvider).value ?? true;
+    final stage2 =
+        ref.watch(wakeStage2Provider).value ?? const WakeStage2Settings();
     final tone = ref.watch(wakeToneProvider).value ?? true;
     final noRole = !status.holdsRole;
     final noVoice = speakers.isEmpty && ref.watch(wakeNeedsVoiceProvider);
@@ -233,64 +323,16 @@ class _State extends ConsumerState<WakeServiceSection> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: WSpace.l18,
       children: [
-        SettingsSection(
-          title: context.l10n.wakeServiceSectionBackground,
-          children: [
-            SettingsRow(
-              key: const ValueKey('wakeStatus'),
-              title: context.l10n.wakeServiceSectionStatus,
-              detail: wakeStatusText(context.l10n, settings, status),
-            ),
-            SettingsRow(
-              key: const ValueKey('wakeSwitch'),
-              title: context.l10n.wakeServiceSectionEnable,
-              detail: context.l10n.wakeServiceSectionEnableDetail,
-              trailing: WSwitch(
-                value: settings.enabled,
-                semanticLabel: context.l10n.wakeServiceSectionEnable,
-                onChanged: locked ? null : (v) => unawaited(_toggle(on: v)),
-              ),
-            ),
-            if (noModel && !settings.enabled) ..._needModel(),
-            if (noRole) ...[
-              SettingsRow(
-                key: ValueKey('wakeNeedRole'),
-                title: context.l10n.wakeServiceSectionNotAssistant,
-                detail: context.l10n.wakeServiceSectionNotAssistantBody,
-              ),
-              _action(
-                context.l10n.wakeServiceSectionChooseAssistant,
-                () => unawaited(_chooseRole()),
-              ),
-            ],
-            if (noVoice) ...[
-              SettingsRow(
-                key: ValueKey('wakeNeedVoice'),
-                title: context.l10n.wakeServiceSectionEnrollFirst,
-                detail: context.l10n.wakeServiceSectionEnrollFirstBody,
-              ),
-              _enrollLink(),
-            ],
-          ],
+        _backgroundSection(
+          settings: settings,
+          status: status,
+          noRole: noRole,
+          noVoice: noVoice,
+          noModel: noModel,
+          locked: locked,
         ),
-        SettingsSection(
-          title: context.l10n.wakeServiceSectionWhen,
-          children: [
-            _condition(
-              settings,
-              WakeCondition.charging,
-              context.l10n.wakeServiceSectionOnlyCharging,
-              context.l10n.wakeServiceSectionOnlyChargingHint,
-            ),
-            _condition(
-              settings,
-              WakeCondition.always,
-              context.l10n.wakeServiceSectionAlways,
-              context.l10n.wakeServiceSectionAlwaysHint,
-            ),
-          ],
-        ),
-        _soundSection(tone: tone, verify: verify),
+        _whenSection(settings),
+        _soundSection(tone: tone, stage2: stage2),
         if (settings.enabled || !noRole) const BatteryHints(),
       ],
     );

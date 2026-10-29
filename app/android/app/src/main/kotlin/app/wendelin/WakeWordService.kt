@@ -419,7 +419,14 @@ class WakeWordService : Service() {
 
 /** Channel arguments of `run` for the wake engine: stage 2, detector choice, station flag (WP129), developer mode (WP148). */
 internal fun WakeSettings.runArgs(stationActive: Boolean): Map<String, Any> =
-    mapOf("verify" to verify, "detector" to detector, "station" to stationActive, "dev" to devMode)
+    mapOf(
+        "verify" to verify,
+        "verifyB" to verifyB,
+        "verifyModel" to verifyModel,
+        "detector" to detector,
+        "station" to stationActive,
+        "dev" to devMode,
+    )
 
 /**
  * `run` arguments for the current station state. The flag follows [StationState.open], not `active` (WP171): with the

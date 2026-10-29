@@ -44,7 +44,6 @@ final class FakeParts implements WakeParts {
 
   /// The engines built, in order (WP171).
   final built = <FakeWakeWordEngine>[];
-  WakeDetector? verifierDetector;
 
   @override
   Future<WakeWordEngine?> engine({
@@ -67,9 +66,19 @@ final class FakeParts implements WakeParts {
     return engine;
   }
 
+  WakeDetector? verifierDetector;
+  bool? lastVerifierB;
+  bool? lastRecognizer;
+
   @override
-  WakeVerifier verifier({WakeDetector detector = WakeDetector.templates}) {
+  WakeVerifier verifier({
+    WakeDetector detector = WakeDetector.templates,
+    bool verifierB = true,
+    bool recognizer = false,
+  }) {
     verifierDetector = detector;
+    lastVerifierB = verifierB;
+    lastRecognizer = recognizer;
     return FakeVerifier(
       this,
       detector == WakeDetector.model ? 'parakeet' : 'whisper',
@@ -82,7 +91,10 @@ final class FakeParts implements WakeParts {
   int gapChecks = 0;
 
   @override
-  Future<WakeStage2Gap?> stage2Gap() async {
+  Future<WakeStage2Gap?> stage2Gap({
+    bool verifierB = true,
+    bool? recognizer,
+  }) async {
     gapChecks++;
     final e = gapError;
     if (e != null) throw e;

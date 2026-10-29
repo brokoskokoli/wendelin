@@ -22,26 +22,62 @@ enum WakeStage2Gap {
   };
 }
 
-/// The one rule for [WakeStage2Gap], used by the engine (files) and the
-/// settings (providers):
+/// The user's configuration for wake-word stage 2 verification (WP177).
+final class WakeStage2Settings {
+  /// Creates the settings.
+  const WakeStage2Settings({this.verifierB = true, this.recognizer = false});
+
+  /// Whether verifier B (template matching against enrolled voices) is enabled.
+  final bool verifierB;
+
+  /// Whether speech recognition (Parakeet or Whisper) is enabled.
+  final bool recognizer;
+
+  /// Whether stage 2 verification is active at all.
+  bool get active => verifierB || recognizer;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is WakeStage2Settings &&
+          runtimeType == other.runtimeType &&
+          verifierB == other.verifierB &&
+          recognizer == other.recognizer;
+
+  @override
+  int get hashCode => Object.hash(verifierB, recognizer);
+
+  @override
+  String toString() =>
+      'WakeStage2Settings(b: $verifierB, recognizer: $recognizer)';
+}
+
+/// The rule for [WakeStage2Gap] (WP171, WP177):
 ///
-/// - [anyVoice]: a voice with embeddings is learned (else nothing to check);
-/// - [anyWithoutSequences]: one of them has no sequences for verifier B;
-/// - [verifierB]: stage 2 asks verifier B first (else every voice counts as
-///   one without sequences, and re-enrolling would not help);
-/// - [recognizerInstalled]: Parakeet or Whisper can decide.
-///
-/// Missing model takes precedence over missing sequences.
+/// - When neither B nor recognizer is active: no gap (stage 2 is off).
+/// - When recognizer is active: needs an installed recognition model
+///   (`recognizerInstalled`). If missing: [WakeStage2Gap.modelMissing].
+/// - When verifier B is active:
+///   - If voices are enrolled and any has no sequences: [WakeStage2Gap.noSequences]
+///     (or [WakeStage2Gap.modelMissing] if fallback recognizer is also active but missing).
 WakeStage2Gap? wakeStage2GapOf({
   required bool anyVoice,
   required bool anyWithoutSequences,
   required bool verifierB,
+  bool? recognizer,
   required bool recognizerInstalled,
 }) {
+  if (!anyVoice) return null;
+  if (!verifierB && recognizer == false) return null;
   final needsFallback = verifierB ? anyWithoutSequences : anyVoice;
-  if (!needsFallback) return null;
-  if (!recognizerInstalled) return WakeStage2Gap.modelMissing;
-  return verifierB ? WakeStage2Gap.noSequences : null;
+  final needsModel = (recognizer ?? false) || needsFallback;
+  if (needsModel && !recognizerInstalled) {
+    return WakeStage2Gap.modelMissing;
+  }
+  if (verifierB && anyWithoutSequences) {
+    return WakeStage2Gap.noSequences;
+  }
+  return null;
 }
 
 /// Counts what the recognizer fallback of stage 2 costs (WP171): model loads

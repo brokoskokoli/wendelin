@@ -5520,6 +5520,13 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get wakeServiceSectionRecognizer => 'Spracherkennungsmodell';
+
+  @override
+  String get wakeServiceSectionRecognizerDetail =>
+      'Bestätigt das Aktivierungswort durch das Spracherkennungsmodell. Gut für allgemeine Bereiche, wenn auch nicht trainierte Personen das Gerät ansprechen.';
+
+  @override
   String get wakeServiceSectionRunning => 'Läuft';
 
   @override
@@ -5534,6 +5541,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get wakeServiceSectionToEnroll => 'Zum Einlernen';
+
+  @override
+  String get wakeServiceSectionVerifierB => 'Prüfer B (Stimmvorlagen)';
+
+  @override
+  String get wakeServiceSectionVerifierBDetail =>
+      'Bestätigt das Aktivierungswort anhand der eingelernten Stimmvorlagen. Funktioniert nur für bekannte Personen, deren Stimme eingelernt wurde.';
 
   @override
   String get wakeServiceSectionWhen => 'Wann zuhören?';
