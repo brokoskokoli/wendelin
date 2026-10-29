@@ -69,6 +69,7 @@ K138 offen, K139 offen, K140 offen, K141 offen, K142 offen. K115 ist zurückgest
 - Tests/Gate: Goldens zeigen Material-Icons als Kästchen (WP154); E2E „SemanticsHandle active“ rot am Testende (WP163); E2E-Messung „während Antwort 2“ (WP165); lokales Gate fand `directives_ordering`/`prefer_const` nicht, erst CI (WP158, WP167); Commit-Hooks führen kein Gate aus (WP159); SIGINT-Freigabe, kein actions/cache (WP97)
 - Build/Release: Debug-Fallback-Warnung in `check_apk.sh`, versionCode-Anstieg, Tag-Schutzregel `v*` (WP131); CI-Filter: nur `tool/check_apk.sh` startet apk-Job nicht (WP91); `cleanup_wt.sh` löscht Urteilsdateien (WP110)
 - Modelle/Messung: Scorer-Leck `</think>`, `fr-clarify-liste`, `live30.txt` (WP112); Fallback je Rolle als eigenes Paket; STT-Messung mit echten Aufnahmen (K99)
+- Stationsmodus optimieren (Wunsch Maintainer 2026-10-29): weitere Informationen anzeigen, z. B. Wetter; die Titelleiste oben soll verschwinden – Kandidat für ein Paket (M6)
 - Sonstiges: Stoppwort-Hinweis folgt UI- statt Sprech-Sprache (WP79); Erinnerung per Wecker/Timer (WP88); Spotify in Akku-Ausnahme (MIUI friert ein, WP161); Lücke im Handy-Log 18:58–19:01 (WP160)
 
 ## Nächste Schritte
