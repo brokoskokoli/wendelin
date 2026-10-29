@@ -134,7 +134,8 @@ bool _rootedOnly(String doc) =>
     doc.startsWith('docs/concept-changelog/');
 
 /// Zeilen mit „(nur im Git-Verlauf)“ nennen bewusst gelöschte Dateien
-/// (Archiv `docs/concept-changelog/`) und werden nicht aufgelöst.
+/// (Archiv `docs/concept-changelog/`) und werden nicht aufgelöst. Der Vermerk
+/// nimmt alle Pfade seiner Zeile aus (auch einer ganzen K-Tabellenzeile).
 bool _inHistory(String text, int line) =>
     text.split('\n')[line - 1].contains('nur im Git-Verlauf');
 

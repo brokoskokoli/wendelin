@@ -5,6 +5,7 @@ import 'dart:io';
 import 'doc_check.dart';
 import 'doc_idents.dart';
 import 'doc_paths.dart';
+import 'doc_stand.dart';
 import 'gen_docs.dart';
 import 'gen_docs_tables.dart';
 import 'self_check.dart';
@@ -27,9 +28,45 @@ void standChecks(SelfCheck t) {
     t.eq(errs().length, 1, 'ohne Stand-Zeile rot');
     File('${tmp.path}/$f').writeAsStringSync('# WP1\n> Stand: bald\n');
     t.eq(errs().length, 1, 'ungültiger Stand rot');
+    _standFormat(t, (c) {
+      File('${tmp.path}/$f').writeAsStringSync(c);
+      return errs().length;
+    });
   } finally {
     tmp.deleteSync(recursive: true);
   }
+}
+
+/// Strenges Stand-Format: Zeile 2, Klammergrund, WP-Nummer; Index-Suffix.
+void _standFormat(SelfCheck t, int Function(String) errCount) {
+  String doc(String stand, {int line = 2}) =>
+      '# WP1\n${line == 2 ? '' : '\n'}> Stand: $stand\n';
+  for (final ok in [
+    'gültig',
+    'teilweise überholt (x)',
+    'überholt durch WP12b',
+  ]) {
+    t.eq(errCount(doc(ok)), 0, 'Stand „$ok“ gültig');
+  }
+  for (final bad in [
+    'teilweise überholt',
+    'überholt durch',
+    'überholt durch WP',
+  ]) {
+    t.eq(errCount(doc(bad)), 1, 'Stand „$bad“ rot');
+  }
+  t.eq(errCount(doc('gültig', line: 3)), 1, 'Stand-Zeile in Zeile 3 rot');
+  t.eq(standSuffix(doc('gültig')), '', 'Suffix: gültig leer');
+  t.eq(
+    standSuffix(doc('teilweise überholt (x)')),
+    ' (teilweise überholt)',
+    'Suffix: teilweise überholt',
+  );
+  t.eq(
+    standSuffix(doc('überholt durch WP2')),
+    ' (überholt)',
+    'Suffix: überholt',
+  );
 }
 
 void docCheckChecks(SelfCheck t) {
@@ -202,7 +239,27 @@ void _deadPathInRuleDocs(
     put(d, '# $d\n');
     t.eq(errors(), <String>[], '$d nach Korrektur ohne Befund');
   }
+  _relativeDeadPath(t, put, errors);
   _conceptDocs(t, put, errors);
+}
+
+/// Relativer toter Pfad (ohne Repo-Wurzel) in einem Regel-Dokument ist rot;
+/// ein Vermerk „nur im Git-Verlauf“ gilt nur für seine Zeile.
+void _relativeDeadPath(
+  SelfCheck t,
+  void Function(String, String) put,
+  List<String> Function() errors,
+) {
+  const d = 'docs/architecture/x.md';
+  put(d, '# x\n\nSiehe `nichtda.md`.\n');
+  t.eq(errors(), [
+    '$d:3: Pfad `nichtda.md` existiert nicht',
+  ], 'relativer toter Pfad in Regel-Dokument wird gemeldet');
+  put(d, '# x\n\nalt `gone.md` (nur im Git-Verlauf)\nneu `tool/gone.sh`\n');
+  t.eq(errors(), [
+    '$d:4: Pfad `tool/gone.sh` existiert nicht',
+  ], 'Vermerk „nur im Git-Verlauf“ wirkt nur auf seine Zeile');
+  put(d, '# x\n');
 }
 
 /// Bezeichner-Check: unbekannter Name rot, bekannter grün, Allowlist ist eine Ratsche.
