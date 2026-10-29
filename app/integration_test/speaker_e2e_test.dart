@@ -151,7 +151,7 @@ void main() {
   testWidgets(
     'Seite Sprache → Sprechererkennung öffnet sich, Schalter ist aus',
     (tester) async {
-      final app = E2eApp(startup: const StartupSettings(onboardingDone: true));
+      final app = E2eApp(startup: const StartupSettings(setupWizardDone: true));
       await app.pump(tester);
       await pumpUntil(tester, find.byType(MainScreen));
       Navigator.of(tester.element(find.byType(MainScreen)))

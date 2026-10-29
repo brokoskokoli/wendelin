@@ -2,7 +2,7 @@
 
 Plattform-Implementierungen der Ports aus `wendelin_voice`. Verdrahtet in
 `lib/di/voice_providers.dart`, Oberfläche in `lib/ui/settings/voice_screen.dart`
-und `lib/ui/onboarding/voice_download_step.dart`.
+und `lib/ui/onboarding/setup_speech_page.dart` (mit `download_plan.dart`).
 
 | Datei | Port / Aufgabe | Technik |
 |---|---|---|

@@ -5,22 +5,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/profiles.dart';
 import 'package:wendelin/platform/assistant_platform.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/onboarding/onboarding_screen.dart';
-import 'package:wendelin/ui/onboarding/voice_download_step.dart';
 import 'package:wendelin/ui/screens/main_parts.dart';
 import 'package:wendelin/ui/settings/assistant_screen.dart';
 import 'package:wendelin/ui/settings/provider_setup_screen.dart';
 import 'package:wendelin/ui/voice/microphone_access.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../di/provider_setup_test.dart' show RecordingFactory;
 import '../overlay/assistant_overlay_test.dart' show FakeAssistantPlatform;
 import '../support/test_env.dart';
 import '../ui/helpers.dart';
 import 'integrations_screen_test.dart' show settle;
-import 'onboarding_test.dart' show firstStart;
+import 'onboarding_test.dart' show firstStart, seedProvider;
 
 Future<void> pumpGoldenScreen(
   WidgetTester tester,
@@ -62,46 +63,71 @@ void main() {
     );
   });
 
-  testWidgets('Golden Download-Schritt (B3)', tags: ['golden'], (tester) async {
-    final env = TestEnv();
+  testWidgets('Golden Sprach-Seite des Assistenten', tags: ['golden'], (
+    tester,
+  ) async {
+    final env = firstStart(page: 'speech');
+    await seedProvider(env);
     final m = env.speechModels;
-    await pumpGoldenScreen(tester, env, VoiceDownloadStep(onNext: () {}));
+    setView(tester, screenSize);
+    await tester.pumpWidget(RepaintBoundary(key: goldenKey, child: env.app()));
+    await settle(tester);
     await expectLater(
       find.byKey(goldenKey),
-      matchesGoldenFile('goldens/onboarding_download_noch_noetig.png'),
+      matchesGoldenFile('goldens/onboarding_sprache_noch_noetig.png'),
     );
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Laden'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Herunterladen'));
     await tester.pump();
     m
-      ..progress('whisper-small', 0.42)
+      ..progress('parakeet-tdt-0.6b-v3', 0.42)
       ..finish('silero-vad');
     await settle(tester);
     await expectLater(
       find.byKey(goldenKey),
-      matchesGoldenFile('goldens/onboarding_download_laedt.png'),
+      matchesGoldenFile('goldens/onboarding_sprache_laedt.png'),
     );
 
-    m.finish('whisper-small');
+    m.fail(
+      'parakeet-tdt-0.6b-v3',
+      const ModelDownloadException(DownloadErrorKind.network, 'Netz weg.'),
+    );
     await settle(tester);
     await expectLater(
       find.byKey(goldenKey),
-      matchesGoldenFile('goldens/onboarding_download_bereit.png'),
+      matchesGoldenFile('goldens/onboarding_sprache_fehler.png'),
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Erneut versuchen'));
+    await tester.pump();
+    m.finish('parakeet-tdt-0.6b-v3');
+    await settle(tester);
+    await expectLater(
+      find.byKey(goldenKey),
+      matchesGoldenFile('goldens/onboarding_sprache_bereit.png'),
     );
   });
 
-  testWidgets('Golden Provider-Schritt mittig', tags: ['golden'], (
+  testWidgets('Golden Anbieter-Seite des Assistenten', tags: ['golden'], (
     tester,
   ) async {
+    final env = firstStart(page: 'provider');
     setView(tester, screenSize);
-    await tester.pumpWidget(firstStart().app());
+    await tester.pumpWidget(env.app());
     await settle(tester);
-    await tester.tap(find.text('Weiter'));
-    await settle(tester);
-    expect(find.text('Sprachmodell'), findsOneWidget);
+    expect(find.text('KI-Anbieter'), findsOneWidget);
     await expectLater(
       find.byType(OnboardingScreen),
       matchesGoldenFile('goldens/onboarding_provider.png'),
+    );
+
+    await seedProvider(env);
+    ProviderScope.containerOf(tester.element(find.byType(OnboardingScreen)))
+        .invalidate(profilesProvider);
+    await settle(tester);
+    await expectLater(
+      find.byType(OnboardingScreen),
+      matchesGoldenFile('goldens/onboarding_provider_eingerichtet.png'),
     );
   });
 

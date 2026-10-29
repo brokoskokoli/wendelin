@@ -1,244 +1,67 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../di/list_access.dart';
 import '../../di/preferences.dart';
-import '../../di/profiles.dart';
 import '../../di/providers.dart';
-import '../../di/voice_settings_providers.dart';
+import '../../di/setup_status.dart';
+import '../../di/setup_wizard.dart';
 import '../../di/wake_service.dart';
-import '../../l10n/l10n.dart';
 import '../../voice/recognizer_config.dart';
-import '../design/design.dart';
-import '../routes.dart';
-import '../settings/app_language_screen.dart';
-import '../settings/integrations_screen.dart';
-import '../settings/provider_setup_screen.dart';
-import '../settings/settings_page.dart';
-import 'voice_download_step.dart';
+import 'setup_done_page.dart';
+import 'setup_optional_page.dart';
+import 'setup_personalization_page.dart';
+import 'setup_provider_page.dart';
+import 'setup_speech_page.dart';
+import 'setup_welcome_page.dart';
 
-/// First start: language, first provider, speech recognition download,
-/// integrations (concept: „Onboarding“). Every step can be skipped;
-/// settings can change it later. From step 2 on, the back arrow and the
-/// system back gesture go one step back; on step 1 back leaves the app.
+/// The setup wizard (WP174), the frame of the first start and of the
+/// update: seven pages (welcome, provider, speech, wake word, integrations,
+/// personalization, done), see [SetupPage]. Required pages (provider,
+/// speech) block „Weiter“ until the live state meets them; what is ticked
+/// is derived each time ([setupFactsProvider]), never stored. The current
+/// page is stored and continues after a restart. Back (arrow and system
+/// gesture) goes one page back; on the first page it leaves the app.
 class OnboardingScreen extends ConsumerStatefulWidget {
-  /// Creates the onboarding.
+  /// Creates the wizard.
   const OnboardingScreen({super.key});
-
-  /// Languages offered for speech.
-  static const languages = [
-    ('de', 'Deutsch'),
-    ('fr', 'Français'),
-    ('en', 'English'),
-  ];
 
   @override
   ConsumerState<OnboardingScreen> createState() => _OnboardingState();
 }
 
 class _OnboardingState extends ConsumerState<OnboardingScreen> {
-  int _step = 0;
+  SetupWizardPage get _wizard => ref.read(setupWizardPageProvider.notifier);
 
-  void _next() => setState(() => _step++);
+  void _next() => unawaited(_wizard.advance());
 
-  Future<void> _finish() =>
-      ref.read(onboardingDoneProvider.notifier).complete();
-
-  Future<void> _setUpProvider() async {
-    final profile = await Navigator.of(context).push<ProviderProfile>(
-      MaterialPageRoute(builder: (_) => const ProviderSetupScreen()),
-    );
-    if (profile != null) _next();
-  }
+  void _finish() => unawaited(_wizard.finish());
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: _step == 0,
-    onPopInvokedWithResult: (didPop, _) {
-      if (!didPop && _step > 0) setState(() => _step--);
-    },
-    child: switch (_step) {
-      0 => _language(),
-      1 => _provider(),
-      2 => VoiceDownloadStep(onNext: _next),
-      3 => _conversation(),
-      4 => _integrations(),
-      _ => _wake(),
-    },
-  );
-
-  String _uiLanguageName(String code) {
-    final l = context.l10n;
-    return switch (code) {
-      'de' => l.languageGerman,
-      'en' => l.languageEnglish,
-      'fr' => l.languageFrench,
-      _ => l.appLanguageSystem,
-    };
-  }
-
-  Widget _language() {
-    final current = ref.watch(languageProvider);
-    final uiCurrent = ref.watch(uiLanguageProvider);
-    return SettingsPage(
-      title: context.l10n.onboardingWelcome,
-      showBack: false,
-      centered: true,
-      intro: context.l10n.onboardingWelcomeIntro,
-      children: [
-        const Center(child: WendelinLockup()),
-        SectionCard(
-          children: [
-            for (final (code, name) in OnboardingScreen.languages)
-              SettingsRow(
-                title: name,
-                onTap: () =>
-                    unawaited(ref.read(languageProvider.notifier).set(code)),
-                trailing: current == code
-                    ? CheckStatusIcon(
-                        CheckStatus.ok,
-                        semanticLabel: context.l10n.selected,
-                      )
-                    : null,
-              ),
-          ],
-        ),
-        Text(context.l10n.onboardingInterfaceLanguage, style: WText.caption),
-        SectionCard(
-          children: [
-            for (final code in AppLanguageScreen.codes)
-              SettingsRow(
-                title: _uiLanguageName(code),
-                onTap: () =>
-                    unawaited(ref.read(uiLanguageProvider.notifier).set(code)),
-                trailing: uiCurrent == code
-                    ? CheckStatusIcon(
-                        CheckStatus.ok,
-                        semanticLabel: context.l10n.selected,
-                      )
-                    : null,
-              ),
-          ],
-        ),
-        PrimaryButton(context.l10n.next, onPressed: _next),
-      ],
+  Widget build(BuildContext context) {
+    final facts = ref.watch(setupFactsProvider);
+    final page = facts.effectivePage(ref.watch(setupWizardPageProvider));
+    return PopScope(
+      canPop: page == SetupPage.welcome,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(_wizard.back());
+      },
+      child: switch (page) {
+        SetupPage.welcome => SetupWelcomePage(onNext: _next),
+        SetupPage.provider => SetupProviderPage(onNext: _next),
+        SetupPage.speech => SetupSpeechPage(onNext: _next),
+        SetupPage.wakeWord => SetupWakePage(onNext: _next),
+        SetupPage.integrations => SetupIntegrationsPage(onNext: _next),
+        SetupPage.personalization => SetupPersonalizationPage(onNext: _next),
+        SetupPage.done => SetupDonePage(onFinish: _finish),
+      },
     );
   }
-
-  Widget _provider() {
-    final profiles = ref.watch(profilesProvider).value?.profiles ?? const [];
-    return SettingsPage(
-      title: context.l10n.onboardingLanguageModel,
-      centered: true,
-      intro: context.l10n.onboardingProviderIntro,
-      children: [
-        if (profiles.isNotEmpty)
-          SectionCard(
-            children: [
-              for (final p in profiles)
-                SettingsRow(title: p.name, trailing: PrivacyChip(p.privacy)),
-            ],
-          ),
-        PrimaryButton(
-          profiles.isEmpty ? context.l10n.mainSetUpProvider : context.l10n.next,
-          onPressed: profiles.isEmpty
-              ? () => unawaited(_setUpProvider())
-              : _next,
-        ),
-        WideButton(
-          profiles.isEmpty
-              ? context.l10n.later
-              : context.l10n.onboardingSetUpAnotherProvider,
-          onPressed: profiles.isEmpty
-              ? _next
-              : () => unawaited(_setUpProvider()),
-        ),
-        if (kDebugMode && profiles.isEmpty)
-          WideButton(
-            context.l10n.onboardingDemoNoProvider,
-            onPressed: () async {
-              await ref.read(demoModeProvider.notifier).set(enabled: true);
-              await _finish();
-            },
-          ),
-      ],
-    );
-  }
-
-  Future<void> _setConversation({required bool on}) async {
-    await ref
-        .read(voiceSettingsProvider.notifier)
-        .change(
-          (s) => s.copyWith(conversationMode: on, conversationAsked: true),
-        );
-    _next();
-  }
-
-  Widget _conversation() => SettingsPage(
-    title: context.l10n.onboardingConversation,
-    centered: true,
-    intro: context.l10n.onboardingConversationIntro,
-    children: [
-      PrimaryButton(
-        context.l10n.onboardingKeepListening,
-        onPressed: () => unawaited(_setConversation(on: true)),
-      ),
-      WideButton(
-        context.l10n.onboardingTapOnly,
-        onPressed: () => unawaited(_setConversation(on: false)),
-      ),
-    ],
-  );
-
-  Widget _integrations() {
-    final registry = ref.watch(toolRegistryProvider);
-    return SettingsPage(
-      title: context.l10n.onboardingWhatMayWendelinDo,
-      intro: context.l10n.onboardingPermissionsIntro,
-      children: [
-        StreamBuilder<void>(
-          stream: registry.changes,
-          builder: (context, _) => SectionCard(
-            children: [
-              // Only this platform's integrations; missing apps greyed out
-              // (concept: „Integrationen auswählen“).
-              for (final info in displayOrder(selectableIntegrations(registry)))
-                IntegrationRow(info),
-            ],
-          ),
-        ),
-        PrimaryButton(context.l10n.next, onPressed: _next),
-      ],
-    );
-  }
-
-  /// Optional last step: the wake word (ADR 0005). Leads to enrolling and
-  /// switching on; can be skipped.
-  Widget _wake() => SettingsPage(
-    title: context.l10n.onboardingWakeWord,
-    intro: context.l10n.onboardingWakeIntro,
-    children: [
-      PrimaryButton(
-        context.l10n.onboardingLearnAndEnable,
-        onPressed: () => unawaited(
-          Navigator.of(context)
-              .pushNamed<void>(AppRoutes.wakeWord)
-              .then((_) => _finish()),
-        ),
-      ),
-      WideButton(
-        context.l10n.onboardingSkip,
-        onPressed: () => unawaited(_finish()),
-      ),
-    ],
-  );
 }
 
-/// Shows the onboarding until it is done (outside the demo mode). On start
+/// Shows the setup wizard until it is done (outside the demo mode). On start
 /// it also checks the grants of the list files (a lost grant marks the
 /// lists integration „Datei neu auswählen“); on every return to the app it
 /// checks the integrations again (installed apps).
@@ -246,7 +69,7 @@ class StartGate extends ConsumerStatefulWidget {
   /// Creates the gate around [home].
   const StartGate({super.key, required this.home});
 
-  /// Screen after the onboarding.
+  /// Screen after the wizard.
   final Widget home;
 
   @override
@@ -284,7 +107,7 @@ class _StartGateState extends ConsumerState<StartGate> {
   Widget build(BuildContext context) {
     // Keeps the system recognizer's copy of the speech settings current.
     ref.watch(recognizerConfigSyncProvider);
-    return ref.watch(onboardingDoneProvider) || ref.watch(demoModeProvider)
+    return ref.watch(setupWizardDoneProvider) || ref.watch(demoModeProvider)
         ? widget.home
         : const OnboardingScreen();
   }

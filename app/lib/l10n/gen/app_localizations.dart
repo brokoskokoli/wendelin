@@ -5266,35 +5266,11 @@ abstract class AppLocalizations {
   /// **'Gespräch'**
   String get onboardingConversation;
 
-  /// No description provided for @onboardingConversationIntro.
-  ///
-  /// In de, this message translates to:
-  /// **'Soll Wendelin nach seinen Antworten kurz weiter zuhören, damit du ohne Tippen nachfragen kannst? Das lässt sich jederzeit unter Einstellungen → Sprache ändern.'**
-  String get onboardingConversationIntro;
-
   /// No description provided for @onboardingDemoNoProvider.
   ///
   /// In de, this message translates to:
-  /// **'Demo ohne Provider'**
+  /// **'Demo ohne Anbieter'**
   String get onboardingDemoNoProvider;
-
-  /// No description provided for @onboardingInterfaceLanguage.
-  ///
-  /// In de, this message translates to:
-  /// **'App-Sprache der Oberfläche'**
-  String get onboardingInterfaceLanguage;
-
-  /// No description provided for @onboardingKeepListening.
-  ///
-  /// In de, this message translates to:
-  /// **'Ja, weiter zuhören'**
-  String get onboardingKeepListening;
-
-  /// No description provided for @onboardingLanguageModel.
-  ///
-  /// In de, this message translates to:
-  /// **'Sprachmodell'**
-  String get onboardingLanguageModel;
 
   /// No description provided for @onboardingLearnAndEnable.
   ///
@@ -5311,26 +5287,14 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingProviderIntro.
   ///
   /// In de, this message translates to:
-  /// **'Wendelin braucht einen Provider, z. B. Claude mit deinem API-Key oder ein eigenes Modell auf dem Homeserver.'**
+  /// **'Wendelin braucht einen Anbieter, z. B. Claude mit deinem API-Key oder ein eigenes Modell auf dem Homeserver.'**
   String get onboardingProviderIntro;
 
   /// No description provided for @onboardingSetUpAnotherProvider.
   ///
   /// In de, this message translates to:
-  /// **'Weiteren Provider einrichten'**
+  /// **'Weiteren Anbieter einrichten'**
   String get onboardingSetUpAnotherProvider;
-
-  /// No description provided for @onboardingSkip.
-  ///
-  /// In de, this message translates to:
-  /// **'Überspringen'**
-  String get onboardingSkip;
-
-  /// No description provided for @onboardingTapOnly.
-  ///
-  /// In de, this message translates to:
-  /// **'Nein, nur nach Tippen'**
-  String get onboardingTapOnly;
 
   /// No description provided for @onboardingWakeIntro.
   ///
@@ -5353,7 +5317,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeIntro.
   ///
   /// In de, this message translates to:
-  /// **'Wendelin ist dein Sprachassistent. In sechs Schritten ist er eingerichtet. Welche Sprache sprichst du mit ihm?'**
+  /// **'Wendelin ist dein persönlicher Sprachassistent. Er hört zu, erledigt Dinge für dich und bleibt dabei so privat wie möglich. Die Einrichtung dauert ein paar Minuten.'**
   String get onboardingWelcomeIntro;
 
   /// No description provided for @onboardingWhatMayWendelinDo.
@@ -5361,6 +5325,156 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Was darf Wendelin?'**
   String get onboardingWhatMayWendelinDo;
+
+  /// No description provided for @setupContinueWithout.
+  ///
+  /// In de, this message translates to:
+  /// **'Ohne fortfahren'**
+  String get setupContinueWithout;
+
+  /// No description provided for @setupDoneAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Fertig'**
+  String get setupDoneAction;
+
+  /// No description provided for @setupDoneIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendelin ist eingerichtet. Alles Weitere findest du jederzeit in den Einstellungen.'**
+  String get setupDoneIntro;
+
+  /// No description provided for @setupDoneTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Alles bereit'**
+  String get setupDoneTitle;
+
+  /// No description provided for @setupIntegrationsOpen.
+  ///
+  /// In de, this message translates to:
+  /// **'Integrationen öffnen'**
+  String get setupIntegrationsOpen;
+
+  /// No description provided for @setupPersonalizationIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Möchtest du, dass Wendelin dich an der Stimme erkennt? Dann lernt es deine Stimme mit ein paar Sätzen. Das ist freiwillig und geht auch später in den Einstellungen.'**
+  String get setupPersonalizationIntro;
+
+  /// No description provided for @setupPersonalizationTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Personalisierung'**
+  String get setupPersonalizationTitle;
+
+  /// No description provided for @setupProviderMissing.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch kein Anbieter eingerichtet'**
+  String get setupProviderMissing;
+
+  /// No description provided for @setupProviderOpen.
+  ///
+  /// In de, this message translates to:
+  /// **'Anbieter eintragen'**
+  String get setupProviderOpen;
+
+  /// No description provided for @setupProviderReadyNamed.
+  ///
+  /// In de, this message translates to:
+  /// **'Anbieter eingerichtet: {name}'**
+  String setupProviderReadyNamed(String name);
+
+  /// No description provided for @setupProviderTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'KI-Anbieter'**
+  String get setupProviderTitle;
+
+  /// No description provided for @setupRetry.
+  ///
+  /// In de, this message translates to:
+  /// **'Erneut versuchen'**
+  String get setupRetry;
+
+  /// No description provided for @setupSkip.
+  ///
+  /// In de, this message translates to:
+  /// **'Überspringen'**
+  String get setupSkip;
+
+  /// No description provided for @setupSpeakerMissing.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Stimme eingelernt'**
+  String get setupSpeakerMissing;
+
+  /// No description provided for @setupSpeakerOpen.
+  ///
+  /// In de, this message translates to:
+  /// **'Stimme einlernen'**
+  String get setupSpeakerOpen;
+
+  /// No description provided for @setupSpeakerReady.
+  ///
+  /// In de, this message translates to:
+  /// **'Deine Stimme ist eingelernt'**
+  String get setupSpeakerReady;
+
+  /// No description provided for @setupSpeechDownload.
+  ///
+  /// In de, this message translates to:
+  /// **'Herunterladen'**
+  String get setupSpeechDownload;
+
+  /// No description provided for @setupSpeechIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendelin erkennt Sprache auf dem Gerät, ohne Internet und ohne Google. Wähle ein Erkennungsmodell und lade es einmal herunter, am besten im WLAN. Silero VAD erkennt, wann du sprichst, und gehört dazu.'**
+  String get setupSpeechIntro;
+
+  /// No description provided for @setupSpeechLowMemory.
+  ///
+  /// In de, this message translates to:
+  /// **'Wenig Arbeitsspeicher ({v} GB): Vorausgewählt ist „Whisper base“. „Whisper small“ und Parakeet brauchen beim Erkennen deutlich mehr Speicher.'**
+  String setupSpeechLowMemory(String v);
+
+  /// No description provided for @setupSpeechModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennungsmodell'**
+  String get setupSpeechModel;
+
+  /// No description provided for @setupSpeechReady.
+  ///
+  /// In de, this message translates to:
+  /// **'Spracherkennung eingerichtet'**
+  String get setupSpeechReady;
+
+  /// No description provided for @setupSpeechTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Spracherkennung'**
+  String get setupSpeechTitle;
+
+  /// No description provided for @setupWakeMissing.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktivierungswort nicht eingerichtet'**
+  String get setupWakeMissing;
+
+  /// No description provided for @setupWakeReady.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktivierungswort eingerichtet und in Ordnung'**
+  String get setupWakeReady;
+
+  /// No description provided for @setupWelcomeAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Los geht’s'**
+  String get setupWelcomeAction;
 
   /// No description provided for @auditEntrySession.
   ///
@@ -7977,41 +8091,17 @@ abstract class AppLocalizations {
   /// **' und '**
   String get voiceDownloadAnd;
 
-  /// No description provided for @voiceDownloadBundled.
-  ///
-  /// In de, this message translates to:
-  /// **'{displayName} gehört dazu ({v}) und wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen deutlich besser. „base“ ist schnell und für schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.'**
-  String voiceDownloadBundled(String displayName, String v);
-
-  /// No description provided for @voiceDownloadContinueInBackground.
-  ///
-  /// In de, this message translates to:
-  /// **'Im Hintergrund weiterladen'**
-  String get voiceDownloadContinueInBackground;
-
   /// No description provided for @voiceDownloadContinueLoading.
   ///
   /// In de, this message translates to:
   /// **'Weiterladen'**
   String get voiceDownloadContinueLoading;
 
-  /// No description provided for @voiceDownloadIntro.
-  ///
-  /// In de, this message translates to:
-  /// **'Wendelin erkennt Sprache auf dem Gerät, ohne Internet und ohne Google. Wähle das Modell und lade es einmal, am besten im WLAN.'**
-  String get voiceDownloadIntro;
-
   /// No description provided for @voiceDownloadLoad.
   ///
   /// In de, this message translates to:
   /// **'Laden'**
   String get voiceDownloadLoad;
-
-  /// No description provided for @voiceDownloadLoadAgain.
-  ///
-  /// In de, this message translates to:
-  /// **'Erneut laden'**
-  String get voiceDownloadLoadAgain;
 
   /// No description provided for @voiceDownloadLoading.
   ///
@@ -8030,12 +8120,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Lädt … {v} % von {size}'**
   String voiceDownloadLoadingPercentOf(String v, String size);
-
-  /// No description provided for @voiceDownloadPreselectedBase.
-  ///
-  /// In de, this message translates to:
-  /// **'Vorausgewählt ist „base“, weil das Gerät wenig Arbeitsspeicher hat ({v} GB). „small“ braucht beim Erkennen deutlich mehr Speicher.'**
-  String voiceDownloadPreselectedBase(String v);
 
   /// No description provided for @voiceDownloadProgressLabel.
   ///
@@ -8072,12 +8156,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Noch nötig: {v}'**
   String voiceDownloadStillNeeded(String v);
-
-  /// No description provided for @voiceDownloadTitle.
-  ///
-  /// In de, this message translates to:
-  /// **'Spracherkennung laden'**
-  String get voiceDownloadTitle;
 
   /// No description provided for @voiceDownloadUnpacking.
   ///

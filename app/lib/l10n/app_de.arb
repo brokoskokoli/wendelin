@@ -1826,22 +1826,55 @@
   },
   "obsidianVault": "Vault",
   "onboardingConversation": "Gespräch",
-  "onboardingConversationIntro": "Soll Wendelin nach seinen Antworten kurz weiter zuhören, damit du ohne Tippen nachfragen kannst? Das lässt sich jederzeit unter Einstellungen → Sprache ändern.",
-  "onboardingDemoNoProvider": "Demo ohne Provider",
-  "onboardingInterfaceLanguage": "App-Sprache der Oberfläche",
-  "onboardingKeepListening": "Ja, weiter zuhören",
-  "onboardingLanguageModel": "Sprachmodell",
+  "onboardingDemoNoProvider": "Demo ohne Anbieter",
   "onboardingLearnAndEnable": "Einlernen und einschalten",
   "onboardingPermissionsIntro": "Schalte nur ein, was du brauchst. Berechtigungen fragt Android erst jetzt beim Einschalten.",
-  "onboardingProviderIntro": "Wendelin braucht einen Provider, z. B. Claude mit deinem API-Key oder ein eigenes Modell auf dem Homeserver.",
-  "onboardingSetUpAnotherProvider": "Weiteren Provider einrichten",
-  "onboardingSkip": "Überspringen",
-  "onboardingTapOnly": "Nein, nur nach Tippen",
+  "onboardingProviderIntro": "Wendelin braucht einen Anbieter, z. B. Claude mit deinem API-Key oder ein eigenes Modell auf dem Homeserver.",
+  "onboardingSetUpAnotherProvider": "Weiteren Anbieter einrichten",
   "onboardingWakeIntro": "Wendelin kann auf „Hey Wendelin“ hören, auch wenn das Telefon liegt. Dafür lernt er zuerst deine Stimme (etwa 3 Minuten). Das geht auch später in den Einstellungen.",
   "onboardingWakeWord": "Aktivierungswort",
   "onboardingWelcome": "Willkommen",
-  "onboardingWelcomeIntro": "Wendelin ist dein Sprachassistent. In sechs Schritten ist er eingerichtet. Welche Sprache sprichst du mit ihm?",
+  "onboardingWelcomeIntro": "Wendelin ist dein persönlicher Sprachassistent. Er hört zu, erledigt Dinge für dich und bleibt dabei so privat wie möglich. Die Einrichtung dauert ein paar Minuten.",
   "onboardingWhatMayWendelinDo": "Was darf Wendelin?",
+  "setupContinueWithout": "Ohne fortfahren",
+  "setupDoneAction": "Fertig",
+  "setupDoneIntro": "Wendelin ist eingerichtet. Alles Weitere findest du jederzeit in den Einstellungen.",
+  "setupDoneTitle": "Alles bereit",
+  "setupIntegrationsOpen": "Integrationen öffnen",
+  "setupPersonalizationIntro": "Möchtest du, dass Wendelin dich an der Stimme erkennt? Dann lernt es deine Stimme mit ein paar Sätzen. Das ist freiwillig und geht auch später in den Einstellungen.",
+  "setupPersonalizationTitle": "Personalisierung",
+  "setupProviderMissing": "Noch kein Anbieter eingerichtet",
+  "setupProviderOpen": "Anbieter eintragen",
+  "setupProviderReadyNamed": "Anbieter eingerichtet: {name}",
+  "@setupProviderReadyNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "setupProviderTitle": "KI-Anbieter",
+  "setupRetry": "Erneut versuchen",
+  "setupSkip": "Überspringen",
+  "setupSpeakerMissing": "Noch keine Stimme eingelernt",
+  "setupSpeakerOpen": "Stimme einlernen",
+  "setupSpeakerReady": "Deine Stimme ist eingelernt",
+  "setupSpeechDownload": "Herunterladen",
+  "setupSpeechIntro": "Wendelin erkennt Sprache auf dem Gerät, ohne Internet und ohne Google. Wähle ein Erkennungsmodell und lade es einmal herunter, am besten im WLAN. Silero VAD erkennt, wann du sprichst, und gehört dazu.",
+  "setupSpeechLowMemory": "Wenig Arbeitsspeicher ({v} GB): Vorausgewählt ist „Whisper base“. „Whisper small“ und Parakeet brauchen beim Erkennen deutlich mehr Speicher.",
+  "@setupSpeechLowMemory": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "setupSpeechModel": "Erkennungsmodell",
+  "setupSpeechReady": "Spracherkennung eingerichtet",
+  "setupSpeechTitle": "Spracherkennung",
+  "setupWakeMissing": "Aktivierungswort nicht eingerichtet",
+  "setupWakeReady": "Aktivierungswort eingerichtet und in Ordnung",
+  "setupWelcomeAction": "Los geht’s",
   "auditEntrySession": "Sitzung",
   "auditEntryVerifications": "Prüfungen dieser Sitzung",
   "auditLogIntro": "Was Wendelin getan hat. Nie Schlüssel. Der Export enthält keine Texte, nur Zeiten, Arten und Ergebnisse.",
@@ -2682,22 +2715,8 @@
   "voiceConvKeepListeningDetail": "Nach der gesprochenen Antwort bleibt das Mikrofon kurz offen, du kannst ohne Tippen nachfragen. „Danke“ oder „Stopp“ beendet.",
   "voiceConvKeepListeningLabel": "Weiter zuhören nach der Antwort",
   "voiceDownloadAnd": " und ",
-  "voiceDownloadBundled": "{displayName} gehört dazu ({v}) und wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen deutlich besser. „base“ ist schnell und für schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.",
-  "@voiceDownloadBundled": {
-    "placeholders": {
-      "displayName": {
-        "type": "String"
-      },
-      "v": {
-        "type": "String"
-      }
-    }
-  },
-  "voiceDownloadContinueInBackground": "Im Hintergrund weiterladen",
   "voiceDownloadContinueLoading": "Weiterladen",
-  "voiceDownloadIntro": "Wendelin erkennt Sprache auf dem Gerät, ohne Internet und ohne Google. Wähle das Modell und lade es einmal, am besten im WLAN.",
   "voiceDownloadLoad": "Laden",
-  "voiceDownloadLoadAgain": "Erneut laden",
   "voiceDownloadLoading": "Lädt …",
   "voiceDownloadLoadingPercent": "Lädt … {v} %",
   "@voiceDownloadLoadingPercent": {
@@ -2714,14 +2733,6 @@
         "type": "String"
       },
       "size": {
-        "type": "String"
-      }
-    }
-  },
-  "voiceDownloadPreselectedBase": "Vorausgewählt ist „base“, weil das Gerät wenig Arbeitsspeicher hat ({v} GB). „small“ braucht beim Erkennen deutlich mehr Speicher.",
-  "@voiceDownloadPreselectedBase": {
-    "placeholders": {
-      "v": {
         "type": "String"
       }
     }
@@ -2760,7 +2771,6 @@
       }
     }
   },
-  "voiceDownloadTitle": "Spracherkennung laden",
   "voiceDownloadUnpacking": "Wird entpackt …",
   "voiceErrorGeneric": "Sprache hat nicht geklappt. Bitte versuche es noch einmal.",
   "voiceErrorMicBusy": "Das Mikrofon war noch belegt. Bitte sprich noch einmal.",

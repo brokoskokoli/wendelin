@@ -94,7 +94,7 @@ void main() {
     final server = FakeBring();
     final app = E2eApp(
       startup: const StartupSettings(
-        onboardingDone: true,
+        setupWizardDone: true,
         enabledIntegrations: {'bring'},
       ),
       extraOverrides: [

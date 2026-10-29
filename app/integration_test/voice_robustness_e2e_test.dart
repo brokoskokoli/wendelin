@@ -58,7 +58,7 @@ Map<String, Object?> _replaceArgs() => {
 /// Settings the overlay engine reads from the app database.
 Future<void> _overlaySettings(String model) async {
   final setup = WendelinStorage(driftDatabase(name: 'wendelin'));
-  await setup.settings.set(AppSettings.onboardingDone, true);
+  await setup.settings.set(AppSettings.setupWizardDone, true);
   await setup.settings.set(voiceSettingsKey, VoiceSettings(sttModel: model));
   await setup.close();
 }

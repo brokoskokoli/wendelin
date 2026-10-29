@@ -21,22 +21,23 @@ void main() {
     tester,
   ) async {
     final app = E2eApp(
-      startup: const StartupSettings(onboardingDone: false),
+      startup: const StartupSettings(setupWizardDone: false),
       clock: FixedClock(e2eNow),
     );
     final c = await app.pump(tester);
     await pumpUntil(tester, find.byType(OnboardingScreen));
 
-    await tester.tap(find.text('Deutsch').first);
-    await pumpFor(tester);
-    await tester.tap(find.text('Weiter'));
-    await pumpUntil(tester, find.text('Sprachmodell'));
+    await tester.tap(find.text('Los geht’s'));
+    await pumpUntil(tester, find.text('KI-Anbieter'));
     await pumpFor(tester);
     await tester.tap(find.text('Demo ohne Provider'));
     await pumpUntil(tester, find.byType(MainScreen));
     expect(c.read(demoModeProvider), isTrue);
-    expect(await app.storage.settings.get(AppSettings.onboardingDone), isTrue);
-    expect(await app.storage.settings.get(AppSettings.language), 'de');
+    // Demo is the exception: the wizard is not marked done (WP174).
+    expect(
+      await app.storage.settings.get(AppSettings.setupWizardDone),
+      isNot(true),
+    );
     await pumpUntil(tester, find.text('Demo · Skript'));
 
     await send(tester, 'Trag mir morgen um 10 Tauchen ein');

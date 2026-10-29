@@ -1,19 +1,45 @@
 {
   "onboardingConversation": "Conversation",
-  "onboardingConversationIntro": "Wendelin doit-il continuer à écouter brièvement après ses réponses, pour que vous puissiez poser une question sans toucher l’écran ? Vous pouvez modifier ce réglage à tout moment sous Paramètres → Voix.",
   "onboardingDemoNoProvider": "Démo sans fournisseur",
-  "onboardingInterfaceLanguage": "Langue de l’interface de l’application",
-  "onboardingKeepListening": "Oui, continuer à écouter",
-  "onboardingLanguageModel": "Modèle de langage",
   "onboardingLearnAndEnable": "Entraîner et activer",
   "onboardingPermissionsIntro": "N’activez que ce dont vous avez besoin. Android ne demande les autorisations qu’au moment où vous les activez.",
   "onboardingProviderIntro": "Wendelin a besoin d’un fournisseur, par exemple Claude avec votre clé d’API ou votre propre modèle sur un serveur personnel.",
   "onboardingSetUpAnotherProvider": "Configurer un autre fournisseur",
-  "onboardingSkip": "Passer",
-  "onboardingTapOnly": "Non, seulement après un appui",
   "onboardingWakeIntro": "Wendelin peut écouter « Hey Wendelin » même quand le téléphone est posé. Pour cela, il apprend d’abord votre voix (environ 3 minutes). Vous pouvez aussi le faire plus tard dans les paramètres.",
   "onboardingWakeWord": "Mot d’activation",
   "onboardingWelcome": "Bienvenue",
-  "onboardingWelcomeIntro": "Wendelin est votre assistant vocal. La configuration se fait en six étapes. Quelle langue parlez-vous avec lui ?",
-  "onboardingWhatMayWendelinDo": "Que peut faire Wendelin ?"
+  "onboardingWelcomeIntro": "Wendelin est votre assistant vocal personnel. Il vous écoute, s’occupe de vos tâches et reste aussi privé que possible. La configuration prend quelques minutes.",
+  "onboardingWhatMayWendelinDo": "Que peut faire Wendelin ?",
+  "setupContinueWithout": "Continuer sans",
+  "setupDoneAction": "Terminé",
+  "setupDoneIntro": "Wendelin est configuré. Tout le reste se trouve à tout moment dans les réglages.",
+  "setupDoneTitle": "Tout est prêt",
+  "setupIntegrationsOpen": "Ouvrir les intégrations",
+  "setupPersonalizationIntro": "Veux-tu que Wendelin te reconnaisse à ta voix ? Il apprend ta voix avec quelques phrases. C’est facultatif et possible plus tard dans les réglages.",
+  "setupPersonalizationTitle": "Personnalisation",
+  "setupProviderMissing": "Aucun fournisseur configuré pour l’instant",
+  "setupProviderOpen": "Ajouter un fournisseur",
+  "setupProviderReadyNamed": "Fournisseur configuré : {name}",
+  "setupProviderTitle": "Fournisseur d’IA",
+  "setupRetry": "Réessayer",
+  "setupSkip": "Passer",
+  "setupSpeakerMissing": "Aucune voix enregistrée pour l’instant",
+  "setupSpeakerOpen": "Enregistrer la voix",
+  "setupSpeakerReady": "Ta voix est enregistrée",
+  "setupSpeechDownload": "Télécharger",
+  "setupSpeechIntro": "Wendelin reconnaît la parole sur l’appareil, sans internet et sans Google. Choisissez un modèle de reconnaissance et téléchargez-le une fois, de préférence en Wi-Fi. Silero VAD détecte quand vous parlez et en fait partie.",
+  "setupSpeechLowMemory": "Peu de mémoire ({v} Go) : « Whisper base » est présélectionné. « Whisper small » et Parakeet demandent nettement plus de mémoire pour la reconnaissance.",
+  "@setupSpeechLowMemory": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "setupSpeechModel": "Modèle de reconnaissance",
+  "setupSpeechReady": "Reconnaissance vocale configurée",
+  "setupSpeechTitle": "Reconnaissance vocale",
+  "setupWakeMissing": "Mot d’activation non configuré",
+  "setupWakeReady": "Mot d’activation configuré et en ordre",
+  "setupWelcomeAction": "C’est parti"
 }

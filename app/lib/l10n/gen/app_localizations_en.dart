@@ -3068,20 +3068,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingConversation => 'Conversation';
 
   @override
-  String get onboardingConversationIntro =>
-      'Should Wendelin keep listening briefly after its answers, so you can follow up without tapping? You can change this any time under Settings → Voice.';
-
-  @override
   String get onboardingDemoNoProvider => 'Demo without provider';
-
-  @override
-  String get onboardingInterfaceLanguage => 'App language of the interface';
-
-  @override
-  String get onboardingKeepListening => 'Yes, keep listening';
-
-  @override
-  String get onboardingLanguageModel => 'Language model';
 
   @override
   String get onboardingLearnAndEnable => 'Train and turn on';
@@ -3098,12 +3085,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingSetUpAnotherProvider => 'Set up another provider';
 
   @override
-  String get onboardingSkip => 'Skip';
-
-  @override
-  String get onboardingTapOnly => 'No, only after tapping';
-
-  @override
   String get onboardingWakeIntro =>
       'Wendelin can listen for “Hey Wendelin” even while the phone is lying around. To do that, it first learns your voice (about 3 minutes). You can also do this later in Settings.';
 
@@ -3115,10 +3096,92 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingWelcomeIntro =>
-      'Wendelin is your voice assistant. Setup takes six steps. Which language do you speak with it?';
+      'Wendelin is your personal voice assistant. It listens, gets things done for you and stays as private as possible. Setup takes a few minutes.';
 
   @override
   String get onboardingWhatMayWendelinDo => 'What may Wendelin do?';
+
+  @override
+  String get setupContinueWithout => 'Continue without';
+
+  @override
+  String get setupDoneAction => 'Done';
+
+  @override
+  String get setupDoneIntro =>
+      'Wendelin is set up. You can find everything else in Settings at any time.';
+
+  @override
+  String get setupDoneTitle => 'All set';
+
+  @override
+  String get setupIntegrationsOpen => 'Open integrations';
+
+  @override
+  String get setupPersonalizationIntro =>
+      'Do you want Wendelin to recognize you by your voice? It learns your voice from a few sentences. This is optional and can also be done later in Settings.';
+
+  @override
+  String get setupPersonalizationTitle => 'Personalization';
+
+  @override
+  String get setupProviderMissing => 'No provider set up yet';
+
+  @override
+  String get setupProviderOpen => 'Add a provider';
+
+  @override
+  String setupProviderReadyNamed(String name) {
+    return 'Provider set up: $name';
+  }
+
+  @override
+  String get setupProviderTitle => 'AI provider';
+
+  @override
+  String get setupRetry => 'Try again';
+
+  @override
+  String get setupSkip => 'Skip';
+
+  @override
+  String get setupSpeakerMissing => 'No voice enrolled yet';
+
+  @override
+  String get setupSpeakerOpen => 'Enroll voice';
+
+  @override
+  String get setupSpeakerReady => 'Your voice is enrolled';
+
+  @override
+  String get setupSpeechDownload => 'Download';
+
+  @override
+  String get setupSpeechIntro =>
+      'Wendelin recognizes speech on the device, without internet and without Google. Choose a recognition model and download it once, ideally on Wi-Fi. Silero VAD detects when you are speaking and is part of it.';
+
+  @override
+  String setupSpeechLowMemory(String v) {
+    return 'Little memory ($v GB): “Whisper base” is preselected. “Whisper small” and Parakeet need much more memory while recognizing.';
+  }
+
+  @override
+  String get setupSpeechModel => 'Recognition model';
+
+  @override
+  String get setupSpeechReady => 'Speech recognition set up';
+
+  @override
+  String get setupSpeechTitle => 'Speech recognition';
+
+  @override
+  String get setupWakeMissing => 'Wake word not set up';
+
+  @override
+  String get setupWakeReady => 'Wake word set up and working';
+
+  @override
+  String get setupWelcomeAction => 'Let’s go';
 
   @override
   String get auditEntrySession => 'Session';
@@ -4635,26 +4698,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceDownloadAnd => ' and ';
 
   @override
-  String voiceDownloadBundled(String displayName, String v) {
-    return '$displayName is included and is downloaded too ($v). “small” recognizes German, French and names much better. “base” is fast and meant for weak devices. More models: Settings → Voice.';
-  }
-
-  @override
-  String get voiceDownloadContinueInBackground =>
-      'Keep loading in the background';
-
-  @override
   String get voiceDownloadContinueLoading => 'Continue loading';
 
   @override
-  String get voiceDownloadIntro =>
-      'Wendelin recognizes speech on the device, without internet and without Google. Pick the model and download it once, preferably on Wi-Fi.';
-
-  @override
   String get voiceDownloadLoad => 'Load';
-
-  @override
-  String get voiceDownloadLoadAgain => 'Load again';
 
   @override
   String get voiceDownloadLoading => 'Loading …';
@@ -4667,11 +4714,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String voiceDownloadLoadingPercentOf(String v, String size) {
     return 'Loading … $v % of $size';
-  }
-
-  @override
-  String voiceDownloadPreselectedBase(String v) {
-    return '“base” is preselected because the device has little memory ($v GB). “small” needs much more memory while recognizing.';
   }
 
   @override
@@ -4699,9 +4741,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String voiceDownloadStillNeeded(String v) {
     return 'Still needed: $v';
   }
-
-  @override
-  String get voiceDownloadTitle => 'Load speech recognition';
 
   @override
   String get voiceDownloadUnpacking => 'Unpacking …';

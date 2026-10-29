@@ -83,7 +83,7 @@ void main() {
       'S2 $noise: leise Störung im Folgefenster ruft das Modell nicht auf',
       (tester) async {
         final setup = WendelinStorage(driftDatabase(name: 'wendelin'));
-        await setup.settings.set(AppSettings.onboardingDone, true);
+        await setup.settings.set(AppSettings.setupWizardDone, true);
         await setup.settings.set(
           voiceSettingsKey,
           const VoiceSettings(sttModel: 'whisper-base', conversationMode: true),

@@ -1,7 +1,10 @@
+import 'dart:ui' show Locale, PlatformDispatcher;
+
 import 'package:flutter/foundation.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
+import '../l10n/l10n.dart';
 import '../station/station_prefs.dart';
 import 'app_settings.dart';
 import 'preference_models.dart';
@@ -15,7 +18,8 @@ final class StartupSettings {
     this.enabledIntegrations = const {},
     this.demoMode = false,
     this.showThinking = false,
-    this.onboardingDone = true,
+    this.setupWizardDone = true,
+    this.setupWizardPage,
     this.language = 'de',
     this.uiLanguage = 'system',
     this.developerMode = false,
@@ -41,9 +45,13 @@ final class StartupSettings {
   /// Show reasoning text.
   final bool showThinking;
 
-  /// Whether the onboarding is done (`true` by default so tests and the
-  /// demo start on the main screen; [load] reads the stored value).
-  final bool onboardingDone;
+  /// Whether the setup wizard (WP174) is finished (`true` by default so tests
+  /// and the demo start on the main screen; [load] reads the stored value,
+  /// missing = not done).
+  final bool setupWizardDone;
+
+  /// Stored page name of the wizard (`SetupPage.name`), `null` = start.
+  final String? setupWizardPage;
 
   /// Preferred language.
   final String language;
@@ -87,11 +95,14 @@ final class StartupSettings {
   /// Station mode settings (WP99).
   final StationPrefs station;
 
-  /// Reads the settings for the integrations [integrationIds].
+  /// Reads the settings for the integrations [integrationIds]. Without a
+  /// stored choice, [language] follows the system language ([systemLocales],
+  /// default: the platform's): `de`/`en`/`fr`, anything else `en`.
   static Future<StartupSettings> load(
     SettingsRepository settings,
-    Iterable<String> integrationIds,
-  ) async {
+    Iterable<String> integrationIds, {
+    List<Locale>? systemLocales,
+  }) async {
     final enabled = <String>{};
     for (final id in integrationIds) {
       if (await settings.get(AppSettings.integrationEnabled(id)) ?? false) {
@@ -102,8 +113,13 @@ final class StartupSettings {
       enabledIntegrations: enabled,
       demoMode: await settings.get(AppSettings.demoMode) ?? false,
       showThinking: await settings.get(AppSettings.showThinking) ?? false,
-      onboardingDone: await settings.get(AppSettings.onboardingDone) ?? false,
-      language: await settings.get(AppSettings.language) ?? 'de',
+      setupWizardDone: await settings.get(AppSettings.setupWizardDone) ?? false,
+      setupWizardPage: await settings.get(AppSettings.setupWizardPage),
+      language:
+          await settings.get(AppSettings.language) ??
+          systemLanguageCode(
+            systemLocales ?? PlatformDispatcher.instance.locales,
+          ),
       uiLanguage: await settings.get(AppSettings.uiLanguage) ?? 'system',
       developerMode: await settings.get(AppSettings.developerMode) ?? false,
       assistant: AssistantPrefs(

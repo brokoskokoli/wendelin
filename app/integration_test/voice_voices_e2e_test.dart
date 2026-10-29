@@ -32,7 +32,7 @@ void main() {
   testWidgets('Stimmen: Kerstin laden, wählen, Probe hören', (tester) async {
     final playback = _RecordingPlayback();
     final app = E2eApp(
-      startup: const StartupSettings(onboardingDone: true),
+      startup: const StartupSettings(setupWizardDone: true),
       extraOverrides: [
         sherpaTtsProvider.overrideWith(
           (ref) => createSherpaTts(ref, playback: playback),

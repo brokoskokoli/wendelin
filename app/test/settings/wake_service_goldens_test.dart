@@ -9,7 +9,7 @@ import 'package:wendelin/ui/onboarding/onboarding_screen.dart';
 
 import '../ui/helpers.dart';
 import 'integrations_screen_test.dart' show settle;
-import 'onboarding_test.dart' show firstStart, pumpApp;
+import 'onboarding_test.dart' show firstStart, pumpApp, seedProvider;
 import 'wake_service_section_test.dart' show Setup, pump;
 
 Future<void> golden(WidgetTester tester, String name) =>
@@ -68,19 +68,9 @@ void main() {
   testWidgets('Golden Onboarding-Schritt Aktivierungswort', tags: ['golden'], (
     tester,
   ) async {
-    final env = firstStart();
+    final env = firstStart(page: 'wakeWord', withSpeech: true);
+    await seedProvider(env);
     await pumpApp(tester, env);
-    for (final label in ['Weiter', 'Später', 'Später']) {
-      await tester.tap(find.text(label));
-      await settle(tester);
-    }
-    await tester.tap(find.text('Ja, weiter zuhören'));
-    await settle(tester);
-    await tester.scrollUntilVisible(find.text('Weiter'), 200);
-    await tester.ensureVisible(find.text('Weiter'));
-    await tester.pump();
-    await tester.tap(find.text('Weiter'));
-    await settle(tester);
     expect(find.byType(OnboardingScreen), findsOneWidget);
     // The golden keeps its original frame.
     setView(tester, const Size(390, 1400));

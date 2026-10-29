@@ -14,23 +14,6 @@ import 'providers.dart';
 
 SettingsRepository _settings(Ref ref) => ref.read(storageProvider).settings;
 
-/// Whether the onboarding is done.
-final onboardingDoneProvider = NotifierProvider<OnboardingDone, bool>(
-  OnboardingDone.new,
-);
-
-/// Onboarding state.
-final class OnboardingDone extends Notifier<bool> {
-  @override
-  bool build() => ref.watch(startupProvider).onboardingDone;
-
-  /// Marks the onboarding as done.
-  Future<void> complete() async {
-    state = true;
-    await _settings(ref).set(AppSettings.onboardingDone, true);
-  }
-}
-
 /// Preferred language (`de`, `fr`, `en`).
 final languageProvider = NotifierProvider<LanguagePref, String>(
   LanguagePref.new,

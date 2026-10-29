@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/l10n.dart';
 import '../../voice/voice_metrics.dart';
 import '../design/design.dart';
-import '../onboarding/voice_download_step.dart';
+import '../onboarding/download_plan.dart';
 import 'settings_page.dart';
 
 /// Settings → Sprache → Messwerte (WP103): latency, real-time factor and

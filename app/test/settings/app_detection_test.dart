@@ -19,6 +19,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 import '../support/test_env.dart';
 import '../ui/helpers.dart';
 import 'integrations_screen_test.dart';
+import 'onboarding_test.dart' show seedProvider;
 
 const spotifyPkg = 'com.spotify.music';
 
@@ -245,11 +246,15 @@ void main() {
     );
   });
 
-  testWidgets('Onboarding: nur Integrationen der Plattform, fehlende Apps '
-      'ausgegraut', (tester) async {
+  testWidgets('Onboarding: Integrationsseite führt nur ins Menü, '
+      'keine Kacheln', (tester) async {
     final opened = <Uri>[];
     final env = TestEnv(
-      startup: const StartupSettings(onboardingDone: false),
+      startup: const StartupSettings(
+        setupWizardDone: false,
+        setupWizardPage: 'integrations',
+      ),
+      storedProfiles: true,
       extraOverrides: specOverrides([
         spotifySpec(spotify()),
         IntegrationSpec(
@@ -264,31 +269,24 @@ void main() {
       ], opened),
     );
     env.apps.uninstall(spotifyPkg);
+    // The required pages before are met, the wizard starts at the integrations.
+    await seedProvider(env);
+    env.speechModels.installed.addAll(['whisper-small', 'silero-vad']);
     setView(tester, const Size(390, 1800));
     await tester.pumpWidget(env.app());
     await settle(tester);
     final c = ProviderScope.containerOf(
       tester.element(find.byType(OnboardingScreen)),
     );
-    for (final step in [
-      'Weiter',
-      'Später',
-      'Später',
-      'Nein, nur nach Tippen',
-    ]) {
-      await tester.tap(find.text(step));
-      await settle(tester);
-    }
     expect(find.text('Was darf Wendelin?'), findsOneWidget);
     await tester.runAsync(() => c.read(toolRegistryProvider).refresh());
     await tester.pumpAndSettle();
 
-    expect(find.text('Kurzbefehle'), findsNothing, reason: 'nur iOS');
-    final t = tileWidget(tester, 'Spotify');
-    expect(t.status, IntegrationStatus.unavailable);
-    expect(t.detail, 'App nicht installiert');
-    await tester.tap(find.text('Im Store'));
-    await tester.pumpAndSettle();
-    expect(opened, hasLength(1));
+    // The page only leads to the menu; the tiles (platform filter, store
+    // hint) are covered by the settings tests above.
+    expect(find.text('Integrationen öffnen'), findsOneWidget);
+    expect(find.text('Spotify'), findsNothing);
+    expect(find.text('Kurzbefehle'), findsNothing);
+    expect(opened, isEmpty);
   });
 }

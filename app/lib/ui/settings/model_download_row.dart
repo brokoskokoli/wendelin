@@ -7,7 +7,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../../di/voice_providers.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
-import '../onboarding/voice_download_step.dart';
+import '../onboarding/download_plan.dart';
 import 'settings_page.dart';
 
 /// One downloadable speech model: name, size and state, a progress bar
@@ -91,7 +91,7 @@ class ModelDownloadRow extends ConsumerWidget {
       ModelPhase.absent => (
         state.error == null
             ? context.l10n.voiceDownloadLoad
-            : context.l10n.voiceDownloadLoadAgain,
+            : context.l10n.retry,
         () => unawaited(notifier.download(model.id)),
       ),
     };
