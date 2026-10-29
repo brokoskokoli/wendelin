@@ -65,7 +65,7 @@ Empfehlung zusätzlich: Tags `v*` per Tag-Schutzregel (Settings → Rules) auf d
 
 ## 5. Release per Tag
 
-1. `version:` in `app/pubspec.yaml` anheben (`0.6.0+7`; der Teil nach `+` ist der `versionCode` und muss bei jedem Release steigen), auf main mergen, Gate abwarten.
+1. `version:` in `app/pubspec.yaml` anheben (`0.6.0+7`; der Teil nach `+` ist der `versionCode` und muss bei jedem Release steigen), auf main mergen, Gate abwarten Im selben Commit die Konstanten `wendelinAppVersion` (`app/lib/di/weather.dart`, ohne `+`) und `devArchiveAppVersion` (`app/lib/voice/dev_archive.dart`, mit `+`) mitziehen; Tests vergleichen sie mit der pubspec.
 2. `git tag v0.6.0 && git push origin v0.6.0`. Der Tag ohne `-` ist ein reguläres Release und nur erlaubt, wenn der Commit auf `main` liegt; mit `-` (z. B. `v0.6.0-rc1`) ist es eine Vorabversion, die auch von einem Branch kommen darf (Probe).
 3. Der Workflow bricht ab (rot, mit Meldung ohne Werte), wenn: Secrets fehlen, die Tag-Basisversion nicht der pubspec-Version entspricht, das Gate für den Commit nicht grün war, ein echtes Release nicht von `main` kommt, `check_apk.sh` rot ist oder das APK-Zertifikat nicht das des Keystores ist (z. B. Debug-Schlüssel).
 4. Ergebnis: Release mit `wendelin-<version>.apk` und `SHA256SUMS`, Notizen aus den Merges auf main seit dem letzten echten Release-Tag.
