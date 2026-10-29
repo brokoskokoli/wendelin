@@ -69,7 +69,7 @@ Voraussetzung: **Android 10 oder neuer**. Google Play Services werden nicht gebr
 
 1. Wendelin öffnen und dem Onboarding folgen. Das Mikrofon freigeben; die Sprachmodelle werden in der App geladen.
 2. **Provider einrichten** (Einstellungen > Provider): Vorlage wählen, API-Schlüssel eintragen und den Verbindungstest laufen lassen. Der Schlüssel bleibt im Android Keystore. Bei Anbietern mit vertraulicher Ausführung zeigt die App das Prüfergebnis beim Anbieter an.
-3. Wendelin zum **Standard-Assistenten** machen (die App führt zur Android-Einstellung) und **Hey Wendelin** einschalten, wenn du freihändig sprechen willst.
+3. Wendelin zum **Standard-Assistenten** machen (die App führt zur Android-Einstellung) und **Hey Wendelin** einschalten (Einstellungen > Aktivierungswort), wenn du freihändig sprechen willst.
 4. Die gewünschten **Integrationen** einschalten (Einstellungen > Integrationen) und die jeweils nötigen Berechtigungen erteilen.
 5. Sag zum Beispiel: „Hey Wendelin, stell einen Timer auf zehn Minuten.“
 

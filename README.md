@@ -69,7 +69,7 @@ Requirements: **Android 10 or later**. Google Play Services are not needed.
 
 1. Open Wendelin and follow the onboarding. Grant the microphone permission; the speech models are downloaded in the app.
 2. **Set up a provider** (Settings > Providers): pick a template, enter your API key and run the connection test. The key stays in the Android Keystore. For providers with confidential execution, the verification result is shown with the provider.
-3. Make Wendelin your **default assistant** (the app takes you to the Android setting) and switch on **Hey Wendelin** if you want hands-free use.
+3. Make Wendelin your **default assistant** (the app takes you to the Android setting) and switch on **Hey Wendelin** (Settings > Wake word) if you want hands-free use.
 4. Switch on the **integrations** you want (Settings > Integrations) and grant the permissions each one asks for.
 5. Say, for example: "Hey Wendelin, set a timer for ten minutes."
 
