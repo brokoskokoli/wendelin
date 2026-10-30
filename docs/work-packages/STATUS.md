@@ -6,7 +6,7 @@ Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) 
 
 Parallelität: bis zu 4 Paket-Sitzungen, je 1 Sub-Agent (AGENTS.md); Standard 2, solange der Maintainer am Rechner ist.
 
-Stand: 2026-10-30; läuft: WP187; Release v0.1.6.
+Stand: 2026-10-30; läuft: keiner; Release v0.1.6 (4ce2d167).
 
 ## Meilensteine
 
@@ -44,7 +44,7 @@ Stand: 2026-10-30; läuft: WP187; Release v0.1.6.
 | WP184 | Zentrale Audio-Anbindung vervollständigen (Multi-Subscriber, kein Mic-Busy bei Follow-Up, sauberer Vorlauf ohne Weckwort-Doppeltranskription) | gemergt 498f5c47 | K147 offen. CI grün, Review FREIGABE. |
 | WP185 | Release 0.1.5 | gemergt 12a1eb08 | Release v0.1.5 veröffentlicht. |
 | WP186 | Overlay hält Bildschirm aktiv (FLAG_KEEP_SCREEN_ON) und schließt nicht vor Ende des Follow-Up-Fensters | gemergt 5de1eae7 | K148 offen. CI grün, Review FREIGABE. |
-| WP187 | Release 0.1.6 | in Arbeit | Release v0.1.6 |
+| WP187 | Release 0.1.6 | gemergt 4ce2d167 | Release v0.1.6 veröffentlicht. |
 
 ## Offen
 
@@ -84,6 +84,6 @@ K138 offen, K139 offen, K140 offen, K141 offen, K142 offen, K144 offen, K145 off
 
 ## Nächste Schritte
 
-1. Release 0.1.6 erstellen und auf Gerät installieren (WP187).
+1. Release 0.1.6 auf Gerät testen.
 2. Konzeptänderungen bestätigen lassen: K138, K139, K140, K141, K142, K144, K145, K146, K147, K148 (Status: offen).
 5. Danach nur mit Go (M6): Prüfseite Weckwort-Archiv (dann Hey-Pflicht K115 und Training mit eigenem HW-Kopf), WP100/WP101, STT-Messung (K99), WP132, WP138.
