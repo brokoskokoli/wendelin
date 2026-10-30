@@ -25,6 +25,12 @@ import io.flutter.plugin.common.MethodChannel
  */
 class AssistantActivity : WendelinActivity() {
 
+    // WP186, K148: Keep screen awake while the assistant overlay is active.
+    private val screenOn = AssistantScreenOn(
+        addFlags = { window.addFlags(it) },
+        clearFlags = { window.clearFlags(it) },
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Arrived before the Flutter engine starts (that may take a while on a cold start).
         VoiceLog.i("overlay-create restored=${savedInstanceState != null}")
@@ -42,6 +48,7 @@ class AssistantActivity : WendelinActivity() {
         }
         // Personal content: no screenshots, not visible in the app switcher.
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        screenOn.acquire()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
         } else {
@@ -97,6 +104,7 @@ class AssistantActivity : WendelinActivity() {
 
     /** Dart closes the overlay: ends the activity now, keeps the engine. False if impossible. */
     private fun releaseHost(): Boolean {
+        screenOn.release()
         if (engineHeld) return true
         val engine = flutterEngine ?: return false
         if (!EngineGroups.hold(engine)) return false
@@ -201,6 +209,7 @@ class AssistantActivity : WendelinActivity() {
     private var createdAt: Long? = null
 
     override fun onDestroy() {
+        screenOn.release()
         frameWatchdog.stop()
         handler.removeCallbacksAndMessages(null)
         hidePlaceholder()
@@ -243,6 +252,7 @@ class AssistantActivity : WendelinActivity() {
     }
 
     private fun closeOverlay() {
+        screenOn.release()
         val channel = assistant
         VoiceLog.i("overlay-stop engine=${channel != null}")
         if (channel == null) {

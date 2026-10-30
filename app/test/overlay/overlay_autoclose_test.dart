@@ -841,4 +841,146 @@ void main() {
       },
     );
   });
+
+  group('WP186: Follow-Up-Fenster im Gespraechsmodus', () {
+    testWidgets(
+      'Overlay bleibt waehrend des aktiven Follow-Up-Fensters geoeffnet',
+      (tester) async {
+        final c = await open(
+          tester,
+          conversation: true,
+          speak: const Duration(milliseconds: 100),
+          script: const [
+            Transcript(text: 'Wie spät ist es?', language: 'de'),
+            Transcript(text: ''),
+          ],
+        );
+        for (
+          var i = 0;
+          i < 200 && !c.read(voiceControllerProvider).followUp;
+          i++
+        ) {
+          await tester.pump(const Duration(milliseconds: 10));
+        }
+        expect(c.read(voiceControllerProvider).followUp, isTrue);
+        expect(closedByIdle(), isFalse, reason: 'Follow-Up-Fenster ist aktiv');
+        expect(platform.calls, isNot(contains('releaseHost')));
+
+        // Während des Fensters bleibt es geöffnet:
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(c.read(voiceControllerProvider).followUp, isTrue);
+        expect(closedByIdle(), isFalse);
+        expect(platform.calls, isNot(contains('releaseHost')));
+      },
+    );
+
+    testWidgets(
+      'Nach Ablauf des Follow-Up-Fensters schliesst das Overlay per by=idle',
+      (tester) async {
+        final c = await open(
+          tester,
+          conversation: true,
+          speak: const Duration(milliseconds: 100),
+          script: const [
+            Transcript(text: 'Wie spät ist es?', language: 'de'),
+            Transcript(text: ''),
+          ],
+        );
+        for (
+          var i = 0;
+          i < 200 && !c.read(voiceControllerProvider).followUp;
+          i++
+        ) {
+          await tester.pump(const Duration(milliseconds: 10));
+        }
+        expect(c.read(voiceControllerProvider).followUp, isTrue);
+        expect(closedByIdle(), isFalse);
+
+        // 5 s Follow-Up läuft ab (Ende durch Timeout)
+        await _pump(tester, steps: 60, ms: 100);
+        expect(c.read(voiceControllerProvider).followUp, isFalse);
+        expect(closedByIdle(), isTrue);
+        expect(platform.calls.where((x) => x == 'releaseHost'), hasLength(1));
+      },
+    );
+
+    testWidgets(
+      'Sprachausgabe gefolgt von Follow-Up schliesst erst nach Follow-Up-Fenster',
+      (tester) async {
+        final c = await open(
+          tester,
+          conversation: true,
+          speak: const Duration(seconds: 1),
+          script: const [
+            Transcript(text: 'Wie spät ist es?', language: 'de'),
+            Transcript(text: ''),
+          ],
+        );
+        // Warten bis Sprachausgabe aktiv ist
+        for (
+          var i = 0;
+          i < 200 && phases.lastOrNull != VoiceState.speaking;
+          i++
+        ) {
+          await tester.pump(const Duration(milliseconds: 10));
+        }
+        expect(phases.last, VoiceState.speaking);
+
+        // Warten bis Sprachausgabe endet
+        for (
+          var i = 0;
+          i < 200 && phases.lastOrNull == VoiceState.speaking;
+          i++
+        ) {
+          await tester.pump(const Duration(milliseconds: 10));
+        }
+
+        // Direkt nach Sprachausgabe: Follow-Up ist aktiv, Overlay bleibt offen!
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(c.read(voiceControllerProvider).speaking, isFalse);
+        expect(c.read(voiceControllerProvider).followUp, isTrue);
+        expect(
+          closedByIdle(),
+          isFalse,
+          reason: 'Nicht direkt nach Sprachausgabe schliessen',
+        );
+        expect(platform.calls, isNot(contains('releaseHost')));
+
+        // Erst nach Ablauf des Follow-Up-Fensters schliesst es
+        await _pump(tester, steps: 60, ms: 100);
+        expect(c.read(voiceControllerProvider).followUp, isFalse);
+        expect(closedByIdle(), isTrue);
+        expect(platform.calls.where((x) => x == 'releaseHost'), hasLength(1));
+      },
+    );
+
+    testWidgets(
+      'Tipp auf Schliessen waehrend Follow-Up-Fenster: schliesst sofort per tap',
+      (tester) async {
+        final c = await open(
+          tester,
+          conversation: true,
+          speak: const Duration(milliseconds: 100),
+          script: const [
+            Transcript(text: 'Wie spät ist es?', language: 'de'),
+            Transcript(text: ''),
+          ],
+        );
+        for (
+          var i = 0;
+          i < 200 && !c.read(voiceControllerProvider).followUp;
+          i++
+        ) {
+          await tester.pump(const Duration(milliseconds: 10));
+        }
+        expect(c.read(voiceControllerProvider).followUp, isTrue);
+        expect(closedByIdle(), isFalse);
+
+        await tester.tap(find.byTooltip(AppLocalizationsDe().overlayEnd));
+        await tester.pump();
+        expect(closedBy('tap'), isTrue);
+        expect(platform.calls, contains('releaseHost'));
+      },
+    );
+  });
 }
