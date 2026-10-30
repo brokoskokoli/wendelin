@@ -8,6 +8,8 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../platform/channel_audio_focus_port.dart';
 import '../platform/channel_memory_trim.dart';
 import '../platform/voice/audio_playback.dart';
+import '../platform/voice/central_audio_bridge.dart';
+import '../platform/voice/central_audio_input.dart';
 import '../platform/voice/ducking_tts.dart';
 import '../platform/voice/engine_whisper.dart';
 import '../platform/voice/lazy_vad.dart';
@@ -71,21 +73,33 @@ final speechFocusProvider = Provider<SpeechFocus>((ref) {
   return focus;
 });
 
+/// Bridge to the native central audio capture service (WP180).
+final centralAudioBridgeProvider = Provider<CentralAudioBridge>(
+  (ref) => ChannelCentralAudioBridge(),
+);
+
 /// Microphone as [AudioInput] (16 kHz mono PCM).
+///
+/// On Android, connects to the central audio service via [CentralAudioInput]
+/// (WP180, ADR 0024); falls back to [RecordAudioInput] when the service is
+/// unavailable or on desktop/tests.
 final audioInputProvider = Provider<AudioInput>(
-  (ref) => RecordAudioInput(
-    ref.watch(microphoneProvider),
-    // `mic-start` logs AudioManager.mode (always: the channel answers `null`
-    // where there is none, e.g. in tests).
-    () => ChannelAudioMode().read(),
-    // WP146: a second recorder, so the barge-in recording can go on until
-    // the follow-up recording has its first frame.
-    () => RecordPcmRecorder(
-      null,
-      () async => SpeechCapture.parse(
-        await ref.read(storageProvider).settings.get(AppSettings.bargeSource),
+  (ref) => CentralAudioInput(
+    bridge: ref.watch(centralAudioBridgeProvider),
+    fallback: RecordAudioInput(
+      ref.watch(microphoneProvider),
+      // `mic-start` logs AudioManager.mode (always: the channel answers `null`
+      // where there is none, e.g. in tests).
+      () => ChannelAudioMode().read(),
+      // WP146: a second recorder, so the barge-in recording can go on until
+      // the follow-up recording has its first frame.
+      () => RecordPcmRecorder(
+        null,
+        () async => SpeechCapture.parse(
+          await ref.read(storageProvider).settings.get(AppSettings.bargeSource),
+        ),
+        ref.read(audioFocusPortProvider),
       ),
-      ref.read(audioFocusPortProvider),
     ),
   ),
 );

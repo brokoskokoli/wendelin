@@ -28,8 +28,9 @@ class WakeConflictReactionTest {
         val sched = Sched()
         val guard = TimedGuard(sched)
         var stops = 0
+        var resumes = 0
         val lines = mutableListOf<String>()
-        val reaction = WakeConflictReaction(guard, { stops++ }, { lines += it })
+        val reaction = WakeConflictReaction(guard, { stops++ }, { lines += it }, { resumes++ })
         var timedOut = 0
 
         /** The take with the capture kept open (as `handoffKept` does). */
@@ -106,5 +107,25 @@ class WakeConflictReactionTest {
         r.reaction.react("recording")
         r.reaction.reset()
         assertNull(r.reaction.last)
+    }
+
+    @Test
+    fun resumesAutomaticallyWhenConflictClears() {
+        val r = Rig()
+        assertTrue(r.reaction.react("call"))
+        assertEquals(1, r.stops)
+        assertEquals(0, r.resumes)
+
+        assertFalse(r.reaction.react(null))
+        assertEquals(1, r.stops)
+        assertEquals(1, r.resumes)
+    }
+
+    @Test
+    fun doesNotResumeIfWasNotClosed() {
+        val r = Rig()
+        assertFalse(r.reaction.react(null))
+        assertEquals(0, r.stops)
+        assertEquals(0, r.resumes)
     }
 }

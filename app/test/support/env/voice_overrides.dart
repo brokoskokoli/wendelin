@@ -8,6 +8,7 @@ import '../test_env.dart';
 List<Override> withVoice(TestEnv env) => [
   speechModelServiceProvider.overrideWith((ref) async => env.speechModels),
   microphoneProvider.overrideWithValue(env.microphone),
+  centralAudioBridgeProvider.overrideWithValue(env.centralAudioBridge),
   systemTtsProvider.overrideWithValue(env.systemTts),
   sherpaTtsProvider.overrideWithValue(env.sherpaTts),
 ];

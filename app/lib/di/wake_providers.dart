@@ -7,6 +7,7 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../platform/voice/audio_playback.dart';
+import '../platform/voice/central_audio_input.dart';
 import '../platform/voice/onnx_wake_models.dart';
 import '../platform/voice/pcm.dart';
 import '../platform/voice/wake_feature_chain.dart';
@@ -408,11 +409,17 @@ final wakeEnrollVerifierWaitProvider = Provider<Duration>(
   (ref) => const Duration(seconds: 90),
 );
 
-/// Microphone for enrollment, calibration and test (the same as the
-/// voice pipeline; device tests replace it by WAV files).
-final wakeAudioProvider = Provider<AudioInput>(
-  (ref) => ref.watch(audioInputProvider),
-);
+/// Microphone for enrollment, calibration and test (WP180, ADR 0024).
+///
+/// Uses [CentralAudioInput.withKind] with 'enroll' so that the enrollment
+/// screens stream from the central source without conflicting with the wake word service.
+final wakeAudioProvider = Provider<AudioInput>((ref) {
+  final input = ref.watch(audioInputProvider);
+  if (input is CentralAudioInput) {
+    return input.withKind('enroll');
+  }
+  return input;
+});
 
 /// Short tone (880 Hz, 0.35 s) asking the speaker to say „Wendelin“ during
 /// the calibration (replaced in tests).
