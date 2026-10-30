@@ -4,21 +4,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../agent/agent_controller.dart';
+import '../../di/agent_providers.dart' show undoManagerProvider;
 import '../../voice/voice_controller.dart';
 
 /// Whether nothing is left to do after listening ended, so the overlay may
-/// close itself (WP172): no new voice request, no running answer, no open
-/// question or GPU choice, and no unlock offer while locked ([unlocking]:
-/// the unlock window is active or open). Typing and an own cancel are the
-/// overlay's own state and checked there.
+/// close itself (WP172, WP182): no new voice request, no running answer,
+/// no active speech output, no pending undo window, no open question or
+/// GPU choice, and no unlock offer while locked ([unlocking]: the unlock
+/// window is active or open). Typing and an own cancel are the overlay's
+/// own state and checked there.
 bool nothingLeftToDo(
   WidgetRef ref, {
   required bool locked,
   required bool unlocking,
 }) {
+  final voice = ref.read(voiceControllerProvider);
   final conversation = ref.read(agentControllerProvider);
-  if (ref.read(voiceControllerProvider).active ||
+  if (voice.active ||
+      voice.speaking ||
       conversation.running ||
+      conversation.hasPendingUndo ||
+      ref.read(undoManagerProvider).hasPending ||
       conversation.pending != null ||
       conversation.gpuBlock != null) {
     return false;
@@ -114,6 +120,17 @@ class IdleCloser {
         if (was == true && !now) scheduleMicrotask(recheck);
       },
     );
+    // WP182: Recheck after speech output ends.
+    ref.listen(voiceControllerProvider.select((v) => v.speaking), (was, now) {
+      if (was == true && !now) scheduleMicrotask(recheck);
+    });
+    // WP182: Recheck after an undo window expires or is resolved.
+    ref.listen(agentControllerProvider.select((c) => c.hasPendingUndo), (
+      was,
+      now,
+    ) {
+      if (was == true && !now) scheduleMicrotask(recheck);
+    });
   }
 
   /// Decides now, as at the end of listening (also after the keyboard was

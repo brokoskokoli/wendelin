@@ -632,36 +632,6 @@ final class VoiceController extends Notifier<VoiceUiState> {
           : levels,
     );
   }
-
-  /// Undoes [callId]: stops a spoken answer at once, adds „Zurückgenommen.“
-  /// and speaks it if the request came by voice (B9). Returns the text, or
-  /// `null` if the undo failed.
-  Future<String?> undo(String callId) async {
-    if (_voiceRun || state.phase != VoiceState.idle) await cancel(.undo);
-    final tts = _promptTts;
-    _promptTts = null;
-    if (tts != null) await tts.stop();
-    final byVoice = _callByVoice[callId] ?? _lastByVoice;
-    final language = byVoice ? _language : ref.read(languageProvider);
-    if (!await _agent.undo(callId)) return null;
-    final text = undoneText(language);
-    _agent.addNotice(text);
-    final components = _components;
-    if (byVoice && components != null) {
-      _promptTts = await components
-          .textToSpeech(language)
-          .catchError((Object _) => null);
-      await sayBounded(
-        _promptTts,
-        text,
-        language: language,
-        timeout: promptTimeout,
-        source: 'undo',
-      );
-      _promptTts = null;
-    }
-    return text;
-  }
 }
 
 /// German text for a failure of a voice component.

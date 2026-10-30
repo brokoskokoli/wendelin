@@ -28,10 +28,12 @@ void main() {
       final m = UndoManager(clock: _FakeClock(async))..register('c1', action());
       async.elapse(const Duration(milliseconds: 9999));
       expect(m.canUndo('c1'), isTrue);
+      expect(m.hasPending, isTrue);
       bool? result;
       m.undo('c1').then((r) => result = r);
       async.flushMicrotasks();
       expect(result, isTrue);
+      expect(m.hasPending, isFalse);
       expect(runs, 1);
       m.undo('c1').then((r) => result = r);
       async.flushMicrotasks();

@@ -2,8 +2,8 @@
 # Neue Warnung oder Wachstum ist rot; sinkt ein Wert oder entfällt der Eintrag, ist es
 # ebenfalls rot, bis die Datei gesenkt ist: `dart run tool/check_sizes.dart --update-baseline`
 # (senkt/entfernt, erhöht nie). Die Liste schrumpft nur; neue Einträge von Hand sind unzulässig.
-app/lib/agent/agent_controller.dart: 623
-app/lib/agent/agent_controller.dart#AgentController: 585
+app/lib/agent/agent_controller.dart: 621
+app/lib/agent/agent_controller.dart#AgentController: 582
 app/lib/agent/agent_controller.dart#AgentController._start: 85
 app/lib/agent/conversation_reducer.dart#ConversationReducer.apply: 113
 app/lib/ui/attestation/attestation_texts.dart#attestationMessage: 100
@@ -18,8 +18,8 @@ app/lib/ui/settings/speaker/speaker_person_screen.dart#_PersonState.build: 104
 app/lib/ui/settings/voice_screen.dart#VoiceScreen.build: 85
 app/lib/ui/settings/voice_voices_screen.dart#VoiceVoicesScreen.build: 102
 app/lib/voice/voice_confirmation.dart#_VoiceConfirmation._confirmByVoice: 142
-app/lib/voice/voice_controller.dart: 674
-app/lib/voice/voice_controller.dart#VoiceController: 589
+app/lib/voice/voice_controller.dart: 644
+app/lib/voice/voice_controller.dart#VoiceController: 559
 app/lib/voice/voice_controller.dart#VoiceController.start: 94
 app/tool/mcp_test_server.dart#main: 100
 app/tool/stt_wer.dart#main: 111

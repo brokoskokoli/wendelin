@@ -102,6 +102,9 @@ final class UndoManager {
   /// undone elsewhere, e.g. automatically after a red TEE receipt).
   void discard(String callId) => _pending.remove(callId)?.cancel();
 
+  /// Whether at least one undo action is currently pending.
+  bool get hasPending => _pending.isNotEmpty;
+
   /// Whether [callId] can still be undone.
   bool canUndo(String callId) => remaining(callId) != null;
 

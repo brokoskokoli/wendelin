@@ -76,6 +76,9 @@ final class VoiceUiState {
   /// Whether a voice request (or a spoken confirmation) is in progress.
   bool get active => phase != VoiceState.idle || awaitingAnswer || preparing;
 
+  /// Whether speech output is active (WP182).
+  bool get speaking => phase == VoiceState.speaking;
+
   /// Whether the microphone is open.
   bool get listening =>
       phase == VoiceState.listening || awaitingAnswer || preparing;

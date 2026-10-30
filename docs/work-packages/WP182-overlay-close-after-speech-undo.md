@@ -17,9 +17,9 @@ In der Praxis (Gerätetest 2026-10-30) führte das zu zwei kritischen Problemen:
    - Tippt der Nutzer währenddessen auf „Rückgängig“, spricht Wendelin die Bestätigung („Zurückgenommen.“) und das Fenster schließt danach.
 
 ## Abnahmekriterien
-- [ ] `nothingLeftToDo` prüft zusätzlich, ob ein Rückgängig-Fenster offen ist (`hasPendingUndo` in `ConversationState` bzw. `UndoManager`) und ob noch eine Sprachausgabe aktiv ist.
-- [ ] `IdleCloser` lauscht auf das Auslaufen des Rückgängig-Countdowns sowie auf das Ende der Sprachausgabe und stößt danach die Schließprüfung an.
-- [ ] Unit-Tests in `overlay_autoclose_test.dart` (und ggf. `assistant_overlay_test.dart`):
+- [x] `nothingLeftToDo` prüft zusätzlich, ob ein Rückgängig-Fenster offen ist (`hasPendingUndo` in `ConversationState` bzw. `UndoManager`) und ob noch eine Sprachausgabe aktiv ist.
+- [x] `IdleCloser` lauscht auf das Auslaufen des Rückgängig-Countdowns sowie auf das Ende der Sprachausgabe und stößt danach die Schließprüfung an.
+- [x] Unit-Tests in `overlay_autoclose_test.dart` (und ggf. `assistant_overlay_test.dart`):
   - Aktion mit Rückgängig-Fenster: Overlay bleibt während der gesamten Countdown-Dauer offen; schließt erst nach Ablauf der 10 s per `by=idle`.
   - Ansage läuft: Overlay bleibt offen, solange Wendelin spricht; schließt danach (falls kein Rückgängig offen).
   - Rückgängig angetippt: Wendelin sagt „Zurückgenommen.“, Overlay schließt danach.
