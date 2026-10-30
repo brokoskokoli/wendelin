@@ -7,6 +7,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-30
+
+Centralized audio capture service and multi-subscriber ring buffer (ADR 0024 / WP180).
+
+### Added
+
+- **Centralized Android audio recording service** – single capture source for all audio on Android directly within `WakeWordService` using a continuous 16 kHz PCM16 ring buffer (`AudioRingBuffer`, ≥ 6 s).
+- **Multi-subscriber audio dispatch** – `CentralAudioHub` distributes audio streams simultaneously to wake detection (`WAKE`), interaction/dialog sessions (`SESSION`), and speaker/wake enrollment (`ENROLL`) without mic contention or restarts.
+- **Microphone conflict management** – automatic pause of recording during external mic conflicts (phone calls, third-party apps) and seamless resume when conflicts clear.
+
+### Fixed
+
+- **Concurrent capture restrictions on Android 10** – fixes mic lockout and muted audio (`isClientSilenced`) on devices where multiple `AudioRecord` instances cannot run concurrently (such as Huawei EMUI), allowing speech recognition and speaker enrollment (`SpeakerEnrollScreen`) to work reliably.
+
 ## [0.1.2] - 2026-10-29
 
 Continuous audio ring buffer and selectable stage 2 wake word verifiers.
@@ -55,7 +69,8 @@ Download the APK below and install it. On Android 13 and later, you may have to 
 Certificate fingerprint (SHA-256): `A9:E9:5A:13:98:34:19:23:4B:DB:8F:CA:F6:0F:1B:84:18:88:36:86:7B:F8:DC:38:99:15:B5:25:39:DC:09:7B`
 APK checksum: see `SHA256SUMS`.
 
-[Unreleased]: https://github.com/brokoskokoli/wendelin/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/brokoskokoli/wendelin/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/brokoskokoli/wendelin/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/brokoskokoli/wendelin/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/brokoskokoli/wendelin/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/brokoskokoli/wendelin/releases/tag/v0.1.0
