@@ -6,7 +6,7 @@ Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) 
 
 Parallelität: bis zu 4 Paket-Sitzungen, je 1 Sub-Agent (AGENTS.md); Standard 2, solange der Maintainer am Rechner ist.
 
-Stand: 2026-10-30; läuft: WP182; Release v0.1.3 (248a801c).
+Stand: 2026-10-30; läuft: keiner; Release v0.1.3 (248a801c).
 
 ## Meilensteine
 
@@ -39,7 +39,7 @@ Stand: 2026-10-30; läuft: WP182; Release v0.1.3 (248a801c).
 | WP178 | Durchgehender Audio-Ringpuffer (5–6 s) für Mikrofon und Weckwort | gemergt 1ac966a0 | K144 offen. CI grün, Review FREIGABE. |
 | WP180 | Zentrale Audio-Aufnahme und Ringpuffer im Dienst | gemergt b648dbaf | ADR 0024, K145 offen. CI grün, Review FREIGABE. |
 | WP181 | Release 0.1.3 | gemergt 248a801c | Release v0.1.3 veröffentlicht. |
-| WP182 | Overlay schließt nicht während Ansage oder 10-Sekunden-Rückgängig-Fenster | in Arbeit | K146 offen. |
+| WP182 | Overlay schließt nicht während Ansage oder 10-Sekunden-Rückgängig-Fenster | gemergt d0a0c136 | K146 offen. Gerätetest docs/testing/m5/wp182.md |
 
 ## Offen
 
@@ -79,8 +79,8 @@ K138 offen, K139 offen, K140 offen, K141 offen, K142 offen, K144 offen, K145 off
 
 ## Nächste Schritte
 
-1. WP182 umsetzen (Overlay schließt nicht während Ansage oder 10-Sekunden-Rückgängig-Fenster, K146).
+1. WP182 gemergt d0a0c136 (Overlay schließt nicht während Ansage oder 10-Sekunden-Rückgängig-Fenster, K146). Gerätetest `docs/testing/m5/wp182.md`.
 2. WP169 läuft (GitHub-Repo auffrischen).
 3. Gerätetests beim Maintainer: rc13/v0.1.0 (T31) und die noch offenen Blöcke T30, T29, T28 (siehe „Offen“).
-4. K127–K133 vom Maintainer bestätigen lassen.
+4. Konzeptänderungen bestätigen lassen: K138, K139, K140, K141, K142, K144, K145, K146 (Status: offen).
 5. Danach nur mit Go (M6): Prüfseite Weckwort-Archiv (dann Hey-Pflicht K115 und Training mit eigenem HW-Kopf), WP100/WP101, STT-Messung (K99), WP132, WP138.
