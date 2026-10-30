@@ -9,7 +9,7 @@ import 'weather_config.dart';
 
 /// App version for the `User-Agent` of MET Norway (checked against
 /// `pubspec.yaml` by a test).
-const wendelinAppVersion = '0.1.5';
+const wendelinAppVersion = '0.1.6';
 
 /// Chosen weather service and home place.
 final weatherConfigProvider =
