@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../agent/agent_controller.dart';
-import '../../di/agent_providers.dart' show undoManagerProvider;
 import '../../voice/voice_controller.dart';
 
 /// Whether nothing is left to do after listening ended, so the overlay may
@@ -21,10 +20,8 @@ bool nothingLeftToDo(
   final voice = ref.read(voiceControllerProvider);
   final conversation = ref.read(agentControllerProvider);
   if (voice.active ||
-      voice.speaking ||
       conversation.running ||
       conversation.hasPendingUndo ||
-      ref.read(undoManagerProvider).hasPending ||
       conversation.pending != null ||
       conversation.gpuBlock != null) {
     return false;
