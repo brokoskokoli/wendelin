@@ -6,7 +6,7 @@ Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) 
 
 Parallelität: bis zu 4 Paket-Sitzungen, je 1 Sub-Agent (AGENTS.md); Standard 2, solange der Maintainer am Rechner ist.
 
-Stand: 2026-10-30; läuft: keiner; Release v0.1.4 (c9989220).
+Stand: 2026-10-30; läuft: WP184; Release v0.1.4 (c9989220).
 
 ## Meilensteine
 
@@ -41,6 +41,7 @@ Stand: 2026-10-30; läuft: keiner; Release v0.1.4 (c9989220).
 | WP181 | Release 0.1.3 | gemergt 248a801c | Release v0.1.3 veröffentlicht. |
 | WP182 | Overlay schließt nicht während Ansage oder 10-Sekunden-Rückgängig-Fenster | gemergt d0a0c136 | K146 offen. Gerätetest docs/testing/m5/wp182.md |
 | WP183 | Release 0.1.4 | gemergt c9989220 | Release v0.1.4 veröffentlicht. |
+| WP184 | Zentrale Audio-Anbindung vervollständigen (Multi-Subscriber, kein Mic-Busy bei Follow-Up, sauberer Vorlauf ohne Weckwort-Doppeltranskription) | in Arbeit | K147 offen. |
 
 ## Offen
 
@@ -80,8 +81,8 @@ K138 offen, K139 offen, K140 offen, K141 offen, K142 offen, K144 offen, K145 off
 
 ## Nächste Schritte
 
-1. WP182 gemergt d0a0c136 (Overlay schließt nicht während Ansage oder 10-Sekunden-Rückgängig-Fenster, K146). Gerätetest `docs/testing/m5/wp182.md`.
+1. WP184 umsetzen (Zentrale Audio-Anbindung vervollständigen, Multi-Subscriber, kein Mic-Busy bei Follow-Up, sauberer Vorlauf ohne Weckwort-Doppeltranskription, K147).
 2. WP169 läuft (GitHub-Repo auffrischen).
 3. Gerätetests beim Maintainer: rc13/v0.1.0 (T31) und die noch offenen Blöcke T30, T29, T28 (siehe „Offen“).
-4. Konzeptänderungen bestätigen lassen: K138, K139, K140, K141, K142, K144, K145, K146 (Status: offen).
+4. Konzeptänderungen bestätigen lassen: K138, K139, K140, K141, K142, K144, K145, K146, K147 (Status: offen).
 5. Danach nur mit Go (M6): Prüfseite Weckwort-Archiv (dann Hey-Pflicht K115 und Training mit eigenem HW-Kopf), WP100/WP101, STT-Messung (K99), WP132, WP138.
