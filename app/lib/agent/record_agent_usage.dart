@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
-import '../di/preferences.dart';
 import '../di/providers.dart';
 
 /// Stores the token usage of an agent call in the local database.
