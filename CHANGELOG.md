@@ -7,6 +7,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-10-30
+
+Multi-subscriber centralized audio capture & wake pre-roll fix (K147 / WP184).
+
+### Fixed
+
+- **Microphone busy error on follow-up listening** – fixed `VoiceErrorKind.busy` when listening resumes after assistant speech output; `CentralAudioInput.detach()` cleanly unbinds the stream without blocking subsequent listen sessions, and `wakeBargeInDetectorProvider` operates on a decoupled subscription.
+- **Wake-word remnant & pause in locked mode** – speech endpointer no longer triggers a premature `EndpointReason.silence` on wake-word decay tail; if the user pauses briefly while the screen turns on, listening continues up to `noSpeechTimeout` (8 seconds), and the user's spoken command is captured completely without truncation.
+- **Multi-subscriber support** – Kotlin `CentralAudioChannel` and Dart `CentralAudioBridge` support concurrent audio subscriptions by `subId`, ensuring continuous background ring-buffer recording without stopping/restarting the microphone.
+
 ## [0.1.4] - 2026-10-30
 
 Assistant overlay stays open during speech output and undo countdown (K146 / WP182).
