@@ -7,6 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-10-30
+
+Keep screen active during assistant session and protect follow-up countdown (K148 / WP186).
+
+### Fixed
+
+- **Screen timeout / sleep during speech and follow-up window** – `AssistantActivity` now sets `FLAG_KEEP_SCREEN_ON` during active overlay sessions, preventing Android's lock screen inactivity timeout from turning off the display (`SurfaceFlinger` power mode 0) and triggering an unexpected `onStop()` / `_voice.suspend()` cancellation while the assistant is speaking or awaiting input. The flag is cleared when the overlay closes.
+- **Follow-up window protection** – `nothingLeftToDo` in `overlay_idle_close.dart` now explicitly accounts for `voice.followUp`, and `IdleCloser` listens for the expiration of the follow-up window, ensuring the 5-second countdown runs to completion before the overlay closes via `by=idle`.
+
 ## [0.1.5] - 2026-10-30
 
 Multi-subscriber centralized audio capture & wake pre-roll fix (K147 / WP184).
