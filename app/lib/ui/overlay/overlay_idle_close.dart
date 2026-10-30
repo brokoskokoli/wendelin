@@ -7,10 +7,10 @@ import '../../agent/agent_controller.dart';
 import '../../voice/voice_controller.dart';
 
 /// Whether nothing is left to do after listening ended, so the overlay may
-/// close itself (WP172, WP182): no new voice request, no running answer,
-/// no active speech output, no pending undo window, no open question or
-/// GPU choice, and no unlock offer while locked ([unlocking]: the unlock
-/// window is active or open). Typing and an own cancel are the overlay's
+/// close itself (WP172, WP182, WP186): no new voice request, no running answer,
+/// no active speech output, no pending follow-up window, no pending undo window,
+/// no open question or GPU choice, and no unlock offer while locked ([unlocking]:
+/// the unlock window is active or open). Typing and an own cancel are the overlay's
 /// own state and checked there.
 bool nothingLeftToDo(
   WidgetRef ref, {
@@ -20,6 +20,7 @@ bool nothingLeftToDo(
   final voice = ref.read(voiceControllerProvider);
   final conversation = ref.read(agentControllerProvider);
   if (voice.active ||
+      voice.followUp ||
       conversation.running ||
       conversation.hasPendingUndo ||
       conversation.pending != null ||
@@ -119,6 +120,10 @@ class IdleCloser {
     );
     // WP182: Recheck after speech output ends.
     ref.listen(voiceControllerProvider.select((v) => v.speaking), (was, now) {
+      if (was == true && !now) scheduleMicrotask(recheck);
+    });
+    // WP186: Recheck after the conversation follow-up window ends.
+    ref.listen(voiceControllerProvider.select((v) => v.followUp), (was, now) {
       if (was == true && !now) scheduleMicrotask(recheck);
     });
     // WP182: Recheck after an undo window expires or is resolved.
