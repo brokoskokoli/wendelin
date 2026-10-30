@@ -168,5 +168,69 @@ void main() {
       expect(channelCalls.any((c) => c.method == 'stop'), isTrue);
       await sub.cancel();
     });
+
+    test('supports concurrent subscriptions with subId', () async {
+      final stream1 = bridge.start(kind: 'session', subId: 'sub-1');
+      final stream2 = bridge.start(kind: 'session', subId: 'sub-2');
+
+      final rec1 = <Int16List>[];
+      final rec2 = <Int16List>[];
+      var done1 = false;
+      var done2 = false;
+
+      final sub1 = stream1.listen(rec1.add, onDone: () => done1 = true);
+      final sub2 = stream2.listen(rec2.add, onDone: () => done2 = true);
+
+      await pumpEventQueue();
+
+      // Chunk for sub-1
+      final chunk1 = Uint8List.fromList([0x01, 0x00]);
+      final byteData1 = const StandardMethodCodec().encodeMethodCall(
+        MethodCall('audioChunk', {'subId': 'sub-1', 'pcm': chunk1}),
+      );
+      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .handlePlatformMessage(centralAudioChannelName, byteData1, (_) {});
+
+      // Chunk for sub-2
+      final chunk2 = Uint8List.fromList([0x02, 0x00]);
+      final byteData2 = const StandardMethodCodec().encodeMethodCall(
+        MethodCall('audioChunk', {'subId': 'sub-2', 'pcm': chunk2}),
+      );
+      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .handlePlatformMessage(centralAudioChannelName, byteData2, (_) {});
+
+      await pumpEventQueue();
+
+      expect(rec1.length, 1);
+      expect(rec1.single, [1]);
+      expect(rec2.length, 1);
+      expect(rec2.single, [2]);
+
+      // Stop sub-1 selectively
+      await bridge.stop(subId: 'sub-1');
+      await pumpEventQueue();
+
+      expect(done1, isTrue);
+      expect(done2, isFalse);
+
+      // Chunk for sub-2 still received
+      final chunk3 = Uint8List.fromList([0x03, 0x00]);
+      final byteData3 = const StandardMethodCodec().encodeMethodCall(
+        MethodCall('audioChunk', {'subId': 'sub-2', 'pcm': chunk3}),
+      );
+      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .handlePlatformMessage(centralAudioChannelName, byteData3, (_) {});
+
+      await pumpEventQueue();
+      expect(rec2.length, 2);
+      expect(rec2.last, [3]);
+
+      await bridge.stop(subId: 'sub-2');
+      await pumpEventQueue();
+      expect(done2, isTrue);
+
+      await sub1.cancel();
+      await sub2.cancel();
+    });
   });
 }

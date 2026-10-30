@@ -32,6 +32,85 @@ void main() {
   const wakeMs = 600;
   const wakeEnd = wakeMs * 16;
 
+  test('WP184: Pause nach Weckwort mit Ausklingen löst keinen silence-Endpoint aus und wartet bis noSpeechTimeout', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [ScriptedTurn.text('Ok.')],
+        transcripts: const [Transcript(text: 'Mach das Licht an')],
+      );
+      // Weckwort detektiert bei 600 ms, klingt aber noch 350 ms nach (bis 950 ms).
+      // Danach herrscht Stille (1000 ms im Vorlauf, dann Live-Stille).
+      final pre = cat([speech(950), quiet(1000)]);
+      h.fakeAudio.script(AudioFrames.pattern('.' * 260, frame: frame));
+
+      h.pipeline.start(trigger: wake(pre, wakeEnd)); // wakeEnd = 600 * 16
+
+      // Nach 800 ms Pause nach dem Weckwort darf KEIN Abbruch wegen Stille erfolgen!
+      async.elapse(const Duration(milliseconds: 1500));
+      expect(h.pipeline.state, VoiceState.listening);
+      expect(
+        h.stt.calls,
+        isEmpty,
+        reason: 'kein vorzeitiger Weckwort-STT-Aufruf',
+      );
+
+      // Erst nach 8 s Gesamt-Stille greift noSpeech
+      async.elapse(const Duration(seconds: 8));
+      settle(async);
+      expect(h.pipeline.state, VoiceState.idle);
+      expect(h.events, contains(isA<VoiceNothingUnderstood>()));
+      expect(h.stt.calls, isEmpty);
+    });
+  });
+
+  test('WP184: Pause nach Weckwort im gesperrten Modus, dann Live-Befehl: lückenlos erfasst ohne Relisten', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [ScriptedTurn.text('Licht ist an.')],
+        transcripts: const [Transcript(text: 'Schalte die Lampe ein')],
+      );
+      // Weckwort bei 600 ms, Ausklingen bis 950 ms, dann 800 ms Pause beim Warten auf Bildschirm
+      final pre = cat([speech(950), quiet(800)]);
+      // Danach spricht der Nutzer live seinen Befehl: 900 ms Sprache, 900 ms Endstille
+      h.fakeAudio.script(
+        AudioFrames.pattern('${'S' * 30}${'.' * 30}', frame: frame),
+      );
+
+      h.pipeline.start(trigger: wake(pre, wakeEnd)); // wakeEnd = 600 * 16
+      settle(async);
+
+      // Genau ein STT-Aufruf mit dem echten Befehl, kein wake-only Zwischenstopp!
+      expect(h.stt.calls, hasLength(1));
+      expect(h.recording.inputs.single.text, 'Schalte die Lampe ein');
+      expect(
+        h.diagnostics.where((d) => d.startsWith('relisten reason=wake-only')),
+        isEmpty,
+      );
+    });
+  });
+
+  test('WP184: flüssiges Weitersprechen („Wendelin, <Kommando>“): gesamter Befehl lückenlos erfasst', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [ScriptedTurn.text('Licht ist an.')],
+        transcripts: const [Transcript(text: 'Wendelin, mach das Licht an')],
+      );
+      // Flüssiges Sprechen: 600 ms Weckwort + 900 ms Befehl + 900 ms Endstille im Vorlauf
+      final pre = cat([speech(600), speech(900), quiet(900)]);
+      h.fakeAudio.script(AudioFrames.pattern('.' * 30, frame: frame));
+
+      h.pipeline.start(trigger: wake(pre, wakeEnd));
+      settle(async);
+
+      expect(h.stt.calls, hasLength(1));
+      expect(h.recording.inputs.single.text, 'mach das Licht an');
+      expect(
+        h.diagnostics.where((d) => d.startsWith('relisten reason=wake-only')),
+        isEmpty,
+      );
+    });
+  });
+
   test('ohne Pause: Anfrage steckt im Pre-Roll, Wake Word fehlt im Text und '
       'im Audio', () {
     runFake((async) {
@@ -46,9 +125,9 @@ void main() {
       expect(h.pipeline.start(trigger: wake(pre, wakeEnd)), isTrue);
       settle(async);
       expect(h.recording.inputs.single.text, 'schalte die Taschenlampe an.');
-      // 4 Chunks Rand (stille) + 26 Sprach- + 27 Stille-Chunks; das Wake Word
+      // 12 Chunks Rand (stille) + 18 Sprach- + 27 Stille-Chunks; das Wake Word
       // (600 ms = 9600 Samples) ist nicht dabei.
-      expect(h.stt.calls.single.samples, 57 * 480);
+      expect(h.stt.calls.single.samples, 55 * 480);
       // Endpoint inside the pre-roll: the microphone is not needed (WP146).
       expect(h.fakeAudio.startCount, 0);
     });
@@ -65,7 +144,7 @@ void main() {
         ],
       );
       // Stage 2 took its time: the request was spoken meanwhile.
-      final pre = cat([speech(600), quiet(1000), speech(900), quiet(900)]);
+      final pre = cat([speech(800), quiet(1000), speech(900), quiet(900)]);
       expect(h.pipeline.start(trigger: wake(pre, 200 * 16)), isTrue);
       settle(async);
       expect(h.stt.calls, hasLength(2));
@@ -92,7 +171,7 @@ void main() {
       h.fakeAudio.script(
         AudioFrames.pattern('${'.' * 10}${'S' * 20}${'.' * 30}', frame: frame),
       );
-      final pre = cat([speech(600), quiet(1000)]);
+      final pre = cat([speech(800), quiet(1000)]);
       h.pipeline.start(trigger: wake(pre, 200 * 16));
       settle(async);
       expect(h.stt.calls, hasLength(2));
@@ -115,7 +194,7 @@ void main() {
         audio: mic,
       );
       // The pre-roll ends after the wake word and a pause: decided inside it.
-      final pre = cat([speech(600), quiet(1000)]);
+      final pre = cat([speech(800), quiet(1000)]);
       h.pipeline.start(trigger: wake(pre, 200 * 16));
       settle(async);
       expect(h.stt.calls, hasLength(2));
@@ -220,10 +299,10 @@ void main() {
       h.pipeline.start(trigger: wake(pre, wakeEnd));
       settle(async);
       final line = h.diagnostics.singleWhere((d) => d.startsWith('wake-strip'));
-      // Pre-roll from the wake end: 4 chunks margin, then 26 speech chunks.
+      // Pre-roll from the wake end: 12 chunks margin, then 18 speech chunks.
       expect(
         line,
-        'wake-strip speechMs=780 removed=false firstLen=6 firstDist=5 '
+        'wake-strip speechMs=540 removed=false firstLen=6 firstDist=5 '
         'tailDist=2 restWords=5',
       );
       expect(line, isNot(contains('Geheim')));
@@ -251,7 +330,7 @@ void main() {
       h.pipeline.start(trigger: wake(pre, wakeEnd));
       settle(async);
       final line = h.diagnostics.singleWhere((d) => d.startsWith('wake-strip'));
-      expect(line, contains('speechMs=180 removed=true'));
+      expect(line, contains('speechMs=300 removed=true'));
     });
   });
 

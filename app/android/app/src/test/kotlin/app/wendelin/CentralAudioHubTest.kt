@@ -138,4 +138,36 @@ class CentralAudioHubTest {
         assertFalse(hub.hasSubscribers())
         assertEquals(0, hub.ringBuffer.filled)
     }
+
+    @Test
+    fun supportsMultipleSimultaneousSessions() {
+        val hub = CentralAudioHub()
+        val session1Chunks = mutableListOf<ByteArray>()
+        val session2Chunks = mutableListOf<ByteArray>()
+
+        val sub1 = hub.subscribe(AudioSubscriberKind.SESSION, onChunk = { session1Chunks.add(it) })
+        val sub2 = hub.subscribe(AudioSubscriberKind.SESSION, onChunk = { session2Chunks.add(it) })
+
+        assertEquals(2, hub.subscriberCount)
+
+        val chunk1 = ByteArray(64) { 10 }
+        hub.dispatchChunk(chunk1)
+
+        assertEquals(1, session1Chunks.size)
+        assertEquals(1, session2Chunks.size)
+        assertArrayEquals(chunk1, session1Chunks.first())
+        assertArrayEquals(chunk1, session2Chunks.first())
+
+        // Unsubscribe sub1, sub2 still receives
+        assertTrue(hub.unsubscribe(sub1))
+        assertEquals(1, hub.subscriberCount)
+
+        val chunk2 = ByteArray(64) { 20 }
+        hub.dispatchChunk(chunk2)
+
+        assertEquals(1, session1Chunks.size)
+        assertEquals(2, session2Chunks.size)
+        assertArrayEquals(chunk2, session2Chunks.last())
+    }
 }
+

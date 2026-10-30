@@ -6,6 +6,48 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import 'central_audio_bridge.dart';
 
+/// Single active or detached stream session of [CentralAudioInput] (WP184).
+final class _ActiveStream {
+  _ActiveStream({
+    required this.subId,
+    required this.controller,
+    required this.isFallback,
+  });
+
+  final String subId;
+  final StreamController<Int16List> controller;
+  bool isFallback;
+  void Function()? cancelSubscription;
+  Future<void> Function()? fallbackCloser;
+  bool closed = false;
+
+  Future<void> close(
+    CentralAudioBridge bridge,
+    String kind,
+    AudioInput? fallback,
+  ) async {
+    if (closed) return;
+    closed = true;
+    final cancel = cancelSubscription;
+    cancelSubscription = null;
+    cancel?.call();
+    if (isFallback) {
+      if (fallbackCloser != null) {
+        await fallbackCloser!();
+      } else {
+        await fallback?.stop();
+      }
+    } else {
+      await bridge.stop(subId: subId, kind: kind);
+    }
+    if (!controller.isClosed) {
+      unawaited(controller.close());
+    }
+  }
+}
+
+StreamController<Int16List> _newController() => StreamController<Int16List>();
+
 /// [AudioInput] connecting to the central audio service on Android (WP180, ADR 0024).
 ///
 /// Uses [bridge] to stream from the central Kotlin audio source without opening a competing
@@ -38,15 +80,15 @@ final class CentralAudioInput implements DetachableAudioInput {
   final bool isAndroid;
 
   bool? _available;
-  StreamSubscription<Int16List>? _sub;
-  StreamController<Int16List>? _controller;
-  bool _usingFallback = false;
+  int _subCounter = 0;
+  _ActiveStream? _active;
+  final List<_ActiveStream> _detached = [];
 
   @override
-  bool get isRunning => _controller != null && !_controller!.isClosed;
+  bool get isRunning => _active != null && !_active!.controller.isClosed;
 
   /// Whether the input currently streams from the fallback input.
-  bool get isUsingFallback => _usingFallback;
+  bool get isUsingFallback => _active?.isFallback ?? false;
 
   /// Creates a copy of this input configured for [newKind] (e.g. 'enroll').
   CentralAudioInput withKind(String newKind) => CentralAudioInput(
@@ -64,32 +106,43 @@ final class CentralAudioInput implements DetachableAudioInput {
         'CentralAudioInput stream runs already.',
       );
     }
-    final controller = StreamController<Int16List>();
-    _controller = controller;
+    final subId = '${kind}_${++_subCounter}';
+    final controller = _newController();
+    final active = _ActiveStream(
+      subId: subId,
+      controller: controller,
+      isFallback: !isAndroid || _available == false,
+    );
+    _active = active;
 
     if (!isAndroid || _available == false) {
-      _useFallback(controller);
+      _useFallback(active);
       return controller.stream;
     }
 
     () async {
       final available = await _bridge.isAvailable();
       _available = available;
-      if (_controller != controller) {
+      if (active.closed) {
         return;
       }
       if (!available) {
-        _useFallback(controller);
+        active.isFallback = true;
+        _useFallback(active);
         return;
       }
       try {
-        final stream = _bridge.start(kind: kind, preRollMs: preRollMs);
-        if (_controller != controller) {
-          await _bridge.stop(kind: kind);
+        final stream = _bridge.start(
+          kind: kind,
+          preRollMs: preRollMs,
+          subId: subId,
+        );
+        if (active.closed) {
+          await _bridge.stop(subId: subId, kind: kind);
           return;
         }
-        _usingFallback = false;
-        _sub = stream.listen(
+        active.isFallback = false;
+        final sub = stream.listen(
           controller.add,
           onError: (Object e) {
             if (!controller.isClosed) {
@@ -108,9 +161,11 @@ final class CentralAudioInput implements DetachableAudioInput {
             if (!controller.isClosed) unawaited(controller.close());
           },
         );
+        active.cancelSubscription = () => unawaited(sub.cancel());
       } on Object catch (e) {
-        if (_controller == controller) {
-          _useFallback(controller, cause: e);
+        if (!active.closed) {
+          active.isFallback = true;
+          _useFallback(active, cause: e);
         }
       }
     }();
@@ -118,7 +173,8 @@ final class CentralAudioInput implements DetachableAudioInput {
     return controller.stream;
   }
 
-  void _useFallback(StreamController<Int16List> controller, {Object? cause}) {
+  void _useFallback(_ActiveStream active, {Object? cause}) {
+    final controller = active.controller;
     final fb = fallback;
     if (fb == null) {
       if (!controller.isClosed) {
@@ -133,9 +189,8 @@ final class CentralAudioInput implements DetachableAudioInput {
       }
       return;
     }
-    _usingFallback = true;
     try {
-      _sub = fb.start().listen(
+      final sub = fb.start().listen(
         controller.add,
         onError: (Object e) {
           if (!controller.isClosed) controller.addError(e);
@@ -144,6 +199,7 @@ final class CentralAudioInput implements DetachableAudioInput {
           if (!controller.isClosed) unawaited(controller.close());
         },
       );
+      active.cancelSubscription = () => unawaited(sub.cancel());
     } on Object catch (e, st) {
       if (!controller.isClosed) {
         controller.addError(e, st);
@@ -154,30 +210,37 @@ final class CentralAudioInput implements DetachableAudioInput {
 
   @override
   Future<void> stop() async {
-    final sub = _sub;
-    _sub = null;
-    final controller = _controller;
-    _controller = null;
-    final wasFallback = _usingFallback;
-    _usingFallback = false;
-
-    unawaited(sub?.cancel());
-    if (wasFallback) {
-      await fallback?.stop();
-    } else {
-      await _bridge.stop(kind: kind);
-    }
-    if (controller != null && !controller.isClosed) {
-      unawaited(controller.close());
+    final active = _active;
+    _active = null;
+    if (active != null) {
+      await active.close(_bridge, kind, fallback);
     }
   }
 
   @override
-  Future<void> Function()? detach() => stop;
+  Future<void> Function()? detach() {
+    final active = _active;
+    if (active == null || active.closed) return null;
+    _active = null;
+    _detached.add(active);
 
-  /// Closes active subscriptions and controllers.
-  void close() {
-    _sub?.cancel();
-    _controller?.close();
+    if (active.isFallback && fallback is DetachableAudioInput) {
+      active.fallbackCloser = (fallback as DetachableAudioInput).detach();
+    }
+
+    return () async {
+      _detached.remove(active);
+      await active.close(_bridge, kind, fallback);
+    };
+  }
+
+  /// Closes active and detached subscriptions and controllers.
+  Future<void> dispose() async {
+    await stop();
+    final detachedList = List<_ActiveStream>.from(_detached);
+    _detached.clear();
+    for (final s in detachedList) {
+      await s.close(_bridge, kind, fallback);
+    }
   }
 }
