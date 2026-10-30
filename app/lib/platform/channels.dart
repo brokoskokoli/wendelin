@@ -72,3 +72,6 @@ const wakeEngineChannelName = 'app.wendelin/wake-engine';
 
 /// `WindowChannel.kt`: screen protection.
 const windowChannelName = 'app.wendelin/window';
+
+/// `CentralAudioChannel.kt`: central audio capture service and ring buffer (WP180).
+const centralAudioChannelName = 'app.wendelin/central-audio';

@@ -28,16 +28,17 @@ class WakeWordService : Service() {
     private var mic: MicAudioSource? = null
     private val inbox = java.util.concurrent.ConcurrentLinkedQueue<Pair<ByteArray, Long>>()
     private val tap = WakeMicTap()
+    val hub = CentralAudioHub()
     private var watcher: WakeConflictWatcher? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var resume: Runnable? = null
     private val handoffCheck = TimedGuard(main)
-    private val hitFlow = WakeHitFlow(this, main, handoffCheck, ::stopMic) { engine?.send("overlayClosed", null) }
+    private val hitFlow = WakeHitFlow(this, main, handoffCheck, { /* WP180: central mic stays open */ }) { engine?.send("overlayClosed", null) }
     private val overlapGuard = TimedGuard(main)
 
     private val gap = WakeGapState(this) { engine != null }
-    /** WP149: while [overlapGuard] is armed the hit is taken with the capture kept open. */
-    private val conflicts = WakeConflictReaction(overlapGuard, ::stopMic)
+    /** WP149/WP180: react closes on conflict, automatically restarts when conflict clears. */
+    private val conflicts = WakeConflictReaction(overlapGuard, ::stopMic, resumeMic = ::startMic)
     private val micDeferral = WakeMicDeferral(main, hasMic = { mic != null }, startMic = ::startMic)
 
     override fun onCreate() {
@@ -106,6 +107,9 @@ class WakeWordService : Service() {
         }
         val e = RecognizerEngine(this, ::onEngineCall, "wakeWordMain", ENGINE_CHANNEL)
         engine = e
+        hub.subscribe(AudioSubscriberKind.WAKE, "wake-engine", onChunk = { pcm ->
+            main.post { engine?.send("audio", mapOf("pcm" to pcm)) }
+        })
         e.send("run", settings.runArgsForStation())
         watcher = WakeConflictWatcher(this, main, { mic?.sessionId ?: 0 }) { reason ->
             // Do not depend on Dart alone: a call or foreign recording closes the microphone here
@@ -157,6 +161,7 @@ class WakeWordService : Service() {
                 onError = { error ->
                     main.post {
                         stopMic()
+                        hub.dispatchError(error)
                         VoiceLog.i("wake-mic-error error=${error.javaClass.simpleName}")
                         engine?.send("audioError", mapOf("message" to error.javaClass.simpleName))
                     }
@@ -180,12 +185,12 @@ class WakeWordService : Service() {
     }
 
     private fun onMicChunk(pcm: ByteArray, atMs: Long) {
+        hub.dispatchChunk(pcm)
         if (WakeHandoff.capturing()) {
             WakeHandoff.append(pcm, atMs)
             return
         }
         tap.onChunk(pcm)
-        engine?.send("audio", mapOf("pcm" to pcm))
     }
 
     private fun stopMic() {
@@ -273,6 +278,7 @@ class WakeWordService : Service() {
         watcher = null
         conflicts.reset()
         gap.reset()
+        hub.clear()
         stopMic()
         // A hit that was being handed over dies with the service (else `capturing` stays set).
         WakeHandoff.clear()
@@ -283,49 +289,33 @@ class WakeWordService : Service() {
     }
 
     /**
-     * WP146: the app took the hit's audio but the service keeps recording until the app's own
-     * microphone has delivered its first frame ([finishHandoff]); a guard ends it if that never
-     * happens.
+     * WP146/WP180: the app took the hit's audio; the central microphone continues recording.
      */
     private fun handoffKept() {
         handoffCheck.disarm()
         overlapGuard.arm(OVERLAP_GUARD_MS) {
             VoiceLog.i("wake-handoff overlap=timeout")
-            closeMicForHandoff()
-            // What was collected stays for `finishHandoff`.
             WakeHandoff.stopCapture()
-            stopMic()
         }
     }
 
     /**
-     * WP146: the app's microphone delivers: the service stops now (no second `AudioRecord`
-     * from here on) and returns what it recorded since the take.
+     * WP146/WP180: returns what was recorded since the take; central microphone keeps recording.
      */
     private fun finishHandoff(): WakeHandoff.Taken? {
         overlapGuard.disarm()
-        closeMicForHandoff()
         val tail = WakeHandoff.finish()
-        stopMic()
         return tail
     }
 
-    /** The overlay took the hit's audio: it opens the microphone now. */
+    /** The overlay took the hit's audio; central microphone continues recording. */
     private fun handoffTaken() {
         handoffCheck.disarm()
-        stopMic()
     }
 
-    /** The overlay is gone (or never came): Dart may listen again. */
+    /** The assistant overlay was closed: Dart may listen again. */
     private fun overlayClosed() {
         overlapGuard.disarm()
-        if (WakeHandoff.pending() || WakeHandoff.capturing()) {
-            // Never taken (or never finished): the kept microphone closes, Dart opens it again.
-            WakeHandoff.clear()
-            stopMic()
-        }
-        // What the guard stopped collected stays for `finishHandoff`; nobody comes for it now
-        // (up to 15 s of audio must not linger).
         WakeHandoff.clear()
         handoffCheck.disarm()
         engine?.send("overlayClosed", null)
@@ -362,12 +352,24 @@ class WakeWordService : Service() {
         /** Whether the service is alive in this process. */
         val running: Boolean get() = instance != null
 
+        /** The central audio hub of the running service (WP180). */
+        val hub: CentralAudioHub? get() = instance?.hub
+
+        /** Ensures the central microphone is recording if not blocked by a conflict (WP180). */
+        fun ensureMicRunning() {
+            val s = instance ?: return
+            s.main.post {
+                if (s.mic == null && WakePolicy.mayStartMic(s.conflicts.last)) {
+                    s.startMic()
+                }
+            }
+        }
+
         /**
-         * The overlay took the hit's audio (main thread): the service closes its microphone at
-         * once, so the overlay can open its own with the shortest possible hole in between.
+         * WP180: with central audio, the microphone stays open; no stop needed.
          */
         fun beforeHandoffTake() {
-            instance?.closeMicForHandoff()
+            // Central microphone stays open.
         }
 
         fun onHandoffTaken() { instance?.handoffTaken() }
@@ -375,7 +377,7 @@ class WakeWordService : Service() {
         /** WP146: taken with the capture kept open (the service records until [finishHandoff]). */
         fun onHandoffKept() { instance?.handoffKept() }
 
-        /** WP146: the app's microphone is up; stops the service and returns the audio since the take. */
+        /** WP146/WP180: returns the audio since the take; central microphone keeps recording. */
         fun finishHandoff(): WakeHandoff.Taken? = instance?.finishHandoff() ?: WakeHandoff.finish()
 
         /**

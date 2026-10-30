@@ -33,6 +33,7 @@ abstract class WendelinActivity : FlutterActivity() {
         private set
     protected var station: StationChannel? = null
         private set
+    private var centralAudio: CentralAudioChannel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,6 +68,7 @@ abstract class WendelinActivity : FlutterActivity() {
         notify?.handleIntent(intent)
         assistant = AssistantChannel(this, messenger)
         station = StationChannel(this, messenger)
+        centralAudio = CentralAudioChannel(this, messenger)
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -106,6 +108,8 @@ abstract class WendelinActivity : FlutterActivity() {
         assistant = null
         station?.dispose()
         station = null
+        centralAudio?.dispose()
+        centralAudio = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 

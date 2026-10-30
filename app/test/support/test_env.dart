@@ -8,6 +8,7 @@ import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/platform/channel_notifier.dart';
 import 'package:wendelin/platform/platform_ports.dart';
+import 'package:wendelin/platform/voice/central_audio_bridge.dart';
 import 'package:wendelin_agent/fakes.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/testing.dart';
@@ -138,6 +139,9 @@ final class TestEnv {
 
   /// Microphone (permission granted unless a test changes it).
   final microphone = FakePcmRecorder();
+
+  /// Central audio capture bridge (WP180). Unavailable by default in tests.
+  CentralAudioBridge centralAudioBridge = const UnavailableCentralAudioBridge();
 
   /// System speech output.
   final systemTts = FakeTextToSpeech();

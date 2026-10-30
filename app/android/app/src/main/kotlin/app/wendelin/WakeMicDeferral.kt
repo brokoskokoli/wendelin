@@ -92,6 +92,7 @@ internal class WakeConflictReaction(
     private val guard: TimedGuard,
     private val stopMic: () -> Unit,
     private val log: (String) -> Unit = VoiceLog::i,
+    private val resumeMic: () -> Unit = {},
 ) {
     var last: String? = null
         private set
@@ -101,8 +102,13 @@ internal class WakeConflictReaction(
         val overlap = guard.armed
         val closes = WakePolicy.closesMicFor(reason, overlap)
         log(WakePolicy.conflictLog(reason, overlap, closes))
+        val wasClosed = WakePolicy.closesMicFor(last, overlap)
         last = reason
-        if (closes) stopMic()
+        if (closes) {
+            stopMic()
+        } else if (wasClosed && reason == null) {
+            resumeMic()
+        }
         return closes
     }
 

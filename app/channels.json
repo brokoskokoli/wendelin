@@ -344,6 +344,19 @@
         "setBrightness": {"args": ["ambient"], "returns": "none"}
       },
       "toDart": {}
+    },
+    "app.wendelin/central-audio": {
+      "dart": ["app/lib/platform/voice/central_audio_bridge.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/CentralAudioChannel.kt"],
+      "toKotlin": {
+        "isAvailable": {"args": [], "returns": "value"},
+        "start": {"args": ["kind", "preRollMs"], "returns": "map"},
+        "stop": {"args": ["kind"], "returns": "none"}
+      },
+      "toDart": {
+        "audioChunk": {"args": ["pcm"], "returns": "none"},
+        "audioError": {"args": ["error"], "returns": "none"}
+      }
     }
   }
 }
