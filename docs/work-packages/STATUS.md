@@ -6,7 +6,7 @@ Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) 
 
 Parallelität: bis zu 4 Paket-Sitzungen, je 1 Sub-Agent (AGENTS.md); Standard 2, solange der Maintainer am Rechner ist.
 
-Stand: 2026-10-30; läuft: WP183; Release v0.1.4.
+Stand: 2026-10-30; läuft: keiner; Release v0.1.4 (c9989220).
 
 ## Meilensteine
 
@@ -40,7 +40,7 @@ Stand: 2026-10-30; läuft: WP183; Release v0.1.4.
 | WP180 | Zentrale Audio-Aufnahme und Ringpuffer im Dienst | gemergt b648dbaf | ADR 0024, K145 offen. CI grün, Review FREIGABE. |
 | WP181 | Release 0.1.3 | gemergt 248a801c | Release v0.1.3 veröffentlicht. |
 | WP182 | Overlay schließt nicht während Ansage oder 10-Sekunden-Rückgängig-Fenster | gemergt d0a0c136 | K146 offen. Gerätetest docs/testing/m5/wp182.md |
-| WP183 | Release 0.1.4 | in Arbeit | Release v0.1.4 |
+| WP183 | Release 0.1.4 | gemergt c9989220 | Release v0.1.4 veröffentlicht. |
 
 ## Offen
 
