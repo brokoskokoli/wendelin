@@ -7,6 +7,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-30
+
+Assistant overlay stays open during speech output and undo countdown (K146 / WP182).
+
+### Fixed
+
+- **Assistant overlay auto-close during speech** – the overlay no longer closes prematurely while Wendelin is speaking an answer or announcement; it closes only after speech output completes.
+- **Undo window preservation** – when an action with an undo option is executed, the overlay stays open for the full 10-second countdown window (`hasPendingUndo`). If the user taps "Rückgängig", the reversal is confirmed with "Zurückgenommen." before closing. If no action is taken, it automatically closes after the 10 seconds expire.
+
+
 ## [0.1.3] - 2026-10-30
 
 Centralized audio capture service and multi-subscriber ring buffer (ADR 0024 / WP180).
