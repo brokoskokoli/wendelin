@@ -1,13 +1,15 @@
-// WP146: Ablösen und Vorlauf gehen durch die Hüllen des Barge-in-Detektors.
+// WP146, WP184: Ablösen und Vorlauf gehen durch die Hüllen des Barge-in-Detektors.
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/platform/voice/central_audio_input.dart';
 import 'package:wendelin/platform/voice/record_audio_input.dart';
 import 'package:wendelin/voice/wake/barge_meter.dart';
 import 'package:wendelin/voice/wake/wake_barge_in.dart';
 import 'package:wendelin_voice/fakes.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../platform/voice/central_audio_input_test.dart';
 import '../../support/fake_microphone.dart';
 import '../../ui/helpers.dart';
 
@@ -147,6 +149,63 @@ void main() {
       expect(input.isRunning, isTrue, reason: 'hört wieder mit');
       await tester.runAsync(lazy.stop);
       await tester.runAsync(lazy.dispose);
+    },
+  );
+
+  testWidgets(
+    'CentralAudioInput: MeteredAudioInput detach ermöglicht sofortigen Follow-Up ohne busy',
+    (tester) async {
+      final bridge = FakeCentralAudioBridge(available: true);
+      final centralInput = CentralAudioInput(
+        bridge: bridge,
+        kind: 'session',
+        isAndroid: true,
+      );
+      final metered = MeteredAudioInput(
+        centralInput,
+        BargeMeter(threshold: 0.7),
+      );
+
+      // Barge-in starts while speaking
+      final bargeFrames = <Int16List>[];
+      final bargeSub = metered.start().listen(bargeFrames.add);
+      await pumpUntil(tester, () => centralInput.isRunning);
+      await pumpUntil(tester, () => bridge.controllers.isNotEmpty);
+
+      // Speaking ends, barge-in calls detach
+      final closer = metered.detach();
+      expect(closer, isNotNull);
+      expect(centralInput.isRunning, isFalse, reason: 'sofort frei');
+
+      // VoicePipeline starts follow-up on centralInput without busy error
+      final followUpFrames = <Int16List>[];
+      final followUpStream = centralInput.start();
+      expect(centralInput.isRunning, isTrue);
+      final followUpSub = followUpStream.listen(followUpFrames.add);
+      await pumpUntil(tester, () => bridge.startedSubIds.length >= 2);
+
+      // Feed frame to detached barge stream
+      final subId1 = bridge.startedSubIds[0]!;
+      bridge.controllers[subId1]?.add(Int16List.fromList([100]));
+      await pumpUntil(tester, () => bargeFrames.isNotEmpty);
+      expect(bargeFrames.single, [100]);
+
+      // Feed frame to active follow-up stream
+      final subId2 = bridge.startedSubIds[1]!;
+      bridge.controllers[subId2]?.add(Int16List.fromList([200]));
+      await pumpUntil(tester, () => followUpFrames.isNotEmpty);
+      expect(followUpFrames.single, [200]);
+
+      // Closer ends the detached stream
+      await tester.runAsync(closer!);
+      // Active follow-up is still running
+      expect(centralInput.isRunning, isTrue);
+
+      await tester.runAsync(centralInput.stop);
+      expect(centralInput.isRunning, isFalse);
+
+      await tester.runAsync(bargeSub.cancel);
+      await tester.runAsync(followUpSub.cancel);
     },
   );
 }

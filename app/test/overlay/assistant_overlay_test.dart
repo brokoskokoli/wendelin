@@ -660,8 +660,9 @@ void main() {
       await pumpUntil(tester, find.text('Es ist 8 Uhr 12.'));
       expect(platform.wakeTakes, 1);
       expect(plays, 0); // the speaker is already talking: no tone
-      // 4 margin chunks + 26 speech + 27 silence; the wake word is not in it.
-      expect(stt.calls.single.samples, 57 * 480);
+      // 12 margin chunks (wakeEndMargin 350 ms) + 16 speech + 27 silence (1650 ms = 55 chunks);
+      // the wake word is not in it.
+      expect(stt.calls.single.samples, 55 * 480);
       final input = c.read(agentControllerProvider).entries;
       expect(
         input.map((e) => '$e').join(' '),

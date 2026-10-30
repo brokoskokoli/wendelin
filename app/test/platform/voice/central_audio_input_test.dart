@@ -10,31 +10,56 @@ class FakeCentralAudioBridge implements CentralAudioBridge {
   FakeCentralAudioBridge({this.available = true});
 
   bool available;
-  String? lastStartedKind;
-  int? lastStartedPreRollMs;
-  String? lastStoppedKind;
-  StreamController<Int16List>? controller;
+  final List<String> startedKinds = [];
+  final List<int?> startedPreRolls = [];
+  final List<String?> startedSubIds = [];
+  final List<String?> stoppedSubIds = [];
+  final List<String?> stoppedKinds = [];
+  final Map<String, StreamController<Int16List>> controllers = {};
+  int _nextId = 0;
+
+  String? get lastStartedKind => startedKinds.lastOrNull;
+  int? get lastStartedPreRollMs => startedPreRolls.lastOrNull;
+  String? get lastStoppedKind => stoppedKinds.lastOrNull;
+  StreamController<Int16List>? get controller => controllers.values.lastOrNull;
 
   @override
   Future<bool> isAvailable() async => available;
 
   @override
-  Stream<Int16List> start({required String kind, int? preRollMs}) {
-    lastStartedKind = kind;
-    lastStartedPreRollMs = preRollMs;
-    controller = StreamController<Int16List>();
-    return controller!.stream;
+  Stream<Int16List> start({
+    required String kind,
+    int? preRollMs,
+    String? subId,
+  }) {
+    final id = subId ?? 'sub_${++_nextId}';
+    startedKinds.add(kind);
+    startedPreRolls.add(preRollMs);
+    startedSubIds.add(id);
+    controllers[id] = StreamController<Int16List>();
+    return controllers[id]!.stream;
   }
 
   @override
-  Future<void> stop({String? kind}) async {
-    lastStoppedKind = kind;
-    await controller?.close();
-    controller = null;
+  Future<void> stop({String? subId, String? kind}) async {
+    stoppedSubIds.add(subId);
+    stoppedKinds.add(kind);
+    if (subId != null) {
+      final c = controllers.remove(subId);
+      await c?.close();
+    } else {
+      for (final c in controllers.values) {
+        await c.close();
+      }
+      controllers.clear();
+    }
   }
 
   void close() {
-    controller?.close();
+    for (final c in controllers.values) {
+      c.close();
+    }
+    controllers.clear();
   }
 }
 
@@ -246,22 +271,65 @@ void main() {
       await sub.cancel();
     });
 
-    test('detach calls stop', () async {
+    test('detach returns null when not running', () {
       final input = CentralAudioInput(
         bridge: bridge,
         fallback: fallback,
         isAndroid: true,
       );
-      final stream = input.start();
-      final sub = stream.listen((_) {});
+      expect(input.detach(), isNull);
+    });
+
+    test('detach frees isRunning immediately and enables subsequent start without busy', () async {
+      final input = CentralAudioInput(
+        bridge: bridge,
+        fallback: fallback,
+        isAndroid: true,
+      );
+      final stream1 = input.start();
+      expect(input.isRunning, isTrue);
+
+      final rec1 = <Int16List>[];
+      final sub1 = stream1.listen(rec1.add);
       await pumpEventQueue();
 
-      final detachFn = input.detach();
-      expect(detachFn, isNotNull);
-      await detachFn!();
-
+      final closer1 = input.detach();
+      expect(closer1, isNotNull);
+      // isRunning is immediately false after detach!
       expect(input.isRunning, isFalse);
-      await sub.cancel();
+
+      // Subsequent start can begin immediately without VoiceErrorKind.busy
+      final stream2 = input.start();
+      expect(input.isRunning, isTrue);
+      final rec2 = <Int16List>[];
+      final sub2 = stream2.listen(rec2.add);
+      await pumpEventQueue();
+
+      expect(bridge.startedSubIds.length, 2);
+      final subId1 = bridge.startedSubIds[0]!;
+      final subId2 = bridge.startedSubIds[1]!;
+      expect(subId1, isNot(equals(subId2)));
+
+      // Frame to detached stream 1
+      bridge.controllers[subId1]?.add(Int16List.fromList([10, 20]));
+      // Frame to active stream 2
+      bridge.controllers[subId2]?.add(Int16List.fromList([30, 40]));
+      await pumpEventQueue();
+
+      expect(rec1.single, [10, 20]);
+      expect(rec2.single, [30, 40]);
+
+      // Stopping the active input does not stop the detached stream
+      await input.stop();
+      expect(input.isRunning, isFalse);
+      expect(bridge.controllers.containsKey(subId1), isTrue);
+
+      // Closing the detached stream cleans it up
+      await closer1!();
+      expect(bridge.controllers.containsKey(subId1), isFalse);
+
+      await sub1.cancel();
+      await sub2.cancel();
     });
   });
 }

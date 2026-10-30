@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../channels.dart';
 
-/// Bridge interface to the native central audio capture service (WP180, ADR 0024).
+/// Bridge interface to the native central audio capture service (WP180, WP184, ADR 0024).
 abstract interface class CentralAudioBridge {
   /// Whether the central audio service is running and available.
   Future<bool> isAvailable();
@@ -13,10 +13,16 @@ abstract interface class CentralAudioBridge {
   /// Starts streaming audio from the central service for [kind] ('session' or 'enroll').
   ///
   /// If [preRollMs] is given, the stream begins with the pre-roll audio from the ring buffer.
-  Stream<Int16List> start({required String kind, int? preRollMs});
+  /// If [subId] is provided, it identifies this subscription; otherwise one is generated.
+  Stream<Int16List> start({
+    required String kind,
+    int? preRollMs,
+    String? subId,
+  });
 
-  /// Stops the current audio stream from the central service.
-  Future<void> stop({String? kind});
+  /// Stops audio streaming from the central service.
+  /// If [subId] is given, only that subscription is stopped; otherwise all are stopped.
+  Future<void> stop({String? subId, String? kind});
 }
 
 /// Stand-in for [CentralAudioBridge] when central audio is unavailable (e.g. desktop/tests).
@@ -28,21 +34,66 @@ final class UnavailableCentralAudioBridge implements CentralAudioBridge {
   Future<bool> isAvailable() async => false;
 
   @override
-  Stream<Int16List> start({required String kind, int? preRollMs}) =>
-      const Stream.empty();
+  Stream<Int16List> start({
+    required String kind,
+    int? preRollMs,
+    String? subId,
+  }) => const Stream.empty();
 
   @override
-  Future<void> stop({String? kind}) async {}
+  Future<void> stop({String? subId, String? kind}) async {}
 }
 
 /// Platform channel implementation of [CentralAudioBridge] on [centralAudioChannelName].
 final class ChannelCentralAudioBridge implements CentralAudioBridge {
   /// Creates the bridge on [channel].
   ChannelCentralAudioBridge([MethodChannel? channel])
-    : _channel = channel ?? const MethodChannel(centralAudioChannelName);
+    : _channel = channel ?? const MethodChannel(centralAudioChannelName) {
+    _channel.setMethodCallHandler(_onMethodCall);
+  }
 
   final MethodChannel _channel;
-  StreamController<Int16List>? _controller;
+  final Map<String, StreamController<Int16List>> _controllers = {};
+  int _nextId = 0;
+
+  Future<dynamic> _onMethodCall(MethodCall call) async {
+    switch (call.method) {
+      case 'audioChunk':
+        final args = call.arguments;
+        if (args is Map) {
+          final subId = args['subId'] as String?;
+          final pcm = args['pcm'] as Uint8List?;
+          if (pcm != null && pcm.length >= 2) {
+            final samples = _bytesToSamples(pcm);
+            if (subId != null) {
+              if (_controllers[subId]?.isClosed == false) {
+                _controllers[subId]!.add(samples);
+              }
+            } else {
+              for (final entry in _controllers.entries) {
+                if (!entry.value.isClosed) entry.value.add(samples);
+              }
+            }
+          }
+        }
+      case 'audioError':
+        final args = call.arguments;
+        if (args is Map) {
+          final subId = args['subId'] as String?;
+          final error = (args['error'] as String?) ?? 'audioError';
+          final err = StateError(error);
+          if (subId != null) {
+            if (_controllers[subId]?.isClosed == false) {
+              _controllers[subId]!.addError(err);
+            }
+          } else {
+            for (final entry in _controllers.entries) {
+              if (!entry.value.isClosed) entry.value.addError(err);
+            }
+          }
+        }
+    }
+  }
 
   @override
   Future<bool> isAvailable() async {
@@ -56,41 +107,28 @@ final class ChannelCentralAudioBridge implements CentralAudioBridge {
     }
   }
 
-  @override
-  Stream<Int16List> start({required String kind, int? preRollMs}) {
-    final existing = _controller;
-    if (existing != null && !existing.isClosed) {
-      unawaited(existing.close());
-    }
-    final controller = StreamController<Int16List>();
-    _controller = controller;
+  StreamController<Int16List> _newController() => StreamController<Int16List>();
 
-    _channel.setMethodCallHandler((call) async {
-      switch (call.method) {
-        case 'audioChunk':
-          final args = call.arguments;
-          final pcm = args is Map ? args['pcm'] as Uint8List? : null;
-          if (pcm != null && pcm.length >= 2 && !controller.isClosed) {
-            controller.add(_bytesToSamples(pcm));
-          }
-        case 'audioError':
-          final args = call.arguments;
-          final error =
-              (args is Map ? args['error'] as String? : null) ?? 'audioError';
-          if (!controller.isClosed) {
-            controller.addError(StateError(error));
-          }
-      }
-    });
+  @override
+  Stream<Int16List> start({
+    required String kind,
+    int? preRollMs,
+    String? subId,
+  }) {
+    final id = subId ?? '${kind}_${++_nextId}';
+    final controller = _newController();
+    _controllers[id] = controller;
 
     () async {
       try {
         final res = await _channel.invokeMapMethod<String, dynamic>('start', {
           'kind': kind,
+          'subId': id,
           if (preRollMs != null && preRollMs > 0) 'preRollMs': preRollMs,
         });
         final started = res?['started'] == true;
         if (!started) {
+          _controllers.remove(id);
           if (!controller.isClosed) {
             controller.addError(
               StateError(res?['reason']?.toString() ?? 'startFailed'),
@@ -104,6 +142,7 @@ final class ChannelCentralAudioBridge implements CentralAudioBridge {
           controller.add(_bytesToSamples(preRoll));
         }
       } on Object catch (e, st) {
+        _controllers.remove(id);
         if (!controller.isClosed) {
           controller.addError(e, st);
           await controller.close();
@@ -115,19 +154,32 @@ final class ChannelCentralAudioBridge implements CentralAudioBridge {
   }
 
   @override
-  Future<void> stop({String? kind}) async {
-    final controller = _controller;
-    _controller = null;
-    _channel.setMethodCallHandler(null);
-    try {
-      await _channel
-          .invokeMethod<void>('stop', {'kind': ?kind})
-          .timeout(const Duration(milliseconds: 500), onTimeout: () {});
-    } on Object {
-      // Ignored if channel is unavailable.
-    }
-    if (controller != null && !controller.isClosed) {
-      await controller.close();
+  Future<void> stop({String? subId, String? kind}) async {
+    if (subId != null) {
+      final c = _controllers.remove(subId);
+      try {
+        await _channel
+            .invokeMethod<void>('stop', {'subId': subId, 'kind': ?kind})
+            .timeout(const Duration(milliseconds: 500), onTimeout: () {});
+      } on Object {
+        // Ignored if channel is unavailable.
+      }
+      if (c != null && !c.isClosed) {
+        await c.close();
+      }
+    } else {
+      final list = _controllers.values.toList();
+      _controllers.clear();
+      try {
+        await _channel
+            .invokeMethod<void>('stop', {'kind': ?kind})
+            .timeout(const Duration(milliseconds: 500), onTimeout: () {});
+      } on Object {
+        // Ignored if channel is unavailable.
+      }
+      for (final c in list) {
+        if (!c.isClosed) await c.close();
+      }
     }
   }
 

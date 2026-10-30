@@ -142,8 +142,8 @@ final class VoicePipeline with VoiceContentLog {
   bool _tailNext = false;
 
   /// Silence forced after the end of the wake word, so that its tail (the
-  /// engine position is an estimate) is not mistaken for the request.
-  static const wakeEndMargin = Duration(milliseconds: 100);
+  /// engine position is an estimate) is not mistaken for the request (WP68, WP184).
+  static const wakeEndMargin = Duration(milliseconds: 350);
 
   /// How long a recording waits for the barge-in detector to release the mic.
   static const bargeReleaseTimeout = Duration(seconds: 2);

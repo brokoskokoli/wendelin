@@ -6,23 +6,45 @@ import android.os.Looper
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Platform channel for Flutter's [CentralAudioInput] (WP180, ADR 0024).
+ * Platform channel for Flutter's [CentralAudioInput] (WP180, WP184, ADR 0024).
  *
  * Connects the Flutter UI app ([MainActivity], [AssistantActivity]) to the central
- * audio recording and ring buffer in [WakeWordService].
+ * audio recording and ring buffer in [WakeWordService]. Supports multiple concurrent
+ * subscribers identified by unique `subId`.
  */
 class CentralAudioChannel(
-    private val context: Context,
-    messenger: BinaryMessenger,
+    private val context: Context?,
+    private val channel: MethodChannel,
     private val hubProvider: () -> CentralAudioHub? = { WakeWordService.hub },
+    private val isServiceRunning: () -> Boolean = { WakeWordService.running },
+    private val ensureMicRunning: () -> Unit = { WakeWordService.ensureMicRunning() },
+    private val postToMain: (Runnable) -> Unit = { r ->
+        val looper = Looper.getMainLooper()
+        if (looper != null && Thread.currentThread() != looper.thread) {
+            Handler(looper).post(r)
+        } else {
+            r.run()
+        }
+    },
 ) : MethodChannel.MethodCallHandler {
 
-    private val channel = MethodChannel(messenger, CHANNEL)
-    private val main = Handler(Looper.getMainLooper())
-    private var currentSubscriptionId: String? = null
-    private var currentSubscriptionKind: AudioSubscriberKind? = null
+    constructor(
+        context: Context,
+        messenger: BinaryMessenger,
+        hubProvider: () -> CentralAudioHub? = { WakeWordService.hub },
+    ) : this(
+        context = context,
+        channel = MethodChannel(messenger, CHANNEL),
+        hubProvider = hubProvider,
+        isServiceRunning = { WakeWordService.running },
+        ensureMicRunning = { WakeWordService.ensureMicRunning() },
+    )
+
+    private val activeSubIds = ConcurrentHashMap.newKeySet<String>()
 
     init {
         channel.setMethodCallHandler(this)
@@ -30,31 +52,37 @@ class CentralAudioChannel(
 
     fun dispose() {
         channel.setMethodCallHandler(null)
-        stopSubscription()
+        stopAllSubscriptions()
     }
 
-    private fun stopSubscription() {
-        val subId = currentSubscriptionId
-        if (subId != null) {
+    private fun stopSubscription(subId: String) {
+        if (activeSubIds.remove(subId)) {
             hubProvider()?.unsubscribe(subId)
-            currentSubscriptionId = null
-            currentSubscriptionKind = null
         }
+    }
+
+    private fun stopAllSubscriptions() {
+        val hub = hubProvider()
+        for (id in activeSubIds) {
+            hub?.unsubscribe(id)
+        }
+        activeSubIds.clear()
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "isAvailable" -> {
-                val available = WakeWordService.running && hubProvider() != null
+                val available = isServiceRunning() && hubProvider() != null
                 result.success(available)
             }
             "start" -> {
                 val hub = hubProvider()
-                if (hub == null || !WakeWordService.running) {
+                if (hub == null || !isServiceRunning()) {
                     result.success(mapOf("started" to false, "reason" to "serviceNotRunning"))
                     return
                 }
-                WakeWordService.ensureMicRunning()
+                ensureMicRunning()
+                val subId = call.argument<String>("subId") ?: UUID.randomUUID().toString()
                 val kindArg = call.argument<String>("kind") ?: "session"
                 val preRollMs = call.argument<Number>("preRollMs")?.toLong() ?: 0L
 
@@ -64,35 +92,43 @@ class CentralAudioChannel(
                     AudioSubscriberKind.SESSION
                 }
 
-                stopSubscription()
-
                 val preRoll = if (preRollMs > 0L) hub.getPreRollMs(preRollMs) else null
-                val subId = hub.subscribe(
+                hub.subscribe(
                     kind = kind,
+                    id = subId,
                     onChunk = { pcm ->
-                        main.post {
-                            channel.invokeMethod("audioChunk", mapOf("pcm" to pcm))
-                        }
+                        postToMain(Runnable {
+                            channel.invokeMethod("audioChunk", mapOf("subId" to subId, "pcm" to pcm))
+                        })
                     },
                     onError = { error ->
-                        main.post {
-                            channel.invokeMethod("audioError", mapOf("error" to error.javaClass.simpleName))
-                        }
+                        postToMain(Runnable {
+                            channel.invokeMethod(
+                                "audioError",
+                                mapOf("subId" to subId, "error" to error.javaClass.simpleName),
+                            )
+                        })
                     },
                 )
-                currentSubscriptionId = subId
-                currentSubscriptionKind = kind
+                activeSubIds.add(subId)
 
                 result.success(
                     mapOf(
                         "started" to true,
+                        "subId" to subId,
                         "preRoll" to preRoll,
                     ),
                 )
             }
             "stop" -> {
+                val subId = call.argument<String>("subId")
+                @Suppress("UNUSED_VARIABLE")
                 val kind = call.argument<String>("kind")
-                stopSubscription()
+                if (subId != null) {
+                    stopSubscription(subId)
+                } else {
+                    stopAllSubscriptions()
+                }
                 result.success(null)
             }
             else -> result.notImplemented()

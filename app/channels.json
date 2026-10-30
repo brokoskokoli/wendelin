@@ -350,12 +350,12 @@
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/CentralAudioChannel.kt"],
       "toKotlin": {
         "isAvailable": {"args": [], "returns": "value"},
-        "start": {"args": ["kind", "preRollMs"], "returns": "map"},
-        "stop": {"args": ["kind"], "returns": "none"}
+        "start": {"args": ["kind", "preRollMs", "subId"], "returns": "map"},
+        "stop": {"args": ["kind", "subId"], "returns": "none"}
       },
       "toDart": {
-        "audioChunk": {"args": ["pcm"], "returns": "none"},
-        "audioError": {"args": ["error"], "returns": "none"}
+        "audioChunk": {"args": ["pcm", "subId"], "returns": "none"},
+        "audioError": {"args": ["error", "subId"], "returns": "none"}
       }
     }
   }
