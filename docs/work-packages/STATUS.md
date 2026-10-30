@@ -6,7 +6,7 @@ Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) 
 
 Parallelität: bis zu 4 Paket-Sitzungen, je 1 Sub-Agent (AGENTS.md); Standard 2, solange der Maintainer am Rechner ist.
 
-Stand: 2026-10-29; läuft: keins; Release v0.1.0 (2fd52524); der nächste RC braucht eine höhere pubspec-Version.
+Stand: 2026-10-30; läuft: WP181; Release v0.1.2 (e8767681); Release v0.1.3 in Vorbereitung.
 
 ## Meilensteine
 
@@ -37,6 +37,8 @@ Stand: 2026-10-29; läuft: keins; Release v0.1.0 (2fd52524); der nächste RC bra
 | WP174 | Einrichtungsassistent beim ersten Start | gemergt 7efb9d62 | K142 offen. Kein E2E (Maintainer testet selbst): Gerätetest `docs/testing/m5/wp174.md`. Folgepunkte: Aktivierungswort-Engine fest 'de' (`device_wake_parts.dart:32`); Systemsprachwechsel erst nach Neustart; Personalisierung ohne Primärknopf; mehrere Systemsprachen → erste unterstützte |
 | WP177 | Weckwort: Wählbare Stufe-2-Prüfer (Prüfer B und Spracherkennungsmodell mit ODER-Logik) | gemergt 79e989f1 | K143 bestätigt (2026-10-29). |
 | WP178 | Durchgehender Audio-Ringpuffer (5–6 s) für Mikrofon und Weckwort | gemergt 1ac966a0 | K144 offen. CI grün, Review FREIGABE. |
+| WP180 | Zentrale Audio-Aufnahme und Ringpuffer im Dienst | gemergt b648dbaf | ADR 0024, K145 offen. CI grün, Review FREIGABE. |
+| WP181 | Release 0.1.3 | in Arbeit | Version 0.1.3+4, CHANGELOG, Tag v0.1.3. |
 
 ## Offen
 
@@ -76,8 +78,8 @@ K138 offen, K139 offen, K140 offen, K141 offen, K142 offen, K144 offen, K145 off
 
 ## Nächste Schritte
 
-1. WP180 läuft (Zentrale Audio-Aufnahme und Ringpuffer im Dienst, ADR 0024, K145).
+1. WP181 abschließen (Release 0.1.3 taggen und freigeben).
 2. WP169 läuft (GitHub-Repo auffrischen).
-2. Gerätetests beim Maintainer: rc13/v0.1.0 (T31) und die noch offenen Blöcke T30, T29, T28 (siehe „Offen“).
-3. K127–K133 vom Maintainer bestätigen lassen.
-4. Danach nur mit Go (M6): Prüfseite Weckwort-Archiv (dann Hey-Pflicht K115 und Training mit eigenem HW-Kopf), WP100/WP101, STT-Messung (K99), WP132, WP138.
+3. Gerätetests beim Maintainer: rc13/v0.1.0 (T31) und die noch offenen Blöcke T30, T29, T28 (siehe „Offen“).
+4. K127–K133 vom Maintainer bestätigen lassen.
+5. Danach nur mit Go (M6): Prüfseite Weckwort-Archiv (dann Hey-Pflicht K115 und Training mit eigenem HW-Kopf), WP100/WP101, STT-Messung (K99), WP132, WP138.
