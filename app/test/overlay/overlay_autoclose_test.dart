@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart' show AppLifecycleState, SizedBox;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
+import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_state.dart';
 import 'package:wendelin/di/agent_providers.dart' show undoManagerProvider;
 import 'package:wendelin/di/voice_providers.dart';
@@ -666,5 +667,178 @@ void main() {
     );
     await _pump(tester, steps: 5);
     expect(closedBy('stop'), isTrue);
+  });
+
+  // WP182: Kein Schließen während Ansage oder 10-Sekunden-Rückgängig-Fenster
+  group('WP182: Ansage und Rueckgaengig-Fenster', () {
+    testWidgets(
+      'Aktion mit Rueckgaengig-Fenster: bleibt 10 s offen, schliesst erst nach Ablauf per by=idle',
+      (tester) async {
+        final c = await open(tester, autoStart: false);
+        c.read(agentControllerProvider.notifier).seed(overlaySample());
+        c
+            .read(undoManagerProvider)
+            .register('c1', UndoAction(label: 'x', run: () async {}));
+        await tester.pump();
+        await endListening(tester, c);
+        expect(c.read(agentControllerProvider).hasPendingUndo, isTrue);
+        expect(closedByIdle(), isFalse, reason: 'Countdown läuft noch');
+        expect(platform.calls, isNot(contains('releaseHost')));
+
+        // Nach 5 s: weiterhin offen
+        await tester.pump(const Duration(seconds: 5));
+        expect(closedByIdle(), isFalse);
+        expect(platform.calls, isNot(contains('releaseHost')));
+
+        // Nach Ablauf der 10 s: schliesst per by=idle
+        await tester.pump(const Duration(seconds: 5, milliseconds: 100));
+        await _pump(tester, steps: 10);
+        expect(c.read(agentControllerProvider).hasPendingUndo, isFalse);
+        expect(closedByIdle(), isTrue);
+        expect(platform.calls.where((x) => x == 'releaseHost'), hasLength(1));
+      },
+    );
+
+    testWidgets(
+      'Ansage laeuft: bleibt offen solange Wendelin spricht, schliesst danach',
+      (tester) async {
+        await open(tester, speak: const Duration(seconds: 3));
+        for (
+          var i = 0;
+          i < 200 && phases.lastOrNull != VoiceState.speaking;
+          i++
+        ) {
+          await tester.pump(const Duration(milliseconds: 10));
+        }
+        expect(phases.last, VoiceState.speaking, reason: 'Sprachausgabe aktiv');
+        expect(closedByIdle(), isFalse, reason: 'Sprachausgabe läuft');
+        expect(platform.calls, isNot(contains('releaseHost')));
+
+        // Während der Ansage bleibt das Overlay offen
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(phases.last, VoiceState.speaking);
+        expect(closedByIdle(), isFalse, reason: 'Sprachausgabe läuft');
+        expect(platform.calls, isNot(contains('releaseHost')));
+
+        // Nach weiteren 1.5 s: spricht noch
+        await tester.pump(const Duration(milliseconds: 1500));
+        expect(phases.last, VoiceState.speaking);
+        expect(closedByIdle(), isFalse);
+        expect(closedByIdle(), isFalse);
+
+        // Sprachausgabe endet: schliesst per by=idle
+        await _pump(tester, steps: 30);
+        expect(phases.last, VoiceState.idle);
+        expect(closedByIdle(), isTrue);
+        expect(platform.calls.where((x) => x == 'releaseHost'), hasLength(1));
+      },
+    );
+
+    testWidgets(
+      'Rueckgaengig angetippt waehrend Countdown: spricht Zurueckgenommen und schliesst danach',
+      (tester) async {
+        final c = await open(tester, speak: const Duration(seconds: 1));
+        for (
+          var i = 0;
+          i < 200 && phases.lastOrNull != VoiceState.speaking;
+          i++
+        ) {
+          await tester.pump(const Duration(milliseconds: 10));
+        }
+        // Tool-Eintrag registrieren während Sprachausführung aktiv ist:
+        c.read(agentControllerProvider.notifier).seed(overlaySample());
+        c
+            .read(undoManagerProvider)
+            .register('c1', UndoAction(label: 'x', run: () async {}));
+        await tester.pump();
+        // Warten bis erste Sprachausgabe fertig ist:
+        for (
+          var i = 0;
+          i < 200 && phases.lastOrNull == VoiceState.speaking;
+          i++
+        ) {
+          await tester.pump(const Duration(milliseconds: 10));
+        }
+        await _pump(tester, steps: 5);
+        expect(phases.last, VoiceState.idle, reason: 'Ansage ist fertig');
+        expect(c.read(agentControllerProvider).hasPendingUndo, isTrue);
+        expect(closedByIdle(), isFalse, reason: 'Countdown läuft noch');
+
+        // Tipp auf Rückgängig während Countdown
+        await tester.tap(find.textContaining('Rückgängig'));
+        await tester.pump();
+
+        // Bestätigung wird gesprochen: noch offen
+        expect(c.read(agentControllerProvider).hasPendingUndo, isFalse);
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(
+          c.read(voiceControllerProvider).speaking,
+          isTrue,
+          reason: 'Wendelin spricht Bestätigung',
+        );
+        expect(closedByIdle(), isFalse, reason: 'Spricht Zurückgenommen.');
+        expect(platform.calls, isNot(contains('releaseHost')));
+
+        // Nach Ende der Ansage schliesst das Overlay
+        await _pump(tester, steps: 30);
+        expect(
+          c
+              .read(agentControllerProvider)
+              .entries
+              .whereType<NoticeEntry>()
+              .last
+              .text,
+          'Zurückgenommen.',
+        );
+        expect(
+          c.read(agentControllerProvider).tool('c1')?.undo,
+          UndoPhase.undone,
+        );
+        expect(closedByIdle(), isTrue);
+        expect(platform.calls.where((x) => x == 'releaseHost'), hasLength(1));
+      },
+    );
+
+    testWidgets(
+      'Neues Kommando waehrend Countdown: bricht Schliessen ab und hoert zu',
+      (tester) async {
+        llm = FakeLlmProvider([ScriptedTurn.hang()]);
+        final c = await open(tester, autoStart: false);
+        c.read(agentControllerProvider.notifier).seed(overlaySample());
+        c
+            .read(undoManagerProvider)
+            .register('c1', UndoAction(label: 'x', run: () async {}));
+        await endListening(tester, c);
+        expect(closedByIdle(), isFalse);
+
+        // Nach 3 Sekunden neues Kommando per Trigger
+        await tester.pump(const Duration(seconds: 3));
+        platform.trigger();
+        await tester.pump();
+        expect(c.read(voiceControllerProvider).active, isTrue);
+
+        // 10 s Countdown läuft ab während neues Zuhören läuft -> schliesst nicht
+        await tester.pump(const Duration(seconds: 8));
+        expect(closedByIdle(), isFalse);
+      },
+    );
+
+    testWidgets(
+      'Tipp auf Schliessen waehrend Countdown: schliesst sofort per tap',
+      (tester) async {
+        final c = await open(tester, autoStart: false);
+        c.read(agentControllerProvider.notifier).seed(overlaySample());
+        c
+            .read(undoManagerProvider)
+            .register('c1', UndoAction(label: 'x', run: () async {}));
+        await endListening(tester, c);
+        expect(closedByIdle(), isFalse);
+
+        await tester.tap(find.byTooltip(AppLocalizationsDe().overlayEnd));
+        await tester.pump();
+        expect(closedBy('tap'), isTrue);
+        expect(platform.calls, contains('releaseHost'));
+      },
+    );
   });
 }

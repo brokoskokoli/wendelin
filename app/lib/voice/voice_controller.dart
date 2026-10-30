@@ -190,9 +190,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   }) async {
     _muteMicSamples = muteMicSamples;
     _wake.lastSampleAt = null;
-    if (state.active || ref.read(agentControllerProvider).running) {
-      return false;
-    }
+    if (state.active || ref.read(agentControllerProvider).running) return false;
     _releaseTimer?.cancel();
     // `clock`: tests measure on a fake clock.
     _micWatch = clock.stopwatch()..start();
@@ -208,9 +206,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       if (!ref.mounted) return false;
     }
     if (!ready) return _startAfterLoading(kind, prepare, takePreRoll);
-    if (state.active || ref.read(agentControllerProvider).running) {
-      return false;
-    }
+    if (state.active || ref.read(agentControllerProvider).running) return false;
     // Models are installed (WP18 review). The microphone opens right away
     // and buffers while they load; without the permission it does not record
     // (the input checks it), the explanation may come up meanwhile.
@@ -326,9 +322,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       state = state.copyWith(error: denied, clearHint: true);
       return false;
     }
-    if (state.active || ref.read(agentControllerProvider).running) {
-      return false;
-    }
+    if (state.active || ref.read(agentControllerProvider).running) return false;
     final pipeline = _pipelineFor(components);
     final cancels = _cancels;
     state = state.copyWith(trigger: kind, clearHint: true, clearError: true);
@@ -475,11 +469,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
   /// request is running (the next one loads them again).
   @visibleForTesting
   Future<void> onMemoryTrim(int level) async {
-    if (!isMemoryPressure(level) ||
-        state.active ||
-        ref.read(agentControllerProvider).running) {
-      return;
-    }
+    final busy = state.active || ref.read(agentControllerProvider).running;
+    if (!isMemoryPressure(level) || busy) return;
     await releaseModels(reason: memoryPressureReason);
   }
 
@@ -537,9 +528,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
 
   VoicePipeline _pipelineFor(VoiceComponents components) {
     final existing = _pipeline;
-    if (existing != null && identical(components, _components)) {
-      return existing;
-    }
+    if (existing != null && identical(components, _components)) return existing;
     unawaited(existing?.dispose());
     for (final s in _subs) {
       unawaited(s.cancel());
@@ -625,12 +614,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
 
   void _onLevel(double level) {
     if (!state.listening) return;
-    final levels = [...state.levels, level];
-    state = state.copyWith(
-      levels: levels.length > waveBars
-          ? levels.sublist(levels.length - waveBars)
-          : levels,
-    );
+    final l = [...state.levels, level];
+    final trimmed = l.length > waveBars ? l.sublist(l.length - waveBars) : l;
+    state = state.copyWith(levels: trimmed);
   }
 
   /// Undoes [callId]: stops a spoken answer at once, adds „Zurückgenommen.“
@@ -640,7 +626,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
     if (_voiceRun || state.phase != VoiceState.idle) await cancel(.undo);
     final tts = _promptTts;
     _promptTts = null;
-    if (tts != null) await tts.stop();
+    await tts?.stop();
     final byVoice = _callByVoice[callId] ?? _lastByVoice;
     final language = byVoice ? _language : ref.read(languageProvider);
     if (!await _agent.undo(callId)) return null;
@@ -651,14 +637,21 @@ final class VoiceController extends Notifier<VoiceUiState> {
       _promptTts = await components
           .textToSpeech(language)
           .catchError((Object _) => null);
-      await sayBounded(
-        _promptTts,
-        text,
-        language: language,
-        timeout: promptTimeout,
-        source: 'undo',
-      );
-      _promptTts = null;
+      state = state.copyWith(phase: VoiceState.speaking);
+      try {
+        await sayBounded(
+          _promptTts,
+          text,
+          language: language,
+          timeout: promptTimeout,
+          source: 'undo',
+        );
+      } finally {
+        _promptTts = null;
+        if (ref.mounted && state.phase == VoiceState.speaking) {
+          state = state.copyWith(phase: VoiceState.idle);
+        }
+      }
     }
     return text;
   }

@@ -25,6 +25,7 @@ import 'conversation_state.dart';
 import 'history_entries.dart';
 import 'new_topic_command.dart';
 import 'question_answer.dart';
+import 'record_agent_usage.dart';
 import 'report_agent_error.dart';
 
 /// The conversation on the main screen.
@@ -421,6 +422,7 @@ final class AgentController extends Notifier<ConversationState> {
 
   /// Cancels the running request (also while it is still starting).
   void cancel() {
+    if (!ref.mounted) return;
     if (!state.running) return;
     final run = _run;
     if (run == null) {
@@ -445,7 +447,21 @@ final class AgentController extends Notifier<ConversationState> {
   /// was undone; a failing undo is shown as hint.
   Future<bool> undo(String callId) async {
     final manager = ref.read(undoManagerProvider);
-    if (!manager.canUndo(callId)) return false;
+    if (!manager.canUndo(callId)) {
+      final t = state.tool(callId);
+      if (t != null && t.undo == UndoPhase.pending) {
+        state = _reducer.undo(
+          state,
+          UndoUpdate(
+            callId: callId,
+            label: t.undoLabel ?? '',
+            state: UndoState.failed,
+            remaining: Duration.zero,
+          ),
+        );
+      }
+      return false;
+    }
     final tool = state.tool(callId)?.toolName ?? '?';
     final sessionId = _sessionId;
     state = _reducer.undoStarted(state, callId);
@@ -535,7 +551,9 @@ final class AgentController extends Notifier<ConversationState> {
           ref.read(undoManagerProvider).discard(call.id);
         }
       case UsageReported(:final profileId, :final modelId, :final usage):
-        unawaited(_recordUsage(sessionId, event, profileId, modelId, usage));
+        unawaited(
+          recordAgentUsage(ref, sessionId, event, profileId, modelId, usage),
+        );
       case AgentFailed(:final cause, :final message)
           when cause is AttestationFailedException && cause.stage == 'gpu':
         unawaited(_refreshPrivacy(sessionId));
@@ -560,26 +578,6 @@ final class AgentController extends Notifier<ConversationState> {
       case _:
     }
     state = _reducer.apply(state, event);
-  }
-
-  Future<void> _recordUsage(
-    String sessionId,
-    UsageReported event,
-    String profileId,
-    String modelId,
-    Usage usage,
-  ) async {
-    await ref
-        .read(storageProvider)
-        .usage
-        .record(
-          sessionId: sessionId,
-          profileId: profileId,
-          modelId: modelId,
-          usage: usage,
-          costMicros: event.costMicros ?? 0,
-        );
-    ref.invalidate(todayCostProvider);
   }
 
   void _finished() {

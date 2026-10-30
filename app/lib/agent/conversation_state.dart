@@ -214,4 +214,11 @@ final class ConversationState {
   /// The tool entry of [callId], if any.
   ToolEntry? tool(String callId) =>
       entries.whereType<ToolEntry>().where((e) => e.id == callId).firstOrNull;
+
+  /// Whether an undo window is active or an undo is running (WP182).
+  bool get hasPendingUndo => entries.any(
+    (e) =>
+        e is ToolEntry &&
+        (e.undo == UndoPhase.pending || e.undo == UndoPhase.running),
+  );
 }
