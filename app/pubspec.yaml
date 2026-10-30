@@ -1,7 +1,7 @@
 name: wendelin
 description: "Wendelin - personal voice assistant."
 publish_to: 'none'
-version: 0.1.3+4
+version: 0.1.4+5
 
 resolution: workspace
 
