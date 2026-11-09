@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Audio settings** – choose the microphone and the output for Wendelin's speech: "System" (default) or a specific device, which is used whenever it is available and switched back to automatically when it reconnects. A Bluetooth headset microphone is used only during a conversation; the wake word keeps listening on the phone microphone (K149 / WP188).
+
 ## [0.1.6] - 2026-10-30
 
 Keep screen active during assistant session and protect follow-up countdown (K148 / WP186).
