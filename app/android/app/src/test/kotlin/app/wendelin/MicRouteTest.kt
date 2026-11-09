@@ -293,4 +293,61 @@ class MicRouteTest {
         reader.releaseAll()
         assertTrue(old.released && cand.released)
     }
+
+    // --- Review round 1: own sessions while a candidate starts, closed reader ---
+
+    @Test
+    fun candidateSessionIsOursBeforeItIsOffered() {
+        val clock = Clock()
+        val reader = SwitchingReader(FakeTrack(clock, null, 10, 0))
+        reader.expect(11) // built, `startRecording` is about to run
+        assertEquals(setOf(10, 11), reader.sessionIds)
+        reader.unexpect(11)
+        assertEquals(setOf(10), reader.sessionIds)
+    }
+
+    @Test
+    fun recordingCallbackAtStartRecordingIsNoForeignRecording() {
+        // The system's callback fires inside `startRecording`, before `offer`: the watcher polls
+        // the own sessions at that moment (not only on its 2 s poll).
+        val clock = Clock()
+        val reader = SwitchingReader(FakeTrack(clock, null, 10, 0))
+        val reasons = mutableListOf<String?>()
+        val watcher = ConflictEvaluator({ reader.sessionIds }, { false }) { reasons += it }
+        reader.expect(11)
+        watcher.update(0, listOf(RecordingClient(10, false), RecordingClient(11, false)))
+        assertTrue("false conflict: $reasons", reasons.isEmpty())
+        // A really foreign session is still a conflict.
+        watcher.update(0, listOf(RecordingClient(10, false), RecordingClient(99, false)))
+        assertEquals(listOf<String?>("recording"), reasons)
+    }
+
+    @Test
+    fun offerAfterReleaseAllFreesTheCandidateAtOnce() {
+        val clock = Clock()
+        val reader = SwitchingReader(FakeTrack(clock, null, 10, 0))
+        reader.releaseAll()
+        val late = FakeTrack(clock, "usb", 11, 0)
+        reader.offer(late)
+        assertTrue(late.released)
+        assertFalse(reader.hasPending)
+    }
+
+    // --- The watcher uses the flag of the dialog's phone mode ---
+
+    @Test
+    fun conflictEvaluatorReadsTheOwnCommModeFlagByDefault() {
+        val reasons = mutableListOf<String?>()
+        val evaluator = ConflictEvaluator({ setOf(1) }) { reasons += it }
+        try {
+            OwnCommMode.active = true
+            evaluator.update(3, emptyList())
+            assertTrue("own phone mode is no call: $reasons", reasons.isEmpty())
+            OwnCommMode.active = false
+            evaluator.update(3, emptyList())
+            assertEquals(listOf<String?>("call"), reasons)
+        } finally {
+            OwnCommMode.active = false
+        }
+    }
 }

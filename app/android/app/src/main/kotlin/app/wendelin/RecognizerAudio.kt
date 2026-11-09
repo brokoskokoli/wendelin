@@ -102,7 +102,7 @@ class MicAudioSource(private val context: Context, private val router: MicRouter
 
     /** Builds and starts one `AudioRecord`, on [target]'s device if it has one (`setPreferredDevice`). */
     @SuppressLint("MissingPermission")
-    private fun openTrack(target: MicTarget): MicTrack {
+    private fun openTrack(target: MicTarget, onSession: (Int) -> Unit = {}): MicTrack {
         val minBuffer = AudioRecord.getMinBufferSize(
             RecognizerAudioSource.SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,
@@ -127,6 +127,8 @@ class MicAudioSource(private val context: Context, private val router: MicRouter
             record.release()
             throw IllegalStateException("preferred device refused")
         }
+        // Before the start: it triggers the system's recording callback at once (WP188).
+        onSession(record.audioSessionId)
         record.startRecording()
         return RecordTrack(record, target.key)
     }
@@ -149,9 +151,14 @@ class MicAudioSource(private val context: Context, private val router: MicRouter
                         MicRoute.Action.CANCEL_PENDING -> live.cancelPending()
                         MicRoute.Action.SWITCH -> {
                             VoiceLog.i("wake-mic-route to=${target.type}")
-                            val track = openTrack(target)
-                            // Stopped meanwhile: do not leave a recording behind.
-                            if (state.running && reader === live) live.offer(track) else track.release()
+                            var session = 0
+                            try {
+                                val track = openTrack(target) { session = it; live.expect(it) }
+                                // Stopped meanwhile: do not leave a recording behind (offer frees it after releaseAll).
+                                if (state.running && reader === live) live.offer(track) else track.release()
+                            } finally {
+                                live.unexpect(session)
+                            }
                         }
                     }
                 } catch (e: RuntimeException) {

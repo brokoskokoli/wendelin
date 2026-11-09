@@ -18,11 +18,11 @@ internal data class RecordingClient(val session: Int, val silenced: Boolean)
 class WakeConflictWatcher(
     context: Context,
     private val main: Handler,
-    private val ownSessions: () -> Set<Int>,
+    ownSessions: () -> Set<Int>,
     private val onChange: (String?) -> Unit,
 ) {
+    private val evaluator = ConflictEvaluator(ownSessions, onChange = onChange)
     private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    private var last: String? = null
     private var running = false
 
     private val callback = object : AudioManager.AudioRecordingCallback() {
@@ -43,7 +43,7 @@ class WakeConflictWatcher(
     fun start() {
         if (running) return
         running = true
-        last = null
+        evaluator.reset()
         audio.registerAudioRecordingCallback(callback, main)
         main.post(poll)
     }
@@ -60,11 +60,7 @@ class WakeConflictWatcher(
         val clients = configs.map {
             RecordingClient(it.clientAudioSessionId, silencedKnown && it.isClientSilenced)
         }
-        val reason = reasonFor(audio.mode, ownSessions(), clients, OwnCommMode.active)
-        if (reason != last) {
-            last = reason
-            onChange(reason)
-        }
+        evaluator.update(audio.mode, clients)
     }
 
     companion object {
@@ -86,6 +82,31 @@ class WakeConflictWatcher(
         ): String? {
             val foreign = clients.any { it.session !in ownSessions && !it.silenced }
             return WakePolicy.conflict(audioMode, foreign, ownCommMode)
+        }
+    }
+}
+
+/**
+ * The decision part of [WakeConflictWatcher] without Android types: from mode and recordings to
+ * the reason, passed on to [onChange] only when it changes. [ownCommMode] defaults to the flag of
+ * the dialog's phone mode ([OwnCommMode], WP188): that mode is not a call.
+ */
+internal class ConflictEvaluator(
+    private val ownSessions: () -> Set<Int>,
+    private val ownCommMode: () -> Boolean = { OwnCommMode.active },
+    private val onChange: (String?) -> Unit,
+) {
+    private var last: String? = null
+
+    fun reset() {
+        last = null
+    }
+
+    fun update(audioMode: Int, clients: List<RecordingClient>) {
+        val reason = WakeConflictWatcher.reasonFor(audioMode, ownSessions(), clients, ownCommMode())
+        if (reason != last) {
+            last = reason
+            onChange(reason)
         }
     }
 }

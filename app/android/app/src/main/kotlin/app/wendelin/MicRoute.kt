@@ -55,13 +55,17 @@ internal interface MicTrack : PcmReader {
 }
 
 /**
- * A [PcmReader] that can move to another recording without a hole or a doubled frame.
+ * A [PcmReader] that can move to another recording without loss and, apart from the drain time,
+ * without a doubled frame.
  *
  * [offer] hands over a started candidate (any thread). The reading thread keeps reading the old
  * recording until the candidate delivers data. At that moment it throws away what the candidate
  * has buffered so far (that time span is already in the old stream), delivers what the old one
  * still has, and reads on from the candidate. The stream the subscribers see is therefore one
- * continuous sequence of samples; only the candidate's own head start is dropped. A candidate
+ * continuous sequence of samples; only the candidate's own head start is dropped. Nothing is
+ * lost; on a real device the two streams may overlap by about the time the drain takes (a few
+ * ms), because the clock does not stand still while it runs (the tests model it as standing
+ * still). A candidate
  * that stays silent for [giveUpMs] or fails is released and the old recording goes on.
  */
 internal class SwitchingReader(
@@ -77,6 +81,9 @@ internal class SwitchingReader(
     private val scratch = ByteArray(SCRATCH_BYTES)
     private var carry = ByteArray(0)
     private var carryPos = 0
+    private val starting = java.util.concurrent.ConcurrentHashMap.newKeySet<Int>()
+    private val lock = Any()
+    private var closed = false
 
     val activeKey: String? get() = active.key
     val hasPending: Boolean get() = pending.get() != null
@@ -84,11 +91,31 @@ internal class SwitchingReader(
 
     /** Session ids of the recordings that are open now (during a switch there are two). */
     val sessionIds: Set<Int>
-        get() = setOfNotNull(active.sessionId, pending.get()?.track?.sessionId).filter { it != 0 }.toSet()
+        get() = (setOfNotNull(active.sessionId, pending.get()?.track?.sessionId) + starting).filter { it != 0 }.toSet()
 
-    /** Offers a started [track]; a candidate waiting before is released. */
+    /**
+     * A candidate is built but not started yet: its session counts as ours from [session] on, not
+     * only after [offer]. `startRecording` triggers the system's recording callback at once, and
+     * the conflict watcher must not take our own new recording for a foreign one.
+     */
+    fun expect(session: Int) {
+        starting.add(session)
+    }
+
+    /** The candidate is offered or failed: its session is known from [offer] on (or gone). */
+    fun unexpect(session: Int) {
+        starting.remove(session)
+    }
+
+    /** Offers a started [track]; a candidate waiting before is released. After [releaseAll] [track] is freed at once. */
     fun offer(track: MicTrack) {
-        pending.getAndSet(Pending(track, nowMs()))?.track?.release()
+        synchronized(lock) {
+            if (!closed) {
+                pending.getAndSet(Pending(track, nowMs()))?.track?.release()
+                return
+            }
+        }
+        track.release()
     }
 
     /** Drops the candidate (the wish went back to what runs). */
@@ -98,6 +125,7 @@ internal class SwitchingReader(
 
     /** Frees both recordings (end of the reading thread). */
     fun releaseAll() {
+        synchronized(lock) { closed = true }
         cancelPending()
         active.release()
     }
