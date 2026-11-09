@@ -7,7 +7,6 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../platform/channel_audio_focus_port.dart';
 import '../platform/channel_memory_trim.dart';
-import '../platform/voice/audio_playback.dart';
 import '../platform/voice/central_audio_bridge.dart';
 import '../platform/voice/central_audio_input.dart';
 import '../platform/voice/ducking_tts.dart';
@@ -25,6 +24,7 @@ import '../voice/voice_log.dart';
 import '../voice/voice_metrics.dart';
 import '../voice/wake/mic_tail.dart';
 import 'app_settings.dart';
+import 'audio_devices_providers.dart';
 import 'core_providers.dart';
 import 'dispose_tracker.dart';
 import 'hint_term_providers.dart';
@@ -393,9 +393,7 @@ TextToSpeech createSherpaTts(
           await ref.read(speechModelServiceProvider.future),
           ref.read(speechModelCatalogProvider),
         );
-  final own = playback == null ? AudioplayersPlayback() : null;
-  if (own != null) onDisposeTracked(ref, own.dispose);
-  final out = playback ?? own!;
+  final out = playback ?? createRoutedPlayback(ref);
   return SherpaTextToSpeech(
     installed: voices,
     synthesizer: ref.watch(sherpaSynthesizerProvider),

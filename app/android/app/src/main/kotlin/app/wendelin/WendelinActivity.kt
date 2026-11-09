@@ -26,6 +26,7 @@ abstract class WendelinActivity : FlutterActivity() {
     private var location: LocationChannel? = null
     private var audioFocus: AudioFocusChannel? = null
     private var audioDevices: AudioDevicesChannel? = null
+    private var audioPlayback: AudioPlaybackChannel? = null
     private var multicast: MulticastChannel? = null
     private var memory: MemoryChannel? = null
     protected var notify: NotifyChannel? = null
@@ -64,6 +65,7 @@ abstract class WendelinActivity : FlutterActivity() {
         location = LocationChannel(this, messenger)
         audioFocus = AudioFocusChannel(this, messenger)
         audioDevices = AudioDevicesChannel(this, messenger)
+        audioPlayback = AudioPlaybackChannel(this, messenger)
         multicast = MulticastChannel(this, messenger)
         memory = MemoryChannel(messenger)
         notify = NotifyChannel(this, messenger)
@@ -98,6 +100,8 @@ abstract class WendelinActivity : FlutterActivity() {
         audioFocus = null
         audioDevices?.dispose()
         audioDevices = null
+        audioPlayback?.dispose()
+        audioPlayback = null
         media?.dispose()
         media = null
         location?.dispose()

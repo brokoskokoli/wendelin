@@ -189,6 +189,15 @@
         "focusChanged": {"args": ["kind", "state"], "returns": "none"}
       }
     },
+    "app.wendelin/audio-playback": {
+      "dart": ["app/lib/platform/voice/audio_track_playback.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/AudioPlaybackChannel.kt"],
+      "toKotlin": {
+        "play": {"args": ["pcm", "sampleRate"], "returns": "none"},
+        "stop": {"args": [], "returns": "none"}
+      },
+      "toDart": {}
+    },
     "app.wendelin/audio-devices": {
       "dart": ["app/lib/platform/voice/audio_devices.dart"],
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/AudioDevicesChannel.kt"],

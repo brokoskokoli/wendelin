@@ -3,6 +3,11 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../platform/voice/audio_devices.dart';
+import '../platform/voice/audio_playback.dart';
+import '../platform/voice/audio_track_playback.dart';
+import '../platform/voice/routed_playback.dart';
+import '../platform/voice/sherpa_tts.dart';
+import 'dispose_tracker.dart';
 
 // Riverpod wiring of the microphone and output choice (WP188, K149). The
 // choice is stored natively (the wake service reads it without Flutter).
@@ -60,3 +65,32 @@ final audioChoiceProvider = Provider.family<AudioChoice, AudioDirection>((
       ref.watch(audioDevicesProvider).value?.of(direction) ?? const [];
   return resolveAudioChoice(selected, connected);
 });
+
+/// The speech and tone output (WP188): [AudioplayersPlayback] while no output
+/// device is chosen, the native `AudioTrack` with a chosen one (see
+/// [RoutedPlayback]). The choice is cached from [audioSelectionProvider], so
+/// the check per play costs nothing; while it loads or after a read error
+/// the system route is used.
+AudioPlayback createRoutedPlayback(
+  Ref ref, {
+  AudioPlayback? system,
+  AudioPlayback? track,
+}) {
+  var chosen = false;
+  ref.listen(audioSelectionProvider, (_, next) {
+    chosen = next.value?.output != null;
+  }, fireImmediately: true);
+  final sys = system ?? AudioplayersPlayback();
+  final trk = track ?? AudioTrackPlayback();
+  final router = RoutedPlayback(
+    system: sys,
+    track: trk,
+    hasChoice: () => chosen,
+  );
+  onDisposeTracked(ref, () async {
+    await router.stop();
+    if (sys is AudioplayersPlayback) await sys.dispose();
+    if (trk is AudioTrackPlayback) await trk.dispose();
+  });
+  return router;
+}
