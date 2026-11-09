@@ -65,25 +65,55 @@ object AudioDevicePick {
         else -> null
     }
 
+    private val BLUETOOTH_TYPES = setOf(7, 8, 23, 26, 27)
+    private val USB_TYPES = setOf(11, 22)
+    private val A2DP_LIKE_SINKS = setOf(8, 26, 27)
+
     /**
      * The stable key: `type|product|hash`. The type is the raw Android type (not the shared name)
      * so a wired headset and headphones stay apart.
+     *
+     * The hash covers only the part of the address that stays the same: Bluetooth on Android 12+
+     * returns an anonymised address (`XX:XX:XX:XX:A1:B2`) without BLUETOOTH_CONNECT and the real
+     * one with it, so only the last 5 characters (upper case) count. A USB address
+     * (`card=N;device=M`) changes with every re-plug and is left out: two identical USB devices
+     * are therefore one entry. Everything else hashes the whole address.
      */
     fun keyOf(d: AudioDeviceDesc): String =
-        "${d.type}|${d.product.replace('|', ' ').trim()}|${hash(d.address)}"
+        "${d.type}|${d.product.replace('|', ' ').trim()}|${hash(stableAddress(d))}"
 
-    /** The choosable devices for [direction], one entry per key (first wins), in the given order. */
+    private fun stableAddress(d: AudioDeviceDesc): String = when (d.type) {
+        in BLUETOOTH_TYPES -> d.address.trim().uppercase().takeLast(5)
+        in USB_TYPES -> ""
+        else -> d.address
+    }
+
+    /**
+     * The choosable devices for [direction], one entry per key (first wins), in the given order.
+     * For OUTPUT a Bluetooth device shows once per profile; an SCO sink is hidden if the same
+     * device is also there as A2DP or LE sink (same address ending, else same product name).
+     * Pure SCO headsets stay. INPUT is unchanged.
+     */
     fun entries(devices: List<AudioDeviceDesc>, direction: String): List<AudioDeviceEntry> {
         val seen = HashSet<String>()
         val out = ArrayList<AudioDeviceEntry>()
         for (d in devices) {
             val type = typeName(d, direction) ?: continue
+            if (direction == OUTPUT && d.type == 7 && hasBetterProfile(d, devices)) continue
             val key = keyOf(d)
             if (!seen.add(key)) continue
             out.add(AudioDeviceEntry(key, type, d.product.trim()))
         }
         return out
     }
+
+    private fun hasBetterProfile(sco: AudioDeviceDesc, devices: List<AudioDeviceDesc>): Boolean =
+        devices.any { o ->
+            o.isSink && o.type in A2DP_LIKE_SINKS && (
+                if (sco.address.isNotBlank() && o.address.isNotBlank()) hash(stableAddress(o)) == hash(stableAddress(sco))
+                else o.product.trim() == sco.product.trim()
+            )
+        }
 
     /**
      * The device to use: the one with [selected] if it is available, else `null` = system default

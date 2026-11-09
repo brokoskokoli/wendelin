@@ -38,6 +38,57 @@ class AudioDevicePickTest {
         assertNotEquals(k, AudioDevicePick.keyOf(btMic.copy(address = "11:22:33:44:55:66")))
     }
 
+    private fun bt(addr: String, type: Int = 8, product: String = "Buds") =
+        AudioDeviceDesc(type, product, addr, isSource = false, isSink = true)
+
+    @Test
+    fun bluetoothKeySameForAnonymisedAndRealAddress() {
+        assertEquals(
+            AudioDevicePick.keyOf(bt("XX:XX:XX:XX:A1:B2")),
+            AudioDevicePick.keyOf(bt("00:11:22:33:a1:b2")),
+        )
+    }
+
+    @Test
+    fun bluetoothKeyDiffersByAddressEnding() {
+        assertNotEquals(
+            AudioDevicePick.keyOf(bt("XX:XX:XX:XX:A1:B2")),
+            AudioDevicePick.keyOf(bt("XX:XX:XX:XX:A1:B3")),
+        )
+    }
+
+    @Test
+    fun usbKeyIgnoresCardAndDevice() {
+        val a = AudioDeviceDesc(11, "Mic", "card=1;device=0", isSource = true, isSink = false)
+        assertEquals(AudioDevicePick.keyOf(a), AudioDevicePick.keyOf(a.copy(address = "card=3;device=2")))
+        assertFalse(AudioDevicePick.keyOf(a).contains("card"))
+    }
+
+    @Test
+    fun a2dpHidesScoSinkOfSameDevice() {
+        val all = listOf(bt("XX:XX:XX:XX:A1:B2", 7), bt("00:11:22:33:A1:B2", 8))
+        assertEquals(listOf("bluetooth_a2dp"), AudioDevicePick.entries(all, "output").map { it.type })
+    }
+
+    @Test
+    fun scoSinkWithoutAddressMatchesByProduct() {
+        val all = listOf(bt("", 7), bt("", 26))
+        assertEquals(listOf("bluetooth_le"), AudioDevicePick.entries(all, "output").map { it.type })
+    }
+
+    @Test
+    fun pureScoSinkStays() {
+        val all = listOf(bt("XX:XX:XX:XX:A1:B2", 7), bt("XX:XX:XX:XX:C3:D4", 8, "Other"))
+        assertEquals(listOf("bluetooth_sco", "bluetooth_a2dp"), AudioDevicePick.entries(all, "output").map { it.type })
+    }
+
+    @Test
+    fun scoInputStaysDespiteA2dp() {
+        val sco = AudioDeviceDesc(7, "Buds", "AA:BB:CC:DD:A1:B2", isSource = true, isSink = true)
+        val all = listOf(sco, bt("AA:BB:CC:DD:A1:B2", 8))
+        assertEquals(listOf("bluetooth_sco"), AudioDevicePick.entries(all, "input").map { it.type })
+    }
+
     @Test
     fun keyHasNoAddress() {
         val k = AudioDevicePick.keyOf(btMic)
