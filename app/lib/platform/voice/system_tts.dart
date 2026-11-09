@@ -168,6 +168,8 @@ final class SystemTextToSpeech implements TextToSpeech {
     final render = renderer;
     final out = playback;
     if (render == null || out == null) return false;
+    // A state listener may stop us inside `_set(speaking)`, before this runs.
+    if (generation != _generation) return true;
     final Wav wav;
     try {
       wav = await render.render(text);

@@ -49,11 +49,18 @@ final class SystemSpeechRenderer {
   Completer<void>? _pending;
   var _swept = false;
   var _seq = 0;
+  var _cancelEpoch = 0;
 
   /// Synthesizes [text]; throws [SystemSpeechRenderFailed] without content.
   Future<Wav> render(String text) async {
+    final epoch = _cancelEpoch;
     final dir = await directory();
     await _sweep(dir);
+    // A cancel during the file IO above found nothing pending: honour it here
+    // (no await between this check and `_pending` below).
+    if (epoch != _cancelEpoch) {
+      throw const SystemSpeechRenderFailed('cancelled');
+    }
     final file = File(
       '${dir.path}/$prefix${DateTime.now().microsecondsSinceEpoch}_${_seq++}.wav',
     );
@@ -94,6 +101,7 @@ final class SystemSpeechRenderer {
 
   /// Aborts a running [render] (it throws, deletes its file).
   void cancel() {
+    _cancelEpoch++;
     final p = _pending;
     if (p != null && !p.isCompleted) {
       p.completeError(const SystemSpeechRenderFailed('cancelled'));

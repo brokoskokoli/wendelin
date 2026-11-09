@@ -28,6 +28,9 @@ final class _Channel {
   final files = <String>[];
   Completer<void>? speaking;
 
+  /// Completes when the plugin got `synthesizeToFile` (the render is waiting).
+  final synthStarted = Completer<void>();
+
   void install() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(const MethodChannel('flutter_tts'), _handle);
@@ -56,6 +59,7 @@ final class _Channel {
       case 'synthesizeToFile':
         final path = (call.arguments as Map)['fileName'] as String;
         files.add(path);
+        if (!synthStarted.isCompleted) synthStarted.complete();
         if (mode != _Synth.hang) {
           File(path).writeAsBytesSync(
             mode == _Synth.empty ? _wav(1, 16, const []) : wav ?? _mono(),
@@ -204,6 +208,8 @@ void main() {
     late _Channel channel;
     late _Playback out;
     var chosen = true;
+    // Replaced per test: the real cache lookup is file IO of unknown length.
+    Future<Directory> Function() dirLookup = () async => throw StateError('x');
 
     SystemTextToSpeech make({
       Duration synthTimeout = const Duration(seconds: 5),
@@ -213,7 +219,7 @@ void main() {
         tts: tts,
         renderer: SystemSpeechRenderer(
           tts,
-          directory: () async => dir,
+          directory: dirLookup,
           timeout: synthTimeout,
         ),
         playback: out,
@@ -223,6 +229,7 @@ void main() {
 
     setUp(() {
       dir = Directory.systemTemp.createTempSync('tts_render_');
+      dirLookup = () async => dir;
       addTearDown(() => dir.deleteSync(recursive: true));
       channel = _Channel(dir)..install();
       out = _Playback()..dir = dir;
@@ -316,7 +323,8 @@ void main() {
           final tts = make();
           final done = tts.speak('Hallo');
           await tts.states.firstWhere((s) => s == TtsState.speaking);
-          await pumpEventQueue();
+          // The render does file IO first: wait for the engine call itself.
+          await channel.synthStarted.future;
           File(channel.files.single)
               .writeAsBytesSync(_mono()); // halb geschrieben
           await tts.stop();
@@ -332,6 +340,47 @@ void main() {
         },
       );
     }
+
+    test(
+      'Stopp gleich nach "speaking": keine Synthese, kein Nachlauf',
+      () async {
+        channel.mode = _Synth.hang;
+        final tts = make();
+        final done = tts.speak('Hallo');
+        await tts.states.firstWhere((s) => s == TtsState.speaking);
+        await tts.stop();
+        await done.timeout(const Duration(seconds: 2));
+        expect(channel.methods, isNot(contains('synthesizeToFile')));
+        expect(out.played, isEmpty);
+        expect(_left(dir), isEmpty);
+      },
+    );
+
+    test(
+      'Stopp im Verzeichnis-Lookup: keine Synthese, kein Nachlauf',
+      () async {
+        // The cache lookup / sweep is file IO: a stop arriving meanwhile used
+        // to be lost (nothing pending yet) and the render ran on.
+        channel.mode = _Synth.hang;
+        final lookup = Completer<Directory>();
+        final asked = Completer<void>();
+        dirLookup = () {
+          asked.complete();
+          return lookup.future;
+        };
+        final tts = make();
+        final done = tts.speak('Hallo');
+        await asked.future; // the render is inside its file IO
+        await tts.stop();
+        lookup.complete(dir);
+        await done.timeout(const Duration(seconds: 2));
+        expect(channel.methods, isNot(contains('synthesizeToFile')));
+        expect(channel.methods, isNot(contains('speak')));
+        expect(out.played, isEmpty);
+        expect(_left(dir), isEmpty);
+        expect(tts.state, TtsState.idle);
+      },
+    );
 
     test(
       'Stopp während der Wiedergabe: Pfad gestoppt, Ende gemeldet',
