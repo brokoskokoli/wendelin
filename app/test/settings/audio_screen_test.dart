@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/audio_devices_providers.dart';
 import 'package:wendelin/platform/voice/audio_devices.dart';
 import 'package:wendelin/platform/voice/audio_devices_fake.dart';
+import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/audio_screen.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
 
@@ -90,6 +91,12 @@ void main() {
       expect((await port.selection()).input, _bt);
       expect(c.read(audioChoiceProvider(AudioDirection.input)).active, _bt);
       expect(find.text('Gerade benutzt: Kopfhörer X'), findsOneWidget);
+      Finder check(String t) => find.descendant(
+        of: find.widgetWithText(InkWell, t),
+        matching: find.byType(CheckStatusIcon),
+      );
+      expect(check('Kopfhörer X'), findsOneWidget);
+      expect(check('Handy-Mikro'), findsNothing);
       // Output untouched.
       expect((await port.selection()).output, isNull);
 
