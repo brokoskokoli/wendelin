@@ -11,7 +11,7 @@ interface KeyValues {
 /** [KeyValues] over private `SharedPreferences`. */
 class PrefsKeyValues(context: Context) : KeyValues {
     private val prefs =
-        context.applicationContext.getSharedPreferences("app.wendelin.audio_devices", Context.MODE_PRIVATE)
+        context.applicationContext.getSharedPreferences(AudioDeviceSelectionStore.PREFS_NAME, Context.MODE_PRIVATE)
 
     override fun getString(key: String): String? = prefs.getString(key, null)
 
@@ -28,6 +28,12 @@ class PrefsKeyValues(context: Context) : KeyValues {
  */
 class AudioDeviceSelectionStore(private val kv: KeyValues) {
     constructor(context: Context) : this(PrefsKeyValues(context))
+
+    companion object {
+        /** Preferences file; the wake service listens to [INPUT_KEY] to follow a changed choice. */
+        const val PREFS_NAME = "app.wendelin.audio_devices"
+        const val INPUT_KEY = "input.key"
+    }
 
     /** The selection for [direction], `null` for the system default or an unreadable store. */
     fun get(direction: String): AudioDeviceEntry? {

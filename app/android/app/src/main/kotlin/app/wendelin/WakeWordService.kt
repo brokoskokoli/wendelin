@@ -26,6 +26,7 @@ class WakeWordService : Service() {
     private val main = Handler(Looper.getMainLooper())
     private var engine: RecognizerEngine? = null
     private var mic: MicAudioSource? = null
+    private val micRouter by lazy { MicRouter(this) }
     private val inbox = java.util.concurrent.ConcurrentLinkedQueue<Pair<ByteArray, Long>>()
     private val tap = WakeMicTap()
     val hub = CentralAudioHub()
@@ -111,7 +112,7 @@ class WakeWordService : Service() {
             main.post { engine?.send("audio", mapOf("pcm" to pcm)) }
         })
         e.send("run", settings.runArgsForStation())
-        watcher = WakeConflictWatcher(this, main, { mic?.sessionId ?: 0 }) { reason ->
+        watcher = WakeConflictWatcher(this, main, { mic?.sessionIds ?: emptySet() }) { reason ->
             // Do not depend on Dart alone: a call or foreign recording closes the microphone here
             // (WP149: not the app's own AudioRecord in the hand-over overlap).
             conflicts.react(reason)
@@ -149,7 +150,7 @@ class WakeWordService : Service() {
             VoiceLog.i("wake-mic-start skipped=conflict reason=${conflicts.last}")
             return
         }
-        val source = MicAudioSource(this)
+        val source = MicAudioSource(this, micRouter)
         tap.reset()
         try {
             source.start(
@@ -168,6 +169,8 @@ class WakeWordService : Service() {
                 },
             )
             mic = source
+            // Chosen microphone or devices change: the recording follows without a restart (WP188).
+            micRouter.watch(main) { mic?.reroute() }
         } catch (e: Exception) {
             VoiceLog.i("wake-mic-error error=${e.javaClass.simpleName}")
             engine?.send("audioError", mapOf("message" to e.javaClass.simpleName))
@@ -194,6 +197,7 @@ class WakeWordService : Service() {
     }
 
     private fun stopMic() {
+        micRouter.unwatch()
         mic?.stop()
         mic = null
         inbox.clear()

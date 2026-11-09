@@ -12,13 +12,13 @@ internal data class RecordingClient(val session: Int, val silenced: Boolean)
 /**
  * Watches for things that need the microphone more than the wake word: a phone or voice call
  * (`AudioManager.mode`) and a recording of another app (`getActiveRecordingConfigurations`,
- * not the own session [ownSession]). [onChange] gets the reason (`call`, `recording`) or `null`
+ * not the own sessions [ownSessions]). [onChange] gets the reason (`call`, `recording`) or `null`
  * once the microphone is free again; it runs on the main thread. See [WakePolicy.conflict].
  */
 class WakeConflictWatcher(
     context: Context,
     private val main: Handler,
-    private val ownSession: () -> Int,
+    private val ownSessions: () -> Set<Int>,
     private val onChange: (String?) -> Unit,
 ) {
     private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -60,7 +60,7 @@ class WakeConflictWatcher(
         val clients = configs.map {
             RecordingClient(it.clientAudioSessionId, silencedKnown && it.isClientSilenced)
         }
-        val reason = reasonFor(audio.mode, ownSession(), clients)
+        val reason = reasonFor(audio.mode, ownSessions(), clients)
         if (reason != last) {
             last = reason
             onChange(reason)
@@ -74,8 +74,12 @@ class WakeConflictWatcher(
          * The reason for the current state: a recording of another session that is not silenced
          * counts.
          */
-        internal fun reasonFor(audioMode: Int, ownSession: Int, clients: List<RecordingClient>): String? {
-            val foreign = clients.any { it.session != ownSession && !it.silenced }
+        internal fun reasonFor(audioMode: Int, ownSession: Int, clients: List<RecordingClient>): String? =
+            reasonFor(audioMode, setOf(ownSession), clients)
+
+        /** WP188: while the microphone moves to another device two own recordings run at once. */
+        internal fun reasonFor(audioMode: Int, ownSessions: Set<Int>, clients: List<RecordingClient>): String? {
+            val foreign = clients.any { it.session !in ownSessions && !it.silenced }
             return WakePolicy.conflict(audioMode, foreign)
         }
     }
