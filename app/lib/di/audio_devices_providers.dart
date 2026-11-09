@@ -71,7 +71,7 @@ final audioChoiceProvider = Provider.family<AudioChoice, AudioDirection>((
 /// [RoutedPlayback]). The choice is cached from [audioSelectionProvider], so
 /// the check per play costs nothing; while it loads or after a read error
 /// the system route is used.
-AudioPlayback createRoutedPlayback(
+RoutedPlayback createRoutedPlayback(
   Ref ref, {
   AudioPlayback? system,
   AudioPlayback? track,
