@@ -1457,6 +1457,76 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get areaAudio => 'Audio';
+
+  @override
+  String get areaAudioDetail =>
+      'Choisir le micro et la sortie pour la voix de Wendelin';
+
+  @override
+  String audioInUse(String name) {
+    return 'Utilisé actuellement : $name';
+  }
+
+  @override
+  String get audioInUseSystem => 'Utilisé actuellement : système';
+
+  @override
+  String get audioInput => 'Microphone';
+
+  @override
+  String get audioIntro =>
+      'Le choix ne vaut que pour la voix et les sons de Wendelin, pas pour la musique d’autres applications.';
+
+  @override
+  String get audioMissing => 'non connecté, le système est utilisé';
+
+  @override
+  String get audioOutput => 'Sortie';
+
+  @override
+  String get audioSaveFailed => 'Le choix n’a pas pu être enregistré.';
+
+  @override
+  String get audioSystem => 'Système';
+
+  @override
+  String get audioSystemDetail => 'Android choisit l’appareil (par défaut)';
+
+  @override
+  String get audioTypeBluetoothA2dp => 'Bluetooth (musique)';
+
+  @override
+  String get audioTypeBluetoothLe => 'Bluetooth LE';
+
+  @override
+  String get audioTypeBluetoothSco => 'Bluetooth (casque)';
+
+  @override
+  String get audioTypeBuiltinMic => 'Micro intégré';
+
+  @override
+  String get audioTypeBuiltinSpeaker => 'Haut-parleur intégré';
+
+  @override
+  String get audioTypeEarpiece => 'Écouteur';
+
+  @override
+  String get audioTypeHearingAid => 'Appareil auditif';
+
+  @override
+  String get audioTypeLine => 'Ligne';
+
+  @override
+  String get audioTypeOther => 'Autre';
+
+  @override
+  String get audioTypeUsb => 'USB';
+
+  @override
+  String get audioTypeWiredHeadset => 'Casque filaire';
+
+  @override
   String get batteryAllow => 'Autoriser sans restriction';
 
   @override

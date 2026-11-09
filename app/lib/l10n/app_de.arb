@@ -735,6 +735,35 @@
       }
     }
   },
+  "areaAudio": "Audio",
+  "areaAudioDetail": "Mikrofon und Ausgabe für Wendelins Sprache wählen",
+  "audioInUse": "Gerade benutzt: {name}",
+  "@audioInUse": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "audioInUseSystem": "Gerade benutzt: System",
+  "audioInput": "Mikrofon",
+  "audioIntro": "Die Wahl gilt nur für Wendelins Sprache und Töne, nicht für Musik anderer Apps.",
+  "audioMissing": "nicht verbunden, System wird benutzt",
+  "audioOutput": "Ausgabe",
+  "audioSaveFailed": "Die Wahl konnte nicht gespeichert werden.",
+  "audioSystem": "System",
+  "audioSystemDetail": "Android wählt das Gerät (Standard)",
+  "audioTypeBluetoothA2dp": "Bluetooth (Musik)",
+  "audioTypeBluetoothLe": "Bluetooth LE",
+  "audioTypeBluetoothSco": "Bluetooth (Headset)",
+  "audioTypeBuiltinMic": "Eingebautes Mikrofon",
+  "audioTypeBuiltinSpeaker": "Eingebauter Lautsprecher",
+  "audioTypeEarpiece": "Hörmuschel",
+  "audioTypeHearingAid": "Hörgerät",
+  "audioTypeLine": "Line",
+  "audioTypeOther": "Sonstiges",
+  "audioTypeUsb": "USB",
+  "audioTypeWiredHeadset": "Kabel-Headset",
   "batteryAllow": "Keine Einschränkung erlauben",
   "batteryChecklistNote": "Android lässt diese Einstellungen nicht auslesen. Das ist eine Checkliste, kein Status.",
   "batteryHuaweiBody": "Stelle „App-Start“ für Wendelin auf „Manuell verwalten“ und erlaube Autostart, Zweitstart und Hintergrundaktivität.",
