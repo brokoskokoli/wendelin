@@ -10,6 +10,11 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 /// (`startMic`) and [push] hands the 16 kHz PCM16 chunks it sends to the
 /// stream; [stop] frees the microphone (`stopMic`). Restartable: the
 /// listener pauses for the assistant overlay and resumes afterwards.
+///
+/// WP189: every [start] sends a new `token`; the service counts the chunks
+/// of that stream from 0 (the listener's position at a hit) and stamps them
+/// with it. Chunks of an older stream, still on their way, are dropped, so
+/// both sides count the same chunks.
 final class ServiceAudioInput implements AudioInput {
   /// Creates the input on the engine channel.
   ServiceAudioInput(this.channel);
@@ -20,6 +25,7 @@ final class ServiceAudioInput implements AudioInput {
   // Closed in [stop].
   // ignore: close_sinks
   StreamController<Int16List>? _out;
+  int _token = 0;
 
   @override
   bool get isRunning => _out != null;
@@ -29,14 +35,17 @@ final class ServiceAudioInput implements AudioInput {
     if (_out != null) throw StateError('Das Mikrofon läuft bereits.');
     // ignore: close_sinks
     final out = _out = StreamController<Int16List>();
-    unawaited(_call('startMic'));
+    unawaited(_call('startMic', {'token': ++_token}));
     return out.stream;
   }
 
-  /// Adds little-endian PCM16 [bytes] from the service.
-  void push(Uint8List bytes) {
+  /// Adds little-endian PCM16 [bytes] from the service; a chunk of another
+  /// stream than the current one ([token], if the service sent one) is
+  /// dropped (WP189).
+  void push(Uint8List bytes, {int? token}) {
     final out = _out;
     if (out == null || bytes.length < 2) return;
+    if (token != null && token != _token) return;
     final frame = Int16List(bytes.length ~/ 2);
     final data = ByteData.sublistView(bytes);
     for (var i = 0; i < frame.length; i++) {
@@ -61,9 +70,9 @@ final class ServiceAudioInput implements AudioInput {
     await out.close();
   }
 
-  Future<void> _call(String method) async {
+  Future<void> _call(String method, [Map<String, Object?>? args]) async {
     try {
-      await channel.invokeMethod<void>(method);
+      await channel.invokeMethod<void>(method, args);
     } on PlatformException {
       // The service is gone; its end is reported separately.
     } on MissingPluginException {

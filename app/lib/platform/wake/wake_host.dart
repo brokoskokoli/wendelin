@@ -170,7 +170,8 @@ final class WakeHost {
       case 'audio':
         final pcm = args['pcm'];
         if (audio case final ServiceAudioInput input when pcm is Uint8List) {
-          input.push(pcm);
+          final token = args['token'];
+          input.push(pcm, token: token is int ? token : null);
         }
       case 'audioError':
         if (audio case final ServiceAudioInput input) {

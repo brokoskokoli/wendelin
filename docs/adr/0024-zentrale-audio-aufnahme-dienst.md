@@ -36,3 +36,7 @@ Um das Weckwort an den Sprachbefehl zu übergeben, wurde das Kotlin-Mikrofon ges
 - Lückenlose Erfassung schneller Kommandos („Wendelin <Kommando>“) ohne Audioverlust.
 - Sprecher-Einlernen und Spracherkennung funktionieren zuverlässig parallel zum Weckwort-Dienst.
 - Erhebliche Vereinfachung des Handoff-Codes zwischen Kotlin und Dart.
+
+## Nachtrag WP189 (Weckwort-Vorlauf doppelt)
+Punkt 6 ist nur teilweise umgesetzt: Die Übergabe nach einem Treffer läuft weiter über `WakeHandoff` und `WakeMicTap` (Nachlauf ab der Stream-Position `pos` des Treffers). Seit dem zentralen Mikrofon zählte der Tap jeden Mikrofonblock seit dem Öffnen, die Position des Dart-Listeners beginnt aber bei jedem Fortsetzen (nach dem Overlay) bei 0, und während eines Dialogs hält der Hub den Weckwort-Strom zurück. Der Tap lief daher voraus und gab bei jedem Treffer seinen ganzen Puffer (3 s, mit dem Weckwort) als Nachlauf zurück. Der Endpointer entschied dann schon im doppelten Vorlauf („nicht verstanden“ oder das verstümmelte Weckwort als Anfrage).
+Seit WP189 zählt `WakeEngineFeed` nur die Blöcke, die an die Engine gehen, und beginnt bei jedem `startMic` des Listeners bei 0. Ein Token in `startMic` und `audio` sorgt dafür, dass Dart Blöcke eines älteren Stroms verwirft, sodass beide Seiten dieselben Blöcke zählen.

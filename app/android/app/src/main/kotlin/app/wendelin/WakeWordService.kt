@@ -28,7 +28,7 @@ class WakeWordService : Service() {
     private var mic: MicAudioSource? = null
     private val micRouting by lazy { WakeMicRouting(this, main, { mic }, micDeferral::appVoiceChanged) }
     private val inbox = java.util.concurrent.ConcurrentLinkedQueue<Pair<ByteArray, Long>>()
-    private val tap = WakeMicTap()
+    private val feed = WakeEngineFeed()
     val hub = CentralAudioHub()
     private var watcher: WakeConflictWatcher? = null
     private var wakeLock: PowerManager.WakeLock? = null
@@ -108,8 +108,10 @@ class WakeWordService : Service() {
         }
         val e = RecognizerEngine(this, ::onEngineCall, "wakeWordMain", ENGINE_CHANNEL)
         engine = e
+        // Counted when dispatched (main thread, in order), not when the post runs (WP189).
         hub.subscribe(AudioSubscriberKind.WAKE, "wake-engine", onChunk = { pcm ->
-            main.post { engine?.send("audio", mapOf("pcm" to pcm)) }
+            val args = feed.send(pcm)
+            main.post { engine?.send("audio", args) }
         })
         e.send("run", settings.runArgsForStation())
         watcher = WakeConflictWatcher(this, main, { mic?.sessionIds ?: emptySet() }) { reason ->
@@ -127,8 +129,11 @@ class WakeWordService : Service() {
     /** Calls from the Dart side of the engine (main thread). */
     private fun onEngineCall(call: MethodCall) {
         when (call.method) {
-            // While the hit's audio is collected, the microphone stays as it is (WP68).
-            "startMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) micDeferral.request()
+            // The listener's new stream counts from 0 (WP189); while a hit's audio is collected the mic stays (WP68).
+            "startMic" -> {
+                feed.restart(call.argument<Number>("token")?.toLong() ?: 0L)
+                if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) micDeferral.request()
+            }
             "stopMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) {
                 micDeferral.clear()
                 stopMic()
@@ -151,7 +156,6 @@ class WakeWordService : Service() {
             return
         }
         val source = MicAudioSource(this, micRouting.router)
-        tap.reset()
         try {
             source.start(
                 onChunk = { pcm ->
@@ -186,13 +190,10 @@ class WakeWordService : Service() {
         }
     }
 
+    /** The hub feeds the engine (and counts it in [feed]), a hit's capture collects (WP68). */
     private fun onMicChunk(pcm: ByteArray, atMs: Long) {
         hub.dispatchChunk(pcm)
-        if (WakeHandoff.capturing()) {
-            WakeHandoff.append(pcm, atMs)
-            return
-        }
-        tap.onChunk(pcm)
+        if (WakeHandoff.capturing()) WakeHandoff.append(pcm, atMs)
     }
 
     private fun stopMic() {
@@ -227,7 +228,7 @@ class WakeWordService : Service() {
             call.argument<Number>("end")?.toInt() ?: 0,
         )
         val pos = call.argument<Number>("pos")?.toLong()
-        if (mic != null) WakeHandoff.beginCapture(if (pos != null) tap.tailAfter(pos) else ByteArray(0))
+        if (mic != null) WakeHandoff.beginCapture(if (pos != null) feed.tap.tailAfter(pos) else ByteArray(0))
         val keyguard = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
         val route = WakePolicy.routeHit(
             ChatState.visible,
