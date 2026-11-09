@@ -89,6 +89,27 @@ void main() {
     messenger.setMockMethodCallHandler(channel, null);
   });
 
+  test('WP189: startMic trägt ein Token, Stücke eines älteren Stroms zählen '
+      'nicht zur Position des Treffers', () async {
+    await start();
+    final args = toKotlin.firstWhere((c) => c.$1 == 'startMic').$2! as Map;
+    final token = args['token']! as int;
+    // Still on its way from before the listener (re)started: dropped.
+    await fromKotlin('audio', {
+      'pcm': bytes(Int16List(1600)),
+      'token': token - 1,
+    });
+    await fromKotlin('audio', {'pcm': bytes(Int16List(1600)), 'token': token});
+    await fromKotlin('audio', {
+      'pcm': bytes(FakeWakeWordEngine.markerFrame(1600)),
+      'token': token,
+    });
+    await until(() => calls().contains('hit'));
+    final hit = toKotlin.firstWhere((c) => c.$1 == 'hit').$2! as Map;
+    // Two chunks of the current stream, the stale one does not count.
+    expect(hit['pos'], 3200);
+  });
+
   test('ready, dann hört der Dienst zu; ein Treffer gibt das Mikrofon '
       'frei und geht mit dem Pre-Roll an Kotlin', () async {
     await start();

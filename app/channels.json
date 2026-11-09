@@ -339,7 +339,7 @@
       ],
       "toKotlin": {
         "ready": {"args": [], "returns": "none"},
-        "startMic": {"args": [], "returns": "none"},
+        "startMic": {"args": ["token"], "returns": "none"},
         "stopMic": {"args": [], "returns": "none"},
         "hit": {"args": ["pcm", "end", "pos", "kw", "score"], "returns": "none"},
         "failed": {"args": ["reason"], "returns": "none"},
@@ -348,7 +348,7 @@
       "toDart": {
         "run": {"args": ["verify", "verifyB", "verifyModel", "detector", "station", "dev"], "returns": "none"},
         "devMode": {"args": ["on", "clear", "archive"], "returns": "none"},
-        "audio": {"args": ["pcm"], "returns": "none"},
+        "audio": {"args": ["pcm", "token"], "returns": "none"},
         "audioError": {"args": ["message"], "returns": "none"},
         "conflict": {"args": ["reason"], "returns": "none"},
         "overlayClosed": {"args": [], "returns": "none"},
