@@ -9,7 +9,12 @@ import android.os.Handler
  * Bluetooth headset in the dialog. The service only tells it when the microphone starts and stops
  * and when the app's voice state changes.
  */
-class WakeMicRouting(context: Context, private val main: Handler, private val mic: () -> MicAudioSource?) {
+class WakeMicRouting(
+    context: Context,
+    private val main: Handler,
+    private val mic: () -> MicAudioSource?,
+    private val onAppVoice: () -> Unit,
+) {
     val router = MicRouter(context)
     private val dialogMic = DialogMicController(DialogMicOps(context, main, router, { mic() != null }, { mic()?.reroute() }))
 
@@ -28,6 +33,9 @@ class WakeMicRouting(context: Context, private val main: Handler, private val mi
         dialogMic.release()
     }
 
-    /** The app's voice state changed (dialog begins or ends). */
-    fun appVoiceChanged() = dialogMic.evaluate()
+    /** The app's voice state changed (dialog begins or ends, main thread): [onAppVoice], then the phone mode. */
+    fun appVoiceChanged() {
+        onAppVoice()
+        dialogMic.evaluate()
+    }
 }

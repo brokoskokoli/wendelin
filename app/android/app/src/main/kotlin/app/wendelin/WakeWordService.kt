@@ -26,7 +26,7 @@ class WakeWordService : Service() {
     private val main = Handler(Looper.getMainLooper())
     private var engine: RecognizerEngine? = null
     private var mic: MicAudioSource? = null
-    private val micRouting by lazy { WakeMicRouting(this, main) { mic } }
+    private val micRouting by lazy { WakeMicRouting(this, main, { mic }, micDeferral::appVoiceChanged) }
     private val inbox = java.util.concurrent.ConcurrentLinkedQueue<Pair<ByteArray, Long>>()
     private val tap = WakeMicTap()
     val hub = CentralAudioHub()
@@ -400,10 +400,7 @@ class WakeWordService : Service() {
         fun onAppVoice(source: String, active: Boolean) {
             AppVoice.set(source, active, System.currentTimeMillis())
             val s = instance ?: return
-            s.main.post {
-                s.micDeferral.appVoiceChanged()
-                s.micRouting.appVoiceChanged()
-            }
+            s.main.post { s.micRouting.appVoiceChanged() }
         }
 
         /** WP148: the developer mode changed; the running wake engine follows without a restart. */
