@@ -9,6 +9,14 @@ package app.wendelin
 internal object OwnCommMode {
     /** `true` from just before the service sets `MODE_IN_COMMUNICATION` until it is back to normal. */
     @Volatile var active = false
+        set(value) {
+            val changed = field != value
+            field = value
+            if (changed) listener?.invoke()
+        }
+
+    /** Told after every change of [active] (any thread); the running clip re-routes its output. */
+    @Volatile var listener: (() -> Unit)? = null
 }
 
 internal object DialogBluetooth {

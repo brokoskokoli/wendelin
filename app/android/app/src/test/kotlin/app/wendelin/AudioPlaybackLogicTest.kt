@@ -37,6 +37,37 @@ class AudioPlaybackLogicTest {
         assertNull(AudioOutputRoute.deviceIndex(entry(headsetSco), listOf(headsetSco, headset)))
     }
 
+    @Test fun bluetoothSinkIsSystemWhileOwnPhoneMode() {
+        val devices = listOf(speaker, headset)
+        assertEquals(1, AudioOutputRoute.deviceIndex(entry(headset), devices, ownCommMode = false))
+        assertNull(AudioOutputRoute.deviceIndex(entry(headset), devices, ownCommMode = true))
+    }
+
+    @Test fun leSinkIsSystemWhileOwnPhoneMode() {
+        val le = AudioDeviceDesc(26, "Buds", "AA:BB:CC:DD:EE:02", false, true)
+        assertNull(AudioOutputRoute.deviceIndex(entry(le), listOf(speaker, le), ownCommMode = true))
+    }
+
+    @Test fun wiredSinkKeepsItsRouteInOwnPhoneMode() {
+        val wired = AudioDeviceDesc(3, "Wired", "", false, true)
+        assertEquals(1, AudioOutputRoute.deviceIndex(entry(wired), listOf(speaker, wired), ownCommMode = true))
+    }
+
+    @Test fun phoneModeChangeNotifiesTheListenerOnlyOnChange() {
+        var calls = 0
+        OwnCommMode.active = false
+        OwnCommMode.listener = { calls++ }
+        try {
+            OwnCommMode.active = true
+            OwnCommMode.active = true
+            OwnCommMode.active = false
+            assertEquals(2, calls)
+        } finally {
+            OwnCommMode.listener = null
+            OwnCommMode.active = false
+        }
+    }
+
     @Test fun headBelowTotalKeepsPlaying() {
         val p = PlaybackProgress(1000, 2000, 0)
         assertEquals(PlaybackState.PLAYING, p.onPoll(0, 100))

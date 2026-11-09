@@ -6,15 +6,24 @@ object AudioOutputRoute {
      * The index in [devices] of the output to prefer for the stored [selected] choice, or `null` =
      * system routing (no choice, or the chosen device is not connected right now). Only a sink that
      * is also a choosable entry counts, so a hidden SCO twin is never picked.
+     *
+     * While [ownCommMode] (the dialog's phone mode) is on, the system suspends A2DP/LE audio and
+     * plays through the communication device, so a Bluetooth sink counts as not available: the
+     * system route (= that device) is used instead of an output that stays silent.
      */
-    fun deviceIndex(selected: AudioDeviceEntry?, devices: List<AudioDeviceDesc>): Int? {
+    fun deviceIndex(
+        selected: AudioDeviceEntry?,
+        devices: List<AudioDeviceDesc>,
+        ownCommMode: Boolean = false,
+    ): Int? {
         val entries = AudioDevicePick.entries(devices, AudioDevicePick.OUTPUT)
         val key = AudioDevicePick.resolve(selected?.key, entries)?.key ?: return null
         val index = devices.indexOfFirst {
             it.isSink && AudioDevicePick.typeName(it, AudioDevicePick.OUTPUT) != null &&
                 AudioDevicePick.keyOf(it) == key
         }
-        return if (index < 0) null else index
+        if (index < 0) return null
+        return if (ownCommMode && AudioDevicePick.isBluetoothSink(devices[index])) null else index
     }
 }
 

@@ -129,6 +129,8 @@ class AudioPlaybackChannel(context: Context, messenger: BinaryMessenger) :
             if (audio.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) focus = request
             route()
             audio.registerAudioDeviceCallback(devices, handler)
+            // The dialog's phone mode starts/ends mid-clip: route again at once, not at the next clip.
+            OwnCommMode.listener = { handler.post { route() } }
             track.play()
             handler.postDelayed(poll, POLL_MS)
         }
@@ -141,7 +143,7 @@ class AudioPlaybackChannel(context: Context, messenger: BinaryMessenger) :
                 val descs = infos.map {
                     AudioDeviceDesc(it.type, it.productName?.toString() ?: "", it.address, it.isSource, it.isSink)
                 }
-                val index = AudioOutputRoute.deviceIndex(store.get(AudioDevicePick.OUTPUT), descs)
+                val index = AudioOutputRoute.deviceIndex(store.get(AudioDevicePick.OUTPUT), descs, OwnCommMode.active)
                 // null = system route (device missing or no choice).
                 track.setPreferredDevice(index?.let { infos[it] })
             } catch (e: Exception) {
@@ -152,7 +154,10 @@ class AudioPlaybackChannel(context: Context, messenger: BinaryMessenger) :
         fun end() {
             if (ended) return
             ended = true
-            if (current === this) current = null
+            if (current === this) {
+                current = null
+                OwnCommMode.listener = null
+            }
             handler.removeCallbacks(poll)
             audio.unregisterAudioDeviceCallback(devices)
             try {

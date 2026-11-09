@@ -77,9 +77,10 @@ class AudioDevicePickTest {
     }
 
     @Test
-    fun pureScoSinkStays() {
+    fun pureScoSinkIsHiddenForOutput() {
+        // A preferred SCO output is silent outside the phone mode: not a choice (review 12).
         val all = listOf(bt("XX:XX:XX:XX:A1:B2", 7), bt("XX:XX:XX:XX:C3:D4", 8, "Other"))
-        assertEquals(listOf("bluetooth_sco", "bluetooth_a2dp"), AudioDevicePick.entries(all, "output").map { it.type })
+        assertEquals(listOf("bluetooth_a2dp"), AudioDevicePick.entries(all, "output").map { it.type })
     }
 
     @Test
@@ -105,7 +106,7 @@ class AudioDevicePickTest {
     fun entriesFilterByDirectionAndKnownTypes() {
         val all = listOf(mic(), btMic, sink(2, "Speaker"), sink(9, "HDMI"), mic(type = 18, product = "Tel"))
         assertEquals(listOf("builtin_mic", "bluetooth_sco"), AudioDevicePick.entries(all, "input").map { it.type })
-        assertEquals(listOf("bluetooth_sco", "builtin_speaker"), AudioDevicePick.entries(all, "output").map { it.type })
+        assertEquals(listOf("builtin_speaker"), AudioDevicePick.entries(all, "output").map { it.type })
     }
 
     @Test
