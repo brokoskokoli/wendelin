@@ -108,11 +108,7 @@ class WakeWordService : Service() {
         }
         val e = RecognizerEngine(this, ::onEngineCall, "wakeWordMain", ENGINE_CHANNEL)
         engine = e
-        // Counted when dispatched (main thread, in order), not when the post runs (WP189).
-        hub.subscribe(AudioSubscriberKind.WAKE, "wake-engine", onChunk = { pcm ->
-            val args = feed.send(pcm)
-            main.post { engine?.send("audio", args) }
-        })
+        feed.attach(hub) { args -> main.post { engine?.send("audio", args) } }
         e.send("run", settings.runArgsForStation())
         watcher = WakeConflictWatcher(this, main, { mic?.sessionIds ?: emptySet() }) { reason ->
             // Do not depend on Dart alone: a call or foreign recording closes the microphone here
@@ -130,10 +126,11 @@ class WakeWordService : Service() {
     private fun onEngineCall(call: MethodCall) {
         when (call.method) {
             // The listener's new stream counts from 0 (WP189); while a hit's audio is collected the mic stays (WP68).
-            "startMic" -> {
-                feed.restart(call.argument<Number>("token")?.toLong() ?: 0L)
-                if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) micDeferral.request()
-            }
+            "startMic" -> feed.onStartMic(
+                call.argument<Number>("token")?.toLong(),
+                WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null),
+                micDeferral::request,
+            )
             "stopMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) {
                 micDeferral.clear()
                 stopMic()
@@ -283,6 +280,7 @@ class WakeWordService : Service() {
         conflicts.reset()
         gap.reset()
         hub.clear()
+        feed.restart(0)
         stopMic()
         // A hit that was being handed over dies with the service (else `capturing` stays set).
         WakeHandoff.clear()

@@ -1,51 +1,52 @@
 package app.wendelin
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * [WakeEngineFeed] (WP189): the tap counts in the frame of the wake listener's stream position, so
  * a hit hands over only the frames that were still on their way, never audio from before the hit.
+ * The wiring is the service's own ([WakeEngineFeed.attach], [WakeEngineFeed.onStartMic]).
  */
 class WakeEngineFeedTest {
     /** 100 ms chunks like the central recording; sample value = chunk index. */
     private fun chunk(i: Int) = ByteArray(3200) { n -> if (n % 2 == 0) i.toByte() else 0 }
 
-    /** Wires [feed] into [hub] like the service; what the "Dart side" accepts (current token) is counted in [dart]. */
-    private class Wiring(val feed: WakeEngineFeed, val hub: CentralAudioHub) {
+    /** The service's wiring; the "Dart side" accepts the chunks of its current token, like `ServiceAudioInput`. */
+    private class Wiring(val feed: WakeEngineFeed = WakeEngineFeed(), val hub: CentralAudioHub = CentralAudioHub()) {
         var dartToken = 0L
         var dart = 0L
+        var requests = 0
 
         init {
-            hub.subscribe(AudioSubscriberKind.WAKE, "wake-engine", onChunk = { pcm ->
-                val args = feed.send(pcm)
+            feed.attach(hub) { args ->
                 if (args["token"] == dartToken) dart += (args["pcm"] as ByteArray).size / 2
-            })
+            }
         }
 
-        /** The listener (re)starts: new token on both sides, position 0. */
-        fun listenerStarts(token: Long) {
+        /** The listener (re)starts its stream: new token, position 0, `startMic` to the service. */
+        fun listenerStarts(token: Long, ignored: Boolean = false) {
             dartToken = token
             dart = 0
-            feed.restart(token)
+            feed.onStartMic(token, ignored) { requests++ }
         }
     }
 
     @Test
     fun aHitAfterADialogAndAResumeGetsOnlyTheFramesOnTheirWay() {
-        val hub = CentralAudioHub()
-        val w = Wiring(WakeEngineFeed(), hub)
+        val w = Wiring()
         var i = 0
         w.listenerStarts(1)
-        repeat(50) { hub.dispatchChunk(chunk(i++)) }
+        repeat(50) { w.hub.dispatchChunk(chunk(i++)) }
         // A dialog: the microphone keeps running (WP180), the wake stream is held back.
-        val session = hub.subscribe(AudioSubscriberKind.SESSION, onChunk = {})
-        repeat(80) { hub.dispatchChunk(chunk(i++)) }
-        hub.unsubscribe(session)
+        val session = w.hub.subscribe(AudioSubscriberKind.SESSION, onChunk = {})
+        repeat(80) { w.hub.dispatchChunk(chunk(i++)) }
+        w.hub.unsubscribe(session)
         // The listener resumes after the overlay: its position starts at 0 again.
         w.listenerStarts(2)
-        repeat(20) { hub.dispatchChunk(chunk(i++)) }
+        repeat(20) { w.hub.dispatchChunk(chunk(i++)) }
         assertEquals(20L * 1600, w.dart)
         // The listener's pre-roll ends 2 chunks before the newest: only those 2 are handed over.
         val tail = w.feed.tap.tailAfter(w.dart - 2 * 1600)
@@ -55,23 +56,28 @@ class WakeEngineFeedTest {
     }
 
     @Test
-    fun beforeWp189TheTapRanAheadAndHandedOverItsWholeBuffer() {
-        // The old counting (every microphone chunk since the microphone opened) against the
-        // listener's position after a resume: the full 3 s came back, the wake word again.
-        val tap = WakeMicTap()
-        repeat(150) { tap.onChunk(chunk(it)) }
-        val listenerPos = 18L * 1600
-        assertTrue(tap.tailAfter(listenerPos).size >= 3 * 16_000 * 2)
+    fun anIgnoredStartMicStillStartsTheCountAgain() {
+        val w = Wiring()
+        w.listenerStarts(1)
+        repeat(40) { w.hub.dispatchChunk(chunk(it)) }
+        // While a hit's audio is collected the service ignores the call (WP68), the count restarts anyway.
+        w.listenerStarts(2, ignored = true)
+        assertEquals(1, w.requests)
+        repeat(3) { w.hub.dispatchChunk(chunk(it)) }
+        assertEquals(w.dart, w.feed.tap.sent)
+        assertEquals(0, w.feed.tap.tailAfter(w.dart).size)
     }
 
     @Test
-    fun eachChunkCarriesTheTokenItWasCountedUnder() {
-        val feed = WakeEngineFeed()
-        assertEquals(0L, feed.send(chunk(0))["token"])
-        feed.restart(7)
-        assertEquals(0L, feed.tap.sent)
-        val args = feed.send(chunk(1))
-        assertEquals(7L, args["token"])
-        assertEquals(1600L, feed.tap.sent)
+    fun chunksOfAnOlderStreamAreNotCountedByTheListener() {
+        val w = Wiring()
+        w.listenerStarts(1)
+        repeat(5) { w.hub.dispatchChunk(chunk(it)) }
+        // The service restarted (e.g. after release) while the listener still runs on token 1.
+        w.feed.restart(0)
+        repeat(3) { w.hub.dispatchChunk(chunk(it)) }
+        assertEquals(5L * 1600, w.dart)
+        assertFalse(w.feed.tap.sent == w.dart)
+        assertTrue(w.feed.tap.tailAfter(w.dart).isEmpty())
     }
 }

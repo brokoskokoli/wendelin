@@ -27,9 +27,30 @@ internal class WakeEngineFeed(val tap: WakeMicTap = WakeMicTap()) {
         tap.reset()
     }
 
+    /**
+     * Wires the engine into [hub]: each chunk is counted when the hub dispatches it (in order, on
+     * the main thread), [deliver] gets the `audio` arguments (it may post them on).
+     */
+    fun attach(hub: CentralAudioHub, deliver: (Map<String, Any>) -> Unit) {
+        hub.subscribe(AudioSubscriberKind.WAKE, ENGINE_ID, onChunk = { pcm -> deliver(send(pcm)) })
+    }
+
+    /**
+     * The engine's `startMic` ([token], `null` = 0): the new stream counts from 0 in any case,
+     * the microphone is only asked for ([request]) when the call is not [ignored] (WP68).
+     */
+    fun onStartMic(token: Long?, ignored: Boolean, request: () -> Unit) {
+        restart(token ?: 0L)
+        if (!ignored) request()
+    }
+
     /** [pcm] goes to the engine now: counted, returned as the arguments of the `audio` call. */
     fun send(pcm: ByteArray): Map<String, Any> {
         tap.onChunk(pcm)
         return mapOf("pcm" to pcm, "token" to token)
+    }
+
+    companion object {
+        const val ENGINE_ID = "wake-engine"
     }
 }
