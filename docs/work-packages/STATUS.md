@@ -45,7 +45,7 @@ Stand: 2026-10-30; läuft: keiner; Release v0.1.6 (4ce2d167).
 | WP185 | Release 0.1.5 | gemergt 12a1eb08 | Release v0.1.5 veröffentlicht. |
 | WP186 | Overlay hält Bildschirm aktiv (FLAG_KEEP_SCREEN_ON) und schließt nicht vor Ende des Follow-Up-Fensters | gemergt 5de1eae7 | K148 offen. CI grün, Review FREIGABE. |
 | WP187 | Release 0.1.6 | gemergt 4ce2d167 | Release v0.1.6 veröffentlicht. |
-| WP188 | Audio-Einstellungen: Mikrofon und Ausgabe wählen | in Arbeit | K149 offen. Paket-Sitzung gestartet 2026-11-09. |
+| WP188 | Audio-Einstellungen: Mikrofon und Ausgabe wählen | gemergt 69a95ef4 | K149 offen. Review FREIGABE, CI grün. Offen: E2E (AVD Wendelin_AOSP_35 leer seit 2026-11-04, Test in james-wt/e2e-keep/wp188), Gerätetest `docs/testing/m5/wp188.md`, Verdrahtungstests `RecognizerAudio.kt:157`, `AudioPlaybackChannel.kt:133,146`; Latenz AudioTrack/Datei-Synthese ungemessen; Gerätewahl wirkt ab dem nächsten Clip; reine SCO-Ausgänge nicht wählbar; BLUETOOTH_CONNECT auf Android 12+ am Gerät bestätigen. |
 
 ## Offen
 
@@ -85,6 +85,7 @@ K138 offen, K139 offen, K140 offen, K141 offen, K142 offen, K144 offen, K145 off
 
 ## Nächste Schritte
 
-1. Release 0.1.6 auf Gerät testen.
+1. Release 0.1.6 auf Gerät testen; WP188 per Gerätetest `docs/testing/m5/wp188.md` prüfen.
+1a. Emulator-AVD `Wendelin_AOSP_35` neu anlegen (Abbild seit 2026-11-04 leer), danach offene E2E nachholen.
 2. Konzeptänderungen bestätigen lassen: K138, K139, K140, K141, K142, K144, K145, K146, K147, K148, K149 (Status: offen).
 5. Danach nur mit Go (M6): Prüfseite Weckwort-Archiv (dann Hey-Pflicht K115 und Training mit eigenem HW-Kopf), WP100/WP101, STT-Messung (K99), WP132, WP138.
