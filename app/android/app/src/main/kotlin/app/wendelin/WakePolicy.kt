@@ -250,12 +250,14 @@ object WakePolicy {
 
     /**
      * Why the microphone must be free right now: `call` (phone or voice call) or `recording`
-     * (another recording is active), else `null`. Every `MODE_IN_COMMUNICATION` counts as a call
-     * (WP165: the app itself never sets that mode).
+     * (another recording is active), else `null`. `MODE_IN_COMMUNICATION` counts as a call, except
+     * while the service itself holds it for the dialog's Bluetooth microphone ([ownCommMode], WP188
+     * part E): then only a cellular call (mode 2/4) or a foreign recording (a voice call of another
+     * app records) speaks for a call, so a real call during our mode still closes the microphone.
      */
-    fun conflict(audioMode: Int, foreignRecording: Boolean): String? = when {
+    fun conflict(audioMode: Int, foreignRecording: Boolean, ownCommMode: Boolean = false): String? = when {
         audioMode == MODE_IN_CALL ||
-            audioMode == MODE_IN_COMMUNICATION ||
+            (audioMode == MODE_IN_COMMUNICATION && !ownCommMode) ||
             audioMode == MODE_CALL_SCREENING -> "call"
         foreignRecording -> "recording"
         else -> null
@@ -518,6 +520,11 @@ object AppVoice {
         prune(nowMs)
         return sources.isNotEmpty()
     }
+
+    /** WP188: like [active], but a report older than [maxAgeMs] no longer counts (without pruning it). */
+    @Synchronized
+    fun activeWithin(nowMs: Long, maxAgeMs: Long): Boolean =
+        sources.values.any { nowMs - it < maxAgeMs && nowMs - it < MAX_ACTIVE_MS }
 
     /**
      * How long the service waits before it opens its microphone: 0 = now, [WAIT_FOR_APP] = the

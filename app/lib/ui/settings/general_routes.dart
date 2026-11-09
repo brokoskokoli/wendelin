@@ -4,6 +4,7 @@ import '../routes.dart';
 import 'app_language_screen.dart';
 import 'assistant_screen.dart';
 import 'attestation_log_screen.dart';
+import 'audio_screen.dart';
 import 'audit_log_screen.dart';
 import 'costs_screen.dart';
 import 'integrations_screen.dart';
@@ -42,5 +43,6 @@ Map<String, WidgetBuilder> generalRoutes() => {
   AppRoutes.voiceMetrics: (_) => const VoiceMetricsScreen(),
   AppRoutes.voiceLicenses: (_) => const VoiceLicensesScreen(),
   AppRoutes.wakeWord: (_) => const WakeWordScreen(),
+  AppRoutes.audio: (_) => const AudioScreen(),
   AppRoutes.speaker: (_) => const SpeakerScreen(),
 };

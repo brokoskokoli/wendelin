@@ -75,3 +75,9 @@ const windowChannelName = 'app.wendelin/window';
 
 /// `CentralAudioChannel.kt`: central audio capture service and ring buffer (WP180).
 const centralAudioChannelName = 'app.wendelin/central-audio';
+
+/// `AudioDevicesChannel.kt`: list of microphones and outputs, their choice (WP188).
+const audioDevicesChannelName = 'app.wendelin/audio-devices';
+
+/// `AudioPlaybackChannel.kt`: playback of speech and tones on the chosen output (WP188).
+const audioPlaybackChannelName = 'app.wendelin/audio-playback';

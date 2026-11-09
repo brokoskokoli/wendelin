@@ -12,17 +12,17 @@ internal data class RecordingClient(val session: Int, val silenced: Boolean)
 /**
  * Watches for things that need the microphone more than the wake word: a phone or voice call
  * (`AudioManager.mode`) and a recording of another app (`getActiveRecordingConfigurations`,
- * not the own session [ownSession]). [onChange] gets the reason (`call`, `recording`) or `null`
+ * not the own sessions [ownSessions]). [onChange] gets the reason (`call`, `recording`) or `null`
  * once the microphone is free again; it runs on the main thread. See [WakePolicy.conflict].
  */
 class WakeConflictWatcher(
     context: Context,
     private val main: Handler,
-    private val ownSession: () -> Int,
+    ownSessions: () -> Set<Int>,
     private val onChange: (String?) -> Unit,
 ) {
+    private val evaluator = ConflictEvaluator(ownSessions, onChange = onChange)
     private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    private var last: String? = null
     private var running = false
 
     private val callback = object : AudioManager.AudioRecordingCallback() {
@@ -43,7 +43,7 @@ class WakeConflictWatcher(
     fun start() {
         if (running) return
         running = true
-        last = null
+        evaluator.reset()
         audio.registerAudioRecordingCallback(callback, main)
         main.post(poll)
     }
@@ -60,11 +60,7 @@ class WakeConflictWatcher(
         val clients = configs.map {
             RecordingClient(it.clientAudioSessionId, silencedKnown && it.isClientSilenced)
         }
-        val reason = reasonFor(audio.mode, ownSession(), clients)
-        if (reason != last) {
-            last = reason
-            onChange(reason)
-        }
+        evaluator.update(audio.mode, clients)
     }
 
     companion object {
@@ -74,9 +70,43 @@ class WakeConflictWatcher(
          * The reason for the current state: a recording of another session that is not silenced
          * counts.
          */
-        internal fun reasonFor(audioMode: Int, ownSession: Int, clients: List<RecordingClient>): String? {
-            val foreign = clients.any { it.session != ownSession && !it.silenced }
-            return WakePolicy.conflict(audioMode, foreign)
+        internal fun reasonFor(audioMode: Int, ownSession: Int, clients: List<RecordingClient>): String? =
+            reasonFor(audioMode, setOf(ownSession), clients)
+
+        /** WP188: while the microphone moves to another device two own recordings run at once. */
+        internal fun reasonFor(
+            audioMode: Int,
+            ownSessions: Set<Int>,
+            clients: List<RecordingClient>,
+            ownCommMode: Boolean = false,
+        ): String? {
+            val foreign = clients.any { it.session !in ownSessions && !it.silenced }
+            return WakePolicy.conflict(audioMode, foreign, ownCommMode)
+        }
+    }
+}
+
+/**
+ * The decision part of [WakeConflictWatcher] without Android types: from mode and recordings to
+ * the reason, passed on to [onChange] only when it changes. [ownCommMode] defaults to the flag of
+ * the dialog's phone mode ([OwnCommMode], WP188): that mode is not a call.
+ */
+internal class ConflictEvaluator(
+    private val ownSessions: () -> Set<Int>,
+    private val ownCommMode: () -> Boolean = { OwnCommMode.active },
+    private val onChange: (String?) -> Unit,
+) {
+    private var last: String? = null
+
+    fun reset() {
+        last = null
+    }
+
+    fun update(audioMode: Int, clients: List<RecordingClient>) {
+        val reason = WakeConflictWatcher.reasonFor(audioMode, ownSessions(), clients, ownCommMode())
+        if (reason != last) {
+            last = reason
+            onChange(reason)
         }
     }
 }

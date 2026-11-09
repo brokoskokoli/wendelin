@@ -53,17 +53,56 @@ interface RecognizerAudioSource {
     }
 }
 
-/** The microphone (`AudioRecord`, source `VOICE_RECOGNITION`), attributed to the calling app. */
-class MicAudioSource(private val context: Context) : RecognizerAudioSource {
+/**
+ * The microphone (`AudioRecord`, source `VOICE_RECOGNITION`), attributed to the calling app.
+ *
+ * With a [router] (the wake service, WP188) the chosen microphone is preferred, and [reroute]
+ * follows device changes while recording through [SwitchingReader]. Without one (the recognition
+ * service) it is the plain system route, exactly as before.
+ */
+class MicAudioSource(private val context: Context, private val router: MicRouter? = null) : RecognizerAudioSource {
     private val state = ReadState()
     private var thread: Thread? = null
+    @Volatile private var reader: SwitchingReader? = null
+    private val routing = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "wendelin-mic-route") }
 
-    /** Audio session of the running recording (0 before the start): tells it from foreign ones. */
-    @Volatile var sessionId = 0
-        private set
+    /** Audio sessions of the running recordings (empty before the start): tell them from foreign ones. */
+    val sessionIds: Set<Int> get() = reader?.sessionIds ?: emptySet()
 
     @SuppressLint("MissingPermission") // Checked by the service before.
     override fun start(onChunk: (ByteArray) -> Unit, onError: (Throwable) -> Unit) {
+        val target = router?.target() ?: MicTarget.SYSTEM
+        val first = try {
+            openTrack(target)
+        } catch (e: RuntimeException) {
+            // The chosen device did not open: the system route, as if nothing was chosen.
+            if (target.info == null) throw e
+            VoiceLog.i("wake-mic-route fallback=system from=${target.type}")
+            openTrack(MicTarget.SYSTEM)
+        }
+        val switching = SwitchingReader(first, onEvent = { VoiceLog.i("wake-mic-route $it") })
+        reader = switching
+        state.begin()
+        thread = Thread({
+            try {
+                readChunks(
+                    reader = switching,
+                    chunkBytes = RecognizerAudioSource.CHUNK_SAMPLES * 2,
+                    running = { state.running },
+                    flushOnStop = { state.flushOnStop },
+                    onChunk = onChunk,
+                )
+            } catch (e: Throwable) {
+                if (state.running) onError(e)
+            } finally {
+                switching.releaseAll()
+            }
+        }, "wendelin-recognizer-mic").also { it.start() }
+    }
+
+    /** Builds and starts one `AudioRecord`, on [target]'s device if it has one (`setPreferredDevice`). */
+    @SuppressLint("MissingPermission")
+    private fun openTrack(target: MicTarget, onSession: (Int) -> Unit = {}): MicTrack {
         val minBuffer = AudioRecord.getMinBufferSize(
             RecognizerAudioSource.SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,
@@ -84,35 +123,57 @@ class MicAudioSource(private val context: Context) : RecognizerAudioSource {
             record.release()
             throw IllegalStateException("AudioRecord not initialized")
         }
+        if (target.info != null && !record.setPreferredDevice(target.info)) {
+            record.release()
+            throw IllegalStateException("preferred device refused")
+        }
+        // Before the start: it triggers the system's recording callback at once (WP188).
+        onSession(record.audioSessionId)
         record.startRecording()
-        sessionId = record.audioSessionId
-        state.begin()
-        thread = Thread({
-            try {
-                readChunks(
-                    reader = object : PcmReader {
-                        override fun read(buf: ByteArray, off: Int, len: Int) = record.read(buf, off, len)
+        return RecordTrack(record, target.key)
+    }
 
-                        override fun readAvailable(buf: ByteArray, off: Int, len: Int) =
-                            record.read(buf, off, len, AudioRecord.READ_NON_BLOCKING)
-                    },
-                    chunkBytes = RecognizerAudioSource.CHUNK_SAMPLES * 2,
-                    running = { state.running },
-                    flushOnStop = { state.flushOnStop },
-                    onChunk = onChunk,
-                )
-            } catch (e: Throwable) {
-                if (state.running) onError(e)
-            } finally {
-                record.stop()
-                record.release()
+    /**
+     * Follows a change of the choice or of the connected devices (any thread): if the wanted route
+     * differs from the running one, a second recording is opened on it and takes over when it
+     * delivers ([SwitchingReader]); the running one goes on until then. Same route: nothing happens.
+     */
+    fun reroute() {
+        val r = router ?: return
+        if (reader == null) return
+        try {
+            routing.execute {
+                try {
+                    val target = r.target()
+                    val live = reader ?: return@execute
+                    when (MicRoute.decide(live.activeKey, live.hasPending, live.pendingKey, target.key)) {
+                        MicRoute.Action.KEEP -> Unit
+                        MicRoute.Action.CANCEL_PENDING -> live.cancelPending()
+                        MicRoute.Action.SWITCH -> {
+                            VoiceLog.i("wake-mic-route to=${target.type}")
+                            var session = 0
+                            try {
+                                val track = openTrack(target) { session = it; live.expect(it) }
+                                // Stopped meanwhile: do not leave a recording behind (offer frees it after releaseAll).
+                                if (state.running && reader === live) live.offer(track) else track.release()
+                            } finally {
+                                live.unexpect(session)
+                            }
+                        }
+                    }
+                } catch (e: RuntimeException) {
+                    VoiceLog.i("wake-mic-route failed=${e.javaClass.simpleName}")
+                }
             }
-        }, "wendelin-recognizer-mic").also { it.start() }
+        } catch (_: java.util.concurrent.RejectedExecutionException) {
+            // Stopped.
+        }
     }
 
     override fun stop() {
         state.stop()
         thread = null
+        routing.shutdown()
     }
 
     /**
@@ -123,11 +184,31 @@ class MicAudioSource(private val context: Context) : RecognizerAudioSource {
         val t = thread
         state.stopForHandoff()
         thread = null
+        routing.shutdown()
         try {
             t?.join(timeoutMs)
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
         }
+    }
+}
+
+/** An `AudioRecord` as [MicTrack]. */
+private class RecordTrack(private val record: AudioRecord, override val key: String?) : MicTrack {
+    override val sessionId: Int = record.audioSessionId
+
+    override fun read(buf: ByteArray, off: Int, len: Int) = record.read(buf, off, len)
+
+    override fun readAvailable(buf: ByteArray, off: Int, len: Int) =
+        record.read(buf, off, len, AudioRecord.READ_NON_BLOCKING)
+
+    override fun release() {
+        try {
+            record.stop()
+        } catch (_: IllegalStateException) {
+            // Already stopped.
+        }
+        record.release()
     }
 }
 

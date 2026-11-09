@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
-import '../platform/voice/audio_playback.dart';
 import '../platform/voice/central_audio_input.dart';
 import '../platform/voice/onnx_wake_models.dart';
 import '../platform/voice/pcm.dart';
@@ -21,6 +20,7 @@ import '../voice/wake/wake_barge_in.dart';
 import '../voice/wake/wake_storage.dart';
 import '../voice/wake/wake_template_audit.dart';
 import 'app_settings.dart';
+import 'audio_devices_providers.dart';
 import 'core_providers.dart';
 import 'dispose_tracker.dart';
 import 'preferences.dart';
@@ -424,8 +424,7 @@ final wakeAudioProvider = Provider<AudioInput>((ref) {
 /// Short tone (880 Hz, 0.35 s) asking the speaker to say „Wendelin“ during
 /// the calibration (replaced in tests).
 final wakePromptToneProvider = Provider<Future<void> Function()>((ref) {
-  final playback = AudioplayersPlayback();
-  onDisposeTracked(ref, playback.dispose);
+  final playback = createRoutedPlayback(ref);
   final samples = Int16List(5600);
   for (var i = 0; i < samples.length; i++) {
     final fade = math.min(1.0, math.min(i, samples.length - i) / 800);

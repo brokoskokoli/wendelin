@@ -1,4 +1,33 @@
 {
+  "areaAudio": "Audio",
+  "areaAudioDetail": "Choisir le micro et la sortie pour la voix de Wendelin",
+  "audioInUse": "Utilisé actuellement : {name}",
+  "@audioInUse": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "audioInUseSystem": "Utilisé actuellement : système",
+  "audioInput": "Microphone",
+  "audioIntro": "Le choix ne vaut que pour la voix et les sons de Wendelin, pas pour la musique d’autres applications.",
+  "audioMissing": "non connecté, le système est utilisé",
+  "audioOutput": "Sortie",
+  "audioSaveFailed": "Le choix n’a pas pu être enregistré.",
+  "audioSystem": "Système",
+  "audioSystemDetail": "Android choisit l’appareil (par défaut)",
+  "audioTypeBluetoothA2dp": "Bluetooth (musique)",
+  "audioTypeBluetoothLe": "Bluetooth LE",
+  "audioTypeBluetoothSco": "Bluetooth (casque)",
+  "audioTypeBuiltinMic": "Micro intégré",
+  "audioTypeBuiltinSpeaker": "Haut-parleur intégré",
+  "audioTypeEarpiece": "Écouteur",
+  "audioTypeHearingAid": "Appareil auditif",
+  "audioTypeLine": "Ligne",
+  "audioTypeOther": "Autre",
+  "audioTypeUsb": "USB",
+  "audioTypeWiredHeadset": "Casque filaire",
   "batteryAllow": "Autoriser sans restriction",
   "batteryChecklistNote": "Android ne permet pas de lire ces paramètres. Il s’agit d’une liste de contrôle, pas d’un état.",
   "batteryHuaweiBody": "Réglez « Lancement des applications » pour Wendelin sur « Gérer manuellement » et autorisez le démarrage automatique, le démarrage secondaire et l’activité en arrière-plan.",

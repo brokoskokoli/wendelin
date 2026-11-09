@@ -3,11 +3,12 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../platform/channel_audio_focus_port.dart';
 import '../platform/channel_memory_trim.dart';
-import '../platform/voice/audio_playback.dart';
 import '../platform/voice/central_audio_bridge.dart';
 import '../platform/voice/central_audio_input.dart';
 import '../platform/voice/ducking_tts.dart';
@@ -18,6 +19,7 @@ import '../platform/voice/sherpa_tts.dart';
 import '../platform/voice/silero_vad.dart';
 import '../platform/voice/stt_loader.dart';
 import '../platform/voice/system_tts.dart';
+import '../platform/voice/system_tts_render.dart';
 import '../platform/voice/whisper_stt.dart';
 import '../voice/latency_trace.dart';
 import '../voice/model_check.dart';
@@ -25,6 +27,7 @@ import '../voice/voice_log.dart';
 import '../voice/voice_metrics.dart';
 import '../voice/wake/mic_tail.dart';
 import 'app_settings.dart';
+import 'audio_devices_providers.dart';
 import 'core_providers.dart';
 import 'dispose_tracker.dart';
 import 'hint_term_providers.dart';
@@ -326,8 +329,20 @@ void _trace(Ref ref, void Function(LatencyTrace trace) f) {
   }
 }
 
-/// Android system TTS.
-final systemTtsProvider = Provider<TextToSpeech>((ref) => SystemTextToSpeech());
+/// Android system TTS. With a chosen output device (WP188) the speech is rendered into a file
+/// in the app cache and played on that device; without a choice the engine
+/// speaks directly.
+final systemTtsProvider = Provider<TextToSpeech>((ref) {
+  final tts = FlutterTts();
+  final out = createRoutedPlayback(ref);
+  return SystemTextToSpeech(
+    tts: tts,
+    renderer: SystemSpeechRenderer(tts, directory: getTemporaryDirectory),
+    playback: out,
+    hasChoice: out.hasChoice,
+    choicePending: out.choicePending,
+  );
+});
 
 /// Installed sherpa-onnx voices: each voice archive is unpacked into
 /// `<model dir>/<archive name>/` (see `ModelInstaller.unpackedDir`).
@@ -393,9 +408,7 @@ TextToSpeech createSherpaTts(
           await ref.read(speechModelServiceProvider.future),
           ref.read(speechModelCatalogProvider),
         );
-  final own = playback == null ? AudioplayersPlayback() : null;
-  if (own != null) onDisposeTracked(ref, own.dispose);
-  final out = playback ?? own!;
+  final out = playback ?? createRoutedPlayback(ref);
   return SherpaTextToSpeech(
     installed: voices,
     synthesizer: ref.watch(sherpaSynthesizerProvider),

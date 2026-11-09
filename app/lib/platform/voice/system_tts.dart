@@ -1,8 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
+
+import 'pcm.dart';
+import 'sherpa_tts.dart' show AudioPlayback;
+import 'system_tts_render.dart';
 
 /// System speech output (Android `TextToSpeech`) via `flutter_tts`.
 ///
@@ -16,6 +21,11 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 ///   throws `VoiceException(unavailable)` instead of using the engine
 ///   default; [isAvailable] is false without any offline voice, so
 ///   `TtsSelector` uses the sherpa voice.
+/// - With a chosen output device ([hasChoice] true, WP188) the text is
+///   rendered into a temporary file ([renderer]) and played by [playback]
+///   on that device. Without a choice nothing changes: the engine speaks
+///   directly. If the rendering fails or times out, the engine speaks
+///   directly (the answer is never lost); after a stop nothing follows.
 /// - Utterances run one after the other; [stop] ends the current one and
 ///   drops the waiting ones. Rate 1.0 is the engine's normal speed.
 final class SystemTextToSpeech implements TextToSpeech {
@@ -23,7 +33,24 @@ final class SystemTextToSpeech implements TextToSpeech {
   SystemTextToSpeech({
     FlutterTts? tts,
     this.timeout = const Duration(minutes: 2),
+    this.renderer,
+    this.playback,
+    this.hasChoice,
+    this.choicePending,
   }) : _given = tts;
+
+  /// Renders the speech into memory for the chosen output (see above).
+  final SystemSpeechRenderer? renderer;
+
+  /// Plays the rendered speech on the chosen output.
+  final AudioPlayback? playback;
+
+  /// Whether an output device is chosen (read on every utterance).
+  final bool Function()? hasChoice;
+
+  /// A future while the stored choice is not read yet, else `null`.
+  final Future<void>? Function()? choicePending;
+  var _viaTrack = false;
 
   final FlutterTts? _given;
   late final FlutterTts _tts = _given ?? FlutterTts();
@@ -114,9 +141,19 @@ final class SystemTextToSpeech implements TextToSpeech {
       await _tts.setVoice({'name': chosen.id, 'locale': chosen.language});
       // flutter_tts: 0.5 is the normal rate on every platform.
       await _tts.setSpeechRate((rate * 0.5).clamp(0.05, 1.0));
+      final pending = _choicePending();
+      if (pending != null) {
+        try {
+          await pending;
+        } on Object {
+          // Unreadable choice: direct.
+        }
+      }
       if (generation != _generation) return;
       _set(TtsState.speaking);
       try {
+        // Direct path: no await before the engine speaks (as before WP188).
+        if (_outputChosen() && await _speakChosen(text, generation)) return;
         await _tts.speak(text).timeout(timeout);
       } on TimeoutException {
         await _tts.stop();
@@ -128,10 +165,61 @@ final class SystemTextToSpeech implements TextToSpeech {
     return run;
   }
 
+  Future<void>? _choicePending() {
+    try {
+      return choicePending?.call();
+    } on Object {
+      return null;
+    }
+  }
+
+  bool _outputChosen() {
+    if (renderer == null || playback == null) return false;
+    try {
+      return hasChoice?.call() ?? false;
+    } on Object {
+      return false; // unreadable choice: direct
+    }
+  }
+
+  /// Speaks on the chosen output; true when done (played or stopped), false
+  /// when the engine has to speak directly (no choice, rendering failed).
+  Future<bool> _speakChosen(String text, int generation) async {
+    final render = renderer;
+    final out = playback;
+    if (render == null || out == null) return false;
+    // A state listener may stop us inside `_set(speaking)`, before this runs.
+    if (generation != _generation) return true;
+    final Wav wav;
+    try {
+      wav = await render.render(text);
+    } on Object catch (e) {
+      if (generation != _generation) return true; // stopped: no fallback
+      debugPrint('Systemstimme: Datei-Synthese fehlgeschlagen ($e), direkt');
+      return false;
+    }
+    if (generation != _generation) return true;
+    _viaTrack = true;
+    try {
+      await out.play(wav);
+    } finally {
+      _viaTrack = false;
+    }
+    return true;
+  }
+
   @override
   Future<void> stop() async {
     _generation++;
     if (_state == TtsState.idle) return;
+    renderer?.cancel();
+    if (_viaTrack) {
+      try {
+        await playback?.stop();
+      } on Object {
+        // Playback already gone.
+      }
+    }
     try {
       await _tts.stop();
     } on Object {

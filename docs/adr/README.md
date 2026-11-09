@@ -27,3 +27,5 @@ Status: **angenommen** (gilt), **teilweise überholt** (gilt mit dem Vermerk am 
 | [0021](0021-engine-group-statt-engine-je-overlay.md) | Engine-Group statt Flutter-Engine je Overlay (WP145) | angenommen |
 | [0022](0022-sicherheitsstufe-je-tool-und-geraet.md) | Sicherheitsstufe je Tool und je Home-Assistant-Gerät (WP154) | angenommen |
 | [0023](0023-sitzungssperre-und-abfluss-schutz.md) | Sitzungssperre und Abfluss-Schutz (WP157) | angenommen |
+| [0024](0024-zentrale-audio-aufnahme-dienst.md) | Zentrale Audio-Aufnahme und Ringpuffer im Dienst (WP180) | vorgeschlagen |
+| [0025](0025-audio-geraetewahl-abspielweg-bluetooth-dialog.md) | Audio-Gerätewahl, eigener Abspielweg, Bluetooth-Mikrofon nur im Dialog (WP188) | Entwurf |

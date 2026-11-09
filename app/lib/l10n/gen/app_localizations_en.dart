@@ -1431,6 +1431,76 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get areaAudio => 'Audio';
+
+  @override
+  String get areaAudioDetail =>
+      'Choose microphone and output for Wendelin’s speech';
+
+  @override
+  String audioInUse(String name) {
+    return 'In use now: $name';
+  }
+
+  @override
+  String get audioInUseSystem => 'In use now: System';
+
+  @override
+  String get audioInput => 'Microphone';
+
+  @override
+  String get audioIntro =>
+      'The choice applies only to Wendelin’s speech and sounds, not to music from other apps.';
+
+  @override
+  String get audioMissing => 'not connected, system is used';
+
+  @override
+  String get audioOutput => 'Output';
+
+  @override
+  String get audioSaveFailed => 'The choice could not be saved.';
+
+  @override
+  String get audioSystem => 'System';
+
+  @override
+  String get audioSystemDetail => 'Android picks the device (default)';
+
+  @override
+  String get audioTypeBluetoothA2dp => 'Bluetooth (music)';
+
+  @override
+  String get audioTypeBluetoothLe => 'Bluetooth LE';
+
+  @override
+  String get audioTypeBluetoothSco => 'Bluetooth (headset)';
+
+  @override
+  String get audioTypeBuiltinMic => 'Built-in microphone';
+
+  @override
+  String get audioTypeBuiltinSpeaker => 'Built-in speaker';
+
+  @override
+  String get audioTypeEarpiece => 'Earpiece';
+
+  @override
+  String get audioTypeHearingAid => 'Hearing aid';
+
+  @override
+  String get audioTypeLine => 'Line';
+
+  @override
+  String get audioTypeOther => 'Other';
+
+  @override
+  String get audioTypeUsb => 'USB';
+
+  @override
+  String get audioTypeWiredHeadset => 'Wired headset';
+
+  @override
   String get batteryAllow => 'Allow no restriction';
 
   @override

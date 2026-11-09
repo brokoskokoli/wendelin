@@ -2554,6 +2554,138 @@ abstract class AppLocalizations {
   /// **'Noch {n}× tippen, um den Entwicklermodus einzuschalten'**
   String developerModeStepsToOn(int n);
 
+  /// No description provided for @areaAudio.
+  ///
+  /// In de, this message translates to:
+  /// **'Audio'**
+  String get areaAudio;
+
+  /// No description provided for @areaAudioDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Mikrofon und Ausgabe für Wendelins Sprache wählen'**
+  String get areaAudioDetail;
+
+  /// No description provided for @audioInUse.
+  ///
+  /// In de, this message translates to:
+  /// **'Gerade benutzt: {name}'**
+  String audioInUse(String name);
+
+  /// No description provided for @audioInUseSystem.
+  ///
+  /// In de, this message translates to:
+  /// **'Gerade benutzt: System'**
+  String get audioInUseSystem;
+
+  /// No description provided for @audioInput.
+  ///
+  /// In de, this message translates to:
+  /// **'Mikrofon'**
+  String get audioInput;
+
+  /// No description provided for @audioIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Wahl gilt nur für Wendelins Sprache und Töne, nicht für Musik anderer Apps.'**
+  String get audioIntro;
+
+  /// No description provided for @audioMissing.
+  ///
+  /// In de, this message translates to:
+  /// **'nicht verbunden, System wird benutzt'**
+  String get audioMissing;
+
+  /// No description provided for @audioOutput.
+  ///
+  /// In de, this message translates to:
+  /// **'Ausgabe'**
+  String get audioOutput;
+
+  /// No description provided for @audioSaveFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Wahl konnte nicht gespeichert werden.'**
+  String get audioSaveFailed;
+
+  /// No description provided for @audioSystem.
+  ///
+  /// In de, this message translates to:
+  /// **'System'**
+  String get audioSystem;
+
+  /// No description provided for @audioSystemDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Android wählt das Gerät (Standard)'**
+  String get audioSystemDetail;
+
+  /// No description provided for @audioTypeBluetoothA2dp.
+  ///
+  /// In de, this message translates to:
+  /// **'Bluetooth (Musik)'**
+  String get audioTypeBluetoothA2dp;
+
+  /// No description provided for @audioTypeBluetoothLe.
+  ///
+  /// In de, this message translates to:
+  /// **'Bluetooth LE'**
+  String get audioTypeBluetoothLe;
+
+  /// No description provided for @audioTypeBluetoothSco.
+  ///
+  /// In de, this message translates to:
+  /// **'Bluetooth (Headset)'**
+  String get audioTypeBluetoothSco;
+
+  /// No description provided for @audioTypeBuiltinMic.
+  ///
+  /// In de, this message translates to:
+  /// **'Eingebautes Mikrofon'**
+  String get audioTypeBuiltinMic;
+
+  /// No description provided for @audioTypeBuiltinSpeaker.
+  ///
+  /// In de, this message translates to:
+  /// **'Eingebauter Lautsprecher'**
+  String get audioTypeBuiltinSpeaker;
+
+  /// No description provided for @audioTypeEarpiece.
+  ///
+  /// In de, this message translates to:
+  /// **'Hörmuschel'**
+  String get audioTypeEarpiece;
+
+  /// No description provided for @audioTypeHearingAid.
+  ///
+  /// In de, this message translates to:
+  /// **'Hörgerät'**
+  String get audioTypeHearingAid;
+
+  /// No description provided for @audioTypeLine.
+  ///
+  /// In de, this message translates to:
+  /// **'Line'**
+  String get audioTypeLine;
+
+  /// No description provided for @audioTypeOther.
+  ///
+  /// In de, this message translates to:
+  /// **'Sonstiges'**
+  String get audioTypeOther;
+
+  /// No description provided for @audioTypeUsb.
+  ///
+  /// In de, this message translates to:
+  /// **'USB'**
+  String get audioTypeUsb;
+
+  /// No description provided for @audioTypeWiredHeadset.
+  ///
+  /// In de, this message translates to:
+  /// **'Kabel-Headset'**
+  String get audioTypeWiredHeadset;
+
   /// No description provided for @batteryAllow.
   ///
   /// In de, this message translates to:

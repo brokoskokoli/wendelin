@@ -104,6 +104,9 @@ abstract final class AppRoutes {
   /// Wake word: learn the voice, calibrate, try (WP60).
   static const wakeWord = '/settings/voice/wake';
 
+  /// Audio: microphone and output device (WP188, Android only).
+  static const audio = '/settings/audio';
+
   /// Speaker recognition: switch, model, people (WP92a).
   static const speaker = '/settings/voice/speaker';
 

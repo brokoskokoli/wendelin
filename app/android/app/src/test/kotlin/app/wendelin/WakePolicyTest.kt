@@ -174,7 +174,7 @@ class WakePolicyTest {
 
     @Test
     fun inCommunicationModeIsAlwaysACall() {
-        // WP165: the app sets no communication mode itself, so mode 3 is never its own.
+        // WP165: without the own-mode flag of WP188 part E, mode 3 is always foreign.
         assertEquals("call", WakePolicy.conflict(audioMode = 3, foreignRecording = false))
         assertEquals("call", WakeConflictWatcher.reasonFor(audioMode = 3, ownSession = 1, clients = emptyList()))
     }

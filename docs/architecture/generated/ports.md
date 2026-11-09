@@ -6,6 +6,7 @@ Alle `abstract interface class` mit Namensendung `Port`, `Api`, `Secrets` oder `
 
 | Port | Paket | Datei | Implementierer | Fakes |
 | --- | --- | --- | --- | --- |
+| `AudioDevicesPort` | `app` | `app/lib/platform/voice/audio_devices.dart` | `ChannelAudioDevicesPort` (`app/lib/platform/voice/audio_devices.dart`) | `FakeAudioDevicesPort` (`app/lib/platform/voice/audio_devices_fake.dart`) |
 | `AudioFocusPort` | `app` | `app/lib/platform/channel_audio_focus_port.dart` | `ChannelAudioFocusPort` (`app/lib/platform/channel_audio_focus_port.dart`) | – |
 | `AlarmPort` | `wendelin_integrations` | `packages/wendelin_integrations/lib/src/alarms/alarms.dart` | `AndroidAlarmPort` (`app/lib/platform/android_alarm_port.dart`) | `FakeAlarmPort` (`packages/wendelin_integrations/lib/testing/fake_alarm_port.dart`) |
 | `AppPresencePort` | `wendelin_integrations` | `packages/wendelin_integrations/lib/src/common/app_presence.dart` | `ChannelAppPresencePort` (`app/lib/platform/channel_app_presence_port.dart`) | `FakeAppPresencePort` (`packages/wendelin_integrations/lib/testing/fake_app_presence_port.dart`) |

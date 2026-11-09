@@ -28,6 +28,9 @@ class SettingsScreen extends ConsumerWidget {
     (l.areaAssistant, l.areaAssistantDetail, AppRoutes.assistant),
     (l.areaSpeech, l.areaSpeechDetail, AppRoutes.voice),
     (l.areaWakeWord, l.areaWakeWordDetail, AppRoutes.wakeWord),
+    // WP188: the device choice exists on Android only.
+    if (defaultTargetPlatform == TargetPlatform.android)
+      (l.areaAudio, l.areaAudioDetail, AppRoutes.audio),
     (l.stationTitle, l.stationSettingsDetail, AppRoutes.station),
     (l.appLanguageTitle, l.appLanguageDetail, AppRoutes.appLanguage),
   ];

@@ -1,4 +1,33 @@
 {
+  "areaAudio": "Audio",
+  "areaAudioDetail": "Choose microphone and output for Wendelin’s speech",
+  "audioInUse": "In use now: {name}",
+  "@audioInUse": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "audioInUseSystem": "In use now: System",
+  "audioInput": "Microphone",
+  "audioIntro": "The choice applies only to Wendelin’s speech and sounds, not to music from other apps.",
+  "audioMissing": "not connected, system is used",
+  "audioOutput": "Output",
+  "audioSaveFailed": "The choice could not be saved.",
+  "audioSystem": "System",
+  "audioSystemDetail": "Android picks the device (default)",
+  "audioTypeBluetoothA2dp": "Bluetooth (music)",
+  "audioTypeBluetoothLe": "Bluetooth LE",
+  "audioTypeBluetoothSco": "Bluetooth (headset)",
+  "audioTypeBuiltinMic": "Built-in microphone",
+  "audioTypeBuiltinSpeaker": "Built-in speaker",
+  "audioTypeEarpiece": "Earpiece",
+  "audioTypeHearingAid": "Hearing aid",
+  "audioTypeLine": "Line",
+  "audioTypeOther": "Other",
+  "audioTypeUsb": "USB",
+  "audioTypeWiredHeadset": "Wired headset",
   "batteryAllow": "Allow no restriction",
   "batteryChecklistNote": "Android does not allow reading these settings. This is a checklist, not a status.",
   "batteryHuaweiBody": "Set “App launch” for Wendelin to “Manage manually” and allow autostart, secondary launch and background activity.",
