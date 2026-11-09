@@ -26,8 +26,7 @@ class WakeWordService : Service() {
     private val main = Handler(Looper.getMainLooper())
     private var engine: RecognizerEngine? = null
     private var mic: MicAudioSource? = null
-    private val micRouter by lazy { MicRouter(this) }
-    private val dialogMic by lazy { DialogMicController(DialogMicOps(this, main, micRouter, { mic != null }, { mic?.reroute() })) }
+    private val micRouting by lazy { WakeMicRouting(this, main) { mic } }
     private val inbox = java.util.concurrent.ConcurrentLinkedQueue<Pair<ByteArray, Long>>()
     private val tap = WakeMicTap()
     val hub = CentralAudioHub()
@@ -151,7 +150,7 @@ class WakeWordService : Service() {
             VoiceLog.i("wake-mic-start skipped=conflict reason=${conflicts.last}")
             return
         }
-        val source = MicAudioSource(this, micRouter)
+        val source = MicAudioSource(this, micRouting.router)
         tap.reset()
         try {
             source.start(
@@ -170,7 +169,7 @@ class WakeWordService : Service() {
                 },
             )
             mic = source
-            micRouter.watch(main) { dialogMic.evaluate(); mic?.reroute() }.also { dialogMic.evaluate() } // WP188
+            micRouting.micStarted()
         } catch (e: Exception) {
             VoiceLog.i("wake-mic-error error=${e.javaClass.simpleName}")
             engine?.send("audioError", mapOf("message" to e.javaClass.simpleName))
@@ -197,7 +196,7 @@ class WakeWordService : Service() {
     }
 
     private fun stopMic() {
-        micRouter.unwatch(); dialogMic.release() // no microphone, no phone mode (conflict, error, stop)
+        micRouting.micStopped()
         mic?.stop()
         mic = null
         inbox.clear()
@@ -401,7 +400,10 @@ class WakeWordService : Service() {
         fun onAppVoice(source: String, active: Boolean) {
             AppVoice.set(source, active, System.currentTimeMillis())
             val s = instance ?: return
-            s.main.post { s.micDeferral.appVoiceChanged(); s.dialogMic.evaluate() }
+            s.main.post {
+                s.micDeferral.appVoiceChanged()
+                s.micRouting.appVoiceChanged()
+            }
         }
 
         /** WP148: the developer mode changed; the running wake engine follows without a restart. */
