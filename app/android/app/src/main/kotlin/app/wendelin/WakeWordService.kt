@@ -27,6 +27,9 @@ class WakeWordService : Service() {
     private var engine: RecognizerEngine? = null
     private var mic: MicAudioSource? = null
     private val micRouter by lazy { MicRouter(this) }
+    private val dialogMic by lazy {
+        DialogMicController(DialogMicOps(this, main, micRouter, { mic != null }, { mic?.reroute() }))
+    }
     private val inbox = java.util.concurrent.ConcurrentLinkedQueue<Pair<ByteArray, Long>>()
     private val tap = WakeMicTap()
     val hub = CentralAudioHub()
@@ -170,7 +173,11 @@ class WakeWordService : Service() {
             )
             mic = source
             // Chosen microphone or devices change: the recording follows without a restart (WP188).
-            micRouter.watch(main) { mic?.reroute() }
+            micRouter.watch(main) {
+                dialogMic.evaluate()
+                mic?.reroute()
+            }
+            dialogMic.evaluate()
         } catch (e: Exception) {
             VoiceLog.i("wake-mic-error error=${e.javaClass.simpleName}")
             engine?.send("audioError", mapOf("message" to e.javaClass.simpleName))
@@ -198,6 +205,8 @@ class WakeWordService : Service() {
 
     private fun stopMic() {
         micRouter.unwatch()
+        // No microphone, no phone mode: also on a conflict, an error and the service stop.
+        dialogMic.release()
         mic?.stop()
         mic = null
         inbox.clear()
@@ -401,7 +410,10 @@ class WakeWordService : Service() {
         fun onAppVoice(source: String, active: Boolean) {
             AppVoice.set(source, active, System.currentTimeMillis())
             val s = instance ?: return
-            s.main.post { s.micDeferral.appVoiceChanged() }
+            s.main.post {
+                s.micDeferral.appVoiceChanged()
+                s.dialogMic.evaluate()
+            }
         }
 
         /** WP148: the developer mode changed; the running wake engine follows without a restart. */

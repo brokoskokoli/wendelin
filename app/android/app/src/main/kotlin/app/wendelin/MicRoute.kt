@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicReference
 internal object MicRoute {
     /**
      * Raw `AudioDeviceInfo` types that part D does not set: Bluetooth SCO (7) and LE (26) belong
-     * to the dialog only (part E), so they count as "system" here.
+     * to the dialog only (part E): outside it they count as "system" here.
      */
     private val DEFERRED_TYPES = setOf(7, 26)
 
@@ -17,12 +17,13 @@ internal object MicRoute {
      * The key of the device to prefer, `null` = system default: the selected device if it is
      * connected as an input and not deferred, else `null` (not chosen, gone, Bluetooth).
      */
-    fun target(selected: AudioDeviceEntry?, devices: List<AudioDeviceDesc>): String? {
+    fun target(selected: AudioDeviceEntry?, devices: List<AudioDeviceDesc>, dialogBluetooth: Boolean = false): String? {
         val key = selected?.key ?: return null
         val d = devices.firstOrNull {
             AudioDevicePick.typeName(it, AudioDevicePick.INPUT) != null && AudioDevicePick.keyOf(it) == key
         } ?: return null
-        return if (d.type in DEFERRED_TYPES) null else key
+        // Bluetooth only while the service holds the dialog's phone mode (part E).
+        return if (d.type in DEFERRED_TYPES && !dialogBluetooth) null else key
     }
 
     /** What to do with a running recording on [active] (key, `null` = system) given a [target]. */

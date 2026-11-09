@@ -31,7 +31,7 @@ class MicRouter(context: Context) {
     internal fun target(): MicTarget = try {
         val infos = audio.getDevices(AudioManager.GET_DEVICES_INPUTS).toList()
         val descs = infos.map { AudioDeviceDesc(it.type, it.productName?.toString() ?: "", it.address, it.isSource, it.isSink) }
-        val key = MicRoute.target(store.get(AudioDevicePick.INPUT), descs)
+        val key = MicRoute.target(store.get(AudioDevicePick.INPUT), descs, OwnCommMode.active)
         val i = if (key == null) -1 else descs.indexOfFirst { AudioDevicePick.keyOf(it) == key }
         if (i < 0) {
             MicTarget.SYSTEM
@@ -40,6 +40,16 @@ class MicRouter(context: Context) {
         }
     } catch (e: RuntimeException) {
         MicTarget.SYSTEM
+    }
+
+    /** The connected Bluetooth headset of the choice (inputs and outputs), for the dialog; errors mean none. */
+    internal fun dialogHeadset(): AudioDeviceInfo? = try {
+        val infos = audio.getDevices(AudioManager.GET_DEVICES_ALL).toList()
+        val descs = infos.map { AudioDeviceDesc(it.type, it.productName?.toString() ?: "", it.address, it.isSource, it.isSink) }
+        val hit = DialogBluetooth.connected(store.get(AudioDevicePick.INPUT), descs)
+        if (hit == null) null else infos[descs.indexOf(hit)]
+    } catch (e: RuntimeException) {
+        null
     }
 
     /**

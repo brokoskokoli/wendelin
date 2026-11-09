@@ -60,7 +60,7 @@ class WakeConflictWatcher(
         val clients = configs.map {
             RecordingClient(it.clientAudioSessionId, silencedKnown && it.isClientSilenced)
         }
-        val reason = reasonFor(audio.mode, ownSessions(), clients)
+        val reason = reasonFor(audio.mode, ownSessions(), clients, OwnCommMode.active)
         if (reason != last) {
             last = reason
             onChange(reason)
@@ -78,9 +78,14 @@ class WakeConflictWatcher(
             reasonFor(audioMode, setOf(ownSession), clients)
 
         /** WP188: while the microphone moves to another device two own recordings run at once. */
-        internal fun reasonFor(audioMode: Int, ownSessions: Set<Int>, clients: List<RecordingClient>): String? {
+        internal fun reasonFor(
+            audioMode: Int,
+            ownSessions: Set<Int>,
+            clients: List<RecordingClient>,
+            ownCommMode: Boolean = false,
+        ): String? {
             val foreign = clients.any { it.session !in ownSessions && !it.silenced }
-            return WakePolicy.conflict(audioMode, foreign)
+            return WakePolicy.conflict(audioMode, foreign, ownCommMode)
         }
     }
 }
