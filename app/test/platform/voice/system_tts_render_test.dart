@@ -213,6 +213,7 @@ void main() {
 
     SystemTextToSpeech make({
       Duration synthTimeout = const Duration(seconds: 5),
+      Future<void>? Function()? choicePending,
     }) {
       final tts = FlutterTts();
       return SystemTextToSpeech(
@@ -224,6 +225,7 @@ void main() {
         ),
         playback: out,
         hasChoice: () => chosen,
+        choicePending: choicePending,
       );
     }
 
@@ -262,6 +264,31 @@ void main() {
       ); // gelesen und gelöscht vor dem Abspielen
       expect(_left(dir), isEmpty);
       expect(states, [TtsState.speaking, TtsState.idle]);
+    });
+
+    test('Wahl noch ladend: einmal warten, dann der Pfad der Wahl', () async {
+      channel.wav = _wav(1, 16, List.filled(441, 500), rate: 44100);
+      chosen = false;
+      final gate = Completer<void>();
+      final tts = make(choicePending: () => gate.future);
+      final done = tts.speak('Hallo');
+      await pumpEventQueue();
+      expect(channel.methods, isNot(contains('speak')));
+      expect(channel.methods, isNot(contains('synthesizeToFile')));
+      chosen = true;
+      gate.complete();
+      await done;
+      expect(out.played, hasLength(1));
+      expect(channel.methods, isNot(contains('speak')));
+    });
+
+    test('Wahl unlesbar (Future-Fehler): direkter Weg', () async {
+      final tts = make(
+        choicePending: () => Future<void>.error(StateError('x')),
+      );
+      chosen = false;
+      await tts.speak('Hallo');
+      expect(channel.methods, contains('speak'));
     });
 
     test('keine Wahl: direkter Weg, kein Verzeichnis, keine Datei', () async {

@@ -9,6 +9,7 @@ import 'package:wendelin/platform/voice/audio_track_playback.dart';
 import 'package:wendelin/platform/voice/pcm.dart';
 import 'package:wendelin/platform/voice/routed_playback.dart';
 import 'package:wendelin/platform/voice/sherpa_tts.dart';
+import 'package:wendelin/voice/voice_log.dart';
 
 final class _Fake implements AudioPlayback {
   var plays = 0;
@@ -137,5 +138,75 @@ void main() {
     await pumpEventQueue();
     await router.stop();
     expect((system.stops, track.stops), (0, 1));
+  });
+
+  group('choice still loading', () {
+    test('waits once; the choice read afterwards decides', () async {
+      final gate = Completer<void>();
+      router = RoutedPlayback(
+        system: system,
+        track: track,
+        hasChoice: () => chosen,
+        choicePending: () => gate.future,
+      );
+      final done = router.play(wav);
+      await pumpEventQueue();
+      expect((system.plays, track.plays), (0, 0), reason: 'not started yet');
+      chosen = true;
+      gate.complete();
+      await done;
+      expect((system.plays, track.plays), (0, 1));
+    });
+
+    test('unreadable (future fails): system', () async {
+      router = RoutedPlayback(
+        system: system,
+        track: track,
+        hasChoice: () => chosen,
+        choicePending: () => Future<void>.error(StateError('x')),
+      );
+      await router.play(wav);
+      expect((system.plays, track.plays), (1, 0));
+    });
+
+    test('stop while waiting: the clip does not start', () async {
+      final gate = Completer<void>();
+      router = RoutedPlayback(
+        system: system,
+        track: track,
+        hasChoice: () => chosen,
+        choicePending: () => gate.future,
+      );
+      final done = router.play(wav);
+      await router.stop();
+      gate.complete();
+      await done;
+      expect((system.plays, track.plays), (0, 0));
+    });
+
+    test('known (null): no await before the system play', () {
+      router = RoutedPlayback(
+        system: system,
+        track: track,
+        hasChoice: () => chosen,
+        choicePending: () => null,
+      );
+      unawaited(router.play(wav));
+      expect(system.plays, 1);
+    });
+  });
+
+  test('fallback to system is logged without device data', () async {
+    final lines = <String>[];
+    final old = voiceLogSink;
+    voiceLogSink = lines.add;
+    addTearDown(() => voiceLogSink = old);
+    chosen = true;
+    track.error = const AudioTrackUnavailable('Box k');
+    await router.play(wav);
+    final route = lines.where((l) => l.contains(' audio-route ')).toList();
+    expect(route, hasLength(1));
+    expect(route.single, endsWith(' fallback=system'));
+    expect(route.single, isNot(contains('Box')));
   });
 }

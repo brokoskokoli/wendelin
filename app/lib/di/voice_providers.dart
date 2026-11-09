@@ -329,9 +329,7 @@ void _trace(Ref ref, void Function(LatencyTrace trace) f) {
   }
 }
 
-/// Android system TTS.
-///
-/// With a chosen output device (WP188) the speech is rendered into a file
+/// Android system TTS. With a chosen output device (WP188) the speech is rendered into a file
 /// in the app cache and played on that device; without a choice the engine
 /// speaks directly.
 final systemTtsProvider = Provider<TextToSpeech>((ref) {
@@ -342,6 +340,7 @@ final systemTtsProvider = Provider<TextToSpeech>((ref) {
     renderer: SystemSpeechRenderer(tts, directory: getTemporaryDirectory),
     playback: out,
     hasChoice: out.hasChoice,
+    choicePending: out.choicePending,
   );
 });
 

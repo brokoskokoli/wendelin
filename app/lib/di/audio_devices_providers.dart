@@ -69,8 +69,9 @@ final audioChoiceProvider = Provider.family<AudioChoice, AudioDirection>((
 /// The speech and tone output (WP188): [AudioplayersPlayback] while no output
 /// device is chosen, the native `AudioTrack` with a chosen one (see
 /// [RoutedPlayback]). The choice is cached from [audioSelectionProvider], so
-/// the check per play costs nothing; while it loads or after a read error
-/// the system route is used.
+/// the check per play costs nothing. The very first play of a fresh engine
+/// waits once for the read (a few ms) instead of guessing "System"; after a
+/// read error the system route is used.
 RoutedPlayback createRoutedPlayback(
   Ref ref, {
   AudioPlayback? system,
@@ -86,6 +87,12 @@ RoutedPlayback createRoutedPlayback(
     system: sys,
     track: trk,
     hasChoice: () => chosen,
+    choicePending: () {
+      final state = ref.read(audioSelectionProvider);
+      // Known (value or error): no await. Unknown: once, until it is read.
+      if (state.hasValue || state.hasError) return null;
+      return ref.read(audioSelectionProvider.future).then<void>((_) {});
+    },
   );
   onDisposeTracked(ref, () async {
     await router.stop();

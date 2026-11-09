@@ -36,6 +36,7 @@ final class SystemTextToSpeech implements TextToSpeech {
     this.renderer,
     this.playback,
     this.hasChoice,
+    this.choicePending,
   }) : _given = tts;
 
   /// Renders the speech into memory for the chosen output (see above).
@@ -46,6 +47,9 @@ final class SystemTextToSpeech implements TextToSpeech {
 
   /// Whether an output device is chosen (read on every utterance).
   final bool Function()? hasChoice;
+
+  /// A future while the stored choice is not read yet, else `null`.
+  final Future<void>? Function()? choicePending;
   var _viaTrack = false;
 
   final FlutterTts? _given;
@@ -137,6 +141,14 @@ final class SystemTextToSpeech implements TextToSpeech {
       await _tts.setVoice({'name': chosen.id, 'locale': chosen.language});
       // flutter_tts: 0.5 is the normal rate on every platform.
       await _tts.setSpeechRate((rate * 0.5).clamp(0.05, 1.0));
+      final pending = _choicePending();
+      if (pending != null) {
+        try {
+          await pending;
+        } on Object {
+          // Unreadable choice: direct.
+        }
+      }
       if (generation != _generation) return;
       _set(TtsState.speaking);
       try {
@@ -151,6 +163,14 @@ final class SystemTextToSpeech implements TextToSpeech {
     });
     _queue = run.then<void>((_) {}, onError: (_) {});
     return run;
+  }
+
+  Future<void>? _choicePending() {
+    try {
+      return choicePending?.call();
+    } on Object {
+      return null;
+    }
   }
 
   bool _outputChosen() {

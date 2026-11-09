@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/audio_devices_providers.dart';
+import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/platform/voice/audio_devices.dart';
 import 'package:wendelin/platform/voice/audio_devices_fake.dart';
 import 'package:wendelin/ui/design/design.dart';
@@ -10,6 +11,7 @@ import 'package:wendelin/ui/settings/audio_screen.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
 
 import '../support/test_env.dart';
+import '../ui/helpers.dart';
 import 'integrations_screen_test.dart' show settle;
 import 'lists_and_web_test.dart' show pumpPage;
 
@@ -170,4 +172,41 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
+
+  // WP188 Befund 11: gewähltes Gerät (Ausgang, „Gerade benutzt“) und fehlendes
+  // Gerät (Eingang, Hinweis) in de und en.
+  testWidgets(
+    'Golden Audio de/en mit gewähltem und fehlendem Gerät',
+    tags: ['golden'],
+    (tester) async {
+      final port = FakeAudioDevicesPort(
+        list: const AudioDeviceList(input: [_mic], output: [_usb]),
+        selected: const AudioSelection(input: _bt, output: _usb),
+      );
+      addTearDown(port.dispose);
+      final env = TestEnv(
+        extraOverrides: [audioDevicesPortProvider.overrideWithValue(port)],
+      );
+      setView(tester, const Size(390, 1000));
+      await tester.pumpWidget(
+        env.app(
+          home: const RepaintBoundary(key: goldenKey, child: AudioScreen()),
+        ),
+      );
+      await settle(tester);
+      await expectLater(
+        find.byKey(goldenKey),
+        matchesGoldenFile('goldens/audio_screen_de.png'),
+      );
+      final c = ProviderScope.containerOf(
+        tester.element(find.byType(AudioScreen)),
+      );
+      await c.read(uiLanguageProvider.notifier).set('en');
+      await settle(tester);
+      await expectLater(
+        find.byKey(goldenKey),
+        matchesGoldenFile('goldens/audio_screen_en.png'),
+      );
+    },
+  );
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../voice/voice_log.dart';
 import 'audio_track_playback.dart';
 import 'pcm.dart';
 import 'sherpa_tts.dart';
@@ -20,6 +21,7 @@ final class RoutedPlayback implements AudioPlayback {
     required this.system,
     required this.track,
     required this.hasChoice,
+    this.choicePending,
   });
 
   /// Path without a choice.
@@ -31,12 +33,25 @@ final class RoutedPlayback implements AudioPlayback {
   /// Whether a device is chosen for the output (read on every play).
   final bool Function() hasChoice;
 
+  /// A future while the stored choice is not read yet, else `null` (then
+  /// [play] adds no await). Only the first clip of a fresh engine waits.
+  final Future<void>? Function()? choicePending;
+
   AudioPlayback? _active;
   var _generation = 0;
 
   @override
   Future<void> play(Wav wav) async {
     final generation = ++_generation;
+    final pending = _pending();
+    if (pending != null) {
+      try {
+        await pending;
+      } on Object {
+        // Unreadable choice: system.
+      }
+      if (generation != _generation) return;
+    }
     var choice = false;
     try {
       choice = hasChoice();
@@ -59,7 +74,17 @@ final class RoutedPlayback implements AudioPlayback {
       // Stopped or replaced meanwhile: do not start afterwards.
       if (generation != _generation) return;
       _active = system;
+      // The choice is ignored for this clip; no device data in the log.
+      voiceLog('audio-route', {'fallback': 'system'});
       await system.play(wav);
+    }
+  }
+
+  Future<void>? _pending() {
+    try {
+      return choicePending?.call();
+    } on Object {
+      return null;
     }
   }
 

@@ -1,5 +1,6 @@
 // WP188 C1: Verdrahtung der Ausgabe: Wahl aus dem Speicher-Provider steuert
 // die Weiche; Lesefehler und Laden sind System.
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -105,4 +106,29 @@ void main() {
     await p.play(wav);
     expect((system.plays, track.plays), (1, 0));
   });
+
+  test('stored and still loading: the first clip goes to the track', () async {
+    final c = container(
+      FakeAudioDevicesPort(selected: const AudioSelection(output: _device)),
+    );
+    final p = c.read(provider);
+    expect(c.read(audioSelectionProvider).hasValue, isFalse);
+    await p.play(wav);
+    expect((system.plays, track.plays), (0, 1));
+  });
+
+  test(
+    'nothing stored, already read: the system play starts at once',
+    () async {
+      final c = container(FakeAudioDevicesPort());
+      final p = c.read(provider);
+      await c.read(audioSelectionProvider.future);
+      unawaited(p.play(wav));
+      expect(
+        system.plays,
+        1,
+        reason: 'no extra await once the choice is known',
+      );
+    },
+  );
 }
