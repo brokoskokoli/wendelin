@@ -189,6 +189,18 @@
         "focusChanged": {"args": ["kind", "state"], "returns": "none"}
       }
     },
+    "app.wendelin/audio-devices": {
+      "dart": ["app/lib/platform/voice/audio_devices.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/AudioDevicesChannel.kt"],
+      "toKotlin": {
+        "devices": {"args": [], "returns": "map"},
+        "selection": {"args": [], "returns": "map"},
+        "setSelection": {"args": ["direction", "key", "type", "name"], "returns": "none"}
+      },
+      "toDart": {
+        "devicesChanged": {"args": [], "returns": "none"}
+      }
+    },
     "app.wendelin/location": {
       "dart": ["app/lib/platform/channel_location_port.dart"],
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/LocationChannel.kt"],
