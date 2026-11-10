@@ -7,9 +7,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-11-10
+
+Audio settings and a fix for the wake-word pre-roll (K149 / WP188, WP189).
+
 ### Added
 
 - **Audio settings** – choose the microphone and the output for Wendelin's speech: "System" (default) or a specific device, which is used whenever it is available and switched back to automatically when it reconnects. A Bluetooth headset microphone is used only during a conversation; the wake word keeps listening on the phone microphone (K149 / WP188).
+
+### Fixed
+
+- **Listening ended right after the wake word / phantom words** – since the central microphone recording, the audio handed over after the wake word contained the last 3 seconds twice, including the wake word itself. Speech recognition then reacted to that repetition: it answered "not understood" and closed after about 2 seconds, or recognised words that were never said. The wake-word audio position is now counted per listening stream, and chunks of an older stream are discarded (WP189).
 
 ## [0.1.6] - 2026-10-30
 
@@ -102,7 +110,11 @@ Download the APK below and install it. On Android 13 and later, you may have to 
 Certificate fingerprint (SHA-256): `A9:E9:5A:13:98:34:19:23:4B:DB:8F:CA:F6:0F:1B:84:18:88:36:86:7B:F8:DC:38:99:15:B5:25:39:DC:09:7B`
 APK checksum: see `SHA256SUMS`.
 
-[Unreleased]: https://github.com/brokoskokoli/wendelin/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/brokoskokoli/wendelin/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/brokoskokoli/wendelin/compare/v0.1.6...v0.1.7
+[0.1.6]: https://github.com/brokoskokoli/wendelin/compare/v0.1.5...v0.1.6
+[0.1.5]: https://github.com/brokoskokoli/wendelin/compare/v0.1.4...v0.1.5
+[0.1.4]: https://github.com/brokoskokoli/wendelin/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/brokoskokoli/wendelin/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/brokoskokoli/wendelin/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/brokoskokoli/wendelin/compare/v0.1.0...v0.1.1
