@@ -11,6 +11,13 @@ Regeln: Öffentliches Repo. Ergebnisse ohne Namen, Kontaktdaten, Geräte-Serienn
 
 ## Reihenfolge und Ergebnisse
 
+### Neu in v0.1.8-rc1
+
+| Block | Anleitung | Ergebnis |
+| --- | --- | --- |
+| Hinweisbegriffe: Listen und Home Assistant vor Kontakten, Gerätesynonyme | [m5/wp191.md](m5/wp191.md) | offen |
+| Push-to-Talk durch Halten des Mikrofon-Buttons | [m5/wp192.md](m5/wp192.md) | offen |
+
 ### Neu in v0.1.1-rc1
 
 | Block | Anleitung | Ergebnis |

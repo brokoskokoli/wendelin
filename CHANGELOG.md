@@ -7,6 +7,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- **Push-to-talk by holding the mic button** – hold the button (longer than 450 ms) and Wendelin keeps listening through pauses until you release it, even if your finger slides off; the whole recording is then processed as one request. A short tap works as before. Recordings end after 2 minutes; long recordings are recognized in segments (WP192).
+- **Device synonyms as recognizer hints** – approved Home Assistant devices also add generic words for their type (e.g. lamp/light), in German, English and French (WP191).
+
+### Fixed
+- **List and Home Assistant names reach the recognizer again** – with many contacts the hint terms were cut off before lists and devices; lists, rooms and devices now come first, and up to 128 hint terms are passed (WP191).
+
 ## [0.1.7] - 2026-11-10
 
 Audio settings and a fix for the wake-word pre-roll (K149 / WP188, WP189).
