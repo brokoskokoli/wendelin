@@ -133,3 +133,65 @@ Frage: Erkennt der gewählte Bonus 1,0 Reste des Weckworts (Schnittversatz -400/
 - bpe.vocab ist das Original-SentencePiece-Vocab, die App leitet es aus `tokens.txt` ab (laut Kommentar gleich, nicht gegengeprüft).
 - Wortende „Wendelin“ ohne Pause ist aus einer getrennt gerenderten Vorlage geschätzt (Prosodie kann abweichen); das Loch ersetzt Audio durch Null, fügt keine Stille ein.
 - Namenszählung nur auf Wortebene (Bruchstücke fehlen).
+
+## Nachtrag WP191: Obergrenze bei Bonus 1.0 (2026-11-13)
+
+Frage: Wie weit lässt sich `maxTerms` (heute 64) bei Bonus 1.0 anheben, ohne Fehleinfügungen und ohne untragbare Dekodierzeit? Gemessen, App-Code nicht geändert.
+
+**Aufbau.** Wie oben (Werkzeug `tool/voice_quality_measure.py`, Stand Commit 74bd8004, `hotword-bias --sizes 64,128,200,300 --scores 1.0` und `hotword-bias-wake` mit denselben Größen), 4 Threads, `nice -n 10`. Größe T = Gesamtzahl Begriffe inklusive „Wendelin“ und 5 Listennamen (T64 = 58 erfundene Kontakte, T300 = 294); die gesprochenen Namen stehen immer in der Liste, die Recall-Zahlen sind also günstig. Konfigurationen: `greedy`, `beam` (ohne Hotwords) und `T<größe> s1.0`.
+**Maschine.** Rechenserver (AMD EPYC, x86-64, 8 Kerne, ohne GPU, Ubuntu 24.04), sherpa-onnx 1.13.8, Parakeet-v3 int8 (tokens/joiner-SHA identisch mit dem Mac-Modell). Last: vor dem Lauf 0,2, während der Einzelmessung 4,7 und während der Wake-Messung rund 5,5 (nur eigene 4 Threads, sonst Leerlauf; kein fremder Prozess). Einzelmessung 17:04 bis 17:09, Wake-Pfad bis 17:35. Audio (`say`) lokal erzeugt und kopiert; auf dem Server wurde nichts neu erzeugt. Rohdaten: `../handoff/wp191-measure/out/` (json, md, Log; nicht im Repo).
+
+### Einzelbedingungen (22 Äußerungen je Bedingung, noisy 66)
+
+Namen eingefügt (Anteil Äußerungen mit nicht gesagtem Namenswort; n; Wilson-95%), Recall gesagter Namen, WER ohne Namen (de-Befehle, ohne Namen in der Referenz):
+
+| Konfig. | clean eingefügt | noisy eingefügt | Loch eingefügt | Schnitt eingefügt | Recall clean | WER ohne Namen clean | WER ohne Namen noisy |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| greedy | 0/22 | 0/66 | 0/22 | 0/22 | 0/20 | 6,6 | 25,4 |
+| beam | 0/22 | 0/66 | 0/22 | 0/22 | 0/20 | 6,6 | 28,1 |
+| T64 | 0/22 | 0/66 | 0/22 | 0/22 | 1/20 | 6,6 | 29,8 |
+| T128 | 0/22 | 0/66 | 0/22 | 0/22 | 1/20 | 6,6 | 29,4 |
+| T200 | 0/22 | 0/66 | 0/22 | 0/22 | 1/20 | 6,6 | 28,9 |
+| T300 | 0/22 | 0/66 | 0/22 | 0/22 | 1/20 | 6,6 | 28,5 |
+
+Obere Intervallgrenze bei 0/22: 15 %, bei 0/66: 6 %. WER mit Namen (Bootstrap-95% jeweils 40 bis 70 und breiter): clean greedy 49,2, beam 54,1, T64 49,2, T128/T200 52,5, T300 54,1; die Unterschiede liegen weit innerhalb der Intervalle. Stille: überall leer. Reines Rauschen, nicht leere Transkripte (−40 dB / −26 dB, je 20): greedy 0/0, beam 5/2, T64 bis T300 je 4/3 (kein Namenswort).
+
+### Wake-Pfad (20 Befehle, Namen eingefügt, nicht gesagt)
+
+| Konfig. | Tipp clean | Tipp noisy | ohne Pause noisy | mit Pause noisy | Pause+Mute | Loch 600 ms |
+|---|--:|--:|--:|--:|--:|--:|
+| beam | 0/20 | 0/20 | 0/80 | 0/80 | 0/160 | 0/320 |
+| T64 | 0/20 | 0/20 | 0/80 | 0/80 | 0/160 | 0/320 |
+| T128 | 0/20 | 0/20 | 0/80 | 0/80 | 0/160 | 0/320 |
+| T200 | 0/20 | 1/20 | 0/80 | 0/80 | 0/160 | 0/320 |
+| T300 | 0/20 | 1/20 | 0/80 | 0/80 | 0/160 | 0/320 |
+
+(Clean-Spalten für Wake mit und ohne Pause sind überall 0/80. Je Schnittversatz −400 bis +200 ms überall 0/40; „Wendelin“ taucht nach dem Schnitt nie im Transkript auf.) Zum Vergleich WP146 mit Bonus 3,0 und 300 Namen: 4 bis 18 % je Szenario.
+
+### Dekodierzeit (nur `decode_stream`, ohne Laden; Server-CPU, 4 Threads)
+
+| Konfig. | Einzel Median ms | p95 ms | RTF | Faktor zu greedy | Wake-Pfad Median ms | p95 ms | RTF |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| greedy | 200 | 296 | 0,061 | 1,00 | | | |
+| beam | 246 | 352 | 0,075 | 1,23 | 343 | 501 | 0,067 |
+| T64 | 261 | 388 | 0,082 | 1,31 | 344 | 504 | 0,067 |
+| T128 | 262 | 352 | 0,079 | 1,31 | 346 | 500 | 0,067 |
+| T200 | 264 | 360 | 0,080 | 1,32 | 350 | 507 | 0,068 |
+| T300 | 257 | 355 | 0,078 | 1,29 | 353 | 499 | 0,069 |
+
+Der Hotword-Kontextgraph kostet gegenüber `beam` rund 5 bis 6 % (Einzel) bzw. 0 bis 3 % (Wake-Pfad), und zwar nahezu unabhängig von der Größe zwischen 64 und 300. Der Unterschied zu `greedy` (1,2 bis 1,3-fach) stammt fast vollständig von `modified_beam_search`, nicht von den Begriffen.
+
+### Empfehlung
+
+`maxTerms` auf **300** anheben (größter gemessener Wert): bei Bonus 1.0 keine messbaren Fehleinfügungen (0 von 22/66 in allen Einzelbedingungen, 0 in allen Wake-Szenarien bis auf 1/20 im noisy Tipp-Pfad bei T200 und T300), keine WER-Änderung über das Rauschen hinaus, Dekodierzeit gegenüber 64 Begriffen unverändert (Faktor 1,0 bis 1,02). Der Bonus bleibt 1.0.
+
+### Grenzen und Auffälliges
+
+- **Server-CPU ist nicht das Handy.** Absolute Zeiten (RTF 0,06 bis 0,08) gelten nur für diese Maschine; belastbar sind nur die Verhältnisse (Beam +23 % gegen greedy, Begriffe +0 bis 6 % gegen Beam). Auf dem Handy kann die Zahl der Begriffe anders skalieren (Speicher, Cache); das ist nicht gemessen und gehört in den Gerätetest.
+- **Obergrenze der Messung = 300.** Mehr als 300 wurde nicht getestet; darüber ist die Aussage nicht gedeckt (das Werkzeug erzeugt nur 300 Namen).
+- **Der Test ist gegen Einfügungen schwach.** Mit 22 Äußerungen (66 noisy) deckt „0 Treffer“ Raten bis 15 % bzw. 6 % nicht aus; kleine Effekte sind nicht auszuschließen. Der 1/20-Treffer im noisy Tipp-Pfad (T200, T300) liegt im Rauschen (Intervall 1 bis 24 %), tritt bei 64 und 128 nicht auf und ist als Hinweis, nicht als Beleg zu lesen.
+- **„0 % Einfügung“ ist hier plausibel, nicht Zeichen eines toten Aufbaus:** Die Erkennung ist aktiv (T64 bis T300 unterscheiden sich von `beam` in den Hypothesen, Recall 1/20 gegen 0/20, WER mit Namen im Schnitt-Test 63,9 gegen 72,1 beam). Bei Bonus 1.0 ist der Effekt aber klein, wie schon in WP146 (dort hw300 s1.0: Recall 2/20, 0 Einfügungen).
+- **Recall ist schwach und nicht mit der Größe steigend** (1/20 ab T64): Bonus 1.0 hilft kaum bei erfundenen TTS-Namen. Eine Aussage „größere Liste bessert die Erkennung“ lässt sich nicht stützen, nur „schadet nicht“. Gesprochene Namen stehen immer in der Liste (Recall günstig); echte Nutzer, deren Name fehlt oder abgeschnitten wurde, sind nicht abgebildet.
+- **Abweichung zu WP146 bei gleichem Audio:** WER ohne Namen clean greedy 6,6 % statt 3,9 %, noisy 25,4 % statt 32 %. Vermutet (nicht belegt): numerische Unterschiede der int8-Kernel auf x86 gegen ARM und anderes Rauschen/`say`-Rendering; die Rangfolge der Konfigurationen ist davon nicht betroffen, absolute Zahlen nicht mit dem Oktober-Lauf vergleichen.
+- Die Überschrift „nur hw300 s3.0 und beam“ der Versatz-Tabellen im Werkzeug-Output ist veraltet (sie zeigt alle Konfigurationen); nur Beschriftung.
+- Die erste Messung (verlorener Lauf nach Neustart) wurde verworfen und neu gefahren; es gibt einen vollständigen Lauf.
