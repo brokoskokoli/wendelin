@@ -80,9 +80,11 @@ final class PrimedAudioInput implements ReplayingAudioInput {
   bool get isRunning => _primed != null || inner.isRunning;
 
   /// Opens the microphone now and buffers the frames until [start]. No
-  /// effect while it already runs.
+  /// effect while it already runs; if the inner microphone runs for somebody
+  /// else, it is attached only when it allows another listener (WP198).
   void prime() {
-    if (isRunning) return;
+    if (_primed != null) return;
+    final alreadyRunning = inner.isRunning;
     _buffer.clear();
     _bufferedSamples = 0;
     _error = null;
@@ -92,6 +94,9 @@ final class PrimedAudioInput implements ReplayingAudioInput {
     try {
       frames = inner.start();
     } on Object catch (e) {
+      // Somebody else holds the microphone (single listener): as before,
+      // nothing is buffered and `start` decides later (WP198).
+      if (alreadyRunning) return;
       // Reported to the pipeline on start (like a failing microphone).
       _error = e;
       _done = true;
