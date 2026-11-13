@@ -21,40 +21,26 @@ import 'early_capture_test.dart' show RecordingStt;
 /// Mikrofon, das erst Ton liefert, wenn [open] gerufen wird (z. B. der
 /// Dienst hält die Aufnahme, bis er beendet ist).
 final class GatedInput implements AudioInput {
-  // Closed in stop().
-  // ignore: close_sinks
-  StreamController<Int16List>? _c;
   bool _open = false;
-  Timer? _timer;
+  bool _running = false;
   int delivered = 0;
 
   void open() => _open = true;
 
   @override
-  bool get isRunning => _c != null;
+  bool get isRunning => _running;
 
   @override
   Stream<Int16List> start() {
-    // Closed in stop().
-    // ignore: close_sinks
-    final c = StreamController<Int16List>();
-    _c = c;
-    _timer = Timer.periodic(const Duration(milliseconds: 30), (_) {
-      if (_open && !c.isClosed) {
-        delivered++;
-        c.add(Int16List(480)..fillRange(0, 480, 5000));
-      }
-    });
-    return c.stream;
+    _running = true;
+    return Stream.periodic(const Duration(milliseconds: 30), (_) {
+      delivered++;
+      return Int16List(480)..fillRange(0, 480, 5000);
+    }).where((_) => _open).takeWhile((_) => _running);
   }
 
   @override
-  Future<void> stop() async {
-    _timer?.cancel();
-    final c = _c;
-    _c = null;
-    if (c != null && !c.isClosed) unawaited(c.close());
-  }
+  Future<void> stop() async => _running = false;
 }
 
 /// Mikrofon, das schon läuft (jemand anderes hat es geöffnet) und jedem

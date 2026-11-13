@@ -203,9 +203,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
     }
     if (!ready) return _startAfterLoading(kind, prepare, takePreRoll);
     if (state.active || ref.read(agentControllerProvider).running) return false;
-    // Models are installed (WP18 review). The microphone opens right away
-    // and buffers while they load; without the permission it does not record
-    // (the input checks it), the explanation may come up meanwhile.
+    // Models are installed (WP18 review): the microphone opens right away and
+    // buffers while they load (without the permission it does not record).
     final cancels = _cancels;
     // The loaded components' microphone, or (first use) the device one.
     final primed = _primedFor(
@@ -230,8 +229,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       unawaited(preRoll?.finish?.call());
       return false;
     }
-    // The wake word's recording is audio for this request already (WP198).
-    if (preRoll != null && preRoll.pcm.isNotEmpty) _audioArrived();
+    if (preRoll?.pcm.isNotEmpty ?? false) state = state.copyWith(micLive: true);
     _wake.begin(preRoll, primed.head); // before the microphone opens
     _timing.opened();
     primed.prime();
@@ -366,19 +364,12 @@ final class VoiceController extends Notifier<VoiceUiState> {
     return components;
   }
 
-  /// Audio for this request has arrived on any path (app microphone, wake
-  /// word recording): shown as listening (WP194, WP198), even
-  /// while the models load. Once per start, only for a request that is on.
-  /// (`mic-ready` and the timing still measure the app microphone only.)
-  void _audioArrived() {
-    if (!state.active || !ref.mounted || state.micLive) return;
-    state = state.copyWith(micLive: true);
-  }
-
   void _onFirstFrame(int samples) {
     if (!_timing.awaitingFirstFrame) return;
     _timing.firstFrame();
-    _audioArrived();
+    // The microphone delivers (WP194): shown as listening even while the
+    // models load. Only for a request that is on.
+    if (state.active && ref.mounted) state = state.copyWith(micLive: true);
     _wake.onFirstFrame(samples);
     _timing.logIfReady(state.trigger);
   }
