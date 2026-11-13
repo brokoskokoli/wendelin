@@ -11,6 +11,7 @@ import '../screens/bring_share_card.dart';
 import '../screens/confirmation_sheet.dart';
 import '../screens/conversation_view.dart';
 import '../screens/private_banner.dart';
+import 'transcript_text.dart';
 
 /// What the assistant overlay shows of the current request: the latest
 /// user request and everything after it.
@@ -350,7 +351,7 @@ class OverlaySheet extends StatelessWidget {
             style: WText.transcript.copyWith(color: WColors.textMuted),
           )
         else if (request != null)
-          Text('„$request“', style: WText.transcript),
+          TranscriptText(request),
       for (final t in exchange.tools)
         if (ToolEntryCard.isCard(t))
           ToolEntryCard(t, onUndo: onUndo)
