@@ -16,11 +16,21 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../support/test_env.dart';
 import 'voice_controller_test.dart' show utterance, waitConv, waitVoice;
 
-/// 300 ms speech, 3 s pause, 300 ms speech (120 frames of 30 ms).
-List<Int16List> longWithPause() =>
-    AudioFrames.pattern('${'S' * 10}${'.' * 100}${'S' * 10}');
+/// Lead-in silence (200 frames, 200 ms real time at 1 ms per frame; below
+/// the 8 s no-speech timeout of the audio time): the
+/// gesture calls arrive long before any end by silence could fall due, so
+/// the tests do not depend on the speed of the machine.
+const _lead = 200;
 
+/// Lead-in, 300 ms speech, 3 s pause, 300 ms speech (frames of 30 ms).
+List<Int16List> longWithPause() =>
+    AudioFrames.pattern('${'.' * _lead}${'S' * 10}${'.' * 100}${'S' * 10}');
+
+/// Frames of the speech part (speech, pause, speech).
 const _allFrames = 120;
+
+/// All frames of [longWithPause].
+const _total = _lead + _allFrames;
 
 /// Hold gestures of the microphone button on the controller (WP192).
 void main() {
@@ -87,7 +97,7 @@ void main() {
       expect(ui().listening, isTrue);
       await opened(1);
       await voice().holdStart();
-      await played(_allFrames);
+      await played(_total);
       // Without hold the 800 ms silence would have ended long ago.
       expect(ui().phase, VoiceState.listening);
       expect(stt.calls, isEmpty);
@@ -129,7 +139,7 @@ void main() {
       gate.complete(true);
       await down;
       await hold;
-      await played(_allFrames);
+      await played(_total);
       expect(audio.startCount, 1);
       expect(ui().phase, VoiceState.listening, reason: 'gehalten');
       await voice().pressUp(held: true);
@@ -161,13 +171,17 @@ void main() {
 
   group('listening', () {
     test(
-      'pressDown tut nichts, Tipp (pressUp ohne Halten) bricht ab',
+      'pressDown beendet nichts, Tipp (pressUp ohne Halten) bricht ab',
       () async {
         setup(frames: AudioFrames.pattern('S' * 300));
         await voice().start(TriggerKind.pushToTalk);
         await waitVoice(c, (v) => v.levels.isNotEmpty);
         await voice().pressDown();
-        expect(ui().listening, isTrue, reason: 'pressDown allein nichts');
+        expect(
+          ui().listening,
+          isTrue,
+          reason: 'pressDown allein beendet nichts',
+        );
         expect(audio.startCount, 1);
         await voice().pressUp(held: false);
         await voice().whenIdle;
@@ -185,7 +199,7 @@ void main() {
         await waitVoice(c, (v) => v.levels.isNotEmpty);
         await voice().pressDown();
         await voice().holdStart();
-        await played(_allFrames);
+        await played(_total);
         expect(ui().phase, VoiceState.listening);
         expect(stt.calls, isEmpty);
         await voice().pressUp(held: true);
@@ -197,6 +211,55 @@ void main() {
         );
       },
     );
+  });
+
+  group('Zuhören, Fenster läuft während der Haltegrenze ab', () {
+    test('pressDown hält sofort: kein Stille-Ende vor holdStart', () async {
+      // Speech, then 100 frames of silence: the silence end falls due about
+      // 37 frames after the start, long before the 450 ms of a real press.
+      setup(
+        frames: AudioFrames.pattern('${'.' * _lead}${'S' * 10}${'.' * 100}'),
+      );
+      await voice().start(TriggerKind.pushToTalk);
+      await waitVoice(c, (v) => v.levels.isNotEmpty);
+      await voice().pressDown();
+      // No holdStart yet (the threshold has not passed): the whole audio
+      // incl. the silence arrives; without the early hold it would end.
+      await played(_lead + 110);
+      expect(ui().phase, VoiceState.listening, reason: 'gehalten ab Druck');
+      expect(stt.calls, isEmpty);
+      await voice().holdStart();
+      await voice().pressUp(held: true);
+      await voice().whenIdle;
+      expect(stt.calls, hasLength(1));
+      expect(stt.calls.single.samples, greaterThanOrEqualTo(110 * 480));
+    });
+  });
+
+  group('getippte Agent-Anfrage', () {
+    test('läuft: Drücken bricht ab, Halten startet eine gehaltene '
+        'Aufnahme', () async {
+      setup(
+        frames: longWithPause(),
+        // The cancelled typed request never reaches the model: its turn
+        // stays for the voice request.
+        turns: [ScriptedTurn.text('Ok')],
+      );
+      unawaited(c.read(agentControllerProvider.notifier).send('Hallo'));
+      await waitConv(c, (s) => s.running);
+      expect(ui().active, isFalse);
+      await voice().pressDown();
+      await voice().holdStart();
+      await opened(1);
+      await played(_total);
+      expect(c.read(agentControllerProvider).running, isFalse);
+      expect(ui().phase, VoiceState.listening, reason: 'gehalten');
+      expect(stt.calls, isEmpty);
+      await voice().pressUp(held: true);
+      await voice().whenIdle;
+      expect(stt.calls, hasLength(1));
+      expect(stt.calls.single.samples, greaterThanOrEqualTo(_allFrames * 480));
+    });
   });
 
   group('thinking', () {
@@ -248,7 +311,7 @@ void main() {
         await voice().holdStart();
         await opened(2); // new recording
         await waitVoice(c, (v) => v.phase == VoiceState.listening);
-        await played(before + _allFrames);
+        await played(before + _total);
         expect(ui().phase, VoiceState.listening, reason: 'gehalten');
         expect(stt.calls, hasLength(1), reason: 'nur die erste Äußerung');
         await voice().pressUp(held: true);

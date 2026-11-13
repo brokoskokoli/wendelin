@@ -35,14 +35,17 @@ void main() {
       WidgetTester tester, {
       MicState state = MicState.idle,
       bool gesture = true,
+      String? semanticLabel,
+      bool keepLog = false,
     }) async {
-      log.clear();
+      if (!keepLog) log.clear();
       await tester.pumpWidget(
         themed(
           Scaffold(
             body: Center(
               child: MicButton(
                 state: state,
+                semanticLabel: semanticLabel,
                 onPressed: () => log.add('tap'),
                 gesture: gesture
                     ? MicGesture(
@@ -119,14 +122,73 @@ void main() {
       expect(log, isEmpty);
     });
 
-    testWidgets('Entfernen während des Drückens: Timer sauber, Druck endet', (
-      tester,
-    ) async {
+    testWidgets('Entfernen während eines Tipps: Timer sauber, kein up '
+        '(nichts wird abgebrochen)', (tester) async {
       await pumpButton(tester);
       await tester.startGesture(tester.getCenter(find.byType(MicButton)));
       await tester.pumpWidget(const SizedBox());
       await tester.pump(_hold * 2);
+      expect(log, ['down']);
+    });
+
+    testWidgets('Entfernen während des Haltens: gehaltene Aufnahme wird '
+        'freigegeben', (tester) async {
+      await pumpButton(tester);
+      await tester.startGesture(tester.getCenter(find.byType(MicButton)));
+      await tester.pump(_hold);
+      await tester.pumpWidget(const SizedBox());
+      expect(log, ['down', 'hold', 'up:true']);
+    });
+
+    testWidgets('disabled während des Haltens: up:true (Aufnahme wird '
+        'freigegeben)', (tester) async {
+      await pumpButton(tester);
+      await tester.startGesture(tester.getCenter(find.byType(MicButton)));
+      await tester.pump(_hold);
+      await pumpButton(tester, state: MicState.disabled, keepLog: true);
+      expect(log, ['down', 'hold', 'up:true']);
+      expect(find.text('Loslassen zum Senden'), findsNothing);
+    });
+
+    testWidgets('disabled während eines Tipps: up:false', (tester) async {
+      await pumpButton(tester);
+      await tester.startGesture(tester.getCenter(find.byType(MicButton)));
+      await tester.pump(const Duration(milliseconds: 100));
+      await pumpButton(tester, state: MicState.disabled, keepLog: true);
       expect(log, ['down', 'up:false']);
+    });
+
+    testWidgets('Halten: kein Tooltip springt auf, Pille bleibt allein', (
+      tester,
+    ) async {
+      await pumpButton(tester, semanticLabel: 'Zuhören abbrechen');
+      final g = await tester.startGesture(
+        tester.getCenter(find.byType(MicButton)),
+      );
+      await tester.pump(const Duration(milliseconds: 1800));
+      expect(find.byTooltip('Loslassen zum Senden'), findsOneWidget);
+      // Declared, but not shown by the hold (no long-press trigger).
+      expect(find.text('Zuhören abbrechen'), findsNothing);
+      expect(find.text('Loslassen zum Senden'), findsOneWidget);
+      await g.up();
+    });
+
+    testWidgets('Halten: Halte-Label schlägt das semanticLabel', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpButton(tester, semanticLabel: 'Zuhören abbrechen');
+      expect(find.semantics.byLabel('Zuhören abbrechen'), findsOneWidget);
+      final g = await tester.startGesture(
+        tester.getCenter(find.byType(MicButton)),
+      );
+      await tester.pump(_hold);
+      expect(find.semantics.byLabel('Loslassen zum Senden'), findsOneWidget);
+      expect(find.semantics.byLabel('Zuhören abbrechen'), findsNothing);
+      await g.up();
+      await tester.pump();
+      expect(find.semantics.byLabel('Zuhören abbrechen'), findsOneWidget);
+      handle.dispose();
     });
 
     testWidgets('ohne gesture: Tipp über onPressed wie bisher', (tester) async {

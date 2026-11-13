@@ -114,14 +114,15 @@ class _MicButtonState extends State<MicButton> {
   @override
   void didUpdateWidget(MicButton old) {
     super.didUpdateWidget(old);
-    if (widget.state == MicState.disabled && _pointer != null) _end(false);
+    if (widget.state == MicState.disabled && _pointer != null) _end(_holding);
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    // Removed during a press: end it, so a held recording does not hang.
-    if (_pointer != null) widget.gesture?.onUp(_holding);
+    // Removed during a press: only a held recording is released (so it does
+    // not hang); a plain tap must not cancel anything.
+    if (_pointer != null && _holding) widget.gesture?.onUp(true);
     super.dispose();
   }
 
@@ -175,10 +176,8 @@ class _MicButtonState extends State<MicButton> {
     final hearingRing = hearing && state == MicState.speaking;
     final holding = _holding && !disabled;
     final tooltip =
-        semanticLabel ??
-        (holding
-            ? context.l10n.voiceReleaseToSend
-            : hearingRing
+        (holding ? context.l10n.voiceReleaseToSend : semanticLabel) ??
+        (hearingRing
             ? context.l10n.mainMicHearing
             : MicButton.labelFor(context.l10n, state));
     // Der Ring beim Zuhören liegt innerhalb der Fläche (72 bzw. 64): außen
@@ -195,7 +194,9 @@ class _MicButtonState extends State<MicButton> {
       child: IconButton(
         // Nur Tooltip: wird auch als Semantics-Tooltip vorgelesen; ein
         // zusätzliches Label würde doppelt angesagt.
-        tooltip: tooltip,
+        // Mit Geste hängt der Tooltip außen (nur manuell/Hover): der
+        // Long-Press-Tooltip spränge sonst beim Halten auf.
+        tooltip: gesture != null ? null : tooltip,
         // Mit Geste löst der Listener den physischen Tipp aus; der
         // IconButton bleibt nur für Optik (und ist per ExcludeSemantics
         // aus dem Baum, die Tipp-Aktion hängt außen).
@@ -247,7 +248,13 @@ class _MicButtonState extends State<MicButton> {
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
-            ExcludeSemantics(child: button),
+            ExcludeSemantics(
+              child: Tooltip(
+                message: tooltip,
+                triggerMode: TooltipTriggerMode.manual,
+                child: button,
+              ),
+            ),
             if (holding) _HoldLabel(bottom: extent + WSpace.xs),
           ],
         ),
