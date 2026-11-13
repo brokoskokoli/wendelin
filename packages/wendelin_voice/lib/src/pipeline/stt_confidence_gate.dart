@@ -39,17 +39,22 @@ final class SttConfidenceGate {
   /// Threshold for a deliberate start.
   final double deliberate;
 
-  /// The action for [confidence] in this situation.
+  /// The action for [confidence] in this situation. [held]: the recording
+  /// was held (push-to-talk), a deliberate start also in a follow-up window.
   SttGateAction decide(
     double? confidence, {
     required bool followUp,
     TriggerKind? source,
+    bool held = false,
   }) {
     if (confidence == null) return SttGateAction.accept;
     final deliberateStart =
-        !followUp && source != null && source != TriggerKind.wakeWord;
+        held || (!followUp && source != null && source != TriggerKind.wakeWord);
     final min = deliberateStart ? deliberate : handsFree;
     if (confidence >= min) return SttGateAction.accept;
-    return followUp ? SttGateAction.dropQuietly : SttGateAction.askAgain;
+    // A held recording is never dropped silently: the user is told.
+    return followUp && !held
+        ? SttGateAction.dropQuietly
+        : SttGateAction.askAgain;
   }
 }

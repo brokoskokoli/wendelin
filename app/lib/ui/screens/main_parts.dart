@@ -140,6 +140,7 @@ class Composer extends StatefulWidget {
     required this.mic,
     this.hearing = false,
     required this.onMic,
+    this.micGesture,
     this.levels = const [],
     this.micHint,
     this.status,
@@ -162,6 +163,9 @@ class Composer extends StatefulWidget {
 
   /// Tap on the microphone (start, or cancel while active).
   final VoidCallback onMic;
+
+  /// Drücken und Halten des Mikrofons (WP192); [onMic] bleibt TalkBack-Tipp.
+  final MicGesture? micGesture;
 
   /// Recent microphone levels (0–1) for the listening bar.
   final List<double> levels;
@@ -277,6 +281,7 @@ class _ComposerState extends State<Composer> {
     state: widget.mic,
     hearing: widget.hearing,
     onPressed: widget.mic == MicState.disabled ? null : widget.onMic,
+    gesture: widget.micGesture,
     compact: true,
     semanticLabel: switch (widget.mic) {
       MicState.disabled => widget.micHint,

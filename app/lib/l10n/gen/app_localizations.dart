@@ -8319,6 +8319,12 @@ abstract class AppLocalizations {
   /// **'Ein Sprachmodell ist noch nicht geladen (Einstellungen → Sprache).'**
   String get voiceErrorModelMissing;
 
+  /// No description provided for @voiceHoldLimitHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Maximale Aufnahmedauer erreicht, ich verarbeite das Gesagte.'**
+  String get voiceHoldLimitHint;
+
   /// No description provided for @voiceMetricsClear.
   ///
   /// In de, this message translates to:
@@ -8354,6 +8360,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Sprachausgabe'**
   String get voiceMetricsTts;
+
+  /// No description provided for @voiceReleaseToSend.
+  ///
+  /// In de, this message translates to:
+  /// **'Loslassen zum Senden'**
+  String get voiceReleaseToSend;
 
   /// No description provided for @voiceScreenAutomatic.
   ///

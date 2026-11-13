@@ -4858,6 +4858,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ein Sprachmodell ist noch nicht geladen (Einstellungen → Sprache).';
 
   @override
+  String get voiceHoldLimitHint =>
+      'Maximale Aufnahmedauer erreicht, ich verarbeite das Gesagte.';
+
+  @override
   String get voiceMetricsClear => 'Liste leeren';
 
   @override
@@ -4878,6 +4882,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get voiceMetricsTts => 'Sprachausgabe';
+
+  @override
+  String get voiceReleaseToSend => 'Loslassen zum Senden';
 
   @override
   String get voiceScreenAutomatic => 'Automatisch';

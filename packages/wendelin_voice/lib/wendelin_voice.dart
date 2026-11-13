@@ -30,6 +30,7 @@ export 'src/models/voice_settings.dart';
 export 'src/models/wake_classifier_catalog.dart';
 export 'src/pipeline/conversation_offer.dart';
 export 'src/pipeline/endpointer.dart';
+export 'src/pipeline/pcm_segments.dart';
 export 'src/pipeline/stt_confidence_gate.dart';
 export 'src/pipeline/voice_events.dart';
 export 'src/pipeline/voice_pipeline.dart';

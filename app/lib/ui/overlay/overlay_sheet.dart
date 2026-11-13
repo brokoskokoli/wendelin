@@ -74,6 +74,7 @@ class OverlaySheet extends StatelessWidget {
     this.hearing = false,
     required this.levels,
     required this.onMic,
+    this.micGesture,
     required this.onClose,
     required this.onKeyboard,
     required this.onUndo,
@@ -143,6 +144,9 @@ class OverlaySheet extends StatelessWidget {
 
   /// Microphone tap.
   final VoidCallback onMic;
+
+  /// Drücken und Halten des Mikrofons (WP192); [onMic] bleibt TalkBack-Tipp.
+  final MicGesture? micGesture;
 
   /// Close button (cancels and closes the overlay).
   final VoidCallback onClose;
@@ -386,6 +390,7 @@ class OverlaySheet extends StatelessWidget {
             state: mic,
             hearing: hearing,
             onPressed: mic == MicState.disabled ? null : onMic,
+            gesture: micGesture,
             semanticLabel: switch (mic) {
               MicState.idle => context.l10n.overlayKeepTalking,
               MicState.listening => context.l10n.mainCancelListening,

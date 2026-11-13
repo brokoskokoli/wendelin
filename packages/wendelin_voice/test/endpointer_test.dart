@@ -241,4 +241,79 @@ void main() {
     expect(r.toString(), contains('utterance'));
     expect(r.toString(), contains('silence'));
   });
+
+  group('Haltemodus (WP192)', () {
+    test(
+      '3 s Stille nach Sprache beenden nicht: eine Äußerung mit allem Audio',
+      () {
+        final e = Endpointer()..hold();
+        expect(
+          feed('${rep('S', 10)}${rep('.', 60)}${rep('S', 10)}', into: e),
+          isNull,
+        );
+        expect(e.holding, isTrue);
+        final r = e.release();
+        expect(r.kind, EndpointKind.utterance);
+        expect(r.reason, EndpointReason.manual);
+        expect(msOf(r.pcm), 4000);
+        expect(e.holding, isFalse);
+      },
+    );
+
+    test('noSpeechTimeout und maxDuration sind ausgesetzt', () {
+      final e = Endpointer(short)..hold(); // 1 s / 2 s
+      expect(feed(rep('.', 60), into: e), isNull); // 3 s Stille
+      expect(feed('${rep('S', 10)}${rep('S', 60)}', into: e), isNull);
+      expect(e.release().kind, EndpointKind.utterance);
+    });
+
+    test('hold mitten in der Stille verhindert das Stille-Ende', () {
+      final e = Endpointer();
+      expect(feed('${rep('S', 10)}${rep('.', 10)}', into: e), isNull);
+      e.hold();
+      expect(feed(rep('.', 40), into: e), isNull);
+      expect(e.release().kind, EndpointKind.utterance);
+    });
+
+    test('Obergrenze holdMaxDuration greift mit Grund holdMax', () {
+      const c = EndpointConfig(holdMaxDuration: Duration(seconds: 3));
+      final e = Endpointer(c)..hold();
+      final r = feed('${rep('S', 10)}${rep('.', 100)}', config: c, into: e);
+      expect(r, isNotNull);
+      expect(r!.reason, EndpointReason.holdMax);
+      expect(r.kind, EndpointKind.utterance);
+      expect(r.elapsed, const Duration(seconds: 3));
+    });
+
+    test('Obergrenze ohne Sprache: nothing mit holdMax', () {
+      const c = EndpointConfig(holdMaxDuration: Duration(seconds: 3));
+      final e = Endpointer(c)..hold();
+      final r = feed(rep('.', 100), config: c, into: e)!;
+      expect(r.kind, EndpointKind.nothing);
+      expect(r.reason, EndpointReason.holdMax);
+    });
+
+    test('Standard-Obergrenze 2 min, withNoSpeechTimeout behält sie', () {
+      const c = EndpointConfig();
+      expect(c.holdMaxDuration, const Duration(minutes: 2));
+      const d = EndpointConfig(holdMaxDuration: Duration(seconds: 7));
+      expect(
+        d.withNoSpeechTimeout(const Duration(seconds: 5)).holdMaxDuration,
+        const Duration(seconds: 7),
+      );
+    });
+
+    test('hold nach der Entscheidung ist wirkungslos', () {
+      final e = Endpointer();
+      final r = feed('${rep('S', 6)}${rep('.', 16)}', into: e)!;
+      e.hold();
+      expect(e.holding, isFalse);
+      expect(e.release(), same(r));
+    });
+
+    test('ohne hold: normales Endpointing unverändert', () {
+      final r = feed('${rep('S', 6)}${rep('.', 16)}');
+      expect(r!.reason, EndpointReason.silence);
+    });
+  });
 }

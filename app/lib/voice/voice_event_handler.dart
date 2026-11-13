@@ -4,6 +4,13 @@ part of 'voice_controller.dart';
 
 /// Maps pipeline events to the UI state and the voice log.
 extension _VoiceEventHandler on VoiceController {
+  // State accessors for the press gestures (voice_press.dart): the ignore
+  // above covers them, so that file needs none.
+  bool get _isListening => state.listening;
+  bool get _isActive => state.active;
+  bool get _agentRunning => ref.read(agentControllerProvider).running;
+  bool get _isMounted => ref.mounted;
+
   /// WP120: the time line of the request runs from the end of the speech.
   void _onStateTraced(VoiceState s) {
     final latency = ref.read(latencyTraceProvider);
@@ -50,6 +57,10 @@ extension _VoiceEventHandler on VoiceController {
         _onCancelled(reason, during);
       case VoiceBargeIn():
         voiceLogPipelineEvent(e); // barge-in
+      case VoiceHoldLimitReached():
+        // WP192: the held recording is processed; tell the user why.
+        voiceLogPipelineEvent(e);
+        state = state.copyWith(hint: voiceHoldLimitHint);
       case VoiceAgentEvent(:final event):
         ref.read(latencyTraceProvider).agentEvent(event);
     }

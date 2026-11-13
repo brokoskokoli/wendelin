@@ -47,9 +47,16 @@ final voiceReadyProvider = Provider<bool>((ref) {
 /// UI shows `AppLocalizations.voiceUnavailableHint` for it ([voiceStatusText]).
 const voiceUnavailableError = 'voice-unavailable';
 
+/// Hint after the hard limit of a held recording (WP192); shown via
+/// [voiceStatusText].
+const voiceHoldLimitHint = 'voice-hold-limit';
+
 /// Visible text for the voice status/error [text] in the UI language.
-String voiceStatusText(AppLocalizations l, String text) =>
-    text == voiceUnavailableError ? l.voiceUnavailableHint : text;
+String voiceStatusText(AppLocalizations l, String text) => switch (text) {
+  voiceUnavailableError => l.voiceUnavailableHint,
+  voiceHoldLimitHint => l.voiceHoldLimitHint,
+  _ => text,
+};
 
 /// Voice error after the microphone permission was not given; the main
 /// screen shows it as a card with „Erlauben“ above the input row.

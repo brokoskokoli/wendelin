@@ -99,6 +99,17 @@ final class VoiceNothingUnderstood extends VoiceEvent {
   String toString() => 'VoiceNothingUnderstood(${reason?.name})';
 }
 
+/// A held recording (push-to-talk) hit the hard limit
+/// ([EndpointConfig.holdMaxDuration]) and is processed now (WP192): the
+/// app shows a hint.
+final class VoiceHoldLimitReached extends VoiceEvent {
+  /// Creates the event.
+  const VoiceHoldLimitReached();
+
+  @override
+  String toString() => 'VoiceHoldLimitReached()';
+}
+
 /// An event of the agent run, forwarded unchanged (live text, tool cards,
 /// confirmations – the UI answers `ConfirmationRequired` itself).
 final class VoiceAgentEvent extends VoiceEvent {

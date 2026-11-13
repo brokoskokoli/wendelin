@@ -39,11 +39,11 @@ export 'controller_agent_run.dart';
 export 'locked_agent_run.dart';
 export 'voice_ui_state.dart';
 export 'wake/wake_pre_roll.dart' show WakePreRoll, WakeTail, wakeGapMs;
-
 part 'voice_answer_text.dart';
 part 'voice_confirmation.dart';
 part 'voice_event_handler.dart';
 part 'voice_prepare.dart';
+part 'voice_press.dart';
 
 /// Voice requests of the app: push-to-talk on the main screen and the
 /// assistant overlay (`TriggerKind.assistant`).
