@@ -114,5 +114,41 @@ void main() {
         expect(h.eventsOf<VoiceError>(), hasLength(1));
       });
     });
+
+    test('Halteaufnahme mit niedriger Konfidenz im Folgefenster wird nicht '
+        'still verworfen', () {
+      runFake((async) {
+        final h = Harness(
+          config: const VoicePipelineConfig(
+            conversationMode: true,
+            followUpWindow: Duration(seconds: 1),
+          ),
+          transcripts: const [
+            Transcript(text: 'Eins', language: 'de', confidence: 0.9),
+            Transcript(text: 'Zwei', language: 'de', confidence: 0.4),
+          ],
+          turns: [ScriptedTurn.text('Erste.'), ScriptedTurn.text('Zweite.')],
+        );
+        h.pipeline.start();
+        async.flushMicrotasks();
+        h.fakeAudio.script(
+          AudioFrames.pattern('${'.' * 200}${'S' * 10}', frame: frame),
+        );
+        for (var i = 0; i < 100; i++) {
+          async.elapse(const Duration(milliseconds: 100));
+          if (h.eventsOf<VoiceListening>().length == 2 &&
+              h.pipeline.state == VoiceState.listening) {
+            break;
+          }
+        }
+        h.pipeline.hold();
+        async.elapse(const Duration(seconds: 10)); // speech after 6 s
+        h.pipeline.release();
+        async.elapse(const Duration(seconds: 20));
+        // 0.4 is below the hands-free threshold 0.5 but a held recording
+        // counts as deliberate (0.3): answered, not dropped.
+        expect(h.recording.inputs.map((i) => i.text), ['Eins', 'Zwei']);
+      });
+    });
   });
 }

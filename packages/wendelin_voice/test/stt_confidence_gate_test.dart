@@ -23,6 +23,18 @@ void main() {
       expect(SttConfidenceGate.defaultDeliberate, 0.3);
     });
 
+    test('gehaltene Aufnahme (WP192): bewusster Start auch im Folgefenster, '
+        'nie still verworfen', () {
+      expect(
+        gate.decide(0.3, followUp: true, held: true),
+        SttGateAction.accept,
+      );
+      expect(
+        gate.decide(0.29, followUp: true, held: true),
+        SttGateAction.askAgain,
+      );
+    });
+
     test('ohne Urteil (null) wird nie verworfen', () {
       for (final f in [true, false]) {
         expect(gate.decide(null, followUp: f), SttGateAction.accept);

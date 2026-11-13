@@ -144,6 +144,7 @@ extension VoicePipelineListen on VoicePipeline {
       transcript.confidence,
       followUp: followUp,
       source: trigger?.source,
+      held: _wasHeld,
     );
     if (gate == SttGateAction.accept) return gate;
     diagnostics?.call(

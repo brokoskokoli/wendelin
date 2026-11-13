@@ -11,6 +11,7 @@ extension VoicePipelineHold on VoicePipeline {
   void hold() {
     if (_state != VoiceState.listening) return;
     _holdGen = _gen;
+    _wasHeld = true;
     _endpointer?.hold();
   }
 
@@ -24,7 +25,7 @@ extension VoicePipelineHold on VoicePipeline {
     final endpointer = _endpointer;
     if (_state != VoiceState.listening) return;
     if (end == null || endpointer == null) {
-      _releasePending = true;
+      _releasePendingGen = _gen;
       return;
     }
     _holdGen = null;
@@ -38,16 +39,14 @@ extension VoicePipelineHold on VoicePipeline {
     Endpointer endpointer,
     void Function(Endpoint?) end,
   ) {
-    if (_releasePending && _holdGen == gen) end(endpointer.release());
+    if (_releasePendingGen == gen && _holdGen == gen) end(endpointer.release());
   }
 
   /// The listening is over: a hold counts for this one only; reaching the
   /// hard limit is announced.
   void _endHold(int gen, Endpoint? result) {
-    if (_holdGen == gen) {
-      _holdGen = null;
-      _releasePending = false;
-    }
+    if (_holdGen == gen) _holdGen = null;
+    if (_releasePendingGen == gen) _releasePendingGen = null;
     if (result?.reason == EndpointReason.holdMax) {
       _emit(const VoiceHoldLimitReached());
     }
@@ -57,7 +56,8 @@ extension VoicePipelineHold on VoicePipeline {
   void _attach(int gen, Endpointer endpointer, void Function(Endpoint?) end) {
     _endListening = end;
     _endpointer = endpointer;
-    if (_holdGen == gen) endpointer.hold();
+    _wasHeld = _holdGen == gen;
+    if (_wasHeld) endpointer.hold();
   }
 
   /// Each recording only clears its own hooks.

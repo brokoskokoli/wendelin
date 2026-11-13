@@ -204,5 +204,73 @@ void main() {
         expect(h.stt.calls.last.samples, lessThan(60 * 480));
       });
     });
+
+    test('Abbruch nach vorzeitigem release hinterlässt kein Loslassen für das '
+        'nächste Halten', () {
+      runFake((async) {
+        final h = Harness(turns: [ScriptedTurn.text('Ja.')]);
+        h.fakeAudio.script(long);
+        h.pipeline.start(hold: true);
+        h.pipeline.release(); // before the microphone exists
+        h.pipeline.cancel();
+        settle(async);
+        h.fakeAudio.script(long);
+        expect(h.pipeline.start(hold: true), isTrue);
+        async.elapse(const Duration(seconds: 10));
+        expect(h.pipeline.state, VoiceState.listening);
+        expect(h.eventsOf<VoiceNothingUnderstood>(), isEmpty);
+        h.pipeline.release();
+        settle(async);
+        expect(h.stt.calls, hasLength(1));
+        expect(h.stt.calls.single.samples, greaterThanOrEqualTo(120 * 480));
+      });
+    });
+
+    test('Gesprächsmodus: das Halten endet mit der ersten Runde, das '
+        'Folgefenster läuft normal ab', () {
+      runFake((async) {
+        final h = Harness(
+          config: const VoicePipelineConfig(
+            conversationMode: true,
+            followUpWindow: Duration(seconds: 1),
+          ),
+          transcripts: const [Transcript(text: 'Eins')],
+          turns: [ScriptedTurn.text('Erste.')],
+        );
+        h.fakeAudio.script(long);
+        h.pipeline.start(hold: true);
+        async.elapse(const Duration(seconds: 5));
+        h.pipeline.release();
+        // Answer, then the follow-up window (1 s, no speech) must expire.
+        async.elapse(const Duration(seconds: 20));
+        expect(h.recording.inputs.map((i) => i.text), ['Eins']);
+        expect(h.pipeline.state, VoiceState.idle);
+        expect(h.eventsOf<VoiceListening>().last.followUp, isTrue);
+      });
+    });
+
+    test('Gesprächsmodus: nach der Obergrenze läuft das Folgefenster normal '
+        'ab (kein Halten über die Runde hinaus)', () {
+      runFake((async) {
+        final h = Harness(
+          config: const VoicePipelineConfig(
+            conversationMode: true,
+            followUpWindow: Duration(seconds: 1),
+            endpoint: EndpointConfig(holdMaxDuration: Duration(seconds: 3)),
+          ),
+          transcripts: const [Transcript(text: 'Eins')],
+          turns: [ScriptedTurn.text('Erste.')],
+        );
+        h.fakeAudio.script(
+          AudioFrames.pattern('${'S' * 10}${'.' * 1000}', frame: frame),
+        );
+        h.pipeline.start(hold: true);
+        async.elapse(const Duration(seconds: 30)); // nobody releases
+        expect(h.eventsOf<VoiceHoldLimitReached>(), hasLength(1));
+        expect(h.recording.inputs.map((i) => i.text), ['Eins']);
+        expect(h.eventsOf<VoiceListening>().last.followUp, isTrue);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
   });
 }

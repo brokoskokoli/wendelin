@@ -126,12 +126,12 @@ final class VoicePipeline with VoiceContentLog {
   bool _micHeld = false;
   final _listenLog = _ListenLog();
   Endpointer? _endpointer;
-  // Push-to-talk (WP192): the listening that runs is held; a release that
-  // came before the endpointer existed is applied when it is created.
-  // Tied to the generation, so that a late cleanup of a cancelled listening
-  // cannot clear the hold of the next request.
+  // Push-to-talk (WP192): held listening and a release that came before the
+  // endpointer existed, both tied to the generation (a cancelled listening
+  // cannot clear or trigger those of the next request).
   int? _holdGen;
-  bool _releasePending = false;
+  int? _releasePendingGen; // release waiting for the endpointer (per gen)
+  bool _wasHeld = false; // the last listening was held (deliberate, WP192)
   SpeechQueue? _queue;
   bool _agentRunning = false;
   Future<void> _agentDrained = Future.value();
