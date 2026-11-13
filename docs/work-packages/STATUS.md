@@ -49,6 +49,10 @@ Stand: 2026-10-30; läuft: keiner; Release v0.1.6 (4ce2d167).
 | WP189 | Weckwort-Vorlauf nicht mehr doppelt (Tap-Position je Listener-Strom) | gemergt 570ca5b5 | Bugfix zu WP180 (seit v0.1.3): Der Tap gab nach jedem Treffer 3 s alten Ton samt Weckwort zurück („nicht verstanden“ bzw. Phantomwörter). Review FREIGABE (Runde 2), CI grün. Offen: Gerätetest (`captured` ≈ 100–300 ms, volles Zuhören nach dem Weckwort); prüfen, ob `wakeEndMargin` (WP184, 350 ms) wieder auf 100 ms kann. |
 | WP191 | Hinweisbegriffe: Listen und HA sicher drin, Gerätesynonyme, höhere Obergrenze | gemergt 13d18d8c | K150. Ursache belegt (Kontakte zuerst, Schnitt bei 64). Rang Agent > Liste > Raum > Entität > Synonym > Kontakt, Synonyme de/en/fr, maxTerms 128 (Messung: ab 200 Fehleinfügung). Offen: Gerätetest `docs/testing/m5/wp191.md`; bei Bonus 1.0 kaum Wirkung messbar (Recall 1/20), ggf. Folgemessung mit echten Aufnahmen; goldens-Job in CI 2× nach 15 min abgebrochen (beobachten). |
 | WP192 | Push-to-Talk: Mikrofon-Button gedrückt halten | gemergt d38984fe | K151, K152. Haltegrenze 450 ms, Obergrenze 2 min mit Hinweis, lange Aufnahmen in 25-s-Segmenten. Offen: E2E (AVD fehlt) und Gerätetest `docs/testing/m5/wp192.md`; Nahtstellen-WER und Latenz bei 2 min ungemessen; Loslassen vor Mikrofonstart verliert das Gesagte (Folgepunkt: Primed-Puffer); Soll: Pipeline-Test für `VoicePipeline.unhold()`. |
+| WP193 | Release-Kandidat 0.1.8 | gemergt bb3c98a6 | Tag v0.1.8-rc1 (WP191, WP192). Versionskonstanten `wendelinAppVersion` und `devArchiveAppVersion` müssen beim Versionssprung mit. |
+| WP194 | Start: Mikrofon zuerst, „Ich höre zu“, sobald es läuft | in Arbeit | Wunsch Maintainer 2026-11-13, K153. |
+| WP195 | Nichts gehört: nach 5 s still mit Stopp-Ton beenden | in Arbeit | Wunsch Maintainer 2026-11-13, K154. |
+| WP196 | Langes Transkript kleiner anzeigen | in Arbeit | Wunsch Maintainer 2026-11-13, K155. |
 
 ## Offen
 
