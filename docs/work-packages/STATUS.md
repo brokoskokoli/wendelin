@@ -47,6 +47,8 @@ Stand: 2026-10-30; läuft: keiner; Release v0.1.6 (4ce2d167).
 | WP187 | Release 0.1.6 | gemergt 4ce2d167 | Release v0.1.6 veröffentlicht. |
 | WP188 | Audio-Einstellungen: Mikrofon und Ausgabe wählen | gemergt 69a95ef4 | K149 offen. Review FREIGABE, CI grün. Offen: E2E (AVD Wendelin_AOSP_35 leer seit 2026-11-04, Test in james-wt/e2e-keep/wp188), Gerätetest `docs/testing/m5/wp188.md`, Verdrahtungstests `RecognizerAudio.kt:157`, `AudioPlaybackChannel.kt:133,146`; Latenz AudioTrack/Datei-Synthese ungemessen; Gerätewahl wirkt ab dem nächsten Clip; reine SCO-Ausgänge nicht wählbar; BLUETOOTH_CONNECT auf Android 12+ am Gerät bestätigen. |
 | WP189 | Weckwort-Vorlauf nicht mehr doppelt (Tap-Position je Listener-Strom) | gemergt 570ca5b5 | Bugfix zu WP180 (seit v0.1.3): Der Tap gab nach jedem Treffer 3 s alten Ton samt Weckwort zurück („nicht verstanden“ bzw. Phantomwörter). Review FREIGABE (Runde 2), CI grün. Offen: Gerätetest (`captured` ≈ 100–300 ms, volles Zuhören nach dem Weckwort); prüfen, ob `wakeEndMargin` (WP184, 350 ms) wieder auf 100 ms kann. |
+| WP191 | Hinweisbegriffe: Listen und HA sicher drin, Gerätesynonyme, höhere Obergrenze | in Arbeit | Wunsch Maintainer 2026-11-13, K150. |
+| WP192 | Push-to-Talk: Mikrofon-Button gedrückt halten | in Arbeit | Wunsch Maintainer 2026-11-13, K151. |
 
 ## Offen
 
