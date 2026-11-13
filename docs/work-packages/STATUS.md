@@ -54,6 +54,7 @@ Stand: 2026-10-30; läuft: keiner; Release v0.1.6 (4ce2d167).
 | WP195 | Nichts gehört: nach 5 s still mit Stopp-Ton beenden | gemergt 9e69ba06 | K154. 5 s ab erstem Mikrofonblock für jede erste Runde (auch Weckwort, Station); synthetischer Stopp-Ton (kein Asset), folgt „Bestätigungston“, still in Station-Ruhezeit; Overlay „Nichts gehört.“, schließt nach 1200 ms. Offen: Gerätetest `docs/testing/m5/wp195.md` (Ton nicht abgeschnitten?); Soll: Gegentest sofortiges Schließen bei anderen Hinweisen (`overlay_idle_close.dart:155`); Frage: Bestätigungston in Ruhezeiten. |
 | WP196 | Langes Transkript kleiner anzeigen | gemergt a0609f67 | K155. Nur im Overlay (Chat-Blase ist schon 16 px, Station nutzt das Overlay); Stufen 26 / 18,2 / 16 px, Hysterese 10 %; Untergrenze Body 16 px bleibt (Maintainer 2026-11-13). Offen: Gerätetest `docs/testing/m5/wp196.md`; Soll: irreführender Kommentar „55 %“ in `app_theme.dart:288`. |
 | WP197 | Bestätigungston beachtet die Ruhezeiten des Stationsmodus | in Arbeit | Entscheidung Maintainer 2026-11-13 (Folgefrage WP195). |
+| WP198 | Overlay zeigt „Moment …“, obwohl schon aufgenommen wird; Overlay-Logs fehlen | in Arbeit | Gerätetest v0.1.8-rc2 (Maintainer 2026-11-13), Fehler zu K153. |
 
 ## Offen
 
