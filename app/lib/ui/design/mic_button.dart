@@ -36,6 +36,7 @@ class MicGesture {
     required this.onDown,
     required this.onHold,
     required this.onUp,
+    this.onAbort,
   });
 
   /// Finger runter.
@@ -47,6 +48,10 @@ class MicGesture {
   /// Finger hoch oder Geste vom System abgebrochen; `held`: Grenze war
   /// überschritten.
   final ValueChanged<bool> onUp;
+
+  /// Der Button wurde während eines Drucks vor der Haltegrenze entfernt
+  /// (kein [onUp] mehr): nur das Halten aufheben, nichts abbrechen.
+  final VoidCallback? onAbort;
 
   /// Ab dieser Dauer zählt der Druck als Halten (wie `kHoldThreshold`).
   static const holdThreshold = Duration(milliseconds: 450);
@@ -122,7 +127,13 @@ class _MicButtonState extends State<MicButton> {
     _timer?.cancel();
     // Removed during a press: only a held recording is released (so it does
     // not hang); a plain tap must not cancel anything.
-    if (_pointer != null && _holding) widget.gesture?.onUp(true);
+    if (_pointer != null) {
+      if (_holding) {
+        widget.gesture?.onUp(true);
+      } else {
+        widget.gesture?.onAbort?.call();
+      }
+    }
     super.dispose();
   }
 

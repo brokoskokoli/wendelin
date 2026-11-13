@@ -106,6 +106,16 @@ extension VoiceControllerPress on VoiceController {
       await cancel();
     }
   });
+
+  /// The press went away without a release (the button was removed before
+  /// the threshold): only the hold from [pressDown] is lifted, the listening
+  /// goes on with normal endpointing (no cancel).
+  Future<void> pressAbort() => _press._enqueue(() async {
+    final p = _press;
+    final kind = p._kind;
+    p._kind = _PressKind.none;
+    if (kind == _PressKind.listening) _pipeline?.unhold();
+  });
 }
 
 final _presses = Expando<_VoicePress>('VoicePress');

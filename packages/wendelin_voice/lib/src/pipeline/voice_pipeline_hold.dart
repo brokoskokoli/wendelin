@@ -15,6 +15,18 @@ extension VoicePipelineHold on VoicePipeline {
     _endpointer?.hold();
   }
 
+  /// Lifts a hold without ending the listening (the press went away without
+  /// a release, e.g. the button was removed): normal endpointing applies from
+  /// now on and the recording no longer counts as held. No effect without a
+  /// hold.
+  void unhold() {
+    if (!_isHolding) return;
+    _holdGen = null;
+    _wasHeld = false;
+    _releasePendingGen = null;
+    _endpointer?.unhold();
+  }
+
   /// Ends a hold and processes the whole recording as one utterance (like
   /// [finishListening]). No effect without a hold or when the listening is
   /// already over. Released before the microphone is open: the listening

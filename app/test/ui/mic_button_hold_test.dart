@@ -52,6 +52,7 @@ void main() {
                         onDown: () => log.add('down'),
                         onHold: () => log.add('hold'),
                         onUp: (h) => log.add('up:$h'),
+                        onAbort: () => log.add('abort'),
                       )
                     : null,
               ),
@@ -122,13 +123,13 @@ void main() {
       expect(log, isEmpty);
     });
 
-    testWidgets('Entfernen während eines Tipps: Timer sauber, kein up '
-        '(nichts wird abgebrochen)', (tester) async {
+    testWidgets('Entfernen während eines Tipps: Timer sauber, kein up, '
+        'abort hebt nur das Halten auf', (tester) async {
       await pumpButton(tester);
       await tester.startGesture(tester.getCenter(find.byType(MicButton)));
       await tester.pumpWidget(const SizedBox());
       await tester.pump(_hold * 2);
-      expect(log, ['down']);
+      expect(log, ['down', 'abort']);
     });
 
     testWidgets('Entfernen während des Haltens: gehaltene Aufnahme wird '

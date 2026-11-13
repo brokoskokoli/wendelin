@@ -158,6 +158,12 @@ final class Endpointer {
     if (_result == null) _hold = true;
   }
 
+  /// Lifts the hold without ending the listening: normal endpointing
+  /// (silence end, timeouts, maximum duration) applies from the next frame on.
+  void unhold() {
+    _hold = false;
+  }
+
   /// Ends the hold and the listening: what was captured becomes the
   /// utterance (like [finish]).
   Endpoint release() {

@@ -234,6 +234,31 @@ void main() {
       expect(stt.calls, hasLength(1));
       expect(stt.calls.single.samples, greaterThanOrEqualTo(110 * 480));
     });
+    test('pressAbort (Button vor der Haltegrenze entfernt): Halten wird '
+        'aufgehoben, Zuhören endet normal, kein Abbruch', () async {
+      setup(
+        frames: AudioFrames.pattern('${'.' * _lead}${'S' * 10}${'.' * 100}'),
+      );
+      await voice().start(TriggerKind.pushToTalk);
+      await waitVoice(c, (v) => v.levels.isNotEmpty);
+      await voice().pressDown();
+      await voice().pressAbort();
+      // Without the abort the hold would keep the listening open for 2 min.
+      await voice().whenIdle;
+      expect(stt.calls, hasLength(1));
+      expect(stt.calls.single.samples, lessThan(80 * 480));
+    });
+
+    test('pressAbort ohne Druck oder nach Loslassen: keine Wirkung', () async {
+      setup(frames: utterance());
+      await voice().pressAbort();
+      await voice().pressDown();
+      await voice().pressUp(held: false);
+      await voice().pressAbort();
+      expect(ui().listening, isTrue);
+      await voice().whenIdle;
+      expect(stt.calls, hasLength(1));
+    });
   });
 
   group('getippte Agent-Anfrage', () {

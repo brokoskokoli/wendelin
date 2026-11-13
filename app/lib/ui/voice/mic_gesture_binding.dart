@@ -15,4 +15,5 @@ MicGesture micGestureFor(
   onDown: () => unawaited(controller.pressDown(kind: kind, prepare: prepare)),
   onHold: () => unawaited(controller.holdStart()),
   onUp: (held) => unawaited(controller.pressUp(held: held)),
+  onAbort: () => unawaited(controller.pressAbort()),
 );

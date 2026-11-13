@@ -187,6 +187,126 @@ void main() {
       });
     });
 
+    test(
+      'unhold() hebt das Halten auf: normales Ende, Zuhören läuft weiter',
+      () {
+        runFake((async) {
+          final h = Harness(turns: [ScriptedTurn.text('Ja.')]);
+          h.fakeAudio.script(long);
+          h.pipeline.start(hold: true);
+          async.elapse(const Duration(milliseconds: 600));
+          expect(h.pipeline.state, VoiceState.listening);
+          h.pipeline.unhold();
+          expect(h.pipeline.state, VoiceState.listening); // no abort
+          async.elapse(const Duration(seconds: 10));
+          expect(h.stt.calls, hasLength(1));
+          expect(h.stt.calls.single.samples, lessThan(60 * 480));
+          h.pipeline.unhold(); // without hold: no effect
+        });
+      },
+    );
+
+    test('unhold() im Folgefenster: das Fenster läuft normal ab', () {
+      runFake((async) {
+        final h = Harness(
+          config: const VoicePipelineConfig(
+            conversationMode: true,
+            followUpWindow: Duration(seconds: 1),
+          ),
+          transcripts: const [Transcript(text: 'Eins')],
+          turns: [ScriptedTurn.text('Erste.')],
+        );
+        h.pipeline.start();
+        async.flushMicrotasks();
+        h.fakeAudio.script(
+          AudioFrames.pattern('${'.' * 200}${'S' * 10}', frame: frame),
+        );
+        for (var i = 0; i < 100; i++) {
+          async.elapse(const Duration(milliseconds: 100));
+          if (h.eventsOf<VoiceListening>().length == 2 &&
+              h.pipeline.state == VoiceState.listening) {
+            break;
+          }
+        }
+        h.pipeline.hold();
+        async.elapse(const Duration(seconds: 5));
+        expect(h.pipeline.state, VoiceState.listening);
+        h.pipeline.unhold();
+        async.elapse(const Duration(seconds: 10));
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('unhold() im Folgefenster: der Rest zählt wieder als freihändig '
+        '(0,4 verworfen)', () {
+      runFake((async) {
+        final h = Harness(
+          config: const VoicePipelineConfig(
+            conversationMode: true,
+            followUpWindow: Duration(seconds: 5),
+          ),
+          transcripts: const [
+            Transcript(text: 'Eins', language: 'de', confidence: 0.9),
+            Transcript(text: 'Zwei', language: 'de', confidence: 0.4),
+          ],
+          turns: [ScriptedTurn.text('Erste.'), ScriptedTurn.text('Zweite.')],
+        );
+        h.pipeline.start();
+        async.flushMicrotasks();
+        h.fakeAudio.script(
+          AudioFrames.pattern(
+            '${'.' * 20}${'S' * 10}${'.' * 40}',
+            frame: frame,
+          ),
+        );
+        for (var i = 0; i < 300; i++) {
+          async.elapse(const Duration(milliseconds: 10));
+          if (h.eventsOf<VoiceListening>().length == 2 &&
+              h.pipeline.state == VoiceState.listening) {
+            break;
+          }
+        }
+        h.pipeline.hold();
+        async.elapse(const Duration(seconds: 2)); // speech is over, held
+        h.pipeline.unhold();
+        async.elapse(const Duration(seconds: 30));
+        expect(h.stt.calls.length, greaterThan(1), reason: 'Folgefenster');
+        expect(h.recording.inputs.map((i) => i.text), ['Eins']);
+      });
+    });
+
+    test('Folgefenster nach gehaltener Runde: Schwelle wieder 0,5, leise '
+        'verworfen (0,4)', () {
+      runFake((async) {
+        final h = Harness(
+          config: const VoicePipelineConfig(
+            conversationMode: true,
+            followUpWindow: Duration(seconds: 2),
+          ),
+          transcripts: const [
+            Transcript(text: 'Eins', language: 'de', confidence: 0.9),
+            Transcript(text: 'Zwei', language: 'de', confidence: 0.4),
+          ],
+          turns: [ScriptedTurn.text('Erste.'), ScriptedTurn.text('Zweite.')],
+        );
+        h.fakeAudio.script(long);
+        h.pipeline.start(hold: true);
+        async.elapse(const Duration(seconds: 5));
+        h.fakeAudio.script(
+          AudioFrames.pattern('${'.' * 5}${'S' * 10}${'.' * 40}', frame: frame),
+        );
+        h.pipeline.release();
+        async.elapse(const Duration(seconds: 30));
+        // Round 1 was held; the follow-up window is hands-free again:
+        // 0.4 < 0.5 is dropped quietly (a held 0.4 would pass at 0.3).
+        // (The fake replays its script, so more than one window may listen.)
+        expect(h.stt.calls.length, greaterThan(1), reason: 'Folgefenster');
+        expect(h.recording.inputs.map((i) => i.text), ['Eins']);
+        expect(h.eventsOf<VoiceNothingUnderstood>(), isEmpty);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
     test('ein Halten gilt nur für ein Zuhören: das nächste endet normal', () {
       runFake((async) {
         final h = Harness(
