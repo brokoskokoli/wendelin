@@ -6,8 +6,8 @@ Regeln: Öffentliches Repo. Ergebnisse ohne Namen, Kontaktdaten, Geräte-Serienn
 
 ## Aktueller Stand
 
-- Release-Kandidat: **v0.1.1-rc1** (GitHub-Release, Vorabversion), Commit `330d1ef2`. APK und `SHA256SUMS` von der Release-Seite laden; Zertifikat-Fingerabdruck wie im README.
-- Installation über v0.1.0 (gleiche Signatur, Daten bleiben). Nach dem Update startet einmal der Einrichtungsassistent (WP174).
+- Release-Kandidat: **v0.1.8-rc1** (GitHub-Release, Vorabversion), Commit `bb3c98a6`. APK und `SHA256SUMS` von der Release-Seite laden; Zertifikat-Fingerabdruck wie im README.
+- Installation über v0.1.7 (gleiche Signatur, Daten bleiben).
 
 ## Reihenfolge und Ergebnisse
 

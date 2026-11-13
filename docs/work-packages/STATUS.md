@@ -88,6 +88,7 @@ K138 offen, K139 offen, K140 offen, K141 offen, K142 offen, K144 offen, K145 off
 
 ## Nächste Schritte
 
+0. v0.1.8-rc1 (WP191, WP192) auf Gerät testen: `docs/testing/m5/wp191.md`, `docs/testing/m5/wp192.md`; K150–K152 bestätigen lassen.
 1. Release 0.1.6 auf Gerät testen; WP188 per Gerätetest `docs/testing/m5/wp188.md` prüfen.
 1a. Emulator-AVD `Wendelin_AOSP_35` neu anlegen (Abbild seit 2026-11-04 leer), danach offene E2E nachholen.
 2. Konzeptänderungen bestätigen lassen: K138, K139, K140, K141, K142, K144, K145, K146, K147, K148, K149 (Status: offen).
