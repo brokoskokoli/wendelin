@@ -549,7 +549,15 @@ def hb_conditions(items, rng_seeds=3):
     return out
 
 
-def hb_config_list():
+def hb_config_list(sizes=None, scores=None):
+    """Standard: wie WP146. Mit sizes (Gesamtzahl Begriffe inkl. Wendelin + Listennamen, WP191):
+    greedy, beam und je Größe x Bonus eine Konfiguration `T<größe> s<bonus>`."""
+    if sizes:
+        cfgs = [("greedy", dict(method="greedy", n=0, score=0.0)), ("beam", dict(method="beam", n=0, score=0.0))]
+        for t in sizes:
+            for sc in scores or (1.0,):
+                cfgs.append((f"T{t} s{sc}", dict(method="hw", n=max(0, t - 1 - len(LIST_NAMES)), score=sc)))
+        return cfgs
     cfgs = [("greedy", dict(method="greedy", n=0, score=0.0)), ("beam", dict(method="beam", n=0, score=0.0))]
     cfgs += [(f"hw300 s{sc}", dict(method="hw", n=300, score=sc)) for sc in SCORES]
     for sc in (1.5, 3.0):
@@ -575,6 +583,25 @@ def hb_recognizer(cfg, names, models, bpe_vocab, threads, scratch):
     hw.write_text("\n".join(terms) + "\n")
     return R.from_transducer(*f, decoding_method="modified_beam_search", hotwords_file=str(hw),
                              hotwords_score=cfg["score"], modeling_unit="bpe", bpe_vocab=str(bpe_vocab), **kw)
+
+
+def pctl(xs, q):
+    xs = sorted(xs)
+    return xs[min(len(xs) - 1, int(round(q * (len(xs) - 1))))] if xs else 0.0
+
+
+def time_stats(times, audio_s):
+    """Dekodierzeit je Äußerung: Median/p95 in ms und Echtzeitfaktor (Summe Dekodierzeit / Summe Audiodauer)."""
+    return dict(n=len(times), median_ms=1000 * pctl(times, 0.5), p95_ms=1000 * pctl(times, 0.95),
+                rtf=sum(times) / max(sum(audio_s), 1e-9))
+
+
+def hb_time_markdown(out):
+    L = ["\n**Dekodierzeit je Äußerung** (reine `decode_stream`-Zeit, ohne Modellladen)\n",
+         "| Konfiguration | n | Median ms | p95 ms | RTF |", "|---|--:|--:|--:|--:|"]
+    for label, t in out.get("times", {}).items():
+        L.append(f'| {label} | {t["n"]} | {t["median_ms"]:.0f} | {t["p95_ms"]:.0f} | {t["rtf"]:.3f} |')
+    return "\n".join(L)
 
 
 def hb_score(conds, hyps, names):
@@ -609,16 +636,22 @@ def cmd_hotword_bias(a):
     names, items = hb_audio(a)
     conds = hb_conditions(items)
     print(f"[hb] {len(items)} Äußerungen, {len(conds)} Audios, {len(names)} Namen", file=sys.stderr, flush=True)
-    out = dict(cfgs={}, hyps={}, n_items=len(items), n_audio=len(conds))
-    for label, cfg in hb_config_list():
+    out = dict(cfgs={}, hyps={}, times={}, load=os.getloadavg(), n_items=len(items), n_audio=len(conds))
+    sizes = [int(x) for x in a.sizes.split(",")] if a.sizes else None
+    scores = [float(x) for x in a.scores.split(",")] if a.scores else None
+    for label, cfg in hb_config_list(sizes, scores):
         t0 = time.perf_counter()
         rec = hb_recognizer(cfg, names, a.models, a.bpe_vocab, a.threads, a.cache)
-        hyps = [decode(rec, s)[0] for _, _, s in conds]
+        res = [decode(rec, s) for _, _, s in conds]
+        hyps = [h for h, _ in res]
+        out["times"][label] = time_stats([t for _, t in res], [len(s) / 16000 for _, _, s in conds])
         out["cfgs"][label] = hb_score(conds, hyps, names)
         out["hyps"][label] = [dict(c=c, id=it["id"], ref=it["ref"], hyp=h) for (c, it, _), h in zip(conds, hyps)]
         Path(a.out).write_text(json.dumps(out, ensure_ascii=False, indent=1))
         print(f"[hb] {label} {time.perf_counter() - t0:.0f}s", file=sys.stderr, flush=True)
+        out.setdefault("load_end", {})[label] = os.getloadavg()
     print(hb_markdown(out))
+    print(hb_time_markdown(out))
 
 
 def hb_markdown(out):
@@ -735,16 +768,22 @@ def cmd_hotword_bias_wake(a):
         for scen, segs in wake_variants(it, 31 + k):
             jobs.append((scen, it, segs))
     cfgs = [("beam", dict(method="beam", n=0, score=0.0))]
-    for n in [int(x) for x in a.counts.split(",")]:
-        for sc in [float(x) for x in a.scores.split(",")]:
-            cfgs.append((f"hw{n} s{sc}", dict(method="hw", n=n, score=sc)))
-    out = dict(rows={}, hyps={}, n_cmds=len(items))
+    if a.sizes:
+        cfgs += hb_config_list([int(x) for x in a.sizes.split(",")], [float(x) for x in a.scores.split(",")])[2:]
+    else:
+        for n in [int(x) for x in a.counts.split(",")]:
+            for sc in [float(x) for x in a.scores.split(",")]:
+                cfgs.append((f"hw{n} s{sc}", dict(method="hw", n=n, score=sc)))
+    out = dict(rows={}, hyps={}, times={}, load=os.getloadavg(), n_cmds=len(items))
     for label, cfg in cfgs:
         rec = hb_recognizer(cfg, names, a.models, a.bpe_vocab, a.threads, a.cache)
         t0 = time.perf_counter()
-        rows, hy = {}, []
+        rows, hy, tms, aud = {}, [], [], []
         for scen, it, segs in jobs:
-            text = " ".join(decode(rec, pad(x))[0] for x in segs)
+            dec = [decode(rec, pad(x)) for x in segs]
+            tms.append(sum(t for _, t in dec))
+            aud.append(sum(len(pad(x)) for x in segs) / 16000)
+            text = " ".join(h for h, _ in dec)
             h = set(norm(text, "de").split())
             ref = set(norm("hey wendelin " + it["text"], "de").split())
             r = rows.setdefault(scen, dict(n=0, ins=0, nonempty=0, wend=0, hit=0, all=0))
@@ -752,10 +791,12 @@ def cmd_hotword_bias_wake(a):
             r["hit"] += sum(w in h for w in it["spoken"]); r["all"] += len(it["spoken"])
             hy.append(dict(s=scen, id=it["id"], hyp=text))
         out["rows"][label] = rows
+        out["times"][label] = time_stats(tms, aud)
         out["hyps"][label] = hy
         Path(a.out).write_text(json.dumps(out, ensure_ascii=False, indent=1))
         print(f"[hbw] {label} {time.perf_counter() - t0:.0f}s", file=sys.stderr, flush=True)
     print(hbw_markdown(out))
+    print(hb_time_markdown(out))
 
 
 def hbw_markdown(out):
@@ -777,7 +818,7 @@ def hbw_markdown(out):
         L.append(f"| {label} | " + " | ".join(agg(rows, f) for _, f in cols) + " |")
     L += ["", "Je Schnittversatz (Wake mit Pause bzw. ohne Pause, plain, clean+noisy), nur hw300 s3.0 und beam:", "",
           "| Konfiguration | Pfad | -400 | -200 | 0 | +200 |", "|---|---|--:|--:|--:|--:|"]
-    for label in ("beam", "hw300 s3.0"):
+    for label in ["beam", "hw300 s3.0"] + [k for k in out["rows"] if k.startswith("T")]:
         if label in out["rows"]:
             for path in ("np", "p"):
                 L.append(f"| {label} | {path} | " + " | ".join(
@@ -829,6 +870,8 @@ def main():
     h.add_argument("--threads", type=int, default=4)
     h.add_argument("--cache", default=os.path.join(os.environ.get("TMPDIR", "/tmp"), "wp146-hb"))
     h.add_argument("--out", default="hotword-bias.json")
+    h.add_argument("--sizes", help="WP191: Gesamtzahl Begriffe inkl. Wendelin + Listennamen, kommagetrennt (z. B. 64,128,200,300)")
+    h.add_argument("--scores", help="WP191: Hotword-Boni für --sizes, kommagetrennt (Standard 1.0)")
     w = sub.add_parser("hotword-bias-wake")
     w.add_argument("--models", required=True)
     w.add_argument("--bpe-vocab", required=True)
@@ -837,6 +880,7 @@ def main():
     w.add_argument("--out", default="hotword-bias-wake.json")
     w.add_argument("--counts", default="0,50,300", help="Anzahl erfundener Kontakte, kommagetrennt")
     w.add_argument("--scores", default="1.5,3.0", help="Hotword-Boni, kommagetrennt")
+    w.add_argument("--sizes", help="WP191: Gesamtzahl Begriffe inkl. Wendelin + Listennamen (ersetzt --counts)")
     t = sub.add_parser("table")
     t.add_argument("--stt"); t.add_argument("--tts")
     a = ap.parse_args()
