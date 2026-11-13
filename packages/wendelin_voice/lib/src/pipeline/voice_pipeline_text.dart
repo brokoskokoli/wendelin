@@ -26,9 +26,9 @@ extension VoicePipelineText on VoicePipeline {
         clock: clock,
         diagnostics: diagnostics,
       ).identify(pcm);
-      final text = await stt.transcribe(pcm, language: config.language);
+      final text = await _transcribeSegments(gen, pcm);
       final match = await who;
-      if (gen != _gen) return null;
+      if (text == null || gen != _gen) return null;
       final t = match == null ? text : text.withSpeaker(match);
       _emit(VoiceTranscribed(t));
       return t;
@@ -36,6 +36,27 @@ extension VoicePipelineText on VoicePipeline {
       if (gen == _gen) _emit(VoiceError(VoiceState.transcribing, error));
       return null;
     }
+  }
+
+  /// Transcribes [pcm] in segments (hold recordings can exceed the
+  /// recognizer's window, WP192); one call for short audio. `null` if the
+  /// run was superseded between segments.
+  ///
+  /// Texts are joined with a space; the confidence is the minimum of the
+  /// segments' (fail-closed: one bad piece must not pass as a good whole),
+  /// the language that of the first segment with one.
+  Future<Transcript?> _transcribeSegments(int gen, Int16List pcm) async {
+    final parts = splitAtQuietPoints(pcm);
+    if (parts.length == 1) {
+      return stt.transcribe(pcm, language: config.language);
+    }
+    final results = <Transcript>[];
+    for (final part in parts) {
+      final t = await stt.transcribe(part, language: config.language);
+      if (gen != _gen) return null;
+      results.add(t);
+    }
+    return mergeTranscripts(results);
   }
 
   Future<void> _nothingUnderstood(

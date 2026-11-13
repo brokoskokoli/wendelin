@@ -20,6 +20,7 @@ import 'barge_detector_sync.dart';
 import 'conversation.dart';
 import 'endpointer.dart';
 import 'open_question.dart';
+import 'pcm_segments.dart';
 import 'speaker_identification.dart';
 import 'speech_hold.dart';
 import 'stt_confidence_gate.dart';
