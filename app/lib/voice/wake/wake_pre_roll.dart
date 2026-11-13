@@ -5,8 +5,10 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../di/core_providers.dart';
 import '../../di/wake_settings.dart';
 import '../../platform/assistant_platform.dart';
+import '../../station/station_providers.dart';
 import '../voice_log.dart';
 import 'wake_align.dart';
 
@@ -48,14 +50,27 @@ Future<WakePreRoll?> takeWakePreRoll({
 }
 
 /// WP195: the stop tone when nothing was heard, only with the setting
-/// „Bestätigungston“ on (same switch as at a wake word hit); never throws.
+/// „Bestätigungston“ on (same switch as at a wake word hit) and not while the
+/// station screen runs in its quiet hours; never throws.
 Future<void> playStopTone(Ref ref) async {
   try {
     if (!await ref.read(wakeToneProvider.future) || !ref.mounted) return;
+    if (_stationQuiet(ref)) return;
     await ref.read(stopToneProvider)();
   } on Object catch (e) {
     voiceLog('stop-tone-error', {'type': errorCode(e)});
   }
+}
+
+/// Whether the station runs right now (its controller is alive, the screen is
+/// shown) and the local time lies in its quiet hours. Creates no state.
+bool _stationQuiet(Ref ref) {
+  if (!ref.exists(stationControllerProvider)) return false;
+  if (ref.read(stationControllerProvider).ended) return false;
+  return ref
+      .read(stationPrefsProvider)
+      .quiet
+      .contains(ref.read(clockProvider).now());
 }
 
 /// How long [WakeHandoffTracker.close] waits for the first frame of the app's
