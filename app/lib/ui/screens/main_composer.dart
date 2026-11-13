@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../agent/agent_controller.dart';
 import '../../agent/conversation_state.dart';
@@ -11,6 +12,7 @@ import '../../l10n/l10n.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
 import '../design/design.dart';
+import '../voice/mic_gesture_binding.dart';
 import '../voice/microphone_access.dart';
 import 'main_parts.dart';
 import 'private_banner.dart';
@@ -72,6 +74,11 @@ class MainComposer extends ConsumerWidget {
             )
           : null,
       onMic: () => _onMic(ref),
+      micGesture: micGestureFor(
+        ref.read(voiceControllerProvider.notifier),
+        TriggerKind.pushToTalk,
+        microphoneAccess,
+      ),
       onSend: (text) {
         if (conversation.running || text.trim().isEmpty) return false;
         unawaited(ref.read(agentControllerProvider.notifier).send(text));

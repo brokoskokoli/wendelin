@@ -22,6 +22,7 @@ import '../../voice/wake/wake_pre_roll.dart';
 import '../design/design.dart';
 import '../screens/confirmation_sheet.dart';
 import '../screens/private_banner.dart';
+import '../voice/mic_gesture_binding.dart';
 import '../voice/microphone_access.dart';
 import 'overlay_frame.dart';
 import 'overlay_idle_close.dart';
@@ -467,6 +468,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     onAnswer: (yes) => _agent.answer(approved: yes),
     hint: voice.answersByVoice ? ConfirmationHint.voice : ConfirmationHint.tap,
     onMic: () => _onMic(voice, conversation),
+    micGesture: micGestureFor(_voice, TriggerKind.assistant, _access),
     onClose: () => unawaited(_close('tap')),
     onKeyboard: _toggleKeyboard,
     onUndo: (id) => unawaited(_idle.afterUndo(() => _voice.undo(id))),
@@ -479,14 +481,11 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     } else if (conversation.running) {
       _agent.cancel();
     } else {
-      unawaited(
-        _voice.start(
-          TriggerKind.assistant,
-          prepare: () => _microphoneAccess(context, ref),
-        ),
-      );
+      unawaited(_voice.start(TriggerKind.assistant, prepare: _access));
     }
   }
+
+  Future<bool> _access() => _microphoneAccess(context, ref);
 
   Widget _typingField() => TextField(
     controller: _text,
