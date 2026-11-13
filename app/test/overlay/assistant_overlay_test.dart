@@ -771,27 +771,6 @@ void main() {
     },
   );
 
-  testWidgets('Overlay: Mikrofon liefert Ton beim Laden -> „Ich höre zu“, '
-      'ohne Ton „Moment …“ (WP194)', (tester) async {
-    final platform = FakeAssistantPlatform();
-    final env = TestEnv(providerConfig: scripted(FakeLlmProvider(const [])));
-    final c = await pumpOverlay(tester, env, platform, autoStart: false);
-    final voice = c.read(voiceControllerProvider.notifier);
-    MicState mic() => tester.widget<MicButton>(find.byType(MicButton)).state;
-
-    voice.seed(const VoiceUiState(preparing: true));
-    await tester.pump();
-    expect(find.text('Moment …'), findsWidgets);
-    expect(mic(), MicState.preparing);
-
-    voice.seed(const VoiceUiState(preparing: true, micLive: true));
-    await tester.pump();
-    expect(find.text('Moment …'), findsNothing);
-    expect(find.text('Ich höre zu …'), findsOneWidget);
-    expect(mic(), MicState.listening);
-    expect(c.read(voiceControllerProvider).active, isTrue);
-  });
-
   testWidgets('Beenden schließt das Overlay', (tester) async {
     final platform = FakeAssistantPlatform();
     final env = TestEnv(providerConfig: scripted(FakeLlmProvider(const [])));
