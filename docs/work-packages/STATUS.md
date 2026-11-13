@@ -52,7 +52,7 @@ Stand: 2026-10-30; läuft: keiner; Release v0.1.6 (4ce2d167).
 | WP193 | Release-Kandidat 0.1.8 | gemergt bb3c98a6 | Tag v0.1.8-rc1 (WP191, WP192). Versionskonstanten `wendelinAppVersion` und `devArchiveAppVersion` müssen beim Versionssprung mit. |
 | WP194 | Start: Mikrofon zuerst, „Ich höre zu“, sobald es läuft | in Arbeit | Wunsch Maintainer 2026-11-13, K153. |
 | WP195 | Nichts gehört: nach 5 s still mit Stopp-Ton beenden | in Arbeit | Wunsch Maintainer 2026-11-13, K154. |
-| WP196 | Langes Transkript kleiner anzeigen | in Arbeit | Wunsch Maintainer 2026-11-13, K155. |
+| WP196 | Langes Transkript kleiner anzeigen | gemergt a0609f67 | K155. Nur im Overlay (Chat-Blase ist schon 16 px, Station nutzt das Overlay); Stufen 26 / 18,2 / 16 px, Hysterese 10 %; Untergrenze Body 16 px bleibt (Maintainer 2026-11-13). Offen: Gerätetest `docs/testing/m5/wp196.md`; Soll: irreführender Kommentar „55 %“ in `app_theme.dart:288`. |
 
 ## Offen
 
