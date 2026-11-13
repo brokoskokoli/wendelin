@@ -111,6 +111,7 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
             "isDefaultAssistant" -> result.success(isDefaultAssistant())
             "openAssistantSettings" -> result.success(openAssistantSettings())
             "isLocked" -> result.success(keyguard().isKeyguardLocked)
+            "stationOpen" -> result.success(StationState.open)
             "requestUnlock" -> requestUnlock(result)
             "isRecognizerOffered" -> result.success(RecognizerSwitch.isOffered(activity))
             "recognitionServiceState" -> RecognitionServiceStatus.read(activity) { result.success(it) }
