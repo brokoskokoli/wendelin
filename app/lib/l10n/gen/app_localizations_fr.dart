@@ -4885,6 +4885,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Un modèle vocal n’est pas encore téléchargé (Paramètres → Voix).';
 
   @override
+  String get voiceHoldLimitHint =>
+      'Durée maximale d\'enregistrement atteinte, je traite ce que vous avez dit.';
+
+  @override
   String get voiceMetricsClear => 'Vider la liste';
 
   @override
@@ -4905,6 +4909,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get voiceMetricsTts => 'Synthèse vocale';
+
+  @override
+  String get voiceReleaseToSend => 'Relâcher pour envoyer';
 
   @override
   String get voiceScreenAutomatic => 'Automatique';

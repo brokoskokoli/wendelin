@@ -4831,6 +4831,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'A speech model has not been downloaded yet (Settings → Speech).';
 
   @override
+  String get voiceHoldLimitHint =>
+      'Maximum recording time reached, I am processing what you said.';
+
+  @override
   String get voiceMetricsClear => 'Clear list';
 
   @override
@@ -4851,6 +4855,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceMetricsTts => 'Speech output';
+
+  @override
+  String get voiceReleaseToSend => 'Release to send';
 
   @override
   String get voiceScreenAutomatic => 'Automatic';
