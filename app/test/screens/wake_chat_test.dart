@@ -98,7 +98,6 @@ void main() {
         assistantPlatformProvider.overrideWithValue(assistant),
         voiceReadyProvider.overrideWithValue(ready),
         wakeConfirmToneProvider.overrideWithValue(() async {}),
-        stopToneProvider.overrideWithValue(() async {}),
         activeVoiceProvider.overrideWith(
           (ref) async => noModels
               ? null

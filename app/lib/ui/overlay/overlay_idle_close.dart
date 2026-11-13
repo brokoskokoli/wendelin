@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../agent/agent_controller.dart';
+import '../../voice/voice_components.dart' show voiceNothingHeardHint;
 import '../../voice/voice_controller.dart';
 
 /// Whether nothing is left to do after listening ended, so the overlay may
@@ -145,9 +146,14 @@ class IdleCloser {
     if (!nothingLeftToDo(ref, locked: locked(), unlocking: unlocking())) {
       return;
     }
-    // An error stays visible briefly, like the stop message.
-    if (ref.read(voiceControllerProvider).error != null) {
+    // An error stays visible briefly, like the stop message. So does „Nothing
+    // heard“ (WP195): the hint is read and the stop tone (it needs the
+    // overlay's player) plays out before the engine is torn down.
+    final voice = ref.read(voiceControllerProvider);
+    if (voice.error != null) {
       closeLater('idle-error', stopCloseDelay());
+    } else if (voice.hint == voiceNothingHeardHint) {
+      closeLater('idle-nothing-heard', stopCloseDelay());
     } else {
       close('idle');
     }

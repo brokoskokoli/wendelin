@@ -49,6 +49,8 @@ final class TestEnv {
     this.llmFactory,
     this.storedProfiles = false,
     this.extraOverrides = const [],
+    this.stopTone,
+    this.realStopTone = false,
     StartupSettings? startup,
     this._storage,
     Set<String> enabled = const {
@@ -61,6 +63,13 @@ final class TestEnv {
   }) : startup =
            startup ??
            StartupSettings(enabledIntegrations: enabled, demoMode: demo);
+
+  /// The stop tone (WP195) of a silent round; default: nothing is played.
+  /// With [realStopTone] the real provider stays (tracker test).
+  final Future<void> Function()? stopTone;
+
+  /// Keeps the real stop tone provider.
+  final bool realStopTone;
 
   /// Further overrides (e.g. the exporter).
   final List<Override> extraOverrides;

@@ -43,10 +43,10 @@ void main() {
           )
         : fakeVoice(script: const [Transcript(text: '')]);
     final env = TestEnv(
+      stopTone: () async => tones++,
       providerConfig: scripted(FakeLlmProvider([])),
       extraOverrides: [
         activeVoiceProvider.overrideWith((ref) async => voice),
-        stopToneProvider.overrideWithValue(() async => tones++),
         stationHostProvider.overrideWithValue(FakeStationHost()),
       ],
     );
