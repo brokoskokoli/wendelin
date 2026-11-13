@@ -510,7 +510,11 @@ final class VoiceController extends Notifier<VoiceUiState> {
     final existing = _primed;
     if (existing != null && identical(existing.inner, inner)) return existing;
     if (existing != null) unawaited(existing.stop());
-    return _primed = PrimedAudioInput(inner, onFirstFrame: _onFirstFrame);
+    return _primed = PrimedAudioInput(
+      inner,
+      onFirstFrame: _onFirstFrame,
+      onBuffered: _onBufferedFrame,
+    );
   }
 
   VoicePipeline _pipelineFor(VoiceComponents components) {
@@ -598,13 +602,6 @@ final class VoiceController extends Notifier<VoiceUiState> {
     if (_answers.finished(ref.read(clockProvider).now())) {
       unawaited(ref.read(conversationOfferProvider.notifier).offer());
     }
-  }
-
-  void _onLevel(double level) {
-    if (!state.listening) return;
-    final l = [...state.levels, level];
-    final trimmed = l.length > waveBars ? l.sublist(l.length - waveBars) : l;
-    state = state.copyWith(levels: trimmed);
   }
 
   /// Undoes [callId]: stops a spoken answer at once, adds „Zurückgenommen.“

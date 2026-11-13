@@ -7,7 +7,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 /// [AudioInput] that passes frames through unchanged and reports the level
 /// of each frame (0–1) on [levels], for the waveform in the overlay and on
 /// the main screen.
-final class MeteredAudioInput implements AudioInput {
+final class MeteredAudioInput implements ReplayingAudioInput {
   /// Wraps [inner].
   MeteredAudioInput(this.inner);
 
@@ -22,6 +22,12 @@ final class MeteredAudioInput implements AudioInput {
 
   @override
   bool get isRunning => inner.isRunning;
+
+  @override
+  int get pendingReplaySamples => switch (inner) {
+    final ReplayingAudioInput a => a.pendingReplaySamples,
+    _ => 0,
+  };
 
   int _pendingMute = 0;
 

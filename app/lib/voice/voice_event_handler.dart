@@ -4,6 +4,25 @@ part of 'voice_controller.dart';
 
 /// Maps pipeline events to the UI state and the voice log.
 extension _VoiceEventHandler on VoiceController {
+  // The bar moves while the models load (WP194); afterwards the metered
+  // pipeline input takes over (the buffer is replayed through it).
+  void _onBufferedFrame(Int16List frame) {
+    if (ref.mounted && state.preparing && state.micLive) {
+      _addLevel(MeteredAudioInput.levelOf(frame));
+    }
+  }
+
+  void _onLevel(double level) {
+    if (!state.listening) return;
+    _addLevel(level);
+  }
+
+  void _addLevel(double level) {
+    final l = [...state.levels, level];
+    final trimmed = l.length > waveBars ? l.sublist(l.length - waveBars) : l;
+    state = state.copyWith(levels: trimmed);
+  }
+
   // State accessors for the press gestures (voice_press.dart): the ignore
   // above covers them, so that file needs none.
   bool get _isListening => state.listening;

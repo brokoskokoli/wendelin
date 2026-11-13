@@ -12,12 +12,13 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 ///
 /// The buffer holds at most [maxBuffered] of audio (the longest utterance);
 /// older frames are dropped. Without [prime], [start] is [inner.start].
-final class PrimedAudioInput implements AudioInput {
+final class PrimedAudioInput implements ReplayingAudioInput {
   /// Wraps [inner].
   PrimedAudioInput(
     this.inner, {
     this.maxBuffered = const Duration(seconds: 30),
     this.onFirstFrame,
+    this.onBuffered,
   });
 
   /// The real microphone.
@@ -29,6 +30,10 @@ final class PrimedAudioInput implements AudioInput {
   /// Called with the length (samples) of the first frame of every recording
   /// (primed or not).
   final void Function(int samples)? onFirstFrame;
+
+  /// Called with each frame that is buffered (nobody took the recording
+  /// yet): the level display while the models load (WP194).
+  final void Function(Int16List frame)? onBuffered;
 
   final _buffer = Queue<Int16List>();
   int _bufferedSamples = 0;
@@ -49,6 +54,9 @@ final class PrimedAudioInput implements AudioInput {
   /// Whether the early recording already failed or ended (e.g. no
   /// permission yet) and nobody took it.
   bool get failed => _out == null && (_error != null || _done);
+
+  @override
+  int get pendingReplaySamples => _out == null ? _bufferedSamples : 0;
 
   /// Buffered audio (for tests and the log).
   Duration get buffered =>
@@ -124,6 +132,8 @@ final class PrimedAudioInput implements AudioInput {
     }
     _buffer.add(frame);
     _bufferedSamples += frame.length;
+    onBuffered?.call(frame);
+
     final max = durationToSamples(maxBuffered);
     while (_bufferedSamples > max && _buffer.isNotEmpty) {
       _bufferedSamples -= _buffer.removeFirst().length;

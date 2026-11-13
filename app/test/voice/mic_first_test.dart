@@ -93,6 +93,7 @@ void main() {
         async.elapse(const Duration(milliseconds: 100));
         expect(ui().preparing, isTrue, reason: 'Modelle laden noch');
         expect(ui().micLive, isTrue, reason: 'erster Block da');
+        expect(ui().levels, isNotEmpty, reason: 'Pegelleiste bewegt sich');
         final ready = lines.where((l) => l.contains(' mic-ready ')).toList();
         expect(ready, isEmpty, reason: 'Laden noch nicht fertig');
         async.elapse(const Duration(seconds: 2));
@@ -105,10 +106,59 @@ void main() {
       });
     });
 
-    test('ohne Block bleibt micLive false, der Fehlerpfad greift', () {
+    test('Mikrofon ohne Block (Start schlägt fehl): micLive bleibt false, die '
+        'Fehlermeldung kommt, das Laden gelingt', () {
       fakeAsync((async) {
-        // A microphone that ends at once without any frame.
-        final audio = FakeAudioInput(frames: const []);
+        final audio = DeniedAudioInput();
+        final stt = RecordingStt('x');
+        container(
+          audio: audio,
+          load: () async {
+            await Future<void>.delayed(const Duration(seconds: 2));
+            return components(audio, stt);
+          },
+        );
+        unawaited(voice().start(TriggerKind.pushToTalk));
+        async.elapse(const Duration(seconds: 1));
+        expect(ui().preparing, isTrue);
+        expect(ui().micLive, isFalse, reason: 'kein Block, kein „hört zu“');
+        async.elapse(const Duration(seconds: 3));
+        expect(ui().micLive, isFalse);
+        expect(ui().preparing, isFalse);
+        expect(ui().error, isNotNull, reason: lines.join(' | '));
+        expect(stt.heard, isEmpty);
+      });
+    });
+
+    test(
+      'Abbruch im Laden nach dem ersten Block setzt micLive sofort zurück',
+      () {
+        fakeAsync((async) {
+          final audio = microphone();
+          container(
+            audio: audio,
+            load: () async {
+              await Future<void>.delayed(const Duration(seconds: 2));
+              return components(audio, RecordingStt('x'));
+            },
+          );
+          unawaited(voice().start(TriggerKind.pushToTalk));
+          async.elapse(const Duration(milliseconds: 500));
+          expect(ui().micLive, isTrue);
+          expect(ui().preparing, isTrue);
+          // Right after the cancel, before the load ends and cleans up too.
+          unawaited(voice().cancel());
+          async.flushMicrotasks();
+          expect(ui().preparing, isFalse);
+          expect(ui().micLive, isFalse);
+        });
+      },
+    );
+
+    test('Ladefehler nach dem ersten Block setzt micLive zurück und zeigt den '
+        'Fehler', () {
+      fakeAsync((async) {
+        final audio = microphone();
         container(
           audio: audio,
           load: () async {
@@ -116,15 +166,10 @@ void main() {
             throw const VoiceException(VoiceErrorKind.failed, 'kaputt');
           },
         );
-        var result = true;
-        unawaited(
-          voice().start(TriggerKind.pushToTalk).then((r) => result = r),
-        );
+        unawaited(voice().start(TriggerKind.pushToTalk));
         async.elapse(const Duration(seconds: 1));
-        expect(ui().preparing, isTrue);
-        expect(ui().micLive, isFalse, reason: 'kein Block, kein „hört zu“');
+        expect(ui().micLive, isTrue);
         async.elapse(const Duration(seconds: 2));
-        expect(result, isFalse);
         expect(ui().error, 'kaputt');
         expect(ui().micLive, isFalse);
         expect(ui().preparing, isFalse);

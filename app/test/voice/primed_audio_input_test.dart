@@ -18,6 +18,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 30));
       final all = primed.head(1 << 20);
       expect(all.length, greaterThan(0));
+      expect(primed.pendingReplaySamples, all.length);
       expect(primed.head(all.length + 5), hasLength(all.length));
       final part = primed.head(all.length ~/ 2 + 1);
       expect(part, hasLength(all.length ~/ 2 + 1));
@@ -27,6 +28,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 1));
       expect(replayed.take(all.length), all);
       expect(primed.head(100), isEmpty, reason: 'Puffer übergeben');
+      expect(primed.pendingReplaySamples, 0);
       await sub.cancel();
       await primed.stop();
     },
