@@ -229,6 +229,7 @@ void main() {
       final pre = await takeWakePreRoll(
         platform: platform,
         tone: false,
+        quiet: Future.value(false),
         playTone: () async {},
       );
       expect(platform.wakeKeptOpen, 1);
@@ -254,7 +255,7 @@ void main() {
       final pre = await takeWakePreRoll(
         platform: platform,
         tone: tone,
-        quiet: quiet,
+        quiet: Future.value(quiet),
         playTone: () async => plays++,
       );
       return (plays, pre);

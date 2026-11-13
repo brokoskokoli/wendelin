@@ -1,12 +1,14 @@
-// WP197: one check "station active and quiet hours" for both tones.
+// WP197: one check "station open and quiet hours" for both tones. The
+// station runs in its own engine; only the platform channel knows it is open.
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/platform/assistant_platform.dart';
 import 'package:wendelin/station/station_prefs.dart';
 import 'package:wendelin/station/station_providers.dart';
+import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin/voice/wake/wake_pre_roll.dart';
 
-import '../../station/station_support.dart' show FakeStationHost;
+import '../../overlay/assistant_overlay_test.dart' show FakeAssistantPlatform;
 import '../../support/test_env.dart';
 
 void main() {
@@ -14,39 +16,40 @@ void main() {
   const quietNow = QuietHours(fromHour: 8, toHour: 9);
   const quietLater = QuietHours(fromHour: 22, toHour: 7);
 
-  Future<ProviderContainer> make(
+  Future<bool> check(
     QuietHours quiet, {
-    bool stationOn = true,
+    bool open = true,
+    Object? error,
   }) async {
-    final env = TestEnv(
-      extraOverrides: [
-        stationHostProvider.overrideWithValue(FakeStationHost()),
-      ],
-    );
-    final c = env.container();
+    final platform = FakeAssistantPlatform()
+      ..stationIsOpen = open
+      ..stationError = error;
+    final c = TestEnv(
+      extraOverrides: [assistantPlatformProvider.overrideWithValue(platform)],
+    ).container();
     addTearDown(c.dispose);
     await c.read(stationPrefsProvider.notifier).set(StationPrefs(quiet: quiet));
-    if (stationOn) c.listen(stationControllerProvider, (_, _) {});
-    return c;
+    return stationQuiet(c.read);
   }
 
-  bool check(ProviderContainer c) =>
-      stationQuiet(exists: c.exists, read: c.read);
-
-  test('Station aktiv in der Ruhezeit: wahr', () async {
-    expect(check(await make(quietNow)), isTrue);
+  test('Station offen in der Ruhezeit: wahr', () async {
+    expect(await check(quietNow), isTrue);
   });
 
-  test('Station aktiv außerhalb der Ruhezeit: falsch', () async {
-    expect(check(await make(quietLater)), isFalse);
+  test('Station offen außerhalb der Ruhezeit: falsch', () async {
+    expect(await check(quietLater), isFalse);
   });
 
-  test(
-    'Station nicht aktiv, Ruhezeit: falsch, erzeugt keinen Zustand',
-    () async {
-      final c = await make(quietNow, stationOn: false);
-      expect(check(c), isFalse);
-      expect(c.exists(stationControllerProvider), isFalse);
-    },
-  );
+  test('Station nicht offen, Ruhezeit: falsch', () async {
+    expect(await check(quietNow, open: false), isFalse);
+  });
+
+  test('Kanalfehler: falsch (Ton wie bisher) und geloggt', () async {
+    final lines = <String>[];
+    final saved = voiceLogSink;
+    voiceLogSink = lines.add;
+    addTearDown(() => voiceLogSink = saved);
+    expect(await check(quietNow, error: StateError('x')), isFalse);
+    expect(lines.single, contains('station-quiet-error'));
+  });
 }

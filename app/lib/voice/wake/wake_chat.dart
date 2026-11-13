@@ -153,7 +153,7 @@ class WakeChatSession {
           final pre = await takeWakePreRoll(
             platform: assistant,
             tone: tone,
-            quiet: stationQuiet(exists: container.exists, read: container.read),
+            quiet: stationQuiet(container.read),
             playTone: container.read(wakeConfirmToneProvider),
           );
           // Taken elsewhere meanwhile (race with the overlay fallback):
