@@ -38,8 +38,9 @@ void main() {
   });
 
   test('Begrenzung: Anzahl, Länge, Wörter einstellbar', () {
-    final many = [for (var i = 0; i < 100; i++) room('Raum $i a')];
-    expect(sanitizeHintTerms(many).length, 64);
+    final many = [for (var i = 0; i < 400; i++) room('Raum $i a')];
+    expect(const HintTermLimits().maxTerms, 300);
+    expect(sanitizeHintTerms(many).length, 300);
     expect(
       sanitizeHintTerms([
         room('Eins'),

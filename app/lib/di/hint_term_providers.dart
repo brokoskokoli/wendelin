@@ -1,8 +1,8 @@
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../voice/voice_log.dart';
 import 'core_providers.dart';
 import 'ha_domain_synonyms.dart';
 import 'home_assistant.dart';
@@ -156,12 +156,9 @@ final hintTermsProvider = FutureProvider<List<String>>((ref) async {
   ref.watch(contactNamesProvider);
   return collectHintTerms(
     ref.watch(hintTermSourcesProvider),
-    onCounts: (c) => hintTermLog(
-      'Hinweisbegriffe: ${[for (final e in c.entries) '${e.key.name}=${e.value}'].join(' ')}',
-    ),
+    onCounts: (c) => voiceLog('hint-terms', {
+      for (final k in HintTermKind.values) k.name: c[k] ?? 0,
+      'total': c.values.fold<int>(0, (a, b) => a + b),
+    }),
   );
 });
-
-/// Log sink of the hint terms (counts per kind only, never names); tests
-/// replace it.
-void Function(String line) hintTermLog = debugPrint;

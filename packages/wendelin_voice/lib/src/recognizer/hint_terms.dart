@@ -64,12 +64,16 @@ abstract interface class HintTermSource {
 final class HintTermLimits {
   /// Creates limits.
   const HintTermLimits({
-    this.maxTerms = 64,
+    this.maxTerms = 300,
     this.maxLength = 40,
     this.maxWords = 4,
   });
 
   /// Maximum number of terms (kinds earlier in [hintTermPriority] win).
+  ///
+  /// 300 (WP191): at hotword bonus 1.0 the measurement with 64 to 300 invented
+  /// names showed no inserted names and a bearable decoding time
+  /// (`docs/notes/hotword-bias-2026-10-25.md`, "Nachtrag WP191").
   final int maxTerms;
 
   /// Maximum characters of one term.

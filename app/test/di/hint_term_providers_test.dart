@@ -5,6 +5,7 @@ import 'package:wendelin/di/hint_term_providers.dart';
 import 'package:wendelin/di/home_assistant.dart';
 import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/startup.dart';
+import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
@@ -162,7 +163,10 @@ void _providers() {
           expect(terms, contains('Lampe ${_letters(i)}'));
           expect(terms, contains('Raum ${_letters(i)}'));
         }
-        expect(terms, hasLength(64));
+        // Limit 300: the contacts are cut at the end, the total is exactly 300.
+        expect(terms, hasLength(300));
+        expect(terms, contains('Person ${_letters(0)}'));
+        expect(terms, isNot(contains('Person ${_letters(299)}')));
       },
     );
 
@@ -231,21 +235,28 @@ void _providers() {
 
     test('Log nennt nur Zahlen je Art, keine Namen', () async {
       final lines = <String>[];
-      final old = hintTermLog;
-      hintTermLog = lines.add;
-      addTearDown(() => hintTermLog = old);
+      final old = voiceLogSink;
+      voiceLogSink = lines.add;
+      addTearDown(() => voiceLogSink = old);
       await ha.save(const [
         HaEntity(entityId: 'light.k', name: 'Geheimlicht', area: 'Geheimraum'),
       ]);
       c.read(_contactState.notifier).set(['Geheime Person']);
       await c.read(hintTermsProvider.future);
-      expect(lines, hasLength(1));
+      final hint = lines.where((l) => l.contains('hint-terms')).toList();
+      expect(hint, hasLength(1));
       expect(
-        lines.single,
-        'Hinweisbegriffe: agent=1 list=2 room=1 entity=1 synonym=2 contact=1',
+        hint.single,
+        endsWith(
+          'hint-terms engine=app contact=1 agent=1 list=2 room=1 entity=1 '
+          'synonym=2 total=8',
+        ),
       );
       for (final n in ['Geheim', 'Einkauf', 'Wendelin', 'Lampe']) {
-        expect(lines.single, isNot(contains(n)));
+        expect(
+          hint.single.replaceFirst(voiceLogPrefix, ''),
+          isNot(contains(n)),
+        );
       }
     });
 
