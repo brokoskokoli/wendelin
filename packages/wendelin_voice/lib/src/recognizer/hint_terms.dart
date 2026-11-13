@@ -64,16 +64,17 @@ abstract interface class HintTermSource {
 final class HintTermLimits {
   /// Creates limits.
   const HintTermLimits({
-    this.maxTerms = 300,
+    this.maxTerms = 128,
     this.maxLength = 40,
     this.maxWords = 4,
   });
 
   /// Maximum number of terms (kinds earlier in [hintTermPriority] win).
   ///
-  /// 300 (WP191): at hotword bonus 1.0 the measurement with 64 to 300 invented
-  /// names showed no inserted names and a bearable decoding time
-  /// (`docs/notes/hotword-bias-2026-10-25.md`, "Nachtrag WP191").
+  /// 128 (WP191): the largest measured value without an inserted name at
+  /// hotword bonus 1.0; at 200 and 300 one invented name (only in the list
+  /// from size 200 on) appeared in a noisy hypothesis. See
+  /// `docs/notes/hotword-bias-2026-10-25.md` ("Nachtrag WP191").
   final int maxTerms;
 
   /// Maximum characters of one term.

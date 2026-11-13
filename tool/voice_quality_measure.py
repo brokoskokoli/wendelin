@@ -769,10 +769,10 @@ def cmd_hotword_bias_wake(a):
             jobs.append((scen, it, segs))
     cfgs = [("beam", dict(method="beam", n=0, score=0.0))]
     if a.sizes:
-        cfgs += hb_config_list([int(x) for x in a.sizes.split(",")], [float(x) for x in a.scores.split(",")])[2:]
+        cfgs += hb_config_list([int(x) for x in a.sizes.split(",")], [float(x) for x in a.scores.split(",")] if a.scores else None)[2:]
     else:
         for n in [int(x) for x in a.counts.split(",")]:
-            for sc in [float(x) for x in a.scores.split(",")]:
+            for sc in [float(x) for x in (a.scores or "1.5,3.0").split(",")]:
                 cfgs.append((f"hw{n} s{sc}", dict(method="hw", n=n, score=sc)))
     out = dict(rows={}, hyps={}, times={}, load=os.getloadavg(), n_cmds=len(items))
     for label, cfg in cfgs:
@@ -879,7 +879,7 @@ def main():
     w.add_argument("--cache", default=os.path.join(os.environ.get("TMPDIR", "/tmp"), "wp146-hb"))
     w.add_argument("--out", default="hotword-bias-wake.json")
     w.add_argument("--counts", default="0,50,300", help="Anzahl erfundener Kontakte, kommagetrennt")
-    w.add_argument("--scores", default="1.5,3.0", help="Hotword-Boni, kommagetrennt")
+    w.add_argument("--scores", default=None, help="Hotword-Boni, kommagetrennt (Standard 1.5,3.0; mit --sizes 1.0)")
     w.add_argument("--sizes", help="WP191: Gesamtzahl Begriffe inkl. Wendelin + Listennamen (ersetzt --counts)")
     t = sub.add_parser("table")
     t.add_argument("--stt"); t.add_argument("--tts")

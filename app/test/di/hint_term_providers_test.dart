@@ -83,6 +83,11 @@ class _Contacts extends Notifier<List<String>> {
   void set(List<String> next) => state = next;
 }
 
+void _setLists(ProviderContainer c, List<ListDefinition> lists) {
+  // ignore: invalid_use_of_protected_member
+  c.read(listDefinitionsProvider.notifier).state = lists;
+}
+
 final _contactState = NotifierProvider<_Contacts, List<String>>(_Contacts.new);
 
 void _providers() {
@@ -142,33 +147,53 @@ void _providers() {
       },
     );
 
-    test(
-      '300 Kontakte verdrängen weder Listen noch HA-Namen (WP191)',
-      () async {
-        c.read(_contactState.notifier).set([
-          for (var i = 0; i < 300; i++) 'Person ${_letters(i)}',
-        ]);
-        await ha.save([
-          for (var i = 0; i < 10; i++)
-            HaEntity(
-              entityId: 'light.l$i',
-              name: 'Lampe ${_letters(i)}',
-              area: 'Raum ${_letters(i)}',
-            ),
-        ]);
-        final terms = await c.read(hintTermsProvider.future);
-        expect(terms, contains('Einkaufen'));
-        expect(terms, contains('Einkaufsliste'));
-        for (var i = 0; i < 10; i++) {
-          expect(terms, contains('Lampe ${_letters(i)}'));
-          expect(terms, contains('Raum ${_letters(i)}'));
-        }
-        // Limit 300: the contacts are cut at the end, the total is exactly 300.
-        expect(terms, hasLength(300));
-        expect(terms, contains('Person ${_letters(0)}'));
-        expect(terms, isNot(contains('Person ${_letters(299)}')));
-      },
-    );
+    test('300 Kontakte verdrängen weder Listen noch HA-Namen noch Synonyme '
+        '(WP191)', () async {
+      c.read(_contactState.notifier).set([
+        for (var i = 0; i < 300; i++) 'Person ${_letters(i)}',
+      ]);
+      const domains = ['light', 'cover', 'switch', 'climate', 'media_player'];
+      _setLists(c, [
+        for (var i = 0; i < 5; i++)
+          ListDefinition(id: 'l$i', name: 'Liste ${_letters(i)}', target: 't'),
+      ]);
+      await ha.save([
+        for (var i = 0; i < 10; i++)
+          HaEntity(
+            entityId: '${domains[i % 5]}.e$i',
+            name: 'Gerät ${_letters(i)}',
+            area: 'Raum ${_letters(i)}',
+          ),
+      ]);
+      c.invalidate(haApprovedEntitiesProvider);
+      final terms = await c.read(hintTermsProvider.future);
+      for (var i = 0; i < 5; i++) {
+        expect(terms, contains('Liste ${_letters(i)}'));
+      }
+      for (var i = 0; i < 10; i++) {
+        expect(terms, contains('Gerät ${_letters(i)}'));
+        expect(terms, contains('Raum ${_letters(i)}'));
+      }
+      // Synonyms of the domains that exist (de), none of absent domains.
+      expect(
+        terms,
+        containsAll([
+          'Lampe',
+          'Licht',
+          'Rollo',
+          'Schalter',
+          'Heizung',
+          'Fernseher',
+        ]),
+      );
+      for (final absent in ['Ventilator', 'Schloss']) {
+        expect(terms, isNot(contains(absent)));
+      }
+      // Limit: the contacts are cut at the end, the total is the limit.
+      expect(terms, hasLength(const HintTermLimits().maxTerms));
+      expect(terms, contains('Person ${_letters(0)}'));
+      expect(terms, isNot(contains('Person ${_letters(299)}')));
+    });
 
     Future<List<String>> next() async {
       await Future<void>.delayed(Duration.zero);
@@ -264,10 +289,7 @@ void _providers() {
       expect(await c.read(hintTermsProvider.future), contains('Einkaufen'));
       c.listen(hintTermsProvider, (_, _) {});
 
-      // ignore: invalid_use_of_protected_member
-      c.read(listDefinitionsProvider.notifier).state = [
-        ListDefinition(id: 'b', name: 'Baumarkt', target: 't'),
-      ];
+      _setLists(c, [ListDefinition(id: 'b', name: 'Baumarkt', target: 't')]);
       var t = await next();
       expect(t, contains('Baumarkt'));
       expect(t, isNot(contains('Einkaufen')));

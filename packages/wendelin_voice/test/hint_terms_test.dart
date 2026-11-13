@@ -39,8 +39,8 @@ void main() {
 
   test('Begrenzung: Anzahl, Länge, Wörter einstellbar', () {
     final many = [for (var i = 0; i < 400; i++) room('Raum $i a')];
-    expect(const HintTermLimits().maxTerms, 300);
-    expect(sanitizeHintTerms(many).length, 300);
+    expect(const HintTermLimits().maxTerms, 128);
+    expect(sanitizeHintTerms(many).length, 128);
     expect(
       sanitizeHintTerms([
         room('Eins'),
