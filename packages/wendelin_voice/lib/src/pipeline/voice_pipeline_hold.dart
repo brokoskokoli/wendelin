@@ -45,13 +45,24 @@ extension VoicePipelineHold on VoicePipeline {
   }
 
   /// A [release] that came before the endpointer existed ends the listening
-  /// now.
+  /// now. With [guards] (microphone opened early, WP194) it waits until the
+  /// buffered frames it replays have reached the endpointer (they pass the
+  /// wrappers in microtasks); a guard, so a cancelled listening leaves no
+  /// timer behind.
   void _applyPendingRelease(
     int gen,
     Endpointer endpointer,
-    void Function(Endpoint?) end,
-  ) {
-    if (_releasePendingGen == gen && _holdGen == gen) end(endpointer.release());
+    void Function(Endpoint?) end, [
+    List<Timer>? guards,
+  ]) {
+    void apply() {
+      if (_releasePendingGen == gen && _holdGen == gen) {
+        end(endpointer.release());
+      }
+    }
+
+    if (guards == null) return apply();
+    guards.add(Timer(Duration.zero, apply));
   }
 
   /// The listening is over: a hold counts for this one only; reaching the

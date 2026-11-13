@@ -79,7 +79,8 @@ extension VoicePipelineRecord on VoicePipeline {
         // buffering, the next recording continues with what it heard.
         held = holdMic && early != null;
       }
-      _applyPendingRelease(gen, endpointer, end);
+      final buffered = audio.isRunning; // opened early: holds frames (WP194)
+      if (!buffered) _applyPendingRelease(gen, endpointer, end);
       if (!done.isCompleted) {
         _micHeld = false;
         sub = _openMic(endpointer, limits, levels, guards, end, fail, done, (
@@ -88,6 +89,7 @@ extension VoicePipelineRecord on VoicePipeline {
           log.opened();
           return tail ? _bridgeBargeTail(endpointer, first) : null;
         });
+        if (buffered) _applyPendingRelease(gen, endpointer, end, guards);
       }
     } on Object catch (error) {
       fail(error);
