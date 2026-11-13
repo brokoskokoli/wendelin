@@ -26,6 +26,7 @@ import 'controller_agent_run.dart';
 import 'conversation_offer.dart';
 import 'level_meter.dart';
 import 'locked_agent_run.dart';
+import 'mic_timing.dart';
 import 'primed_audio_input.dart';
 import 'voice_components.dart';
 import 'voice_log.dart';
@@ -102,12 +103,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
   bool _warmOnlyIfUsed = false;
   Timer? _releaseTimer;
   // Tap → first frame / models ready, for `mic-ready` (B11).
-  Stopwatch? _micWatch;
-  Duration? _firstFrame;
+  final _timing = MicTiming();
   // The hit whose service microphone still records (WP146, WP68).
   final _wake = WakeHandoffTracker();
-  Duration? _loaded;
-  String _micEngineModel = '';
 
   /// Answers are only taken from short utterances.
   static const recognizer = YesNoRecognizer();
@@ -193,10 +191,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
     if (state.active || ref.read(agentControllerProvider).running) return false;
     _releaseTimer?.cancel();
     // `clock`: tests measure on a fake clock.
-    _micWatch = clock.stopwatch()..start();
-    _firstFrame = null;
+    _timing.begin(clock.stopwatch()..start());
     _wake.reset();
-    _loaded = null;
     final demo = ref.read(demoModeProvider);
     var ready = !demo && ref.read(voiceReadyProvider);
     if (!demo && !ready && !voiceModelsChecked(ref)) {
@@ -219,6 +215,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
     state = state.copyWith(
       trigger: kind,
       preparing: true,
+      micLive: false,
       levels: const [],
       clearHint: true,
       clearError: true,
@@ -229,11 +226,12 @@ final class VoiceController extends Notifier<VoiceUiState> {
     if (cancels != _cancels) {
       // Cancelled while taking the hit (WP93: the audio went elsewhere):
       // the microphone does not open.
-      state = state.copyWith(preparing: false);
+      state = state.copyWith(preparing: false, micLive: false);
       unawaited(preRoll?.finish?.call());
       return false;
     }
     _wake.begin(preRoll, primed.head); // before the microphone opens
+    _timing.opened();
     primed.prime();
     final denied = await _askPrepare(prepare, ref);
     if (denied != null || !ref.mounted) return _failStart(primed, denied);
@@ -285,6 +283,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
     if (!ref.mounted) return false;
     state = state.copyWith(
       preparing: false,
+      micLive: false,
       error: error,
       clearHint: clearHint,
     );
@@ -342,7 +341,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
     _audio?.muteNextStart(preRoll?.muteMicSamples ?? _muteMicSamples);
     _muteMicSamples = 0;
     // (Without the early microphone the first frame comes after this.)
-    if (_firstFrame == null) _wake.lastSampleAt = preRoll?.lastSampleAtMs;
+    if (!_timing.hasFirstFrame) _wake.lastSampleAt = preRoll?.lastSampleAtMs;
     final started = pipeline.start(
       trigger: TriggerEvent(
         source: kind,
@@ -360,31 +359,19 @@ final class VoiceController extends Notifier<VoiceUiState> {
   Future<VoiceComponents?> _loadComponents() async {
     final components = await ref.read(activeVoiceProvider.future);
     await components?.warmUp?.call();
-    _loaded = _micWatch?.elapsed;
-    _micEngineModel = components?.stt.info.model ?? '';
-    _logMicReady();
+    _timing.loaded(components?.stt.info.model ?? '');
+    _timing.logIfReady(state.trigger);
     return components;
   }
 
   void _onFirstFrame(int samples) {
-    if (_micWatch == null || _firstFrame != null) return;
-    _firstFrame = _micWatch!.elapsed;
+    if (!_timing.awaitingFirstFrame) return;
+    _timing.firstFrame();
+    // The microphone delivers (WP194): shown as listening even while the
+    // models load. Only for a request that is on.
+    if (state.active && ref.mounted) state = state.copyWith(micLive: true);
     _wake.onFirstFrame(samples);
-    _logMicReady();
-  }
-
-  /// `mic-ready`: tap → first frame and tap → models ready (B11).
-  void _logMicReady() {
-    final first = _firstFrame;
-    final loaded = _loaded;
-    if (first == null || loaded == null) return;
-    _micWatch = null;
-    voiceLog('mic-ready', {
-      'after': first,
-      'load': loaded,
-      'model': _micEngineModel,
-      'trigger': state.trigger,
-    });
+    _timing.logIfReady(state.trigger);
   }
 
   /// Microphone button: starts push-to-talk when idle, otherwise cancels
@@ -406,7 +393,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
     if (state.preparing) {
       await _primed?.stop();
       if (!ref.mounted) return;
-      state = state.copyWith(preparing: false);
+      state = state.copyWith(preparing: false, micLive: false);
     }
     await _pipeline?.cancel(why);
   }
@@ -523,7 +510,11 @@ final class VoiceController extends Notifier<VoiceUiState> {
     final existing = _primed;
     if (existing != null && identical(existing.inner, inner)) return existing;
     if (existing != null) unawaited(existing.stop());
-    return _primed = PrimedAudioInput(inner, onFirstFrame: _onFirstFrame);
+    return _primed = PrimedAudioInput(
+      inner,
+      onFirstFrame: _onFirstFrame,
+      onBuffered: _onBufferedFrame,
+    );
   }
 
   VoicePipeline _pipelineFor(VoiceComponents components) {
@@ -598,6 +589,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
     _focus.busy = s == VoiceState.thinking || s == VoiceState.speaking;
     state = state.copyWith(
       phase: s,
+      micLive: s == VoiceState.idle ? false : state.micLive,
       levels: s == VoiceState.listening ? const [] : state.levels,
       clearFollowUp: s != VoiceState.listening,
     );
@@ -610,13 +602,6 @@ final class VoiceController extends Notifier<VoiceUiState> {
     if (_answers.finished(ref.read(clockProvider).now())) {
       unawaited(ref.read(conversationOfferProvider.notifier).offer());
     }
-  }
-
-  void _onLevel(double level) {
-    if (!state.listening) return;
-    final l = [...state.levels, level];
-    final trimmed = l.length > waveBars ? l.sublist(l.length - waveBars) : l;
-    state = state.copyWith(levels: trimmed);
   }
 
   /// Undoes [callId]: stops a spoken answer at once, adds „Zurückgenommen.“

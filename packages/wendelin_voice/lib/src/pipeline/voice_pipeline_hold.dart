@@ -45,13 +45,17 @@ extension VoicePipelineHold on VoicePipeline {
   }
 
   /// A [release] that came before the endpointer existed ends the listening
-  /// now.
+  /// now. With a microphone opened early (WP194) the caller calls this only
+  /// after the endpointer got the buffered frames it replays (counted in
+  /// `_openMic`, see [ReplayingAudioInput]), so the whole buffer is in.
   void _applyPendingRelease(
     int gen,
     Endpointer endpointer,
     void Function(Endpoint?) end,
   ) {
-    if (_releasePendingGen == gen && _holdGen == gen) end(endpointer.release());
+    if (_releasePendingGen == gen && _holdGen == gen) {
+      end(endpointer.release());
+    }
   }
 
   /// The listening is over: a hold counts for this one only; reaching the

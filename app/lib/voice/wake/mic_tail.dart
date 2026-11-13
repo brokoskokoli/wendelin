@@ -34,7 +34,7 @@ final class MicTail {
 }
 
 /// [AudioInput] that copies every frame of [inner] into [tail].
-final class TappedAudioInput implements AudioInput {
+final class TappedAudioInput implements ReplayingAudioInput {
   /// Wraps [inner].
   TappedAudioInput(this.inner, this.tail);
 
@@ -46,6 +46,12 @@ final class TappedAudioInput implements AudioInput {
 
   @override
   bool get isRunning => inner.isRunning;
+
+  @override
+  int get pendingReplaySamples => switch (inner) {
+    final ReplayingAudioInput a => a.pendingReplaySamples,
+    _ => 0,
+  };
 
   @override
   Stream<Int16List> start() {

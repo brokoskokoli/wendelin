@@ -37,6 +37,13 @@ abstract interface class DetachableAudioInput implements AudioInput {
   Future<void> Function()? detach();
 }
 
+/// An [AudioInput] that was opened early and holds frames that the next
+/// [start] replays first (WP194). Wrappers pass the value on.
+abstract interface class ReplayingAudioInput implements AudioInput {
+  /// Samples buffered for the next [start]'s replay (0: nothing).
+  int get pendingReplaySamples;
+}
+
 /// Duration of [samples] samples at [AudioInput.sampleRate].
 Duration samplesToDuration(int samples) =>
     Duration(microseconds: samples * 1000000 ~/ AudioInput.sampleRate);

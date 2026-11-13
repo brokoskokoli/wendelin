@@ -443,7 +443,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
             ),
           ),
     listening: voice.listening,
-    preparing: voice.preparing,
+    preparing: voice.preparing && !voice.micLive,
     mic: mic,
     levels: voice.levels,
     conversationMode:

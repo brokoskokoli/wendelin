@@ -27,6 +27,7 @@ final class VoiceUiState {
     this.error,
     this.awaitingAnswer = false,
     this.preparing = false,
+    this.micLive = false,
     this.tapOnly = false,
     this.stopCount = 0,
     this.followUpUntil,
@@ -54,6 +55,12 @@ final class VoiceUiState {
   /// The microphone already records (and buffers) while the speech models
   /// still load (B11). Signal for a „Moment …“ display (WP31).
   final bool preparing;
+
+  /// The microphone delivered its first block of this request (WP194).
+  /// While [preparing] the models still load, but what is said now is
+  /// recorded: the UI may show „Ich höre zu“. `false` without a block (the
+  /// microphone did not start).
+  final bool micLive;
 
   /// The open confirmation of a voice request can only be answered by tap
   /// (the spoken answer could not start or got no answer, B7).
@@ -98,6 +105,7 @@ final class VoiceUiState {
     bool clearError = false,
     bool? awaitingAnswer,
     bool? preparing,
+    bool? micLive,
     bool? tapOnly,
     int? stopCount,
     DateTime? followUpUntil,
@@ -111,6 +119,7 @@ final class VoiceUiState {
     error: clearError ? null : error ?? this.error,
     awaitingAnswer: awaitingAnswer ?? this.awaitingAnswer,
     preparing: preparing ?? this.preparing,
+    micLive: micLive ?? this.micLive,
     tapOnly: tapOnly ?? this.tapOnly,
     stopCount: stopCount ?? this.stopCount,
     followUpUntil: clearFollowUp ? null : followUpUntil ?? this.followUpUntil,
@@ -132,8 +141,12 @@ MicState micStateFor(
   if (voice.awaitingAnswer || voice.phase == VoiceState.listening) {
     return MicState.listening;
   }
-  // Models still load while the microphone already buffers (B11).
-  if (voice.preparing) return MicState.preparing;
+  // Models still load while the microphone already buffers (B11). Once it
+  // delivers audio (WP194) what is said counts: show „listening“, a tap
+  // still cancels (`active` stays true).
+  if (voice.preparing) {
+    return voice.micLive ? MicState.listening : MicState.preparing;
+  }
   if (voice.phase == VoiceState.speaking) return MicState.speaking;
   if (voice.active || running) return MicState.thinking;
   return available ? MicState.idle : MicState.disabled;

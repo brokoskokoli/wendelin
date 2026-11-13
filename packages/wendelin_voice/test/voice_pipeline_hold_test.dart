@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:test/test.dart';
 import 'package:wendelin_core/fakes.dart' show ScriptedTurn;
 import 'package:wendelin_voice/fakes.dart';
@@ -5,7 +8,57 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import 'voice_pipeline_test.dart' show Harness, frame, runFake, settle;
 
+/// A microphone opened early (WP194): holds [replay] and delivers it first,
+/// each frame through an asynchronous hop (like a wrapper that is not
+/// synchronous), then silence until [stop].
+final class _EarlyMic implements ReplayingAudioInput {
+  _EarlyMic(this.replay);
+
+  final List<Int16List> replay;
+  bool _running = true;
+
+  @override
+  bool get isRunning => _running;
+
+  @override
+  int get pendingReplaySamples => replay.fold(0, (sum, f) => sum + f.length);
+
+  @override
+  Stream<Int16List> start() async* {
+    final silence = AudioFrames.pattern('.', frame: frame).single;
+    for (final f in replay) {
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+      yield f;
+    }
+    while (_running) {
+      await Future<void>.delayed(frame);
+      yield silence;
+    }
+  }
+
+  @override
+  Future<void> stop() async => _running = false;
+}
+
 void main() {
+  group('Mikrofon vorab geöffnet: Loslassen vor dem Puffer (WP194)', () {
+    test('release vor dem Endpointer wirkt erst nach dem ganzen Puffer, auch '
+        'bei asynchronem Replay', () {
+      runFake((async) {
+        final speech = AudioFrames.pattern('S' * 10, frame: frame);
+        final h = Harness(
+          turns: [ScriptedTurn.text('Ja.')],
+          audio: _EarlyMic(speech),
+        );
+        h.pipeline.start(hold: true);
+        h.pipeline.release(); // endpointer does not exist yet
+        settle(async);
+        expect(h.stt.calls, hasLength(1));
+        expect(h.stt.calls.single.samples, greaterThanOrEqualTo(10 * 480));
+      });
+    });
+  });
+
   group('Haltemodus / Push-to-Talk (WP192)', () {
     // 300 ms speech, 3 s silence, 300 ms speech: 3.6 s = 120 frames of 30 ms.
     final long = AudioFrames.pattern(

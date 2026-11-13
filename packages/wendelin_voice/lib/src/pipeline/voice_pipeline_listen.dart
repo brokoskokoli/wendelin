@@ -203,18 +203,28 @@ extension VoicePipelineListen on VoicePipeline {
   /// Starts the microphone and the safety nets (wall-clock time in case the
   /// microphone stops delivering frames: before speech after the no-speech
   /// timeout, otherwise after the maximum duration, each plus a grace
-  /// period); the timers go into [guards].
-  StreamSubscription<Int16List> _openMic(
+  /// period); the timers go into [guards]. A pending release applies once the
+  /// buffer of an early opened microphone was fed.
+  StreamSubscription<Int16List>? _openMic(
+    int gen,
     Endpointer endpointer,
-    EndpointConfig limits,
     _LevelLog levels,
     List<Timer> guards,
     void Function(Endpoint?) end,
     void Function(Object) fail,
     Completer<Endpoint?> done,
-    Endpoint? Function(Int16List first) onFirstFrame,
+    _RecordingLog log,
+    bool tail,
   ) {
     var first = true;
+    // Opened early (WP194): the buffer is replayed first; a release that
+    // came before waits until the endpointer got all of it.
+    var replayLeft = switch (audio) {
+      final ReplayingAudioInput a => a.pendingReplaySamples,
+      _ => 0,
+    };
+    if (replayLeft == 0) _applyPendingRelease(gen, endpointer, end);
+    if (done.isCompleted) return null; // released before the start
     final sub = audio.start().listen(
       (frame) {
         if (done.isCompleted || frame.isEmpty) return;
@@ -222,7 +232,8 @@ extension VoicePipelineListen on VoicePipeline {
         final isFirst = first;
         if (first) {
           first = false;
-          early = onFirstFrame(frame);
+          log.opened();
+          early = tail ? _bridgeBargeTail(endpointer, frame) : null;
         }
         _devRec?.add(isFirst ? 'mic' : null, frame);
         if (early != null) {
@@ -236,20 +247,24 @@ extension VoicePipelineListen on VoicePipeline {
         } on Object catch (error) {
           fail(error);
         }
+        // The buffered frames of an early opened microphone are all in.
+        if (replayLeft > 0 && (replayLeft -= frame.length) <= 0) {
+          _applyPendingRelease(gen, endpointer, end);
+        }
       },
       onError: fail,
       onDone: () => end(endpointer.finish()),
     );
     guards
       ..add(
-        Timer(limits.noSpeechTimeout + config.listenGrace, () {
+        Timer(endpointer.config.noSpeechTimeout + config.listenGrace, () {
           if (!endpointer.inSpeech && !endpointer.holding) {
             end(endpointer.finish(EndpointReason.noSpeech));
           }
         }),
       )
       ..add(
-        Timer(limits.maxDuration + config.listenGrace, () {
+        Timer(endpointer.config.maxDuration + config.listenGrace, () {
           if (!endpointer.holding) {
             end(endpointer.finish(EndpointReason.maxDuration));
           }
@@ -257,13 +272,19 @@ extension VoicePipelineListen on VoicePipeline {
       )
       // Held (push-to-talk, WP192): the hard limit, also if frames stop.
       ..add(
-        Timer(limits.holdMaxDuration + config.listenGrace, () {
+        Timer(endpointer.config.holdMaxDuration + config.listenGrace, () {
           if (endpointer.holding) {
             end(endpointer.finish(EndpointReason.holdMax));
           }
         }),
       );
     return sub;
+  }
+
+  void _cancelAll(List<Timer> timers) {
+    for (final t in timers) {
+      t.cancel();
+    }
   }
 
   /// Ends the barge-in recording that went on after the answer, unused.
