@@ -14,7 +14,12 @@ final class EndpointConfig {
     this.maxDuration = const Duration(seconds: 30),
     this.minSpeech = const Duration(milliseconds: 200),
     this.noSpeechTimeout = const Duration(seconds: 8),
+    this.holdMaxDuration = defaultHoldMaxDuration,
   });
+
+  /// Hard upper limit of a held recording (WP192): a hold that never
+  /// ends must not record for ever.
+  static const defaultHoldMaxDuration = Duration(minutes: 2);
 
   /// Audio kept from before the first speech frame, so the first word is
   /// not cut off.
@@ -37,6 +42,11 @@ final class EndpointConfig {
   /// conversation mode).
   final Duration noSpeechTimeout;
 
+  /// Maximum recording time from the start of listening while the
+  /// endpointer is held ([Endpointer.hold], push-to-talk, WP192). Silence end,
+  /// [noSpeechTimeout] and [maxDuration] are suspended then.
+  final Duration holdMaxDuration;
+
   /// Copy with a different [noSpeechTimeout].
   EndpointConfig withNoSpeechTimeout(Duration timeout) => EndpointConfig(
     preRoll: preRoll,
@@ -44,6 +54,7 @@ final class EndpointConfig {
     maxDuration: maxDuration,
     minSpeech: minSpeech,
     noSpeechTimeout: timeout,
+    holdMaxDuration: holdMaxDuration,
   );
 }
 
@@ -69,6 +80,9 @@ enum EndpointReason {
 
   /// The caller ended listening ([Endpointer.finish]).
   manual,
+
+  /// [EndpointConfig.holdMaxDuration] reached while held (WP192).
+  holdMax,
 }
 
 /// Result of [Endpointer].
@@ -131,6 +145,25 @@ final class Endpointer {
   int _speechEnd = 0; // samples
   int _silenceRun = 0; // samples
   Endpoint? _result;
+  bool _hold = false;
+
+  /// Whether the endpointer is held (silence end, no-speech timeout and
+  /// [EndpointConfig.maxDuration] are suspended, WP192).
+  bool get holding => _hold && _result == null;
+
+  /// Suspends the silence end, the no-speech timeout and the normal maximum
+  /// duration until [release] or [EndpointConfig.holdMaxDuration]. No effect
+  /// after the decision.
+  void hold() {
+    if (_result == null) _hold = true;
+  }
+
+  /// Ends the hold and the listening: what was captured becomes the
+  /// utterance (like [finish]).
+  Endpoint release() {
+    _hold = false;
+    return finish();
+  }
 
   /// The decision, once made.
   Endpoint? get result => _result;
@@ -160,11 +193,17 @@ final class Endpointer {
         _silenceRun = 0;
       } else {
         _silenceRun += frame.length;
-        if (_silenceRun >= _samples(config.endSilence)) {
+        if (!_hold && _silenceRun >= _samples(config.endSilence)) {
           final done = _finishSpeech(EndpointReason.silence);
           if (done != null) return done;
         }
       }
+    }
+    if (_hold) {
+      if (_elapsed >= _samples(config.holdMaxDuration)) {
+        return finish(EndpointReason.holdMax);
+      }
+      return null;
     }
     if (_elapsed >= _samples(config.maxDuration)) {
       return finish(EndpointReason.maxDuration);

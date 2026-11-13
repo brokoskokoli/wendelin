@@ -61,8 +61,7 @@ extension VoicePipelineRecord on VoicePipeline {
     var held = false;
     final guards = <Timer>[];
     final levels = _LevelLog(diagnostics);
-    _endListening = end;
-    _endpointer = endpointer;
+    _attach(gen, endpointer, end);
     final rec = devClips?.on == true ? _devRec = _DevRec() : null;
     try {
       vad.reset();
@@ -80,6 +79,7 @@ extension VoicePipelineRecord on VoicePipeline {
         // buffering, the next recording continues with what it heard.
         held = holdMic && early != null;
       }
+      _applyPendingRelease(gen, endpointer, end);
       if (!done.isCompleted) {
         _micHeld = false;
         sub = _openMic(endpointer, limits, levels, guards, end, fail, done, (
@@ -94,10 +94,7 @@ extension VoicePipelineRecord on VoicePipeline {
     }
     final result = await done.future;
     _finishRec(rec, result);
-    if (identical(_endpointer, endpointer)) {
-      _endListening = null;
-      _endpointer = null;
-    }
+    _detach(endpointer);
     for (final g in guards) {
       g.cancel();
     }
@@ -105,6 +102,7 @@ extension VoicePipelineRecord on VoicePipeline {
     // Whatever happened: the barge-in recording does not outlive this one.
     if (tail) _endBargeTail();
     log.ended(result);
+    _endHold(gen, result);
     await _stopOrHoldMic(held && sub == null);
     // Not awaited: for a finished stream `cancel` returns a shared root-zone
     // future, and there is nothing left to wait for.

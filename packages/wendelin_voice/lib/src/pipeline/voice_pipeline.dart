@@ -31,6 +31,7 @@ export 'voice_pipeline_config.dart';
 part 'voice_pipeline_text.dart';
 part 'voice_pipeline_listen.dart';
 part 'voice_pipeline_record.dart';
+part 'voice_pipeline_hold.dart';
 
 /// The voice pipeline (concept: Auslöser → Aufnahme mit VAD → STT → Agent →
 /// TTS) as a state machine:
@@ -124,6 +125,12 @@ final class VoicePipeline with VoiceContentLog {
   bool _micHeld = false;
   final _listenLog = _ListenLog();
   Endpointer? _endpointer;
+  // Push-to-talk (WP192): the listening that runs is held; a release that
+  // came before the endpointer existed is applied when it is created.
+  // Tied to the generation, so that a late cleanup of a cancelled listening
+  // cannot clear the hold of the next request.
+  int? _holdGen;
+  bool _releasePending = false;
   SpeechQueue? _queue;
   bool _agentRunning = false;
   Future<void> _agentDrained = Future.value();
@@ -164,14 +171,20 @@ final class VoicePipeline with VoiceContentLog {
   /// pre-roll of [trigger] (wake word) is fed to the endpointer first. A wake
   /// word pre-roll without [TriggerEvent.wakeEnd] is dropped: nothing from
   /// before the wake word may reach the recognition (privacy, WP73).
-  bool start({TriggerEvent? trigger}) {
+  ///
+  /// With [hold] (push-to-talk pressed and held, WP192) the endpointing is
+  /// suspended from the start, until [release] (or the hard limit
+  /// [EndpointConfig.holdMaxDuration]).
+  bool start({TriggerEvent? trigger, bool hold = false}) {
     final dropPreRoll =
         trigger?.source == TriggerKind.wakeWord && trigger?.wakeEnd == null;
-    return _begin(
+    final started = _begin(
       trigger,
       preRoll: dropPreRoll ? null : trigger?.preRoll,
       wakeEnd: trigger?.wakeEnd,
     );
+    if (started && hold) this.hold();
+    return started;
   }
 
   bool _begin(
@@ -368,48 +381,8 @@ final class VoicePipeline with VoiceContentLog {
     stopPhrases: config.stopPhrases,
   );
 
-  Future<Transcript?> _transcribe(int gen, Int16List pcm) async {
-    _setState(VoiceState.transcribing);
-    try {
-      final who = SpeakerIdentification(
-        recognizer: speaker,
-        clock: clock,
-        diagnostics: diagnostics,
-      ).identify(pcm);
-      final text = await stt.transcribe(pcm, language: config.language);
-      final match = await who;
-      if (gen != _gen) return null;
-      final t = match == null ? text : text.withSpeaker(match);
-      _emit(VoiceTranscribed(t));
-      return t;
-    } on Object catch (error) {
-      if (gen == _gen) _emit(VoiceError(VoiceState.transcribing, error));
-      return null;
-    }
-  }
-
   /// How long a request waits for the recognition at most.
   static const speakerTimeout = SpeakerIdentification.timeout;
-
-  Future<void> _nothingUnderstood(
-    int gen,
-    EndpointReason? reason, {
-    String? language,
-  }) async {
-    _emit(VoiceNothingUnderstood(reason));
-    if (!config.speakNothingUnderstood) return;
-    final lang = language ?? config.language;
-    await _speakOnly(gen, [VoiceTexts.of(lang).nothingUnderstood], lang);
-  }
-
-  /// Speaks [sentences] outside of an answer (e.g. „nichts verstanden“).
-  Future<void> _speakOnly(int gen, List<String> sentences, String? lang) async {
-    final queue = await _newQueue(gen, lang);
-    if (queue == null || gen != _gen) return;
-    queue.addAll(sentences);
-    await queue.whenIdle;
-    if (_queue == queue) _queue = null;
-  }
 
   Future<SpeechQueue?> _newQueue(int gen, String? language) async {
     TextToSpeech? tts;

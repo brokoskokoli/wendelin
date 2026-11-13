@@ -242,16 +242,25 @@ extension VoicePipelineListen on VoicePipeline {
     guards
       ..add(
         Timer(limits.noSpeechTimeout + config.listenGrace, () {
-          if (!endpointer.inSpeech) {
+          if (!endpointer.inSpeech && !endpointer.holding) {
             end(endpointer.finish(EndpointReason.noSpeech));
           }
         }),
       )
       ..add(
-        Timer(
-          limits.maxDuration + config.listenGrace,
-          () => end(endpointer.finish(EndpointReason.maxDuration)),
-        ),
+        Timer(limits.maxDuration + config.listenGrace, () {
+          if (!endpointer.holding) {
+            end(endpointer.finish(EndpointReason.maxDuration));
+          }
+        }),
+      )
+      // Held (push-to-talk, WP192): the hard limit, also if frames stop.
+      ..add(
+        Timer(limits.holdMaxDuration + config.listenGrace, () {
+          if (endpointer.holding) {
+            end(endpointer.finish(EndpointReason.holdMax));
+          }
+        }),
       );
     return sub;
   }

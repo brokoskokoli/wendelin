@@ -50,6 +50,9 @@ extension _VoiceEventHandler on VoiceController {
         _onCancelled(reason, during);
       case VoiceBargeIn():
         voiceLogPipelineEvent(e); // barge-in
+      case VoiceHoldLimitReached():
+        // WP192: the hint for the user follows with the push-to-talk UI.
+        voiceLogPipelineEvent(e);
       case VoiceAgentEvent(:final event):
         ref.read(latencyTraceProvider).agentEvent(event);
     }
