@@ -16,7 +16,22 @@ enum HintTermKind {
 
   /// Home Assistant entity name.
   entity,
+
+  /// Generic word for a device type (e.g. „Lampe“ for a light), WP191.
+  synonym,
 }
+
+/// Which kinds win when [HintTermLimits.maxTerms] cuts the list: first
+/// entry first, so contacts (the most numerous) are dropped first. Explicit,
+/// not derived from the declaration order of [HintTermKind] (WP191).
+const hintTermPriority = <HintTermKind>[
+  HintTermKind.agent,
+  HintTermKind.list,
+  HintTermKind.room,
+  HintTermKind.entity,
+  HintTermKind.synonym,
+  HintTermKind.contact,
+];
 
 /// One name for the recognizer.
 @immutable
@@ -49,12 +64,17 @@ abstract interface class HintTermSource {
 final class HintTermLimits {
   /// Creates limits.
   const HintTermLimits({
-    this.maxTerms = 64,
+    this.maxTerms = 128,
     this.maxLength = 40,
     this.maxWords = 4,
   });
 
-  /// Maximum number of terms (names of earlier kinds win).
+  /// Maximum number of terms (kinds earlier in [hintTermPriority] win).
+  ///
+  /// 128 (WP191): the largest measured value without an inserted name at
+  /// hotword bonus 1.0; at 200 and 300 one invented name (only in the list
+  /// from size 200 on) appeared in a noisy hypothesis. See
+  /// `docs/notes/hotword-bias-2026-10-25.md` ("Nachtrag WP191").
   final int maxTerms;
 
   /// Maximum characters of one term.
@@ -72,20 +92,27 @@ final _letter = RegExp(r'\p{L}', unicode: true);
 
 /// The cleaned terms of [terms]: whitespace collapsed, names that are too
 /// long (characters or words) or look like sentences/markup dropped,
-/// duplicates (case-insensitive) removed, ordered by [HintTermKind] (contact
-/// first) and cut to [HintTermLimits.maxTerms].
+/// duplicates (case-insensitive) removed, ordered by [hintTermPriority] (agent
+/// first, contact last) and cut to [HintTermLimits.maxTerms].
 List<String> sanitizeHintTerms(
+  Iterable<HintTerm> terms, {
+  HintTermLimits limits = const HintTermLimits(),
+}) => [for (final t in sanitizeHintTermsKinded(terms, limits: limits)) t.text];
+
+/// Like [sanitizeHintTerms], but keeps the kind of each surviving term.
+List<HintTerm> sanitizeHintTermsKinded(
   Iterable<HintTerm> terms, {
   HintTermLimits limits = const HintTermLimits(),
 }) {
   final ordered = [
-    for (final kind in HintTermKind.values)
+    for (final kind in hintTermPriority)
       for (final term in terms)
-        if (term.kind == kind) term.text,
+        if (term.kind == kind) term,
   ];
   final seen = <String>{};
-  final out = <String>[];
-  for (final raw in ordered) {
+  final out = <HintTerm>[];
+  for (final term in ordered) {
+    final raw = term.text;
     final text = raw.trim().replaceAll(_space, ' ');
     if (text.isEmpty ||
         raw.contains(_lineBreak) ||
@@ -96,17 +123,25 @@ List<String> sanitizeHintTerms(
         !seen.add(text.toLowerCase())) {
       continue;
     }
-    out.add(text);
+    out.add(HintTerm(text, term.kind));
     if (out.length == limits.maxTerms) break;
   }
   return List.unmodifiable(out);
 }
 
+/// How many cleaned terms of each kind there are (no names).
+Map<HintTermKind, int> countHintTerms(Iterable<HintTerm> terms) => {
+  for (final kind in hintTermPriority)
+    kind: terms.where((t) => t.kind == kind).length,
+};
+
 /// Asks all [sources] (a failing source is skipped) and cleans the result
-/// with [sanitizeHintTerms].
+/// with [sanitizeHintTerms]. [onCounts] gets the number of cleaned terms per
+/// kind (for a log without names).
 Future<List<String>> collectHintTerms(
   Iterable<HintTermSource> sources, {
   HintTermLimits limits = const HintTermLimits(),
+  void Function(Map<HintTermKind, int> counts)? onCounts,
 }) async {
   final all = <HintTerm>[];
   for (final source in sources) {
@@ -116,5 +151,7 @@ Future<List<String>> collectHintTerms(
       // A source that is not ready must not take the recognizer down.
     }
   }
-  return sanitizeHintTerms(all, limits: limits);
+  final cleaned = sanitizeHintTermsKinded(all, limits: limits);
+  onCounts?.call(countHintTerms(cleaned));
+  return [for (final t in cleaned) t.text];
 }

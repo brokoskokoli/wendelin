@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../voice/voice_log.dart';
 import 'core_providers.dart';
+import 'ha_domain_synonyms.dart';
 import 'home_assistant.dart';
 import 'integration_providers.dart';
 import 'preferences.dart';
@@ -23,21 +25,32 @@ final class ListNameHintSource implements HintTermSource {
 }
 
 /// Rooms (areas) and entity names of the Home Assistant entities the user
-/// approved (WP103). Names only: no states, ids or values.
+/// approved (WP103), plus generic words for their device types (WP191,
+/// [haDomainSynonyms], only for domains that occur). Names only: no states,
+/// ids or values.
 final class HaNameHintSource implements HintTermSource {
-  /// Creates the source over [entities] (the approved ones).
-  const HaNameHintSource(this.entities);
+  /// Creates the source over [entities] (the approved ones); [language] is
+  /// the app language for the synonyms.
+  const HaNameHintSource(this.entities, {this.language = 'en'});
 
   /// The approved entities (local store, no network).
   final Future<List<HaEntity>> Function() entities;
 
+  /// App language (`de`, `en`, `fr`; other = `en`).
+  final String language;
+
   @override
-  Future<List<HintTerm>> terms() async => [
-    for (final e in await entities()) ...[
-      if (e.area != null) HintTerm(e.area!, HintTermKind.room),
-      HintTerm(e.name, HintTermKind.entity),
-    ],
-  ];
+  Future<List<HintTerm>> terms() async {
+    final all = await entities();
+    return [
+      for (final e in all) ...[
+        if (e.area != null) HintTerm(e.area!, HintTermKind.room),
+        HintTerm(e.name, HintTermKind.entity),
+      ],
+      for (final w in haSynonymsFor([for (final e in all) e.domain], language))
+        HintTerm(w, HintTermKind.synonym),
+    ];
+  }
 }
 
 /// Port for contact names: display names only, no numbers, addresses or
@@ -116,7 +129,10 @@ final hintTermSourcesProvider = Provider<List<HintTermSource>>(
         ],
       ],
     ),
-    HaNameHintSource(() => ref.read(haApprovedEntitiesProvider.future)),
+    HaNameHintSource(
+      () => ref.read(haApprovedEntitiesProvider.future),
+      language: ref.watch(languageProvider),
+    ),
     ContactNameHintSource(() => ref.read(contactNamesProvider)()),
   ],
 );
@@ -138,5 +154,11 @@ final hintTermsProvider = FutureProvider<List<String>>((ref) async {
   ref.watch(listDefinitionsProvider);
   await ref.watch(haApprovedEntitiesProvider.future);
   ref.watch(contactNamesProvider);
-  return collectHintTerms(ref.watch(hintTermSourcesProvider));
+  return collectHintTerms(
+    ref.watch(hintTermSourcesProvider),
+    onCounts: (c) => voiceLog('hint-terms', {
+      for (final k in HintTermKind.values) k.name: c[k] ?? 0,
+      'total': c.values.fold<int>(0, (a, b) => a + b),
+    }),
+  );
 });
