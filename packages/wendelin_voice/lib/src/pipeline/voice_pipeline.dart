@@ -276,9 +276,9 @@ final class VoicePipeline with VoiceContentLog {
       _announceListening(trigger, followUp);
       final endpoint = await _listen(
         gen,
-        followUp
-            ? config.endpoint.withNoSpeechTimeout(config.followUpWindow)
-            : config.endpoint,
+        config.endpoint.withNoSpeechTimeout(
+          followUp ? config.followUpWindow : config.firstNoSpeechTimeout,
+        ),
         preRoll: followUp ? null : pre,
         preRollIsSpeech: preRollIsSpeech,
         wakeEnd: preWakeEnd,
@@ -289,7 +289,7 @@ final class VoicePipeline with VoiceContentLog {
       if (gen != _gen) return;
       if (endpoint == null) return _finish(gen, ConversationEndReason.error);
       if (endpoint.kind == EndpointKind.nothing) {
-        if (!followUp) await _nothingUnderstood(gen, endpoint.reason);
+        if (!followUp) await _nothingFirstRound(gen, endpoint.reason);
         return _finish(gen, ConversationEndReason.silence);
       }
       var transcript = await _transcribe(gen, endpoint.pcm);

@@ -29,6 +29,7 @@ final class VoicePipelineConfig {
     this.stopPhrases = defaultStopPhrases,
     this.conversationMode = false,
     this.followUpWindow = const Duration(seconds: 5),
+    this.firstNoSpeechTimeout = const Duration(seconds: 5),
     this.maxFollowUps = 5,
     this.closingPhrases = defaultClosingPhrases,
     this.bargeIn = BargeInMode.off,
@@ -114,6 +115,12 @@ final class VoicePipelineConfig {
 
   /// Follow-up window of the conversation mode (concept: 5 s).
   final Duration followUpWindow;
+
+  /// No-speech window of the first round (WP195), counted in microphone
+  /// samples; replaces [EndpointConfig.noSpeechTimeout] there. Without a
+  /// word the pipeline ends quietly ([VoiceNothingHeard]). Follow-up rounds
+  /// use [followUpWindow].
+  final Duration firstNoSpeechTimeout;
 
   /// Maximum number of follow-up rounds in one conversation (concept
   /// proposal: 5). Afterwards the conversation ends (`maxFollowUps`).

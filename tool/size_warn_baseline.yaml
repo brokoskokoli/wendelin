@@ -82,7 +82,7 @@ packages/wendelin_voice/lib/src/models/voice_settings.dart#VoiceSettings.fromJso
 packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline: 492
 packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline._answer: 115
 packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline._run: 90
-packages/wendelin_voice/test/voice_pipeline_test.dart: 1495
+packages/wendelin_voice/test/voice_pipeline_test.dart: 1493
 tool/check_deps.dart#main: 89
 tool/self_test.dart: 777
 tool/self_test.dart#_depsAndGit: 113

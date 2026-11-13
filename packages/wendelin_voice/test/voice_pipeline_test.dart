@@ -938,21 +938,19 @@ void main() {
   });
 
   group('nichts verstanden', () {
-    test('nur Stille bis zum Timeout', () {
+    test('nur Stille bis zum Timeout: still beenden (WP195)', () {
       runFake((async) {
         final h = Harness(
           config: const VoicePipelineConfig(
-            endpoint: EndpointConfig(noSpeechTimeout: Duration(seconds: 1)),
+            firstNoSpeechTimeout: Duration(seconds: 1),
           ),
         );
         h.fakeAudio.script(AudioFrames.pattern('.' * 60, frame: frame));
         h.pipeline.start();
         settle(async);
-        expect(
-          h.eventsOf<VoiceNothingUnderstood>().single.reason,
-          EndpointReason.noSpeech,
-        );
-        expect(h.tts.spoken, [VoiceTexts.de.nothingUnderstood]);
+        expect(h.eventsOf<VoiceNothingHeard>(), hasLength(1));
+        expect(h.eventsOf<VoiceNothingUnderstood>(), isEmpty);
+        expect(h.tts.spoken, isEmpty);
         expect(h.stt.calls, isEmpty);
         expect(h.pipeline.state, VoiceState.idle);
       });
@@ -999,7 +997,7 @@ void main() {
       runFake((async) {
         final h = Harness(
           config: const VoicePipelineConfig(
-            endpoint: EndpointConfig(noSpeechTimeout: Duration(seconds: 2)),
+            firstNoSpeechTimeout: Duration(seconds: 2),
             listenGrace: Duration(seconds: 1),
           ),
         );
@@ -1008,10 +1006,8 @@ void main() {
         async.elapse(const Duration(milliseconds: 2900));
         expect(h.pipeline.state, VoiceState.listening);
         async.elapse(const Duration(milliseconds: 200));
-        expect(
-          h.eventsOf<VoiceNothingUnderstood>().single.reason,
-          EndpointReason.noSpeech,
-        );
+        expect(h.eventsOf<VoiceNothingHeard>(), hasLength(1));
+        expect(h.tts.spoken, isEmpty);
       });
     });
 
@@ -1243,6 +1239,7 @@ void main() {
         expect(followUp.followUp, isTrue);
         expect(followUp.trigger, isNull);
         expect(h.eventsOf<VoiceNothingUnderstood>(), isEmpty);
+        expect(h.eventsOf<VoiceNothingHeard>(), isEmpty); // WP195: unchanged
         expect(h.tts.spoken, ['Ok.']);
         expect(h.pipeline.state, VoiceState.idle);
       });
@@ -1449,6 +1446,7 @@ void main() {
       VoiceListening(trigger: t, followUp: false),
       const VoiceTranscribed(Transcript(text: 'x')),
       const VoiceNothingUnderstood(EndpointReason.noSpeech),
+      const VoiceNothingHeard(),
       const VoiceAgentEvent(AgentTextDelta('y')),
       const VoiceSpeaking('z'),
       const VoiceCancelled(VoiceCancelReason.tap, during: VoiceState.speaking),

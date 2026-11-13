@@ -59,6 +59,17 @@ extension VoicePipelineText on VoicePipeline {
     return mergeTranscripts(results);
   }
 
+  /// First round ended without valid speech (WP195): no word at all
+  /// ([EndpointReason.noSpeech]) ends quietly with [VoiceNothingHeard];
+  /// every other reason is „nichts verstanden“.
+  Future<void> _nothingFirstRound(int gen, EndpointReason reason) async {
+    if (reason == EndpointReason.noSpeech) {
+      _emit(const VoiceNothingHeard());
+    } else {
+      await _nothingUnderstood(gen, reason);
+    }
+  }
+
   Future<void> _nothingUnderstood(
     int gen,
     EndpointReason? reason, {
