@@ -196,6 +196,14 @@ void main() {
       expect(mic(), MicState.preparing);
       expect(find.text('Moment …'), findsOneWidget);
 
+      // WP194: the first microphone block wins over the loading.
+      voice.seed(const VoiceUiState(preparing: true, micLive: true));
+      await tester.pump();
+      expect(mic(), MicState.listening);
+      expect(find.text('Moment …'), findsNothing);
+      expect(find.byType(ListeningBar), findsOneWidget);
+      expect(c.read(voiceControllerProvider).active, isTrue);
+
       voice.seed(const VoiceUiState(awaitingAnswer: true));
       await tester.pump();
       expect(mic(), MicState.listening);

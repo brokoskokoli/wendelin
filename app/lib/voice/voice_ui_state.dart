@@ -141,8 +141,12 @@ MicState micStateFor(
   if (voice.awaitingAnswer || voice.phase == VoiceState.listening) {
     return MicState.listening;
   }
-  // Models still load while the microphone already buffers (B11).
-  if (voice.preparing) return MicState.preparing;
+  // Models still load while the microphone already buffers (B11). Once it
+  // delivers audio (WP194) what is said counts: show „listening“, a tap
+  // still cancels (`active` stays true).
+  if (voice.preparing) {
+    return voice.micLive ? MicState.listening : MicState.preparing;
+  }
   if (voice.phase == VoiceState.speaking) return MicState.speaking;
   if (voice.active || running) return MicState.thinking;
   return available ? MicState.idle : MicState.disabled;

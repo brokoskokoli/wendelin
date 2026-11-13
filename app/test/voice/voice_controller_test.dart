@@ -775,6 +775,7 @@ void main() {
     const answering = VoiceUiState(awaitingAnswer: true);
     const speaking = VoiceUiState(phase: VoiceState.speaking);
     const preparing = VoiceUiState(preparing: true);
+    const preparingLive = VoiceUiState(preparing: true, micLive: true);
     final cases = <(VoiceUiState, bool, bool, MicState)>[
       (idle, true, false, MicState.idle),
       (idle, false, false, MicState.disabled),
@@ -784,6 +785,7 @@ void main() {
       (answering, true, true, MicState.listening),
       (speaking, true, true, MicState.speaking),
       (preparing, true, false, MicState.preparing),
+      (preparingLive, true, false, MicState.listening),
     ];
     for (final (v, available, running, expected) in cases) {
       expect(

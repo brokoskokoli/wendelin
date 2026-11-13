@@ -54,6 +54,7 @@ Jedes Arbeitspaket mit Gerätebezug (M5 und M6) legt hier seine eigene Datei `<w
 - [WP188 – Audio-Einstellungen: Mikrofon und Ausgabe wählen (Gerätetest)](wp188.md)
 - [WP191 – Hinweisbegriffe: Listennamen und Gerätesynonyme (Gerätetest)](wp191.md)
 - [WP192 Push-to-Talk: Drücken und Halten](wp192.md)
+- [WP194 Mikrofon zuerst: „Ich höre zu“, sobald es Ton liefert](wp194.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)
 - [WP85 Kontakte, SMS und Anrufe (`contacts`)](wp85.md)
