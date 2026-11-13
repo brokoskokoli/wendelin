@@ -53,6 +53,7 @@ Stand: 2026-10-30; läuft: keiner; Release v0.1.6 (4ce2d167).
 | WP194 | Start: Mikrofon zuerst, „Ich höre zu“, sobald es läuft | gemergt e3000caa | K153. Anzeige „Ich höre zu“ ab dem ersten Mikrofonblock (`micLive`), Pegel schon während des Ladens; Push-to-Talk-Loslassen greift erst nach dem Nachspielen des Puffers (Ursache belegt). `_startAfterLoading` (Whisper/Silero fehlen) öffnet bewusst kein Mikrofon. Offen: Gerätetest `docs/testing/m5/wp194.md` (mic-ready-Zahlen vorher/nachher), E2E (`../james-wt/e2e-keep/wp194_mic_first_e2e_test.dart`) sobald AVD neu angelegt; Soll: Diagnosezeile bei wartendem Loslassen; Hooks prüfen den Trailer von Merge-Commits nicht (nur CI). |
 | WP195 | Nichts gehört: nach 5 s still mit Stopp-Ton beenden | gemergt 9e69ba06 | K154. 5 s ab erstem Mikrofonblock für jede erste Runde (auch Weckwort, Station); synthetischer Stopp-Ton (kein Asset), folgt „Bestätigungston“, still in Station-Ruhezeit; Overlay „Nichts gehört.“, schließt nach 1200 ms. Offen: Gerätetest `docs/testing/m5/wp195.md` (Ton nicht abgeschnitten?); Soll: Gegentest sofortiges Schließen bei anderen Hinweisen (`overlay_idle_close.dart:155`); Frage: Bestätigungston in Ruhezeiten. |
 | WP196 | Langes Transkript kleiner anzeigen | gemergt a0609f67 | K155. Nur im Overlay (Chat-Blase ist schon 16 px, Station nutzt das Overlay); Stufen 26 / 18,2 / 16 px, Hysterese 10 %; Untergrenze Body 16 px bleibt (Maintainer 2026-11-13). Offen: Gerätetest `docs/testing/m5/wp196.md`; Soll: irreführender Kommentar „55 %“ in `app_theme.dart:288`. |
+| WP197 | Bestätigungston beachtet die Ruhezeiten des Stationsmodus | in Arbeit | Entscheidung Maintainer 2026-11-13 (Folgefrage WP195). |
 
 ## Offen
 
@@ -92,7 +93,7 @@ K138 offen, K139 offen, K140 offen, K141 offen, K142 offen, K144 offen, K145 off
 
 ## Nächste Schritte
 
-0. v0.1.8-rc1 (WP191, WP192) auf Gerät testen: `docs/testing/m5/wp191.md`, `docs/testing/m5/wp192.md`; K150–K152 bestätigen lassen.
+0. v0.1.8-rc2 (WP191, WP192, WP194, WP195, WP196) auf Gerät testen (Blöcke im Testprotokoll); K150–K155 bestätigen lassen; CHANGELOG für WP194–WP196 vor dem Release 0.1.8 nachtragen; Emulator-AVD neu anlegen (E2E WP192, WP194).
 1. Release 0.1.6 auf Gerät testen; WP188 per Gerätetest `docs/testing/m5/wp188.md` prüfen.
 1a. Emulator-AVD `Wendelin_AOSP_35` neu anlegen (Abbild seit 2026-11-04 leer), danach offene E2E nachholen.
 2. Konzeptänderungen bestätigen lassen: K138, K139, K140, K141, K142, K144, K145, K146, K147, K148, K149 (Status: offen).
