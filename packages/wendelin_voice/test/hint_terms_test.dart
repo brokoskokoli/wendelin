@@ -12,7 +12,7 @@ void main() {
         const HintTerm('Mia Berger', HintTermKind.contact),
         const HintTerm('Wendelin-Test', HintTermKind.list),
       ]),
-      ['Mia Berger', 'Wendelin-Test', 'Wohnzimmer Licht'],
+      ['Wendelin-Test', 'Wohnzimmer Licht', 'Mia Berger'],
     );
   });
 
@@ -64,26 +64,64 @@ void main() {
     );
   });
 
-  test('Doppelte ohne Rücksicht auf Groß/Klein; Kontakte zuerst', () {
+  test('Doppelte ohne Rücksicht auf Groß/Klein; der höhere Rang bleibt', () {
     expect(
       sanitizeHintTerms([
         room('Küche'),
         const HintTerm('küche', HintTermKind.contact),
         const HintTerm('Agent Eins', HintTermKind.agent),
       ]),
-      ['küche', 'Agent Eins'],
+      ['Agent Eins', 'Küche'],
     );
   });
 
-  test('beim Kürzen bleiben die Kontakte, nicht die Entitäten', () {
-    final terms = [
-      for (var i = 0; i < 5; i++) HintTerm('Entität $i', HintTermKind.entity),
-      const HintTerm('Anna', HintTermKind.contact),
-    ];
+  test('Reihenfolge: Agent, Liste, Raum, Entität, Synonym, Kontakt', () {
     expect(
-      sanitizeHintTerms(terms, limits: const HintTermLimits(maxTerms: 2)),
-      ['Anna', 'Entität 0'],
+      sanitizeHintTerms(const [
+        HintTerm('Anna', HintTermKind.contact),
+        HintTerm('Lampe', HintTermKind.synonym),
+        HintTerm('Deckenlicht', HintTermKind.entity),
+        HintTerm('Küche', HintTermKind.room),
+        HintTerm('Einkaufen', HintTermKind.list),
+        HintTerm('Wendelin', HintTermKind.agent),
+      ]),
+      ['Wendelin', 'Einkaufen', 'Küche', 'Deckenlicht', 'Lampe', 'Anna'],
     );
+  });
+
+  test('Kürzen an der Grenze: Kontakte fallen zuerst, dann Synonyme', () {
+    final terms = [
+      for (var i = 0; i < 5; i++)
+        HintTerm('Kontakt${'a' * i}', HintTermKind.contact),
+      const HintTerm('Lampe', HintTermKind.synonym),
+      const HintTerm('Deckenlicht', HintTermKind.entity),
+      const HintTerm('Einkaufen', HintTermKind.list),
+    ];
+    List<String> cut(int n) =>
+        sanitizeHintTerms(terms, limits: HintTermLimits(maxTerms: n));
+    expect(cut(3), ['Einkaufen', 'Deckenlicht', 'Lampe']);
+    expect(cut(4), ['Einkaufen', 'Deckenlicht', 'Lampe', 'Kontakt']);
+    expect(cut(2), ['Einkaufen', 'Deckenlicht']);
+  });
+
+  test('Dedupe: der Entitätsname schlägt das gleiche Synonym', () {
+    final out = sanitizeHintTermsKinded(const [
+      HintTerm('lampe', HintTermKind.synonym),
+      HintTerm('Lampe', HintTermKind.entity),
+    ]);
+    expect(out.single.text, 'Lampe');
+    expect(out.single.kind, HintTermKind.entity);
+  });
+
+  test('Zählung je Art ohne Namen', () {
+    final counts = countHintTerms(const [
+      HintTerm('A', HintTermKind.list),
+      HintTerm('B', HintTermKind.list),
+      HintTerm('C', HintTermKind.contact),
+    ]);
+    expect(counts[HintTermKind.list], 2);
+    expect(counts[HintTermKind.contact], 1);
+    expect(counts[HintTermKind.synonym], 0);
   });
 
   test('Quellen: eine fehlerhafte Quelle wird übersprungen', () async {
@@ -92,7 +130,7 @@ void main() {
       FakeHintTermSource(const [], failure: StateError('weg')),
       FakeHintTermSource([const HintTerm('Anna', HintTermKind.contact)]),
     ]);
-    expect(out, ['Anna', 'Küche']);
+    expect(out, ['Küche', 'Anna']);
   });
 
   test('Begriff schreibt keinen Inhalt in toString', () {

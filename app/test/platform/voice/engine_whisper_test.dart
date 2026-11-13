@@ -729,6 +729,20 @@ void main() {
         expect(process.live, hasLength(1));
       });
 
+      test('gleiche Namen (neue Liste) bauen den Erkenner nicht neu', () async {
+        final app = withNames(SpeechModelCatalog.parakeetV3.id);
+        addTearDown(app.dispose);
+        await app.read(speechToTextProvider.future);
+        app.read(names.notifier).set(<String>[]);
+        await pumpEventQueue();
+        await app.read(speechToTextProvider.future);
+        await pumpEventQueue();
+        expect(
+          process.events.where((e) => e.startsWith('load ')),
+          hasLength(1),
+        );
+      });
+
       test('Whisper ignoriert die Namen: kein Neuladen', () async {
         final app = withNames('whisper-small');
         addTearDown(app.dispose);
