@@ -1668,6 +1668,7 @@
   },
   "voiceMetricsStt": "Reconnaissance",
   "voiceMetricsTts": "Synthèse vocale",
+  "voiceNothingHeardHint": "Rien entendu.",
   "voiceReleaseToSend": "Relâcher pour envoyer",
   "voiceScreenAutomatic": "Automatique",
   "voiceScreenAutomaticDetail": "Voix du système, sinon voix hors ligne",

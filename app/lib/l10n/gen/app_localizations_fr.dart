@@ -4911,6 +4911,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get voiceMetricsTts => 'Synthèse vocale';
 
   @override
+  String get voiceNothingHeardHint => 'Rien entendu.';
+
+  @override
   String get voiceReleaseToSend => 'Relâcher pour envoyer';
 
   @override

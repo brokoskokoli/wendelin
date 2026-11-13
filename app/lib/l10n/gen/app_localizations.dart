@@ -8361,6 +8361,12 @@ abstract class AppLocalizations {
   /// **'Sprachausgabe'**
   String get voiceMetricsTts;
 
+  /// No description provided for @voiceNothingHeardHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Nichts gehört.'**
+  String get voiceNothingHeardHint;
+
   /// No description provided for @voiceReleaseToSend.
   ///
   /// In de, this message translates to:

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../di/wake_settings.dart';
@@ -44,6 +45,17 @@ Future<WakePreRoll?> takeWakePreRoll({
     lastSampleAtMs: taken.lastSampleAtMs,
     finish: finish,
   );
+}
+
+/// WP195: the stop tone when nothing was heard, only with the setting
+/// „Bestätigungston“ on (same switch as at a wake word hit); never throws.
+Future<void> playStopTone(Ref ref) async {
+  try {
+    if (!await ref.read(wakeToneProvider.future) || !ref.mounted) return;
+    await ref.read(stopToneProvider)();
+  } on Object catch (e) {
+    voiceLog('stop-tone-error', {'type': errorCode(e)});
+  }
 }
 
 /// How long [WakeHandoffTracker.close] waits for the first frame of the app's

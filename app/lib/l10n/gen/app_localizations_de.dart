@@ -4884,6 +4884,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get voiceMetricsTts => 'Sprachausgabe';
 
   @override
+  String get voiceNothingHeardHint => 'Nichts gehört.';
+
+  @override
   String get voiceReleaseToSend => 'Loslassen zum Senden';
 
   @override

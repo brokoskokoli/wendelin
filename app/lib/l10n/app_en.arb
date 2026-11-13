@@ -1668,6 +1668,7 @@
   },
   "voiceMetricsStt": "Recognition",
   "voiceMetricsTts": "Speech output",
+  "voiceNothingHeardHint": "Nothing heard.",
   "voiceReleaseToSend": "Release to send",
   "voiceScreenAutomatic": "Automatic",
   "voiceScreenAutomaticDetail": "System voice, otherwise offline voice",

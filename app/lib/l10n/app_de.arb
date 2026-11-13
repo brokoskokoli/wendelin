@@ -2828,6 +2828,7 @@
   },
   "voiceMetricsStt": "Erkennung",
   "voiceMetricsTts": "Sprachausgabe",
+  "voiceNothingHeardHint": "Nichts gehört.",
   "voiceReleaseToSend": "Loslassen zum Senden",
   "voiceScreenAutomatic": "Automatisch",
   "voiceScreenAutomaticDetail": "Systemstimme, sonst Offline-Stimme",
