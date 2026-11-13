@@ -281,6 +281,38 @@ abstract final class WText {
   );
 
   static final transcript = _ui(26, FontWeight.w600, height: 1.2, ls: -0.01);
+
+  /// Length thresholds (characters) for the smaller transcript steps (WP196).
+  static const transcriptThresholds = [200, 500];
+
+  /// Size factors per step: 100 %, 70 %, 55 % of [transcript].
+  static const _transcriptFactors = [1.0, 0.7, 0.55];
+  static const _transcriptHeights = [1.2, 1.25, 1.3];
+
+  /// Share below a threshold the length must fall before a step grows again.
+  static const transcriptHysteresis = 0.9;
+
+  /// The step (0 = full size) for a transcript of [length] characters.
+  static int transcriptStep(num length) {
+    var step = 0;
+    for (final t in transcriptThresholds) {
+      if (length >= t) step++;
+    }
+    return step;
+  }
+
+  /// The transcript style for [step]; never below the [body] size.
+  static TextStyle transcriptAt(int step) {
+    final size = transcript.fontSize! * _transcriptFactors[step];
+    return transcript.copyWith(
+      fontSize: size < body.fontSize! ? body.fontSize! : size,
+      height: _transcriptHeights[step],
+    );
+  }
+
+  /// The transcript style for a text of [length] characters.
+  static TextStyle transcriptFor(int length) =>
+      transcriptAt(transcriptStep(length));
   static final screenTitle = _ui(26, FontWeight.w600, ls: -0.01);
   static final cardTitle = _ui(24, FontWeight.w600, height: 1.25);
   static final answer = _ui(
