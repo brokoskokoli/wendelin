@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart'
+    show ProviderBase, ProviderListenable;
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../di/core_providers.dart';
@@ -17,10 +19,12 @@ import 'wake_align.dart';
 /// The tone follows the take: the service no longer records, the new
 /// microphone silences the first [wakeToneMuteSamples] samples. Without a
 /// tone (setting) or if the speaker is evidently continuing already,
-/// nothing is played and nothing silenced. `null` if nobody left a hit.
+/// nothing is played and nothing silenced; the same holds in the quiet hours
+/// of the active station ([quiet], WP197). `null` if nobody left a hit.
 Future<WakePreRoll?> takeWakePreRoll({
   required AssistantPlatform platform,
   required bool tone,
+  bool quiet = false,
   required Future<void> Function() playTone,
 }) async {
   // The service records on until the new microphone has its first frame
@@ -38,7 +42,7 @@ Future<WakePreRoll?> takeWakePreRoll({
     'captured': Duration(milliseconds: taken.capturedMs),
     'continues': continues,
   });
-  final play = tone && !continues;
+  final play = tone && !quiet && !continues;
   if (play) unawaited(playTone());
   return WakePreRoll(
     pcm: pcm,
@@ -55,7 +59,7 @@ Future<WakePreRoll?> takeWakePreRoll({
 Future<void> playStopTone(Ref ref) async {
   try {
     if (!await ref.read(wakeToneProvider.future) || !ref.mounted) return;
-    if (_stationQuiet(ref)) return;
+    if (stationQuiet(exists: ref.exists, read: ref.read)) return;
     await ref.read(stopToneProvider)();
   } on Object catch (e) {
     voiceLog('stop-tone-error', {'type': errorCode(e)});
@@ -63,14 +67,17 @@ Future<void> playStopTone(Ref ref) async {
 }
 
 /// Whether the station runs right now (its controller is alive, the screen is
-/// shown) and the local time lies in its quiet hours. Creates no state.
-bool _stationQuiet(Ref ref) {
-  if (!ref.exists(stationControllerProvider)) return false;
-  if (ref.read(stationControllerProvider).ended) return false;
-  return ref
-      .read(stationPrefsProvider)
-      .quiet
-      .contains(ref.read(clockProvider).now());
+/// shown) and the local time lies in its quiet hours. Creates no state. The
+/// one check for the stop tone (WP195) and the confirmation tone (WP197);
+/// [exists] and [read] are the callers' `ref.exists`/`ref.read` (`Ref`,
+/// `WidgetRef` and `ProviderContainer` share no interface).
+bool stationQuiet({
+  required bool Function(ProviderBase<Object?>) exists,
+  required T Function<T>(ProviderListenable<T>) read,
+}) {
+  if (!exists(stationControllerProvider)) return false;
+  if (read(stationControllerProvider).ended) return false;
+  return read(stationPrefsProvider).quiet.contains(read(clockProvider).now());
 }
 
 /// How long [WakeHandoffTracker.close] waits for the first frame of the app's

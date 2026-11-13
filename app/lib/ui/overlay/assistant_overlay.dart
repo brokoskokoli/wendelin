@@ -123,6 +123,7 @@ Future<WakePreRoll?> _takeWake(WidgetRef ref, {required bool tone}) =>
     takeWakePreRoll(
       platform: ref.read(assistantPlatformProvider),
       tone: tone,
+      quiet: stationQuiet(exists: ref.exists, read: ref.read),
       playTone: ref.read(wakeConfirmToneProvider),
     );
 
