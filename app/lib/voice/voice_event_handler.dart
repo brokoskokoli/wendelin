@@ -62,6 +62,11 @@ extension _VoiceEventHandler on VoiceController {
         state = state.copyWith(
           hint: VoiceTexts.of(_language).nothingUnderstood,
         );
+      case VoiceNothingHeard():
+        // WP195: nothing spoken: a short hint and the stop tone, no speech.
+        voiceLog('nothing-heard', {});
+        state = state.copyWith(hint: voiceNothingHeardHint);
+        unawaited(playStopTone(ref));
       case VoiceError(:final during, :final error):
         voiceLog('voice-error', {'phase': during, 'error': errorCode(error)});
         state = state.copyWith(error: voiceErrorText(uiTexts(ref), error));

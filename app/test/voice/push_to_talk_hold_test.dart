@@ -16,11 +16,11 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../support/test_env.dart';
 import 'voice_controller_test.dart' show utterance, waitConv, waitVoice;
 
-/// Lead-in silence (200 frames, 200 ms real time at 1 ms per frame; below
-/// the 8 s no-speech timeout of the audio time): the
+/// Lead-in silence (120 frames, 120 ms real time at 1 ms per frame; below
+/// the 5 s no-speech timeout (WP195) of the audio time): the
 /// gesture calls arrive long before any end by silence could fall due, so
 /// the tests do not depend on the speed of the machine.
-const _lead = 200;
+const _lead = 120;
 
 /// Lead-in, 300 ms speech, 3 s pause, 300 ms speech (frames of 30 ms).
 List<Int16List> longWithPause() =>

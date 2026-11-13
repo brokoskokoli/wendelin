@@ -63,3 +63,21 @@ final wakeConfirmToneProvider = Provider<Future<void> Function()>((ref) {
   }
   return () => playback.play(Wav(samples));
 });
+
+/// Length of the stop tone in samples (0.2 s at 16 kHz).
+const wakeStopToneSamples = 3200;
+
+/// Short, quiet, falling tone (660 to 440 Hz, 0.2 s) when nothing was heard
+/// and the round ends silently (WP195; replaced in tests).
+final stopToneProvider = Provider<Future<void> Function()>((ref) {
+  final playback = createRoutedPlayback(ref);
+  final samples = Int16List(wakeStopToneSamples);
+  var phase = 0.0;
+  for (var i = 0; i < samples.length; i++) {
+    final f = 660 - 220 * i / samples.length;
+    phase += 2 * math.pi * f / 16000;
+    final fade = math.min(1.0, math.min(i, samples.length - i) / 400);
+    samples[i] = (math.sin(phase) * 3500 * fade).round();
+  }
+  return () => playback.play(Wav(samples));
+});

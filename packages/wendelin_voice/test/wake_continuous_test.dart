@@ -54,11 +54,11 @@ void main() {
         reason: 'kein vorzeitiger Weckwort-STT-Aufruf',
       );
 
-      // Erst nach 8 s Gesamt-Stille greift noSpeech
+      // Erst nach 5 s Stille greift noSpeech (WP195)
       async.elapse(const Duration(seconds: 8));
       settle(async);
       expect(h.pipeline.state, VoiceState.idle);
-      expect(h.events, contains(isA<VoiceNothingUnderstood>()));
+      expect(h.events, contains(isA<VoiceNothingHeard>()));
       expect(h.stt.calls, isEmpty);
     });
   });

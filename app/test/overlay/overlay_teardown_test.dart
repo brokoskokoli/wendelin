@@ -134,6 +134,7 @@ void main() {
   /// An overlay engine as `assistantMain` builds it, native objects counted.
   ProviderContainer overlayEngine({required bool keep}) {
     final env = TestEnv(
+      realStopTone: true,
       extraOverrides: [
         whisperLoaderProvider.overrideWithValue(
           (m, _) async => _Backend(counts),
@@ -241,6 +242,7 @@ void main() {
     'speaker-embedder': (c) => c.read(speakerEmbedderProvider),
     'wake-confirm-tone': (c) => c.read(wakeConfirmToneProvider),
     'wake-prompt-tone': (c) => c.read(wakePromptToneProvider),
+    'stop-tone': (c) => c.read(stopToneProvider),
     'sherpa-tts-playback': (c) =>
         c.read(Provider<TextToSpeech>(createSherpaTts)),
   };

@@ -99,6 +99,17 @@ final class VoiceNothingUnderstood extends VoiceEvent {
   String toString() => 'VoiceNothingUnderstood(${reason?.name})';
 }
 
+/// Nothing was heard at all in the first round (no word within
+/// [VoicePipelineConfig.firstNoSpeechTimeout], WP195): nothing is spoken, the
+/// conversation ends with `silence`; the app plays a short stop tone.
+final class VoiceNothingHeard extends VoiceEvent {
+  /// Creates the event.
+  const VoiceNothingHeard();
+
+  @override
+  String toString() => 'VoiceNothingHeard()';
+}
+
 /// A held recording (push-to-talk) hit the hard limit
 /// ([EndpointConfig.holdMaxDuration]) and is processed now (WP192): the
 /// app shows a hint.

@@ -51,10 +51,14 @@ const voiceUnavailableError = 'voice-unavailable';
 /// [voiceStatusText].
 const voiceHoldLimitHint = 'voice-hold-limit';
 
+/// Hint after a silent end (WP195): nothing was heard.
+const voiceNothingHeardHint = 'voice-nothing-heard';
+
 /// Visible text for the voice status/error [text] in the UI language.
 String voiceStatusText(AppLocalizations l, String text) => switch (text) {
   voiceUnavailableError => l.voiceUnavailableHint,
   voiceHoldLimitHint => l.voiceHoldLimitHint,
+  voiceNothingHeardHint => l.voiceNothingHeardHint,
   _ => text,
 };
 
