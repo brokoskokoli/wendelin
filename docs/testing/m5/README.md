@@ -52,6 +52,7 @@ Jedes Arbeitspaket mit Gerätebezug (M5 und M6) legt hier seine eigene Datei `<w
 - [WP174 – Einrichtungsassistent (Gerätetest)](wp174.md)
 - [WP182 – Overlay schließt nicht während Ansage oder 10-Sekunden-Rückgängig-Fenster (Gerätetest)](wp182.md)
 - [WP188 – Audio-Einstellungen: Mikrofon und Ausgabe wählen (Gerätetest)](wp188.md)
+- [WP191 – Hinweisbegriffe: Listennamen und Gerätesynonyme (Gerätetest)](wp191.md)
 - [WP192 Push-to-Talk: Drücken und Halten](wp192.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)

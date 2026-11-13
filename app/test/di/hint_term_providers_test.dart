@@ -5,6 +5,7 @@ import 'package:wendelin/di/hint_term_providers.dart';
 import 'package:wendelin/di/home_assistant.dart';
 import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/startup.dart';
+import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
@@ -82,6 +83,11 @@ class _Contacts extends Notifier<List<String>> {
   void set(List<String> next) => state = next;
 }
 
+void _setLists(ProviderContainer c, List<ListDefinition> lists) {
+  // ignore: invalid_use_of_protected_member
+  c.read(listDefinitionsProvider.notifier).state = lists;
+}
+
 final _contactState = NotifierProvider<_Contacts, List<String>>(_Contacts.new);
 
 void _providers() {
@@ -134,24 +140,156 @@ void _providers() {
             'Einkaufsliste',
             'Küche',
             'Deckenlicht',
+            'Lampe',
+            'Licht',
           ]),
         );
       },
     );
+
+    test('300 Kontakte verdrängen weder Listen noch HA-Namen noch Synonyme '
+        '(WP191)', () async {
+      c.read(_contactState.notifier).set([
+        for (var i = 0; i < 300; i++) 'Person ${_letters(i)}',
+      ]);
+      const domains = ['light', 'cover', 'switch', 'climate', 'media_player'];
+      _setLists(c, [
+        for (var i = 0; i < 5; i++)
+          ListDefinition(id: 'l$i', name: 'Liste ${_letters(i)}', target: 't'),
+      ]);
+      await ha.save([
+        for (var i = 0; i < 10; i++)
+          HaEntity(
+            entityId: '${domains[i % 5]}.e$i',
+            name: 'Gerät ${_letters(i)}',
+            area: 'Raum ${_letters(i)}',
+          ),
+      ]);
+      c.invalidate(haApprovedEntitiesProvider);
+      final terms = await c.read(hintTermsProvider.future);
+      for (var i = 0; i < 5; i++) {
+        expect(terms, contains('Liste ${_letters(i)}'));
+      }
+      for (var i = 0; i < 10; i++) {
+        expect(terms, contains('Gerät ${_letters(i)}'));
+        expect(terms, contains('Raum ${_letters(i)}'));
+      }
+      // Synonyms of the domains that exist (de), none of absent domains.
+      expect(
+        terms,
+        containsAll([
+          'Lampe',
+          'Licht',
+          'Rollo',
+          'Schalter',
+          'Heizung',
+          'Fernseher',
+        ]),
+      );
+      for (final absent in ['Ventilator', 'Schloss']) {
+        expect(terms, isNot(contains(absent)));
+      }
+      // Limit: the contacts are cut at the end, the total is the limit.
+      expect(terms, hasLength(const HintTermLimits().maxTerms));
+      expect(terms, contains('Person ${_letters(0)}'));
+      expect(terms, isNot(contains('Person ${_letters(299)}')));
+    });
 
     Future<List<String>> next() async {
       await Future<void>.delayed(Duration.zero);
       return c.read(hintTermsProvider.future);
     }
 
+    group('Synonyme (WP191)', () {
+      Future<List<String>> termsFor(
+        List<HaEntity> entities, {
+        String? language,
+      }) async {
+        await ha.save(entities);
+        if (language != null) {
+          c.read(languageProvider.notifier).state = language;
+        }
+        return c.read(hintTermsProvider.future);
+      }
+
+      const light = HaEntity(entityId: 'light.k', name: 'Deckenlicht');
+      const cover = HaEntity(entityId: 'cover.w', name: 'Terrasse');
+
+      test('nur Domains vorhandener Entitäten, de', () async {
+        final t = await termsFor([light], language: 'de');
+        expect(t, containsAll(['Lampe', 'Licht']));
+        expect(t, isNot(contains('Rollo')));
+        expect(t, isNot(contains('Ventilator')));
+      });
+
+      test('ohne Entitäten keine Synonyme', () async {
+        final t = await termsFor(const [], language: 'de');
+        expect(t, isNot(contains('Lampe')));
+      });
+
+      test('Sprache en und fr; unbekannt fällt auf en', () async {
+        expect(
+          await termsFor([light, cover], language: 'fr'),
+          containsAll(['lampe', 'volet']),
+        );
+        c.invalidate(hintTermsProvider);
+        c.read(languageProvider.notifier).state = 'en';
+        final en = await c.read(hintTermsProvider.future);
+        expect(en, containsAll(['lamp', 'blind']));
+        expect(en, isNot(contains('lampe')));
+        c.read(languageProvider.notifier).state = 'xx';
+        expect(await next(), containsAll(['lamp', 'blind']));
+      });
+
+      test('Sprachwechsel berechnet die Begriffe neu', () async {
+        await termsFor([light], language: 'de');
+        c.listen(hintTermsProvider, (_, _) {});
+        c.read(languageProvider.notifier).state = 'en';
+        final t = await next();
+        expect(t, contains('lamp'));
+        expect(t, isNot(contains('Lampe')));
+      });
+
+      test('Entitätsname gleich Synonym: nur einmal', () async {
+        final t = await termsFor([
+          const HaEntity(entityId: 'light.x', name: 'Lampe'),
+        ], language: 'de');
+        expect(t.where((e) => e.toLowerCase() == 'lampe'), hasLength(1));
+      });
+    });
+
+    test('Log nennt nur Zahlen je Art, keine Namen', () async {
+      final lines = <String>[];
+      final old = voiceLogSink;
+      voiceLogSink = lines.add;
+      addTearDown(() => voiceLogSink = old);
+      await ha.save(const [
+        HaEntity(entityId: 'light.k', name: 'Geheimlicht', area: 'Geheimraum'),
+      ]);
+      c.read(_contactState.notifier).set(['Geheime Person']);
+      await c.read(hintTermsProvider.future);
+      final hint = lines.where((l) => l.contains('hint-terms')).toList();
+      expect(hint, hasLength(1));
+      expect(
+        hint.single,
+        endsWith(
+          'hint-terms engine=app contact=1 agent=1 list=2 room=1 entity=1 '
+          'synonym=2 total=8',
+        ),
+      );
+      for (final n in ['Geheim', 'Einkauf', 'Wendelin', 'Lampe']) {
+        expect(
+          hint.single.replaceFirst(voiceLogPrefix, ''),
+          isNot(contains(n)),
+        );
+      }
+    });
+
     test('Neuberechnung bei Listen, HA-Freigaben und Kontakten', () async {
       expect(await c.read(hintTermsProvider.future), contains('Einkaufen'));
       c.listen(hintTermsProvider, (_, _) {});
 
-      // ignore: invalid_use_of_protected_member
-      c.read(listDefinitionsProvider.notifier).state = [
-        ListDefinition(id: 'b', name: 'Baumarkt', target: 't'),
-      ];
+      _setLists(c, [ListDefinition(id: 'b', name: 'Baumarkt', target: 't')]);
       var t = await next();
       expect(t, contains('Baumarkt'));
       expect(t, isNot(contains('Einkaufen')));
@@ -177,3 +315,6 @@ void _providers() {
     );
   });
 }
+
+/// Letters only (hint names without digits need a letter, a-z, then aa…).
+String _letters(int i) => String.fromCharCode(97 + i % 26) * (1 + i ~/ 26);
