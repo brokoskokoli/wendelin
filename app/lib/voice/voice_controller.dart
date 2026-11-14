@@ -203,9 +203,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
     }
     if (!ready) return _startAfterLoading(kind, prepare, takePreRoll);
     if (state.active || ref.read(agentControllerProvider).running) return false;
-    // Models are installed (WP18 review). The microphone opens right away
-    // and buffers while they load; without the permission it does not record
-    // (the input checks it), the explanation may come up meanwhile.
+    // Models are installed (WP18 review): the microphone opens right away and
+    // buffers while they load (without the permission it does not record).
     final cancels = _cancels;
     // The loaded components' microphone, or (first use) the device one.
     final primed = _primedFor(
@@ -230,6 +229,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       unawaited(preRoll?.finish?.call());
       return false;
     }
+    if (preRoll?.pcm.isNotEmpty ?? false) state = state.copyWith(micLive: true);
     _wake.begin(preRoll, primed.head); // before the microphone opens
     _timing.opened();
     primed.prime();
