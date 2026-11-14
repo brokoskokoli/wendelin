@@ -225,6 +225,19 @@ void main() {
     },
   );
 
+  test(
+    'Fehlschlag, dann write-Fehlschlag: derselbe Aufruf bleibt gesperrt',
+    () async {
+      final inv = CountingInvoker([
+        ToolOutcome.error(_error),
+        ToolOutcome.error('make kaputt'),
+        ToolOutcome.text('ok'),
+      ]);
+      await _run(twoTools(inv, RiskLevel.write), <int>[]);
+      expect(inv.calls.map((c) => c.id), ['c1', 'c2']);
+    },
+  );
+
   test('nach write-Erfolg zählen Fehlschläge weiter bis zum Stopp', () async {
     final inv = CountingInvoker([
       ToolOutcome.error(_error),
