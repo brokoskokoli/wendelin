@@ -23,6 +23,7 @@
         "isDefaultAssistant": {"args": [], "returns": "value"},
         "openAssistantSettings": {"args": [], "returns": "value"},
         "isLocked": {"args": [], "returns": "value"},
+        "stationOpen": {"args": [], "returns": "value"},
         "requestUnlock": {"args": [], "returns": "value"},
         "isRecognizerOffered": {"args": [], "returns": "value"},
         "recognitionServiceState": {"args": [], "returns": "map"},

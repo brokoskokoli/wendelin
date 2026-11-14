@@ -57,6 +57,7 @@ Jedes Arbeitspaket mit Gerätebezug (M5 und M6) legt hier seine eigene Datei `<w
 - [WP194 Mikrofon zuerst: „Ich höre zu“, sobald es Ton liefert](wp194.md)
 - [WP195 Nichts gehört: still beenden mit Stopp-Ton](wp195.md)
 - [WP196 Langes Transkript kleiner anzeigen](wp196.md)
+- [WP197 Bestätigungs- und Stopp-Ton respektieren die Ruhezeit der Station](wp197.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)
 - [WP85 Kontakte, SMS und Anrufe (`contacts`)](wp85.md)

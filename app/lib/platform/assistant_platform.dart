@@ -130,6 +130,12 @@ class AssistantPlatform {
     await _invoke<void>('setRecognizerConfig', config.toArgs());
   }
 
+  /// Whether the station screen is open (WP197): Kotlin `StationState.open`,
+  /// also with a dark screen. The station runs in its own engine, so this is
+  /// the one way for the overlay and the app to know. `false` if unknown.
+  Future<bool> stationOpen() async =>
+      await _invoke<bool>('stationOpen') ?? false;
+
   /// Whether a wake word hit waits for the overlay (WP50). Does not take it.
   Future<bool> hasWakeHandoff() async =>
       await _invoke<bool>('hasWakeHandoff') ?? false;

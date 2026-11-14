@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../di/core_providers.dart';
@@ -17,10 +18,12 @@ import 'wake_align.dart';
 /// The tone follows the take: the service no longer records, the new
 /// microphone silences the first [wakeToneMuteSamples] samples. Without a
 /// tone (setting) or if the speaker is evidently continuing already,
-/// nothing is played and nothing silenced. `null` if nobody left a hit.
+/// nothing is played and nothing silenced; the same holds in the quiet hours
+/// of the open station ([quiet] from [stationQuiet], WP197). `null` if nobody left a hit.
 Future<WakePreRoll?> takeWakePreRoll({
   required AssistantPlatform platform,
   required bool tone,
+  required Future<bool> quiet,
   required Future<void> Function() playTone,
 }) async {
   // The service records on until the new microphone has its first frame
@@ -38,7 +41,8 @@ Future<WakePreRoll?> takeWakePreRoll({
     'captured': Duration(milliseconds: taken.capturedMs),
     'continues': continues,
   });
-  final play = tone && !continues;
+  // Asked by the caller before the take, so it costs no extra wait here.
+  final play = tone && !continues && !await quiet;
   if (play) unawaited(playTone());
   return WakePreRoll(
     pcm: pcm,
@@ -55,22 +59,28 @@ Future<WakePreRoll?> takeWakePreRoll({
 Future<void> playStopTone(Ref ref) async {
   try {
     if (!await ref.read(wakeToneProvider.future) || !ref.mounted) return;
-    if (_stationQuiet(ref)) return;
+    if (await stationQuiet(ref.read)) return;
     await ref.read(stopToneProvider)();
   } on Object catch (e) {
     voiceLog('stop-tone-error', {'type': errorCode(e)});
   }
 }
 
-/// Whether the station runs right now (its controller is alive, the screen is
-/// shown) and the local time lies in its quiet hours. Creates no state.
-bool _stationQuiet(Ref ref) {
-  if (!ref.exists(stationControllerProvider)) return false;
-  if (ref.read(stationControllerProvider).ended) return false;
-  return ref
-      .read(stationPrefsProvider)
-      .quiet
-      .contains(ref.read(clockProvider).now());
+/// Whether the station screen is open (Kotlin, any engine) and the local time
+/// lies in its quiet hours (WP197). The one check for the stop tone (WP195)
+/// and the confirmation tone; [read] is the caller's `ref.read`. The station
+/// has its own engine, so only the platform channel knows whether it runs; the
+/// quiet hours come from the stored settings, readable in every engine. A
+/// failing channel counts as „not quiet“ (tone as before); never throws.
+Future<bool> stationQuiet(T Function<T>(ProviderListenable<T>) read) async {
+  try {
+    final quiet = read(stationPrefsProvider).quiet;
+    if (!quiet.contains(read(clockProvider).now())) return false;
+    return await read(assistantPlatformProvider).stationOpen();
+  } on Object catch (e) {
+    voiceLog('station-quiet-error', {'type': errorCode(e)});
+    return false;
+  }
 }
 
 /// How long [WakeHandoffTracker.close] waits for the first frame of the app's

@@ -5,6 +5,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/wake_settings.dart';
 import 'package:wendelin/platform/assistant_platform.dart';
 import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin/voice/wake/wake_pre_roll.dart';
@@ -228,6 +229,7 @@ void main() {
       final pre = await takeWakePreRoll(
         platform: platform,
         tone: false,
+        quiet: Future.value(false),
         playTone: () async {},
       );
       expect(platform.wakeKeptOpen, 1);
@@ -240,4 +242,41 @@ void main() {
       expect(identical(a, b), isTrue);
     },
   );
+
+  group('takeWakePreRoll: Bestätigungston (WP197)', () {
+    Future<(int, WakePreRoll?)> take({
+      required bool tone,
+      required bool quiet,
+    }) async {
+      var plays = 0;
+      final platform = FakeAssistantPlatform()
+        ..wakeHandoff = filled(2, 3200)
+        ..wakeEnd = 3200;
+      final pre = await takeWakePreRoll(
+        platform: platform,
+        tone: tone,
+        quiet: Future.value(quiet),
+        playTone: () async => plays++,
+      );
+      return (plays, pre);
+    }
+
+    test('Ton an, keine Ruhezeit: Ton und Stummschaltung', () async {
+      final (plays, pre) = await take(tone: true, quiet: false);
+      expect(plays, 1);
+      expect(pre!.muteMicSamples, wakeToneMuteSamples);
+    });
+
+    test('Ruhezeit der Station: kein Ton, nichts stumm', () async {
+      final (plays, pre) = await take(tone: true, quiet: true);
+      expect(plays, 0);
+      expect(pre!.muteMicSamples, 0);
+    });
+
+    test('Ton aus: kein Ton, nichts stumm', () async {
+      final (plays, pre) = await take(tone: false, quiet: false);
+      expect(plays, 0);
+      expect(pre!.muteMicSamples, 0);
+    });
+  });
 }

@@ -5,7 +5,7 @@
 
 ## Befund
 - `app/lib/voice/wake/wake_pre_roll.dart:41` spielt den Ton bei `tone && !continues`, ohne die Ruhezeit zu prüfen.
-- `_stationQuiet(ref)` (`wake_pre_roll.dart` ~66) prüft die Ruhezeit bereits für `playStopTone`.
+- `stationQuiet` (Nachbesserung: Kotlin `StationState.open` über den Plattformkanal plus gespeicherte Ruhezeiten, weil der Stationscontroller nur in der Station-Engine lebt) prüft die Ruhezeit für beide Töne.
 
 ## Inhalt
 - Der Bestätigungston beim Weckwort-Treffer fällt weg, solange `_stationQuiet` zutrifft. `muteMicSamples` folgt wie bisher dem tatsächlich gespielten Ton: Ohne Ton wird nichts stummgeschaltet.

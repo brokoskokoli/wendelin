@@ -10,10 +10,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/di/agent_providers.dart';
+import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/di/wake_settings.dart';
 import 'package:wendelin/platform/assistant_platform.dart';
 import 'package:wendelin/platform/wake/wake_platform.dart';
+import 'package:wendelin/station/station_prefs.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
 import 'package:wendelin/voice/speaker/speaker_storage.dart';
 import 'package:wendelin/voice/voice_components.dart';
@@ -66,6 +68,7 @@ final class FakeWakePlatform extends WakePlatform {
 void main() {
   late FakeWakePlatform wake;
   late FakeAssistantPlatform assistant;
+  var tonePlays = 0;
   final logLines = <String>[];
   late void Function(String) savedSink;
   setUp(() {
@@ -83,13 +86,17 @@ void main() {
     bool ready = true,
     bool noModels = false,
     Future<void> Function(TestEnv env)? setup,
+    StartupSettings? startup,
+    bool stationOpen = false,
   }) async {
     wake = FakeWakePlatform();
-    assistant = FakeAssistantPlatform();
+    assistant = FakeAssistantPlatform()..stationIsOpen = stationOpen;
+    tonePlays = 0;
     if (handoff) {
       assistant.wakeHandoff = Int16List.fromList(List.filled(8000, 300));
     }
     final env = TestEnv(
+      startup: startup,
       providerConfig: scripted(
         FakeLlmProvider(turns ?? [ScriptedTurn.text('ok')]),
       ),
@@ -97,7 +104,7 @@ void main() {
         wakePlatformProvider.overrideWithValue(wake),
         assistantPlatformProvider.overrideWithValue(assistant),
         voiceReadyProvider.overrideWithValue(ready),
-        wakeConfirmToneProvider.overrideWithValue(() async {}),
+        wakeConfirmToneProvider.overrideWithValue(() async => tonePlays++),
         activeVoiceProvider.overrideWith(
           (ref) async => noModels
               ? null
@@ -151,6 +158,56 @@ void main() {
     await pumpUntil(tester, () => answer != null);
     return answer!;
   }
+
+  // The test clock stands at 08:12 (WP197).
+  Future<void> toneAfterHit(
+    WidgetTester tester, {
+    required bool stationOpen,
+    required QuietHours quiet,
+  }) async {
+    await pump(
+      tester,
+      stationOpen: stationOpen,
+      startup: StartupSettings(station: StationPrefs(quiet: quiet)),
+      setup: (env) => env.storage.settings.set(wakeToneKey, true),
+    );
+    expect(await askHit(tester), isTrue);
+    await pumpUntil(tester, () => wake.done > 0);
+  }
+
+  testWidgets('Treffer im Chat: Station offen in der Ruhezeit, kein Ton', (
+    tester,
+  ) async {
+    await toneAfterHit(
+      tester,
+      stationOpen: true,
+      quiet: const QuietHours(fromHour: 8, toHour: 9),
+    );
+    expect(assistant.wakeTakes, 1);
+    expect(tonePlays, 0);
+  });
+
+  testWidgets('Treffer im Chat: Station offen außerhalb der Ruhezeit, Ton', (
+    tester,
+  ) async {
+    await toneAfterHit(
+      tester,
+      stationOpen: true,
+      quiet: const QuietHours(fromHour: 22, toHour: 7),
+    );
+    expect(tonePlays, 1);
+  });
+
+  testWidgets('Treffer im Chat: Ruhezeit ohne offene Station, Ton', (
+    tester,
+  ) async {
+    await toneAfterHit(
+      tester,
+      stationOpen: false,
+      quiet: const QuietHours(fromHour: 8, toHour: 9),
+    );
+    expect(tonePlays, 1);
+  });
 
   testWidgets(
     'Chat sichtbar: der Chat hört zu, danach hört der Dienst wieder',

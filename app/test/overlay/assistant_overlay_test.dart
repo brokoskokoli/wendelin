@@ -36,6 +36,11 @@ import '../voice/voice_controller_test.dart' show fakeVoice, utterance;
 final class FakeAssistantPlatform extends AssistantPlatform
     with HostCallRecorder {
   bool locked = false;
+  bool stationIsOpen = false; // answer of stationOpen (WP197)
+  Object? stationError; // thrown by stationOpen, if set
+  @override
+  Future<bool> stationOpen() async =>
+      stationError != null ? throw stationError! : stationIsOpen;
   Completer<bool>? lockAnswer;
   bool unlockSucceeds = true;
   Future<void> Function()? closeHandler;
