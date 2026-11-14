@@ -52,7 +52,6 @@ final class AssessingInvoker implements ToolInvoker, ToolRiskAssessor {
     Tool tool,
     String sessionId, {
     bool foreignContent = false,
-    ContentOrigin foreignOrigin = ContentOrigin.none,
   }) => stricter.contains(tool.name) ? RiskLevel.external : tool.risk;
 
   @override
@@ -101,15 +100,11 @@ final class _OriginInvoker implements ToolInvoker, ToolRiskAssessor {
     Tool tool,
     String sessionId, {
     bool foreignContent = false,
-    ContentOrigin foreignOrigin = ContentOrigin.none,
   }) {
     if (!foreignContent) return tool.risk;
-    final own = tool is ContentOriginAware
-        ? (tool as ContentOriginAware).contentOrigin
-        : ContentOrigin.unknown;
-    return own is ServerOrigin && own == foreignOrigin
-        ? tool.risk
-        : RiskLevel.external;
+    // The receipt gate never gets an origin (WP201): after foreign content
+    // the tool is `external` whatever server it belongs to.
+    return RiskLevel.external;
   }
 
   @override

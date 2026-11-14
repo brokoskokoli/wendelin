@@ -68,17 +68,10 @@ final class ToolExecutor
     Tool tool,
     String sessionId, {
     bool foreignContent = false,
-    ContentOrigin foreignOrigin = ContentOrigin.none,
   }) => RiskPolicy.effectiveRisk(
     tool.risk,
     policy
-        .decide(
-          tool,
-          sessionId,
-          access: access,
-          foreignContent: foreignContent,
-          foreignOrigin: foreignOrigin,
-        )
+        .decide(tool, sessionId, access: access, foreignContent: foreignContent)
         .action,
   );
 

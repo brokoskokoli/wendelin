@@ -40,6 +40,36 @@ final class _ServerTool implements Tool, ContentTrustAware, ContentOriginAware {
       inner.describeForConfirmation(args);
 }
 
+/// A TEE-like provider: the first answer is verified green, the following
+/// ones red (like a failed receipt, WP157).
+final class _RedAfterFirst implements LlmProvider, AttestationAware {
+  _RedAfterFirst(this.inner);
+
+  final FakeLlmProvider inner;
+  var _asked = 0;
+
+  @override
+  ProviderType get type => inner.type;
+  @override
+  ProviderCapabilities get caps => inner.caps;
+  @override
+  Stream<ChatEvent> chat(ChatRequest req, {CancelToken? cancel}) =>
+      inner.chat(req, cancel: cancel);
+  @override
+  Future<List<ModelInfo>> listModels() => inner.listModels();
+  @override
+  Future<HealthCheck> test() => inner.test();
+  @override
+  Stream<AttestationReport> get reports => const Stream.empty();
+  @override
+  Future<AttestationReport?> reportFor(ChatRequest request) async =>
+      AttestationReport(
+        logId: 'att-${_asked + 1}',
+        status: _asked++ == 0 ? AttestationStatus.green : AttestationStatus.red,
+        detail: 'Hinweis',
+      );
+}
+
 void main() {
   const device = DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin');
 
@@ -60,23 +90,26 @@ void main() {
   Future<List<String>> run(
     List<(String, String)> calls, {
     InMemoryConversation? conversation,
+    bool tee = false,
   }) async {
     final all = [xList, xSet, yList, web, ...extra];
     final catalog = FakeToolCatalog(all);
     final clock = FixedClock(DateTime.utc(2026, 11, 14, 9));
     final conv = conversation ?? InMemoryConversation();
     var n = 0;
+    final fake = FakeLlmProvider([
+      for (final (name, args) in calls)
+        ScriptedTurn.toolCalls([
+          ToolCallBlock(id: 'id_${n++}', name: name, argumentsJson: args),
+        ]),
+      ScriptedTurn.text('Fertig.'),
+    ]);
+    final LlmProvider provider = tee ? _RedAfterFirst(fake) : fake;
     final target = ProviderTarget(
       profileId: 'p',
       modelId: 'm',
-      provider: FakeLlmProvider([
-        for (final (name, args) in calls)
-          ScriptedTurn.toolCalls([
-            ToolCallBlock(id: 'id_${n++}', name: name, argumentsJson: args),
-          ]),
-        ScriptedTurn.text('Fertig.'),
-      ]),
-      privacy: PrivacyLevel.standard,
+      provider: provider,
+      privacy: tee ? PrivacyLevel.tee : PrivacyLevel.standard,
     );
     final policy = RiskPolicy()
       ..setLevel(xSet.name, SecurityLevel.a)
@@ -112,6 +145,16 @@ void main() {
 
   test('X -> X: Tool von X läuft ohne Nachfrage', () {
     expect(run([c('mcp_x__list'), c('mcp_x__set')]), completion(isEmpty));
+  });
+
+  test('X -> X, TEE-Quittung rot: Tool von X wird nicht ausgeführt', () async {
+    // Real executor and policy: the receipt gate sees no origin, so the
+    // tool counts as external after foreign content and waits for the
+    // (red) receipt, although the confirmation is dropped for the same server.
+    final before = xSet.inner.callCount;
+    final asked = await run([c('mcp_x__list'), c('mcp_x__set')], tee: true);
+    expect(asked, isEmpty);
+    expect(xSet.inner.callCount, before);
   });
 
   test('Y -> X: Tool von X fragt nach', () {
@@ -278,6 +321,25 @@ void main() {
           'mcp_x__set',
         ]);
       });
+
+      test(
+        'X-Treffer bleibt Kandidat, Y-Treffer verschwindet: fragt nach',
+        () async {
+          final conv = InMemoryConversation();
+          extra = [
+            searchOver([xList, xSet, yList]),
+          ];
+          await run([search], conversation: conv);
+          // Only X stays a candidate: the vanished Y hit makes the origin
+          // unknown (mixed), so X must ask again.
+          extra = [
+            searchOver([xList, xSet]),
+          ];
+          expect(await run([c('mcp_x__set')], conversation: conv), [
+            'mcp_x__set',
+          ]);
+        },
+      );
     });
 
     test('neue Unterhaltung beginnt ohne Herkunft', () async {

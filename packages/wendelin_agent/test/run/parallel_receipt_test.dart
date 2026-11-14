@@ -74,7 +74,6 @@ final class PolicyInvoker implements ToolInvoker, ToolRiskAssessor {
     Tool tool,
     String sessionId, {
     bool foreignContent = false,
-    ContentOrigin foreignOrigin = ContentOrigin.none,
   }) => tool.risk;
 
   @override
@@ -96,13 +95,7 @@ final class HookInvoker implements ToolInvoker, ToolRiskAssessor {
     Tool tool,
     String sessionId, {
     bool foreignContent = false,
-    ContentOrigin foreignOrigin = ContentOrigin.none,
-  }) => inner.effectiveRisk(
-    tool,
-    sessionId,
-    foreignContent: foreignContent,
-    foreignOrigin: foreignOrigin,
-  );
+  }) => inner.effectiveRisk(tool, sessionId, foreignContent: foreignContent);
 
   @override
   Stream<ToolInvocationEvent> invokeAll(

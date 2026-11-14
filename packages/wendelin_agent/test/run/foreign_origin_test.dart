@@ -49,9 +49,8 @@ final class _Recording implements ToolInvoker, ToolRiskAssessor {
     Tool tool,
     String sessionId, {
     bool foreignContent = false,
-    ContentOrigin foreignOrigin = ContentOrigin.none,
   }) {
-    assessed.add((tool.name, foreignOrigin, foreignContent));
+    assessed.add((tool.name, ContentOrigin.none, foreignContent));
     return tool.risk;
   }
 

@@ -203,16 +203,15 @@ void main() {
     });
   });
 
-  test('Executor-effectiveRisk spiegelt die Ausnahme', () {
-    final p = levelA(x);
-    final e = ToolExecutor(catalog: FakeToolCatalog([x]), policy: p);
-    expect(
-      e.effectiveRisk(x, 's', foreignContent: true, foreignOrigin: fromX),
-      RiskLevel.write,
-    );
-    expect(
-      e.effectiveRisk(x, 's', foreignContent: true, foreignOrigin: fromY),
-      RiskLevel.external,
-    );
-  });
+  test(
+    'Executor-effectiveRisk kennt keine Herkunft: nach Fremdem external',
+    () {
+      // The receipt gate asks without origin (WP201): even a tool of the
+      // same server X counts as external there.
+      final p = levelA(x);
+      final e = ToolExecutor(catalog: FakeToolCatalog([x]), policy: p);
+      expect(e.effectiveRisk(x, 's', foreignContent: true), RiskLevel.external);
+      expect(e.effectiveRisk(x, 's'), RiskLevel.write);
+    },
+  );
 }

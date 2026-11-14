@@ -55,13 +55,14 @@ abstract interface class ToolInvoker {
 abstract interface class ToolRiskAssessor {
   /// The risk level [tool] is treated as in [sessionId]; [foreignContent]
   /// tells that the run has seen foreign content (a tool with a network
-  /// target then counts as confirm-only); [foreignOrigin] is where it came
-  /// from (WP201: only a tool of the same MCP server skips the minimum).
+  /// target then counts as confirm-only). There is deliberately no origin
+  /// parameter (WP201, ADR 0023): the receipt gate must treat such a tool as
+  /// `external` even for the same MCP server; only the executor's own
+  /// decision (with the origin from the `ToolContext`) drops the confirmation.
   RiskLevel effectiveRisk(
     Tool tool,
     String sessionId, {
     bool foreignContent = false,
-    ContentOrigin foreignOrigin = ContentOrigin.none,
   });
 }
 
