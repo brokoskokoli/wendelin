@@ -25,8 +25,9 @@ void main() {
     final h = Harness(primary: a, tools: [tool]);
     final events = await h.run('Annas Licht an');
     final end = terminal(events);
-    // Desired: stop after the 2nd repetition with an own, understandable text.
-    expect(tool.callCount, 3);
+    // Stop at the 2nd repetition with an own, understandable text; the tool
+    // ran only once, the 1st repetition was blocked (WP200).
+    expect(tool.callCount, 1);
     expect(provider.requests.length, 3);
     final failed = end as AgentFailed;
     expect(failed.error, AgentErrorKind.repeatedToolError);
