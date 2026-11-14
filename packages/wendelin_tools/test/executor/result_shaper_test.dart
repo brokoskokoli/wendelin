@@ -130,6 +130,20 @@ void main() {
     expect(o.undo, same(undo));
   });
 
+  test('serverReportedError bleibt (WP203)', () {
+    for (final flag in [true, false]) {
+      final o = shaper.shape(
+        't',
+        ToolOutcome(
+          content: const [TextBlock('x')],
+          isError: true,
+          serverReportedError: flag,
+        ),
+      );
+      expect(o.serverReportedError, flag);
+    }
+  });
+
   test('ohne Hülle wird nur gekürzt', () {
     final o = const ResultShaper(
       maxChars: 3,

@@ -39,6 +39,7 @@ final class ResultShaper {
         ? _wrap(tool, _truncate(outcome.content))
         : _truncate(outcome.content),
     isError: outcome.isError,
+    serverReportedError: outcome.serverReportedError,
     summary: outcome.summary,
     undo: outcome.undo,
     fixed: outcome.fixed,

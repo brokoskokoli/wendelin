@@ -32,6 +32,12 @@ void main() {
       content: [const TextBlock('Kalender nicht gefunden')],
       isError: true,
     ),
+    'toolResult server error': ToolResultBlock(
+      callId: 'call_3',
+      content: [const TextBlock('Gerät nicht gefunden')],
+      isError: true,
+      serverReportedError: true,
+    ),
     'toolResult empty': ToolResultBlock(callId: 'c3', content: const []),
     'thinking': const ThinkingBlock('Ich überlege', signature: 'sig=='),
     'thinking unsigned': const ThinkingBlock('Nur Text'),
@@ -110,6 +116,48 @@ void main() {
           ],
           'isError': true,
         },
+      );
+    });
+    test('toolResult serverReportedError (WP203): Rundlauf, Default false', () {
+      final b = ToolResultBlock(
+        callId: 'i',
+        content: const [TextBlock('x')],
+        isError: true,
+        serverReportedError: true,
+      );
+      final back = ContentBlock.fromJson(
+        viaJsonString(b.toJson()) as Map<String, Object?>,
+      ) as ToolResultBlock;
+      expect(back.serverReportedError, isTrue);
+      expect(back, b);
+      expect(
+        back,
+        isNot(
+          ToolResultBlock(
+            callId: 'i',
+            content: const [TextBlock('x')],
+            isError: true,
+          ),
+        ),
+      );
+      final old = ContentBlock.fromJson({
+        'type': 'toolResult',
+        'callId': 'i',
+        'content': <Object?>[],
+        'isError': true,
+      }) as ToolResultBlock;
+      expect(old.serverReportedError, isFalse, reason: 'altes JSON ohne Feld');
+      expect(
+        ToolResultBlock(callId: 'i', content: const []).toJson(),
+        isNot(contains('serverReportedError')),
+      );
+      expect(
+        ToolOutcome(
+          content: const [],
+          isError: true,
+          serverReportedError: true,
+        ).toResultBlock('i').serverReportedError,
+        isTrue,
       );
     });
     test('thinking redacted stores opaque data', () {

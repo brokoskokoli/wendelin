@@ -37,6 +37,13 @@ sealed class ContentBlock {
             ContentBlock.fromJson(c),
         ],
         isError: readField(json, 'isError', 'ToolResultBlock'),
+        serverReportedError:
+            readOptional<bool>(
+              json,
+              'serverReportedError',
+              'ToolResultBlock',
+            ) ??
+            false,
       ),
       ThinkingBlock.jsonType => ThinkingBlock(
         readField(json, 'text', 'ThinkingBlock'),
@@ -194,6 +201,7 @@ final class ToolResultBlock extends ContentBlock {
     required this.callId,
     required List<ContentBlock> content,
     this.isError = false,
+    this.serverReportedError = false,
   }) : content = List.unmodifiable(content);
 
   /// JSON discriminator.
@@ -208,12 +216,17 @@ final class ToolResultBlock extends ContentBlock {
   /// Whether the tool failed; the content then holds a readable message.
   final bool isError;
 
+  /// The error came from the MCP server itself (WP203); see
+  /// `ToolOutcome.serverReportedError`. Missing in old JSON means false.
+  final bool serverReportedError;
+
   @override
   Map<String, Object?> toJson() => {
     'type': jsonType,
     'callId': callId,
     'content': [for (final c in content) c.toJson()],
     'isError': isError,
+    if (serverReportedError) 'serverReportedError': true,
   };
 
   @override
@@ -221,6 +234,7 @@ final class ToolResultBlock extends ContentBlock {
       other is ToolResultBlock &&
       other.callId == callId &&
       other.isError == isError &&
+      other.serverReportedError == serverReportedError &&
       const ListEquality<ContentBlock>().equals(other.content, content);
 
   @override
@@ -228,6 +242,7 @@ final class ToolResultBlock extends ContentBlock {
     jsonType,
     callId,
     isError,
+    serverReportedError,
     const ListEquality<ContentBlock>().hash(content),
   );
 

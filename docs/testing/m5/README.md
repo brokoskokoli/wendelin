@@ -61,6 +61,7 @@ Jedes Arbeitspaket mit Gerätebezug (M5 und M6) legt hier seine eigene Datei `<w
 - [WP198 „Ich höre zu“ auf jedem Startweg (Overlay)](wp198.md)
 - [WP200 – Identischer fehlgeschlagener Werkzeugaufruf wird nicht wiederholt (Gerätetest)](wp200.md)
 - [WP201 MCP: Inhalte desselben Servers erzwingen keine Rückfrage](wp201.md)
+- [WP203 MCP: Fehlermeldung des Servers zählt als Inhalt desselben Servers](wp203.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)
 - [WP85 Kontakte, SMS und Anrufe (`contacts`)](wp85.md)
