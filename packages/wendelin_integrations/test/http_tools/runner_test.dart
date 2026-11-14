@@ -133,6 +133,7 @@ void main() {
       expect(r.isError, isTrue);
       expect(r.error, contains('Zeitüberschreitung'));
       expect(r.error, contains('1 s'));
+      expect(r.error, contains('Die Wirkung ist unklar'));
       expect(r.request, isNotNull);
     });
 

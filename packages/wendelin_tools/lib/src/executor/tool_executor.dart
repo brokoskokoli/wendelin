@@ -301,7 +301,7 @@ final class ToolExecutor
 
     final timer = Timer(timeout, () {
       finish(
-        ToolOutcome.error(timeoutText(tool, timeout)),
+        ToolOutcome.error(timeoutText(tool, timeout), retryable: true),
         AuditStatus.timeout,
       );
       token.cancel();

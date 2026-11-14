@@ -347,8 +347,12 @@ final class McpTool implements Tool, ContentTrustAware, LevelFixedTool {
         default:
       }
       return ToolOutcome.error(
-        'MCP-Server „$server“: ${e.message}',
+        'MCP-Server „$server“: ${e.message}'
+        '${e.kind == McpErrorKind.timeout ? '. Die Wirkung ist unklar: erst '
+                  'prüfen, bevor der Aufruf wiederholt wird.' : ''}',
         summary: '$server: Fehler',
+        retryable:
+            e.kind == McpErrorKind.network || e.kind == McpErrorKind.timeout,
       );
     }
   }

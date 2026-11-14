@@ -164,6 +164,7 @@ ToolOutcome _outcome(HttpToolDefinition d, HttpCallResult result, int max) {
     return ToolOutcome.error(
       'HTTP-Tool „${d.name}“: ${escapeDataTags(error, const [_tag])}',
       summary: ellipsize('${d.name}: $error', 80),
+      retryable: result.retryable,
     );
   }
   // Kein Reason-Phrase: Text vom Server gehört nur in den Datenblock.
@@ -174,6 +175,7 @@ ToolOutcome _outcome(HttpToolDefinition d, HttpCallResult result, int max) {
       '$head\n'
       '${excerpt.isEmpty ? '' : '<$_tag>${escapeDataTags(excerpt, const [_tag])}</$_tag>'}',
       summary: '${d.name}: HTTP $status',
+      retryable: status == 429 || status! >= 500,
     );
   }
   final cut = result.truncated

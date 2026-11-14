@@ -22,6 +22,19 @@ final class SteppingClock implements Clock {
   DateTime now() => _t = _t.add(step);
 }
 
+/// Transport whose response body breaks off with an error.
+final class _BrokenBodyTransport implements HttpToolTransport {
+  @override
+  Future<http.StreamedResponse> send(
+    http.BaseRequest request,
+    HttpTarget target, {
+    CancelToken? abort,
+  }) async => http.StreamedResponse(
+    Stream<List<int>>.error(const SocketException('weg')),
+    200,
+  );
+}
+
 void main() {
   httpToolSecretsContract('FakeHttpToolSecrets', FakeHttpToolSecrets.new);
 
@@ -136,6 +149,45 @@ void main() {
       expect(o.text, contains('Entity not found'));
       expect(o.text.length, lessThan(450));
       expect(o.summary, 'status: HTTP 404');
+    });
+
+    test(
+      'WP200: retryable bei 429/5xx und Netzfehler, nicht bei 4xx',
+      () async {
+        for (final (status, retryable) in [
+          (429, true),
+          (500, true),
+          (503, true),
+          (400, false),
+          (404, false),
+        ]) {
+          final m = mockRunner((_) async => http.Response('x', status));
+          final o = await HttpTool(def(), m.runner).execute({'id': '1'}, ctx());
+          expect(o.isError, isTrue, reason: '$status');
+          expect(o.retryable, retryable, reason: '$status');
+        }
+        final down = mockRunner((_) async => throw http.ClientException('x'));
+        final net = await HttpTool(
+          def(),
+          down.runner,
+        ).execute({'id': '1'}, ctx());
+        expect(net.retryable, isTrue);
+        final missing = await HttpTool(def(), down.runner).execute({}, ctx());
+        expect(missing.isError, isTrue);
+        expect(missing.retryable, isFalse);
+      },
+    );
+
+    test('WP200: Abbruch während der Antwort ist retryable', () async {
+      final runner = HttpToolRunner(
+        transport: _BrokenBodyTransport(),
+        secrets: FakeHttpToolSecrets({'tok': canary}),
+        resolve: testDns,
+      );
+      final o = await HttpTool(def(), runner).execute({'id': '1'}, ctx());
+      expect(o.isError, isTrue);
+      expect(o.text, contains('Verbindung während der Antwort abgebrochen'));
+      expect(o.retryable, isTrue);
     });
 
     test('Fehler ohne Antwort und fehlendes Argument', () async {
@@ -313,6 +365,7 @@ void main() {
       {'id': '1'},
     );
     expect(r.error, contains('Zeitüberschreitung'));
+    expect(r.retryable, isTrue);
     // Ohne close(force: true) bliebe der Socket bis zum Idle-Timeout offen.
     await closed.future.timeout(const Duration(seconds: 2));
   });

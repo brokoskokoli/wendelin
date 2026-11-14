@@ -42,6 +42,7 @@ final class ResultShaper {
     summary: outcome.summary,
     undo: outcome.undo,
     fixed: outcome.fixed,
+    retryable: outcome.retryable,
   );
 
   List<ContentBlock> _truncate(List<ContentBlock> content) {

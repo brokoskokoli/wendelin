@@ -158,4 +158,12 @@ abstract final class AgentRunnerTexts {
   static String hiddenTool(String name) =>
       'Das Tool „$name“ steht diesem Modell nicht zur Verfügung. Nutze nur '
       'Tools aus der Tool-Liste.';
+
+  /// Result for a call that repeats one that just failed (same tool, same
+  /// arguments): not executed, [error] is the earlier error text.
+  static String repeatedFailedCall(String error) =>
+      'Nicht ausgeführt: Genau dieser Aufruf (gleiches Tool, gleiche '
+      'Argumente) ist bereits fehlgeschlagen: $error Ändere die Argumente '
+      'entsprechend dem Fehler oder antworte dem Nutzer, statt ihn zu '
+      'wiederholen.';
 }
