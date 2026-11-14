@@ -120,6 +120,31 @@ void main() {
     expect(ids, ['c1', 'c2', 'c3']);
   });
 
+  test('retryable Fehler (Timeout): gleicher Aufruf läuft erneut, nach 3 '
+      'Fehlschlägen Stopp', () async {
+    final timeout = ToolOutcome.error('Zeitüberschreitung', retryable: true);
+    final s = _setup([same, same, same], [timeout]);
+    final events = await _run(s.h, s.asked);
+    expect(s.inv.calls, hasLength(3));
+    expect(s.asked, hasLength(3));
+    final failed = terminal(events) as AgentFailed;
+    expect(failed.error, AgentErrorKind.repeatedToolError);
+    expect(failed.repeats, 3);
+  });
+
+  test('retryable Fehler, dann Erfolg: kein Stopp', () async {
+    final s = _setup(
+      [same, same],
+      [
+        ToolOutcome.error('Zeitüberschreitung', retryable: true),
+        ToolOutcome.text('ok'),
+      ],
+    );
+    final events = await _run(s.h, s.asked);
+    expect(s.inv.calls, hasLength(2));
+    expect(terminal(events), isNot(isA<AgentFailed>()));
+  });
+
   test('abgelehnter Aufruf wird nicht gesperrt', () async {
     final s = _setup(
       [same, same],

@@ -39,7 +39,8 @@ final class RepeatGuard {
 
   /// The error result for [call] if the same tool with the same arguments
   /// already failed in this run (it never reaches the invoker, so there is
-  /// no second confirmation), else `null`. A declined call is no error; a
+  /// no second confirmation), else `null`. A [ToolOutcome.retryable] failure
+  /// is not blocked. A declined call is no error; a
   /// cancelled one does not count as a failure of the call.
   ToolOutcome? blockedOutcome(ToolCallBlock call) {
     Executed? failed;
@@ -50,7 +51,10 @@ final class RepeatGuard {
         failed = e;
       }
     }
-    if (failed == null) return null;
+    // Transient failures (timeout, network, 429/5xx) may succeed the next
+    // time: the call runs normally (and asks again). It still counts in
+    // [repeatedFailure], so the run stops after [maxSameFailures].
+    if (failed == null || failed.outcome.retryable) return null;
     _state.blockedRepeats.add(call);
     return ToolOutcome.error(
       AgentRunnerTexts.repeatedFailedCall(_textOf(failed.outcome)),

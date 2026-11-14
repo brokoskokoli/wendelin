@@ -138,6 +138,33 @@ void main() {
       expect(o.summary, 'status: HTTP 404');
     });
 
+    test(
+      'WP200: retryable bei 429/5xx und Netzfehler, nicht bei 4xx',
+      () async {
+        for (final (status, retryable) in [
+          (429, true),
+          (500, true),
+          (503, true),
+          (400, false),
+          (404, false),
+        ]) {
+          final m = mockRunner((_) async => http.Response('x', status));
+          final o = await HttpTool(def(), m.runner).execute({'id': '1'}, ctx());
+          expect(o.isError, isTrue, reason: '$status');
+          expect(o.retryable, retryable, reason: '$status');
+        }
+        final down = mockRunner((_) async => throw http.ClientException('x'));
+        final net = await HttpTool(
+          def(),
+          down.runner,
+        ).execute({'id': '1'}, ctx());
+        expect(net.retryable, isTrue);
+        final missing = await HttpTool(def(), down.runner).execute({}, ctx());
+        expect(missing.isError, isTrue);
+        expect(missing.retryable, isFalse);
+      },
+    );
+
     test('Fehler ohne Antwort und fehlendes Argument', () async {
       final m = mockRunner((_) async => throw http.ClientException('x'));
       final tool = HttpTool(def(), m.runner);
@@ -313,6 +340,7 @@ void main() {
       {'id': '1'},
     );
     expect(r.error, contains('Zeitüberschreitung'));
+    expect(r.retryable, isTrue);
     // Ohne close(force: true) bliebe der Socket bis zum Idle-Timeout offen.
     await closed.future.timeout(const Duration(seconds: 2));
   });

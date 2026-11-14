@@ -775,6 +775,40 @@ void main() {
     });
 
     test(
+      'WP200: Timeout ist retryable, Tool-Fehler und -Ausnahme nicht',
+      () async {
+        final hang = FakeTool(
+          name: 'p__hang',
+          handler: (args, ctx) async {
+            await ctx.cancel.whenCancelled;
+            return ToolOutcome.text('zu spät');
+          },
+        );
+        final fails = FakeTool(
+          name: 'p__fails',
+          handler: (args, ctx) async => ToolOutcome.error('kaputt'),
+        );
+        final throws = FakeTool(name: 'p__throws', throws: StateError('x'));
+        final executor = ToolExecutor(
+          catalog: FakeToolCatalog([hang, fails, throws]),
+          timeout: const Duration(milliseconds: 50),
+        );
+        final o = _outcomes(
+          await _run(executor, [
+            _call('1', 'p__hang'),
+            _call('2', 'p__fails'),
+            _call('3', 'p__throws'),
+          ]),
+        );
+        expect(o['1']!.retryable, isTrue);
+        expect(o['2']!.isError, isTrue);
+        expect(o['2']!.retryable, isFalse);
+        expect(o['3']!.isError, isTrue);
+        expect(o['3']!.retryable, isFalse);
+      },
+    );
+
+    test(
       'Timeout bei write/external: Wirkung unklar, nicht wiederholen',
       () async {
         for (final risk in [RiskLevel.write, RiskLevel.external]) {

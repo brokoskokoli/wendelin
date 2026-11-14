@@ -11,6 +11,14 @@ void main() {
     expect(o.text, '<tool_data tool="x__y">\nhallo\n</tool_data>');
   });
 
+  test('WP200: retryable bleibt erhalten', () {
+    expect(
+      shaper.shape('t', ToolOutcome.error('x', retryable: true)).retryable,
+      isTrue,
+    );
+    expect(shaper.shape('t', ToolOutcome.error('x')).retryable, isFalse);
+  });
+
   test('genau maxChars wird nicht gekürzt', () {
     final o = shaper.shape('t', ToolOutcome.text('0123456789'));
     expect(o.text, isNot(contains('gekürzt')));

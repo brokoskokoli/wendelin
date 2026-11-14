@@ -280,6 +280,24 @@ void main() {
     expect(cancelled.isError, isTrue);
   });
 
+  test('WP200: nur Netzfehler sind retryable, Serverfehler nicht', () async {
+    final i = integration();
+    final tools = {for (final t in await i.loadTools()) t.mcpName: t};
+    final isErr = await tools['docker.restart']!.execute(const {}, ctx());
+    expect(isErr.isError, isTrue);
+    expect(isErr.retryable, isFalse);
+
+    server.tools.removeWhere((t) => t.name == 'note_add');
+    final rpc = await tools['note_add']!.execute(const {}, ctx());
+    expect(rpc.isError, isTrue);
+    expect(rpc.retryable, isFalse);
+
+    await server.close();
+    final net = await tools['get_weather']!.execute(const {}, ctx());
+    expect(net.isError, isTrue);
+    expect(net.retryable, isTrue);
+  });
+
   test('Bestätigungstext: Server, Tool, gekürzte Argumente', () async {
     final tools = {
       for (final t in await integration().loadTools()) t.mcpName: t,

@@ -75,6 +75,7 @@ final class HttpCallResult {
     this.text = '',
     this.truncated = false,
     this.error,
+    this.retryable = false,
   });
 
   /// What was sent (`null` if the call failed before a request was built).
@@ -104,6 +105,9 @@ final class HttpCallResult {
   /// German, model-safe description of a failure without usable answer.
   final String? error;
 
+  /// The failure is transient (timeout, connection): repeating may help.
+  final bool retryable;
+
   /// Whether the call failed ([error] or HTTP status ≥ 400).
   bool get isError => error != null || (status ?? 0) >= 400;
 
@@ -123,10 +127,11 @@ final class _Prepared {
 }
 
 final class _CallFailure implements Exception {
-  _CallFailure(this.message, {this.status});
+  _CallFailure(this.message, {this.status, this.retryable = false});
 
   final String message;
   final int? status;
+  final bool retryable;
 }
 
 /// Executes [HttpToolDefinition]s: fills the templates, checks the target
@@ -235,10 +240,13 @@ final class HttpToolRunner {
         cancel,
       );
     } on TimeoutException {
-      return fail(
-        'Zeitüberschreitung: keine Antwort nach '
-        '${definition.timeout.inSeconds} s',
-        prepared.sent,
+      return HttpCallResult(
+        duration: clock.now().difference(started),
+        request: prepared.sent,
+        error:
+            'Zeitüberschreitung: keine Antwort nach '
+            '${definition.timeout.inSeconds} s',
+        retryable: true,
       );
     } on PortException catch (e) {
       return fail(_scrub(e.message, used), prepared.sent);
@@ -248,6 +256,7 @@ final class HttpToolRunner {
         request: prepared.sent,
         status: e.status,
         error: _scrub(e.message, used),
+        retryable: e.retryable,
       );
     }
   }
@@ -330,9 +339,9 @@ final class HttpToolRunner {
       try {
         response = await transport.send(request, target, abort: abort);
       } on Exception {
-        throw PortException(
-          PortErrorKind.unavailable,
+        throw _CallFailure(
           'Server „${url.host}“ nicht erreichbar',
+          retryable: true,
         );
       }
       final status = response.statusCode;
@@ -503,9 +512,9 @@ final class HttpToolRunner {
       onError: (Object _) {
         if (!done.isCompleted) {
           done.completeError(
-            const PortException(
-              PortErrorKind.unavailable,
+            _CallFailure(
               'Verbindung während der Antwort abgebrochen',
+              retryable: true,
             ),
           );
         }
