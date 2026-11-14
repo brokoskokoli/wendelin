@@ -13,6 +13,7 @@
   "confirmCardNeedsConfirm": "Nécessite votre confirmation",
   "confirmCardToolLevel": "{toolName} · niveau {level}",
   "confirmCardWarning": "Avertissement",
+  "confirmCardForeignReason": "Demande confirmation, car du contenu d’une autre source a été lu auparavant.",
   "confirmed": "Confirmé",
   "copy": "Copier",
   "delete": "Supprimer",

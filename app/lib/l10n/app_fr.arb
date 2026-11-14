@@ -385,6 +385,7 @@
   "back": "Retour",
   "cancel": "Annuler",
   "close": "Fermer",
+  "confirmCardForeignReason": "Demande confirmation, car du contenu d’une autre source a été lu auparavant.",
   "confirmCardNeedsConfirm": "Nécessite votre confirmation",
   "confirmCardToolLevel": "{toolName} · niveau {level}",
   "confirmCardWarning": "Avertissement",

@@ -31,6 +31,7 @@ final class _NoNet implements Tool, NoNetworkTarget {
 
 const _allow = PolicyDecision.allow;
 const _confirm = PolicyDecision.confirm;
+const _foreign = PolicyDecision.confirmForeign;
 const _unlock = PolicyDecision.unlock;
 
 void main() {
@@ -45,7 +46,7 @@ void main() {
         (false, true, level, level == SecurityLevel.d ? _confirm : _allow),
         (false, false, level, level == SecurityLevel.d ? _confirm : _allow),
         // Netzziel nach Fremdem: mindestens Rückfrage, Stufe A hebt nicht auf.
-        (true, true, level, _confirm),
+        (true, true, level, level == SecurityLevel.d ? _confirm : _foreign),
         (true, false, level, level == SecurityLevel.d ? _confirm : _allow),
       ],
     ];
@@ -146,7 +147,7 @@ void main() {
       expect(RiskPolicy.networkLockedReason, contains('Neues Thema'));
       expect(RiskPolicy.networkLockedReason, contains('neu prüfen'));
       expect(p.decide(net, 's'), _allow);
-      expect(p.decide(net, 'andere', foreignContent: true), _confirm);
+      expect(p.decide(net, 'andere', foreignContent: true), _foreign);
       expect(p.decide(noNet, 's', foreignContent: true), _allow);
       expect(p.decide(send, 'andere'), _confirm);
     });

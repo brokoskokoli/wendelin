@@ -1282,6 +1282,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get close => 'Fermer';
 
   @override
+  String get confirmCardForeignReason =>
+      'Demande confirmation, car du contenu d’une autre source a été lu auparavant.';
+
+  @override
   String get confirmCardNeedsConfirm => 'Nécessite votre confirmation';
 
   @override

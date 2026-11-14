@@ -31,6 +31,7 @@ final class AgentContext {
     List<PromptSection> sections = const [],
     this.speech = SpeechStyle.none,
     this.untrustedSeen = false,
+    this.foreignOrigin = ContentOrigin.none,
   }) : tools = List.unmodifiable(tools),
        messages = List.unmodifiable(messages),
        memories = List.unmodifiable(memories),
@@ -59,6 +60,10 @@ final class AgentContext {
   /// Whether the history already holds a tool result that is not trusted
   /// ([isTrustedResult]); the run then starts with stage 2 switched off.
   final bool untrustedSeen;
+
+  /// Where those untrusted results came from (WP201); [ContentOrigin.none]
+  /// only when [untrustedSeen] is false.
+  final ContentOrigin foreignOrigin;
 }
 
 /// A prompt section of the tool [toolName] ([PromptContributor]): only valid
@@ -122,6 +127,60 @@ bool hasUntrustedResult(ToolCatalog catalog, List<Message> messages) {
   return false;
 }
 
+/// Origin of one result that is not trusted (WP201). A tool that names its
+/// origin ([ResultOriginAware] first, then [ContentOriginAware]) gives it
+/// for a successful result; error texts, unknown tools and everything else
+/// are [ContentOrigin.unknown] (fail-closed). Never [ContentOrigin.none]:
+/// an untrusted result without a readable origin must not turn into a
+/// server.
+ContentOrigin originOfUntrustedResult(
+  ToolCatalog catalog,
+  String? name, {
+  bool isError = false,
+  List<ContentBlock> content = const [],
+}) {
+  final tool = name == null ? null : catalog.lookup(name);
+  if (tool == null || isError) return ContentOrigin.unknown;
+  final origin = tool is ResultOriginAware
+      ? (tool as ResultOriginAware).resultOrigin(content)
+      : contentOriginOf(tool);
+  return origin is NoOrigin ? ContentOrigin.unknown : origin;
+}
+
+/// The merged [ContentOrigin] of all untrusted results in [messages]
+/// (provider blocks and results without a call: unknown); [ContentOrigin.none]
+/// when there are none. Same walk as [hasUntrustedResult].
+ContentOrigin foreignOriginOf(ToolCatalog catalog, List<Message> messages) {
+  final names = <String, String>{};
+  var origin = ContentOrigin.none;
+  for (final m in messages) {
+    for (final b in m.content) {
+      if (b is ToolCallBlock) names[b.id] = b.name;
+      if (b is ProviderBlock) origin = origin.merge(ContentOrigin.unknown);
+      if (b is ToolResultBlock) {
+        final name = names[b.callId];
+        if (name == null ||
+            !isTrustedResult(
+              catalog,
+              name,
+              isError: b.isError,
+              content: b.content,
+            )) {
+          origin = origin.merge(
+            originOfUntrustedResult(
+              catalog,
+              name,
+              isError: b.isError,
+              content: b.content,
+            ),
+          );
+        }
+      }
+    }
+  }
+  return origin;
+}
+
 /// Builds the context of a request (concept: „Agent-Schleife“, step 1).
 ///
 /// The system prompt starts with the stable part (role, rules, persona) and
@@ -181,6 +240,7 @@ final class ContextBuilder {
       sections: sections,
       speech: speech,
       untrustedSeen: hasUntrustedResult(catalog, previous),
+      foreignOrigin: foreignOriginOf(catalog, previous),
       tools: catalog.activeSpecs(),
       messages: [
         ...previous,

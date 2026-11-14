@@ -54,7 +54,10 @@ abstract interface class ToolInvoker {
 abstract interface class ToolRiskAssessor {
   /// The risk level [tool] is treated as in [sessionId]; [foreignContent]
   /// tells that the run has seen foreign content (a tool with a network
-  /// target then counts as confirm-only).
+  /// target then counts as confirm-only). There is deliberately no origin
+  /// parameter (WP201, ADR 0023): the receipt gate must treat such a tool as
+  /// `external` even for the same MCP server; only the executor's own
+  /// decision (with the origin from the `ToolContext`) drops the confirmation.
   RiskLevel effectiveRisk(
     Tool tool,
     String sessionId, {
@@ -111,7 +114,12 @@ final class ConfirmationNeeded extends ToolInvocationEvent {
     this.decision, {
     this.risk = RiskLevel.external,
     this.privateDetails = false,
+    this.askedBecauseForeign = false,
   });
+
+  /// The call is only confirmed because foreign content was seen earlier in
+  /// the run (WP201); the card says so (no content, just the reason).
+  final bool askedBecauseForeign;
 
   /// The tool redacts its audit arguments ([AuditArgumentsRedactor]): the
   /// lines after the first of [description] are private text and must not

@@ -1258,6 +1258,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get close => 'Close';
 
   @override
+  String get confirmCardForeignReason =>
+      'Asking because content from another source was read earlier.';
+
+  @override
   String get confirmCardNeedsConfirm => 'Needs your confirmation';
 
   @override

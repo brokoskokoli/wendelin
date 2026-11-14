@@ -10,10 +10,14 @@ import '../support.dart';
 /// A scripted provider that verifies its answers afterwards, like the
 /// `AttestedProvider` (WP46): [report] completes when the receipt check ends.
 final class VerifyingFake implements LlmProvider, AttestationAware {
-  VerifyingFake(this.inner, this.report);
+  VerifyingFake(this.inner, this.report, {this.firstGreen = false});
 
   final FakeLlmProvider inner;
   final Completer<AttestationReport?> report;
+
+  /// The first answer is verified green at once, [report] decides the rest.
+  final bool firstGreen;
+  var _asked = 0;
 
   @override
   ProviderType get type => inner.type;
@@ -29,7 +33,10 @@ final class VerifyingFake implements LlmProvider, AttestationAware {
   @override
   Stream<AttestationReport> get reports => const Stream.empty();
   @override
-  Future<AttestationReport?> reportFor(ChatRequest request) => report.future;
+  Future<AttestationReport?> reportFor(ChatRequest request) =>
+      firstGreen && _asked++ == 0
+      ? Future.value(_report(AttestationStatus.green))
+      : report.future;
 }
 
 /// Invoker whose policy makes some tools confirm-only (effective
@@ -46,6 +53,59 @@ final class AssessingInvoker implements ToolInvoker, ToolRiskAssessor {
     String sessionId, {
     bool foreignContent = false,
   }) => stricter.contains(tool.name) ? RiskLevel.external : tool.risk;
+
+  @override
+  Stream<ToolInvocationEvent> invokeAll(
+    List<ToolCallBlock> calls,
+    ToolContext ctx,
+  ) => inner.invokeAll(calls, ctx);
+}
+
+/// Stands in for an MCP tool of server `X` (WP201): untrusted results.
+final class _SrvTool implements Tool, ContentTrustAware, ContentOriginAware {
+  _SrvTool(String name, RiskLevel risk)
+    : inner = FakeTool(name: name, risk: risk);
+
+  final FakeTool inner;
+
+  @override
+  bool get mayContainUntrustedContent => true;
+  @override
+  ContentOrigin get contentOrigin => const ContentOrigin.server('X');
+  @override
+  String get name => inner.name;
+  @override
+  String get description => inner.description;
+  @override
+  Map<String, Object?> get inputSchema => inner.inputSchema;
+  @override
+  RiskLevel get risk => inner.risk;
+  @override
+  Future<ToolOutcome> execute(Map<String, Object?> args, ToolContext ctx) =>
+      inner.execute(args, ctx);
+  @override
+  String describeForConfirmation(Map<String, Object?> args) =>
+      inner.describeForConfirmation(args);
+}
+
+/// Policy stand-in: after foreign content, a tool is `external` unless the
+/// handed origin is exactly the tool's own server (the real policy, stage A).
+final class _OriginInvoker implements ToolInvoker, ToolRiskAssessor {
+  _OriginInvoker(this.inner);
+
+  final FakeToolInvoker inner;
+
+  @override
+  RiskLevel effectiveRisk(
+    Tool tool,
+    String sessionId, {
+    bool foreignContent = false,
+  }) {
+    if (!foreignContent) return tool.risk;
+    // The receipt gate never gets an origin (WP201): after foreign content
+    // the tool is `external` whatever server it belongs to.
+    return RiskLevel.external;
+  }
 
   @override
   Stream<ToolInvocationEvent> invokeAll(
@@ -308,6 +368,63 @@ void main() {
         hasLength(2),
         reason: 'Ergebnis geht ans Modell',
       );
+    });
+
+    group('WP201: Netz-Tool nach Fremdem von demselben Server X', () {
+      Future<(Harness, _SrvTool, Completer<AttestationReport?>)> setup() async {
+        final read = _SrvTool('x__list', RiskLevel.read);
+        final send = _SrvTool('x__send', RiskLevel.write);
+        final report = Completer<AttestationReport?>();
+        final provider = VerifyingFake(
+          FakeLlmProvider([
+            ScriptedTurn.toolCalls([call('c1', 'x__list')]),
+            ScriptedTurn.toolCalls([call('c2', 'x__send')]),
+            ScriptedTurn.text('Fertig.'),
+          ]),
+          report,
+          firstGreen: true,
+        );
+        final tools = [read, send];
+        final h = Harness(
+          primary: ProviderTarget(
+            profileId: 'tee',
+            modelId: 'm',
+            provider: provider,
+            privacy: PrivacyLevel.tee,
+          ),
+          tools: tools,
+          invoker: _OriginInvoker(FakeToolInvoker(FakeToolCatalog(tools))),
+        );
+        return (h, send, report);
+      }
+
+      test('X nach X, Quittung rot: Tool wird nicht ausgeführt', () async {
+        final (h, send, report) = await setup();
+        report.complete(_report(AttestationStatus.red));
+        final events = await h.run(
+          'Los',
+          onEvent: (e) {
+            if (e is ConfirmationRequired) fail('keine Nachfrage');
+          },
+        );
+        expect(send.inner.callCount, 0);
+        expect(
+          events.whereType<ToolCallFinished>().last.outcome.isError,
+          isTrue,
+        );
+      });
+
+      test('X nach X, Quittung grün: läuft ohne Nachfrage', () async {
+        final (h, send, report) = await setup();
+        report.complete(_report(AttestationStatus.green));
+        await h.run(
+          'Los',
+          onEvent: (e) {
+            if (e is ConfirmationRequired) fail('keine Nachfrage');
+          },
+        );
+        expect(send.inner.callCount, 1);
+      });
     });
 
     test('Lese-Tools laufen sofort, ohne auf die Quittung zu warten', () async {

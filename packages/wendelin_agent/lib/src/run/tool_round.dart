@@ -284,6 +284,9 @@ final class ToolRound {
             tool,
             runner.sessionId,
             foreignContent: _state.untrustedSeen,
+            // No origin on purpose (WP201): a network tool after foreign
+            // content keeps waiting for the green receipt, even for the same
+            // server; only the executor drops the confirmation.
           )
         : (tool.risk == RiskLevel.read ? RiskLevel.read : RiskLevel.external);
     return risk == RiskLevel.external;
@@ -306,21 +309,14 @@ final class ToolRound {
       privacyFloor: current.privacyFloor,
       memoryOwner: runner.memoryOwner,
       foreignContentSeen: _state.untrustedSeen,
+      foreignOrigin: _state.foreignOriginForTools,
     );
     await for (final event in runner.invoker.invokeAll(pending, ctx)) {
       switch (event) {
         case ToolStarted(:final call):
           _control.emit(ToolCallStarted(call));
-        case ConfirmationNeeded(:final call, :final description):
-          _control.emit(
-            ConfirmationRequired(
-              call: call,
-              description: description,
-              respond: event.respond,
-              risk: event.risk,
-              privateDetails: event.privateDetails,
-            ),
-          );
+        case ConfirmationNeeded():
+          _control.emit(ConfirmationRequired.from(event));
         case ToolFinished(:final call, :final outcome, :final duration):
           // Invariant (fail-closed): every result that is not explicitly
           // trusted switches the invisible speech text off.
@@ -330,7 +326,14 @@ final class ToolRound {
             isError: outcome.isError,
             content: outcome.content,
           )) {
-            _state.untrustedSeen = true;
+            _state.markUntrusted(
+              originOfUntrustedResult(
+                _privacy.catalog,
+                call.name,
+                isError: outcome.isError,
+                content: outcome.content,
+              ),
+            );
           }
           _state.executed.add((call: call, outcome: outcome));
           _control.emit(

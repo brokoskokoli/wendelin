@@ -385,6 +385,7 @@
   "back": "Back",
   "cancel": "Cancel",
   "close": "Close",
+  "confirmCardForeignReason": "Asking because content from another source was read earlier.",
   "confirmCardNeedsConfirm": "Needs your confirmation",
   "confirmCardToolLevel": "{toolName} · level {level}",
   "confirmCardWarning": "Warning",

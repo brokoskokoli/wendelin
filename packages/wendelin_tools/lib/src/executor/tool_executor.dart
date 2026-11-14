@@ -90,6 +90,7 @@ final class ToolExecutor
     ctx.sessionId,
     access: access,
     foreignContent: ctx.foreignContentSeen,
+    foreignOrigin: ctx.foreignOrigin,
   );
 
   /// Checks arguments against the tool's input schema.
@@ -226,14 +227,14 @@ final class ToolExecutor
       case PolicyAction.allow when access.locked && tool is WorksOnlyUnlocked:
         return _deferred();
       case PolicyAction.confirm:
-        final risk = RiskPolicy.effectiveRisk(tool.risk, policyDecision.action);
         final approved = await turns.ask(
           () async => ConfirmationNeeded(
             call,
             await tool.confirmationText(args, ctx),
             Completer<bool>(),
-            risk: risk,
+            risk: RiskPolicy.effectiveRisk(tool.risk, policyDecision.action),
             privateDetails: tool is AuditArgumentsRedactor,
+            askedBecauseForeign: policyDecision.askedBecauseForeign,
           ),
           emit,
         );
@@ -292,6 +293,7 @@ final class ToolExecutor
       memoryOwner: ctx.memoryOwner,
       access: access,
       foreignContentSeen: ctx.foreignContentSeen,
+      foreignOrigin: ctx.foreignOrigin,
     );
 
     final result = Completer<(ToolOutcome, AuditStatus)>();

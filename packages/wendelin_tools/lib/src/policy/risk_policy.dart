@@ -22,13 +22,28 @@ enum PolicyAction {
 /// Outcome of [RiskPolicy.decide].
 @immutable
 final class PolicyDecision {
-  const PolicyDecision._(this.action, [this.reason, this.needsUnlock = false]);
+  const PolicyDecision._(
+    this.action, [
+    this.reason,
+    this.needsUnlock = false,
+    this.askedBecauseForeign = false,
+  ]);
 
   /// Execute without asking.
   static const allow = PolicyDecision._(PolicyAction.allow);
 
   /// Ask the user first.
   static const confirm = PolicyDecision._(PolicyAction.confirm);
+
+  /// Ask the user first, and the only reason is foreign content seen earlier
+  /// (WP201): without it the level would let the call run. The card names
+  /// the reason.
+  static const confirmForeign = PolicyDecision._(
+    PolicyAction.confirm,
+    null,
+    false,
+    true,
+  );
 
   /// Do not execute; [reason] is a German text for the model.
   factory PolicyDecision.deny(String reason) =>
@@ -51,15 +66,20 @@ final class PolicyDecision {
   /// Why the call is denied (only for [PolicyAction.deny]).
   final String? reason;
 
+  /// Confirm only because foreign content was seen ([confirmForeign]).
+  final bool askedBecauseForeign;
+
   @override
   bool operator ==(Object other) =>
       other is PolicyDecision &&
       other.action == action &&
       other.reason == reason &&
-      other.needsUnlock == needsUnlock;
+      other.needsUnlock == needsUnlock &&
+      other.askedBecauseForeign == askedBecauseForeign;
 
   @override
-  int get hashCode => Object.hash(action, reason, needsUnlock);
+  int get hashCode =>
+      Object.hash(action, reason, needsUnlock, askedBecauseForeign);
 
   @override
   String toString() =>
@@ -333,6 +353,11 @@ final class RiskPolicy {
     await store.save(base);
   }
 
+  /// Whether the foreign content comes only from the server [tool] belongs
+  /// to (`ContentOriginAware`, the stable server id).
+  static bool _isSameServer(Tool tool, ContentOrigin origin) =>
+      origin is ServerOrigin && contentOriginOf(tool) == origin;
+
   /// The decision for running [tool] in [sessionId] in the context
   /// [access] (default: unlocked).
   ///
@@ -349,11 +374,17 @@ final class RiskPolicy {
   /// to this minimum, level A does not lift it (the stricter wins), and a
   /// locked device waits for the unlock like level D. In a conversation with
   /// a session lock such a call is denied outright, not asked.
+  ///
+  /// WP201: if all foreign content came from one MCP server ([foreignOrigin]
+  /// is `ContentOrigin.server(X)`) and [tool] is a tool of X, this minimum
+  /// does not apply (the level decides). Other, mixed or unknown origins and
+  /// the session lock keep it.
   PolicyDecision decide(
     Tool tool,
     String sessionId, {
     AccessContext access = AccessContext.unlocked,
     bool foreignContent = false,
+    ContentOrigin foreignOrigin = ContentOrigin.none,
   }) {
     if (tool.risk == RiskLevel.external && isExternalLocked(sessionId)) {
       return PolicyDecision.deny(
@@ -362,16 +393,21 @@ final class RiskPolicy {
             : lockedReason,
       );
     }
-    final mustAsk = foreignContent && tool is! NoNetworkTarget;
+    final networkAfterForeign = foreignContent && tool is! NoNetworkTarget;
     // Locked conversation + foreign content: a network tool is denied for
-    // good, also after a later green receipt (the stricter wins).
-    if (mustAsk && isExternalLocked(sessionId)) {
+    // good, also after a later green receipt (the stricter wins). Also for
+    // the same server (WP201): the lock means a failed TEE receipt, and
+    // sending data to the server whose content we hold is exfiltration.
+    if (networkAfterForeign && isExternalLocked(sessionId)) {
       return PolicyDecision.deny(
         _storeUnreadable && !_locked.containsKey(sessionId)
             ? storeUnreadableReason
             : networkLockedReason,
       );
     }
+    // WP201: foreign content only of the MCP server X does not force a
+    // question for a tool of X (fail-closed: every other origin does).
+    final mustAsk = networkAfterForeign && !_isSameServer(tool, foreignOrigin);
     final override = _overrides[tool.name];
     if (access.locked) {
       if (override == PolicyAction.deny) {
@@ -403,8 +439,11 @@ final class RiskPolicy {
           };
     final asked = mustAsk ? base.atLeast(PolicyAction.confirm) : base;
     final action = override == null ? asked : asked.atLeast(override);
+    final withoutForeign = override == null ? base : base.atLeast(override);
     return switch (action) {
       PolicyAction.allow => PolicyDecision.allow,
+      PolicyAction.confirm when withoutForeign == PolicyAction.allow =>
+        PolicyDecision.confirmForeign,
       PolicyAction.confirm => PolicyDecision.confirm,
       PolicyAction.deny => PolicyDecision.deny(deniedReason),
     };

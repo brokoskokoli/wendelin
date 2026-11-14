@@ -2,6 +2,7 @@ import '../provider/cancel_token.dart';
 import '../provider/privacy_level.dart';
 import '../safety/security_level.dart';
 import '../util/clock.dart';
+import 'content_origin.dart';
 
 /// Environment passed to `Tool.execute`.
 final class ToolContext {
@@ -17,6 +18,7 @@ final class ToolContext {
     this.memoryOwner = '',
     this.access = AccessContext.unlocked,
     this.foreignContentSeen = false,
+    this.foreignOrigin = ContentOrigin.none,
   }) : cancel = cancel ?? CancelToken();
 
   /// Current conversation session.
@@ -60,4 +62,11 @@ final class ToolContext {
   /// WP157). The executor then asks before a tool with a network target
   /// (everything without `NoNetworkTarget`), whatever its level.
   final bool foreignContentSeen;
+
+  /// Where the foreign content came from (WP201). Parallel to
+  /// [foreignContentSeen], which stays authoritative: `foreignContentSeen`
+  /// with [ContentOrigin.none] (not set by the invoker) counts as
+  /// [ContentOrigin.unknown], so an invoker that does not know the origin
+  /// stays fail-closed.
+  final ContentOrigin foreignOrigin;
 }

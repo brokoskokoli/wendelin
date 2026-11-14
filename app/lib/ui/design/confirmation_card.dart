@@ -23,7 +23,12 @@ class ConfirmationCard extends StatelessWidget {
     this.noLabel,
     this.expand = false,
     this.compact = false,
+    this.reason,
   });
+
+  /// Kurzer Grund, warum gefragt wird (z. B. fremde Inhalte gelesen), ohne
+  /// Inhalte; `null` zeigt nichts.
+  final String? reason;
 
   /// Frage („Termin löschen?“).
   final String title;
@@ -110,6 +115,12 @@ class ConfirmationCard extends StatelessWidget {
                 ),
               ),
             ),
+            if (reason != null)
+              Text(
+                reason!,
+                key: const ValueKey('confirmationReason'),
+                style: WText.detail,
+              ),
             if (!compact)
               Text(
                 risk == null
