@@ -2,7 +2,6 @@ import 'dart:async';
 
 import '../messages/content_block.dart';
 import '../messages/tool_spec.dart';
-import 'content_origin.dart';
 import 'tool.dart';
 import 'tool_context.dart';
 import 'tool_outcome.dart';
