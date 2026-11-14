@@ -354,6 +354,7 @@ final class RiskPolicy {
     String sessionId, {
     AccessContext access = AccessContext.unlocked,
     bool foreignContent = false,
+    ContentOrigin foreignOrigin = ContentOrigin.none,
   }) {
     if (tool.risk == RiskLevel.external && isExternalLocked(sessionId)) {
       return PolicyDecision.deny(

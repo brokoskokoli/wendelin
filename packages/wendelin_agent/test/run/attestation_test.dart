@@ -45,6 +45,7 @@ final class AssessingInvoker implements ToolInvoker, ToolRiskAssessor {
     Tool tool,
     String sessionId, {
     bool foreignContent = false,
+    ContentOrigin foreignOrigin = ContentOrigin.none,
   }) => stricter.contains(tool.name) ? RiskLevel.external : tool.risk;
 
   @override

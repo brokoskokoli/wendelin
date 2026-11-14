@@ -68,10 +68,17 @@ final class ToolExecutor
     Tool tool,
     String sessionId, {
     bool foreignContent = false,
+    ContentOrigin foreignOrigin = ContentOrigin.none,
   }) => RiskPolicy.effectiveRisk(
     tool.risk,
     policy
-        .decide(tool, sessionId, access: access, foreignContent: foreignContent)
+        .decide(
+          tool,
+          sessionId,
+          access: access,
+          foreignContent: foreignContent,
+          foreignOrigin: foreignOrigin,
+        )
         .action,
   );
 
@@ -90,6 +97,7 @@ final class ToolExecutor
     ctx.sessionId,
     access: access,
     foreignContent: ctx.foreignContentSeen,
+    foreignOrigin: ctx.foreignOrigin,
   );
 
   /// Checks arguments against the tool's input schema.
@@ -292,6 +300,7 @@ final class ToolExecutor
       memoryOwner: ctx.memoryOwner,
       access: access,
       foreignContentSeen: ctx.foreignContentSeen,
+      foreignOrigin: ctx.foreignOrigin,
     );
 
     final result = Completer<(ToolOutcome, AuditStatus)>();

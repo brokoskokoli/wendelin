@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '../messages/content_block.dart';
 import '../messages/tool_spec.dart';
+import 'content_origin.dart';
 import 'tool.dart';
 import 'tool_context.dart';
 import 'tool_outcome.dart';
@@ -54,11 +55,13 @@ abstract interface class ToolInvoker {
 abstract interface class ToolRiskAssessor {
   /// The risk level [tool] is treated as in [sessionId]; [foreignContent]
   /// tells that the run has seen foreign content (a tool with a network
-  /// target then counts as confirm-only).
+  /// target then counts as confirm-only); [foreignOrigin] is where it came
+  /// from (WP201: only a tool of the same MCP server skips the minimum).
   RiskLevel effectiveRisk(
     Tool tool,
     String sessionId, {
     bool foreignContent = false,
+    ContentOrigin foreignOrigin = ContentOrigin.none,
   });
 }
 
