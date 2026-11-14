@@ -57,6 +57,7 @@ Stand: 2026-10-30; läuft: keiner; Release v0.1.6 (4ce2d167).
 | WP198 | Overlay zeigt „Moment …“, obwohl schon aufgenommen wird; Overlay-Logs fehlen | gemergt (`fae2980b`) | micLive auch bei nicht leerem Weckwort-Vorlauf. Overlay-Logs kommen an (Live-Logcat rc2), MIUI-Puffer nur ~20 min; ursprünglicher Fehler lief vermutlich auf rc1. Offen: Gerätetest `docs/testing/m5/wp198.md`; Folgepaket: CentralAudioChannel in AssistantActivity nicht registriert (Overlay nimmt immer über record-Rückfall auf); Lücke commit-msg-Hook vs. CI bei Merge-Commits ohne Trailer. |
 | WP199 | Release 0.1.8 | gemergt `fac6dd16` | CHANGELOG 0.1.8 (WP191–WP198), Tag v0.1.8 auf `fac6dd16` nach grünem Gate. Gerätetests wp194–wp198 noch offen (rc3 auf dem Testhandy). |
 | WP200 | Identischen fehlgeschlagenen Werkzeugaufruf nicht erneut ausführen | in Arbeit | Gerätetest rc3 (Maintainer 2026-11-14, MCP Smart Home): gleicher Fehlaufruf 3× ausgeführt und je bestätigt. |
+| WP201 | „Ohne Nachfrage“ für MCP-Tools trotz Inhalten desselben Servers (K156) | in Arbeit | Gerätetest rc3 (Maintainer 2026-11-14): nach MCP-Ergebnissen fragt jedes MCP-Tool, Stufe wirkungslos. |
 
 ## Offen
 
