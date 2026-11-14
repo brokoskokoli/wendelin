@@ -135,13 +135,15 @@ void main() {
       ('x__a', ContentOrigin.none, false),
       ('x__a', fromX, true),
     ]);
-    expect(r.assessed.last, ('x__a', fromX, true));
+    // The receipt gate sees the flag only, never the origin (the executor
+    // decides the confirmation from the context).
+    expect(r.assessed.last, ('x__a', ContentOrigin.none, true));
   });
 
   test('X dann Y: unbekannt', () async {
     final r = await run([x, y], ['x__a', 'y__a', 'x__a']);
     expect(r.contexts.last, ('x__a', ContentOrigin.unknown, true));
-    expect(r.assessed.last, ('x__a', ContentOrigin.unknown, true));
+    expect(r.assessed.last, ('x__a', ContentOrigin.none, true));
   });
 
   test('Fremdes ohne Herkunftsangabe: unbekannt, nie ein Server', () async {
@@ -163,5 +165,16 @@ void main() {
     s.foreignOrigin = fromX;
     expect(s.foreignOriginForTools, fromX);
     expect(RunState(null).foreignOriginForTools, ContentOrigin.none);
+  });
+
+  test('markUntrusted: unbekannte Herkunft bleibt nach X unbekannt', () {
+    final seenOnly = RunState(null)..untrustedSeen = true;
+    seenOnly.markUntrusted(fromX);
+    expect(seenOnly.foreignOriginForTools, ContentOrigin.unknown);
+    final viaNone = RunState(null)..markUntrusted(ContentOrigin.none);
+    viaNone.markUntrusted(fromX);
+    expect(viaNone.foreignOriginForTools, ContentOrigin.unknown);
+    final clean = RunState(null)..markUntrusted(fromX);
+    expect(clean.foreignOriginForTools, fromX);
   });
 }

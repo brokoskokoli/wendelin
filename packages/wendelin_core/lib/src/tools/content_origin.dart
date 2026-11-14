@@ -32,24 +32,6 @@ sealed class ContentOrigin {
       this,
     _ => unknown,
   };
-
-  /// The origin as a short stable string for persisting: `''` (none),
-  /// `'?'` (unknown) or `'s:<id>'`.
-  String encode() => switch (this) {
-    NoOrigin() => '',
-    UnknownOrigin() => '?',
-    ServerOrigin(serverId: final id) => 's:$id',
-  };
-
-  /// Inverse of [encode]. Fail-closed: anything unreadable becomes
-  /// [unknown], `null` (nothing stored) becomes [none].
-  static ContentOrigin decode(String? text) {
-    if (text == null || text.isEmpty) return none;
-    if (text.startsWith('s:') && text.length > 2) {
-      return ContentOrigin.server(text.substring(2));
-    }
-    return unknown;
-  }
 }
 
 /// No foreign content.

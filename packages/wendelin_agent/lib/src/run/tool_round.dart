@@ -280,7 +280,9 @@ final class ToolRound {
             tool,
             runner.sessionId,
             foreignContent: _state.untrustedSeen,
-            foreignOrigin: _state.foreignOriginForTools,
+            // No origin on purpose (WP201): a network tool after foreign
+            // content keeps waiting for the green receipt, even for the same
+            // server; only the executor drops the confirmation.
           )
         : (tool.risk == RiskLevel.read ? RiskLevel.read : RiskLevel.external);
     return risk == RiskLevel.external;

@@ -98,10 +98,12 @@ final class RunState {
   /// Records untrusted content of [origin] (fail-closed: `none` counts as
   /// unknown).
   void markUntrusted(ContentOrigin origin) {
-    untrustedSeen = true;
-    foreignOrigin = foreignOrigin.merge(
+    // Merge from the value handed to the policy (before the flag is set):
+    // seen-but-unknown stays unknown when a server's result follows.
+    foreignOrigin = foreignOriginForTools.merge(
       origin is NoOrigin ? ContentOrigin.unknown : origin,
     );
+    untrustedSeen = true;
   }
 
   /// Language of the request (for the spoken-text check); `null` = unknown.

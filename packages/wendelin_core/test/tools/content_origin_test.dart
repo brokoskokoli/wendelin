@@ -32,21 +32,6 @@ void main() {
     });
   });
 
-  group('encode/decode', () {
-    for (final o in [none, unknown, x, const ContentOrigin.server('a:b')]) {
-      test('Rundlauf $o', () => expect(ContentOrigin.decode(o.encode()), o));
-    }
-    test('null und leer = none', () {
-      expect(ContentOrigin.decode(null), none);
-      expect(ContentOrigin.decode(''), none);
-    });
-    test('Unlesbares = unknown (fail-closed)', () {
-      for (final bad in ['s:', 'x', 's', '??', 'S:X']) {
-        expect(ContentOrigin.decode(bad), unknown, reason: bad);
-      }
-    });
-  });
-
   test('Gleichheit nach Server-ID, nicht nach Typ allein', () {
     expect(x, const ContentOrigin.server('X'));
     expect(x, isNot(y));

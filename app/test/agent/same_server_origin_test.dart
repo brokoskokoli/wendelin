@@ -240,6 +240,46 @@ void main() {
       );
     });
 
+    group('Fortsetzung mit tools__search', () {
+      ToolSearchTool searchOver(List<Tool> hits) => ToolSearchTool(
+        candidates: [
+          for (final t in hits)
+            (
+              integration: FakeIntegration(
+                id: t.name.split('__').first,
+                tools: [t],
+              ),
+              tool: t,
+            ),
+        ],
+        unlock: (_, _) {},
+      );
+      final search = (ToolSearchTool.toolName, jsonEncode({'query': 'x'}));
+
+      test('Verlauf nur Treffer von X: nächster Lauf ohne Nachfrage', () async {
+        final conv = InMemoryConversation();
+        extra = [
+          searchOver([xList, xSet]),
+        ];
+        expect(await run([search], conversation: conv), isEmpty);
+        expect(await run([c('mcp_x__set')], conversation: conv), isEmpty);
+      });
+
+      test('Treffer nicht mehr Kandidat: unbekannt, fragt nach', () async {
+        final conv = InMemoryConversation();
+        extra = [
+          searchOver([xList, xSet]),
+        ];
+        await run([search], conversation: conv);
+        extra = [
+          searchOver([yList]),
+        ];
+        expect(await run([c('mcp_x__set')], conversation: conv), [
+          'mcp_x__set',
+        ]);
+      });
+    });
+
     test('neue Unterhaltung beginnt ohne Herkunft', () async {
       await run([c('web__search')]);
       expect(await run([c('mcp_x__set')]), isEmpty);
