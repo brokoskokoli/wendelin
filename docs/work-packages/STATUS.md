@@ -55,6 +55,7 @@ Stand: 2026-10-30; läuft: keiner; Release v0.1.6 (4ce2d167).
 | WP196 | Langes Transkript kleiner anzeigen | gemergt a0609f67 | K155. Nur im Overlay (Chat-Blase ist schon 16 px, Station nutzt das Overlay); Stufen 26 / 18,2 / 16 px, Hysterese 10 %; Untergrenze Body 16 px bleibt (Maintainer 2026-11-13). Offen: Gerätetest `docs/testing/m5/wp196.md`; Soll: irreführender Kommentar „55 %“ in `app_theme.dart:288`. |
 | WP197 | Bestätigungston beachtet die Ruhezeiten des Stationsmodus | gemergt 1611ecf4 | Entscheidung Maintainer 2026-11-13. Review fand: Prüfung „Station läuft“ wirkte nur in der Station-Engine, also auch der WP195-Stopp-Ton nie still am Gerät; jetzt über Kotlin `StationState.open` (Kanal `stationOpen`), gilt bis onDestroy. Offen: Gerätetest `docs/testing/m5/wp197.md` (deckt WP195-Ruhezeit mit ab). |
 | WP198 | Overlay zeigt „Moment …“, obwohl schon aufgenommen wird; Overlay-Logs fehlen | gemergt (`fae2980b`) | micLive auch bei nicht leerem Weckwort-Vorlauf. Overlay-Logs kommen an (Live-Logcat rc2), MIUI-Puffer nur ~20 min; ursprünglicher Fehler lief vermutlich auf rc1. Offen: Gerätetest `docs/testing/m5/wp198.md`; Folgepaket: CentralAudioChannel in AssistantActivity nicht registriert (Overlay nimmt immer über record-Rückfall auf); Lücke commit-msg-Hook vs. CI bei Merge-Commits ohne Trailer. |
+| WP199 | Release 0.1.8 | gemergt `fac6dd16` | CHANGELOG 0.1.8 (WP191–WP198), Tag v0.1.8 auf `fac6dd16` nach grünem Gate. Gerätetests wp194–wp198 noch offen (rc3 auf dem Testhandy). |
 
 ## Offen
 
