@@ -6,15 +6,16 @@ Regeln: Öffentliches Repo. Ergebnisse ohne Namen, Kontaktdaten, Geräte-Serienn
 
 ## Aktueller Stand
 
-- Release-Kandidat: **v0.1.9-rc1** (GitHub-Release, Vorabversion), Commit siehe Release-Seite. APK und `SHA256SUMS` von der Release-Seite laden; Zertifikat-Fingerabdruck wie im README.
+- Release: **v0.1.9** (GitHub-Release), Commit siehe Release-Seite. APK und `SHA256SUMS` von der Release-Seite laden; Zertifikat-Fingerabdruck wie im README.
 - Installation über v0.1.8 (gleiche Signatur, Daten bleiben).
 
 ## Reihenfolge und Ergebnisse
 
-### Neu in v0.1.9-rc1
+### Neu in v0.1.9
 
 | Block | Anleitung | Ergebnis |
 | --- | --- | --- |
+| Fehler des MCP-Servers erzwingt keine Rückfrage | [m5/wp203.md](m5/wp203.md) | offen |
 | Gleicher Fehlaufruf wird nicht wiederholt | [m5/wp200.md](m5/wp200.md) | offen |
 | MCP „Ohne Nachfrage“ nach Inhalten desselben Servers | [m5/wp201.md](m5/wp201.md) | offen |
 

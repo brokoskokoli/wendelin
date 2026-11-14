@@ -7,12 +7,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-11-14
+
+"Ohne Nachfrage" for MCP tools works again after the server's own results and errors, and failed calls are no longer repeated unchanged (WP200, WP201, WP203).
+
 ### Changed
 - **MCP tools: "Ohne Nachfrage" works after the server's own results** – content returned by an MCP server no longer forces a confirmation for tools of the same server; content from other sources (web, mail, other servers, unknown) still does. The confirmation card names foreign content as the reason (K156 / WP201).
 - **A failed tool call is not repeated unchanged** – an identical call that already failed in the same run is neither executed nor confirmed again; the model gets the error and is asked to change the arguments, and the run stops at the second repeat. Temporary errors (timeout, network, 429/5xx) may run again (K157 / WP200).
 
 ### Fixed
 - **Tool search results counted as foreign content** – the result of the tool search was never parsed correctly, so every conversation with a tool search asked for confirmation of all network tools (WP201).
+- **An MCP server's own error forced a confirmation** – an error the server reports itself (e.g. "device not found") now counts as content of that server, so the next call to the same server no longer asks again. Errors produced by the app (timeout, network, protocol, validation, cancel) still count as unknown (K156 / WP203).
 
 ## [0.1.8] - 2026-11-14
 
@@ -135,7 +140,8 @@ Download the APK below and install it. On Android 13 and later, you may have to 
 Certificate fingerprint (SHA-256): `A9:E9:5A:13:98:34:19:23:4B:DB:8F:CA:F6:0F:1B:84:18:88:36:86:7B:F8:DC:38:99:15:B5:25:39:DC:09:7B`
 APK checksum: see `SHA256SUMS`.
 
-[Unreleased]: https://github.com/brokoskokoli/wendelin/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/brokoskokoli/wendelin/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/brokoskokoli/wendelin/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/brokoskokoli/wendelin/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/brokoskokoli/wendelin/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/brokoskokoli/wendelin/compare/v0.1.5...v0.1.6
