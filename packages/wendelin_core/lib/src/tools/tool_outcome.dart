@@ -33,6 +33,7 @@ final class ToolOutcome {
     this.summary,
     this.fixed,
     this.endsRun = false,
+    this.retryable = false,
   }) : content = List.unmodifiable(content);
 
   /// Successful outcome with a single text block.
@@ -54,11 +55,13 @@ final class ToolOutcome {
     String message, {
     String? summary,
     bool endsRun = false,
+    bool retryable = false,
   }) => ToolOutcome(
     content: [TextBlock(message)],
     isError: true,
     summary: summary,
     endsRun: endsRun,
+    retryable: retryable,
   );
 
   /// The user declined the confirmation; not an error, the model should
@@ -103,6 +106,11 @@ final class ToolOutcome {
   /// the caller answers). Checked by the agent before the next request, so
   /// it does not depend on when a listener reacts.
   final bool endsRun;
+
+  /// The failure is transient (timeout, network, HTTP 429/5xx): repeating the
+  /// same call may succeed, so the agent does not block it (WP200 B). Only
+  /// set for errors; never sent to the model.
+  final bool retryable;
 
   /// Concatenated text of all [TextBlock]s in [content].
   String get text => content.whereType<TextBlock>().map((b) => b.text).join();

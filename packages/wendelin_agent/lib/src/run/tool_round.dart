@@ -4,7 +4,6 @@
 /// refused rounds at a limit. Internal to `wendelin_agent`, not exported.
 library;
 
-import 'package:collection/collection.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 import '../agent_config.dart';
@@ -12,6 +11,7 @@ import '../agent_runner_texts.dart';
 import '../context_builder.dart';
 import 'attestation_gate.dart';
 import 'privacy_scope.dart';
+import 'repeat_guard.dart';
 import 'run_config.dart';
 import 'run_state.dart';
 
@@ -42,6 +42,10 @@ final class ToolRound {
   final PrivacyScope _privacy;
   final RunControl _control;
   final AttestationGate _attest;
+  late final RepeatGuard _repeats = RepeatGuard(
+    _state,
+    (name) => _privacy.catalog.lookup(name)?.risk,
+  );
 
   /// Id the model sent for each (possibly renamed) call id.
   final Map<String, String> _sourceIds = {};
@@ -220,7 +224,7 @@ final class ToolRound {
       return ToolOutcome.error(AgentRunnerTexts.hiddenTool(call.name));
     }
     final earlier = _earlierExecution(call);
-    if (earlier == null) return null;
+    if (earlier == null) return _repeats.blockedOutcome(call);
     return ToolOutcome(
       content: [
         const TextBlock(
@@ -340,42 +344,14 @@ final class ToolRound {
     }
   }
 
-  /// How often the model may send the same failing call (same tool, same
-  /// arguments, error each time) before the run stops with that error.
-  static const maxSameFailures = 3;
-
-  /// The tool, error text and number of a call of [round] that failed [maxSameFailures] times
-  /// in this run with the same tool and arguments, or `null`. The model gets
-  /// the error in every result; if it still repeats the call, the run ends
-  /// instead of spinning until the round limit (WP150).
-  ({String tool, String error, int count})? repeatedFailure(
-    ToolRoundRun round,
-  ) {
-    for (final call in round.pending) {
-      final same = [
-        for (final e in _state.executed)
-          if (e.outcome.isError && _sameContent(e.call, call)) e,
-      ];
-      if (same.length >= maxSameFailures) {
-        final text = same.last.outcome.content
-            .whereType<TextBlock>()
-            .map((b) => b.text)
-            .join(' ')
-            .trim();
-        return (tool: call.name, error: text, count: same.length);
-      }
-    }
-    return null;
-  }
-
   /// The stop for a [round] whose call failed [maxSameFailures] times (see
-  /// [repeatedFailure]) or whose outcome ends the run ([ToolOutcome.endsRun],
+  /// [RepeatGuard.repeatedFailure]) or whose outcome ends the run ([ToolOutcome.endsRun],
   /// WP163 B), or `null`. Closes the round first so every call has a result.
   Future<RunStop?> stopOnRepeatedFailure(
     ToolRoundRun round,
     AgentConfig config,
   ) async {
-    final error = repeatedFailure(round);
+    final error = _repeats.repeatedFailure(round.calls);
     if (error == null && !_endsRun(_state.executed, round)) return null;
     await verify(round);
     await _state.append(Message.toolResults(resultsOf(round)));
@@ -389,19 +365,11 @@ final class ToolRound {
   Executed? _earlierExecution(ToolCallBlock call) {
     final sourceId = _sourceIds[call.id] ?? call.id;
     for (final e in _state.executed) {
-      if (!_sameContent(e.call, call)) continue;
+      if (!sameContent(e.call, call)) continue;
       final earlierId = _sourceIds[e.call.id] ?? e.call.id;
       if (sourceId.isNotEmpty && earlierId == sourceId) return e;
     }
     return null;
-  }
-
-  static bool _sameContent(ToolCallBlock a, ToolCallBlock b) {
-    if (a.name != b.name) return false;
-    final args = b.tryDecodeArguments();
-    return args == null
-        ? a.argumentsJson == b.argumentsJson
-        : const DeepCollectionEquality().equals(a.tryDecodeArguments(), args);
   }
 
   /// Records [assistant] with error results for [calls] that are not

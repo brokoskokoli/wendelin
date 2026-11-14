@@ -76,6 +76,9 @@ final class RunState {
   /// Tool calls executed in this run.
   final List<Executed> executed = [];
 
+  /// Calls not executed because they repeated a failed call (WP200).
+  final List<ToolCallBlock> blockedRepeats = [];
+
   /// Whether a result that is not explicitly trusted ([isTrustedResult])
   /// is in the conversation: from the history (set at the start) or from
   /// this run. From then on the `<spoken>` block is off (WP41): the user

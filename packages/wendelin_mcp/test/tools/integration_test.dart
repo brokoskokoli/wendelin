@@ -88,6 +88,7 @@ void main() {
     McpCacheStore? cache,
     McpCallObserver? onCall,
     bool mayContainUntrusted = true,
+    McpTimeouts timeouts = const McpTimeouts(),
   }) {
     final client = McpClient(
       config: McpServerConfig(
@@ -102,6 +103,7 @@ void main() {
         mayContainUntrustedContent: mayContainUntrusted,
       ),
       httpClient: httpClient,
+      timeouts: timeouts,
       secrets: secrets ?? FakeMcpSecrets(),
       oauth: oauth,
       cache: cache,
@@ -278,6 +280,35 @@ void main() {
     final cancelled = await tools['slow']!.execute(const {}, ctx(cancel));
     expect(cancelled.text, ToolOutcome.cancelledText);
     expect(cancelled.isError, isTrue);
+  });
+
+  test('WP200: Timeout ist retryable und warnt vor unklarer Wirkung', () async {
+    final i = integration(
+      timeouts: const McpTimeouts(response: Duration(milliseconds: 300)),
+    );
+    final tools = {for (final t in await i.loadTools()) t.mcpName: t};
+    final o = await tools['slow']!.execute(const {}, ctx());
+    expect(o.isError, isTrue);
+    expect(o.retryable, isTrue);
+    expect(o.text, contains('Wirkung ist unklar'));
+  });
+
+  test('WP200: nur Netzfehler sind retryable, Serverfehler nicht', () async {
+    final i = integration();
+    final tools = {for (final t in await i.loadTools()) t.mcpName: t};
+    final isErr = await tools['docker.restart']!.execute(const {}, ctx());
+    expect(isErr.isError, isTrue);
+    expect(isErr.retryable, isFalse);
+
+    server.tools.removeWhere((t) => t.name == 'note_add');
+    final rpc = await tools['note_add']!.execute(const {}, ctx());
+    expect(rpc.isError, isTrue);
+    expect(rpc.retryable, isFalse);
+
+    await server.close();
+    final net = await tools['get_weather']!.execute(const {}, ctx());
+    expect(net.isError, isTrue);
+    expect(net.retryable, isTrue);
   });
 
   test('Bestätigungstext: Server, Tool, gekürzte Argumente', () async {
