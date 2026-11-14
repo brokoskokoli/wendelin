@@ -309,16 +309,8 @@ final class ToolRound {
       switch (event) {
         case ToolStarted(:final call):
           _control.emit(ToolCallStarted(call));
-        case ConfirmationNeeded(:final call, :final description):
-          _control.emit(
-            ConfirmationRequired(
-              call: call,
-              description: description,
-              respond: event.respond,
-              risk: event.risk,
-              privateDetails: event.privateDetails,
-            ),
-          );
+        case ConfirmationNeeded():
+          _control.emit(ConfirmationRequired.from(event));
         case ToolFinished(:final call, :final outcome, :final duration):
           // Invariant (fail-closed): every result that is not explicitly
           // trusted switches the invisible speech text off.

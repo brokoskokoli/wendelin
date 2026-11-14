@@ -156,6 +156,7 @@ Widget confirmationCardFor(
       detail: clampConfirmationDetail(l, event.description),
       toolName: event.call.name,
       risk: toolRisk,
+      reason: event.askedBecauseForeign ? l.confirmCardForeignReason : null,
       onYes: () => answer(true),
       onNo: () => answer(false),
       yesLabel: texts.yes,

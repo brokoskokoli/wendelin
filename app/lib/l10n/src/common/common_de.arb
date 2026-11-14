@@ -26,6 +26,7 @@
     }
   },
   "confirmCardWarning": "Warnung",
+  "confirmCardForeignReason": "Fragt nach, weil vorher Inhalte aus anderer Quelle gelesen wurden.",
   "confirmed": "Bestätigt",
   "copy": "Kopieren",
   "delete": "Löschen",

@@ -50,7 +50,11 @@ void main() {
   final web = FakeTool(name: 'web__search');
 
   late List<Tool> extra;
-  setUp(() => extra = []);
+  late List<bool> reasons;
+  setUp(() {
+    extra = [];
+    reasons = [];
+  });
 
   /// Runs [calls] (name, args json) and returns the names asked about.
   Future<List<String>> run(
@@ -94,7 +98,10 @@ void main() {
     final asked = <String>[];
     await for (final e in runner.run(UserInput(text: 'Los'))) {
       if (e is ConfirmationRequired) {
-        if (e.call.name == xSet.name) asked.add(e.call.name);
+        if (e.call.name == xSet.name) {
+          asked.add(e.call.name);
+          reasons.add(e.askedBecauseForeign);
+        }
         e.respond(true);
       }
     }
@@ -112,6 +119,11 @@ void main() {
       run([c('mcp_y__list'), c('mcp_x__set')]),
       completion(['mcp_x__set']),
     );
+  });
+
+  test('Y -> X: die Karte nennt fremde Inhalte als Grund', () async {
+    await run([c('mcp_y__list'), c('mcp_x__set')]);
+    expect(reasons, [true]);
   });
 
   test('X und Y gemischt -> X: fragt nach', () {

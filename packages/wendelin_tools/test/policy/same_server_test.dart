@@ -40,6 +40,7 @@ final class _ServerTool implements Tool, ContentOriginAware, LevelFixedTool {
 
 const _allow = PolicyDecision.allow;
 const _confirm = PolicyDecision.confirm;
+const _foreign = PolicyDecision.confirmForeign;
 const _unlock = PolicyDecision.unlock;
 
 void main() {
@@ -59,7 +60,7 @@ void main() {
     test('Inhalte von Y: bestätigt', () {
       expect(
         levelA(x).decide(x, 's', foreignContent: true, foreignOrigin: fromY),
-        _confirm,
+        _foreign,
       );
     });
     test('unbekannte Herkunft: bestätigt', () {
@@ -70,7 +71,7 @@ void main() {
           foreignContent: true,
           foreignOrigin: ContentOrigin.unknown,
         ),
-        _confirm,
+        _foreign,
       );
     });
     test('gemischte Herkunft (X und Y): bestätigt', () {
@@ -81,11 +82,11 @@ void main() {
           foreignContent: true,
           foreignOrigin: fromX.merge(fromY),
         ),
-        _confirm,
+        _foreign,
       );
     });
     test('Fremdes ohne Herkunftsangabe (Standard): bestätigt', () {
-      expect(levelA(x).decide(x, 's', foreignContent: true), _confirm);
+      expect(levelA(x).decide(x, 's', foreignContent: true), _foreign);
     });
     test('Herkunft X, aber nichts Fremdes gesehen: unverändert frei', () {
       expect(levelA(x).decide(x, 's', foreignOrigin: fromX), _allow);
@@ -96,7 +97,7 @@ void main() {
     final y = _ServerTool('Y');
     expect(
       levelA(y).decide(y, 's', foreignContent: true, foreignOrigin: fromX),
-      _confirm,
+      _foreign,
     );
   });
 
@@ -105,7 +106,7 @@ void main() {
     final p = RiskPolicy()..setLevel(net.name, SecurityLevel.a);
     expect(
       p.decide(net, 's', foreignContent: true, foreignOrigin: fromX),
-      _confirm,
+      _foreign,
     );
   });
 
@@ -120,7 +121,7 @@ void main() {
         foreignContent: true,
         foreignOrigin: ContentOrigin.unknown,
       ),
-      _confirm,
+      _foreign,
     );
   });
 

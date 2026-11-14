@@ -22,13 +22,28 @@ enum PolicyAction {
 /// Outcome of [RiskPolicy.decide].
 @immutable
 final class PolicyDecision {
-  const PolicyDecision._(this.action, [this.reason, this.needsUnlock = false]);
+  const PolicyDecision._(
+    this.action, [
+    this.reason,
+    this.needsUnlock = false,
+    this.askedBecauseForeign = false,
+  ]);
 
   /// Execute without asking.
   static const allow = PolicyDecision._(PolicyAction.allow);
 
   /// Ask the user first.
   static const confirm = PolicyDecision._(PolicyAction.confirm);
+
+  /// Ask the user first, and the only reason is foreign content seen earlier
+  /// (WP201): without it the level would let the call run. The card names
+  /// the reason.
+  static const confirmForeign = PolicyDecision._(
+    PolicyAction.confirm,
+    null,
+    false,
+    true,
+  );
 
   /// Do not execute; [reason] is a German text for the model.
   factory PolicyDecision.deny(String reason) =>
@@ -51,15 +66,20 @@ final class PolicyDecision {
   /// Why the call is denied (only for [PolicyAction.deny]).
   final String? reason;
 
+  /// Confirm only because foreign content was seen ([confirmForeign]).
+  final bool askedBecauseForeign;
+
   @override
   bool operator ==(Object other) =>
       other is PolicyDecision &&
       other.action == action &&
       other.reason == reason &&
-      other.needsUnlock == needsUnlock;
+      other.needsUnlock == needsUnlock &&
+      other.askedBecauseForeign == askedBecauseForeign;
 
   @override
-  int get hashCode => Object.hash(action, reason, needsUnlock);
+  int get hashCode =>
+      Object.hash(action, reason, needsUnlock, askedBecauseForeign);
 
   @override
   String toString() =>
@@ -419,8 +439,11 @@ final class RiskPolicy {
           };
     final asked = mustAsk ? base.atLeast(PolicyAction.confirm) : base;
     final action = override == null ? asked : asked.atLeast(override);
+    final withoutForeign = override == null ? base : base.atLeast(override);
     return switch (action) {
       PolicyAction.allow => PolicyDecision.allow,
+      PolicyAction.confirm when withoutForeign == PolicyAction.allow =>
+        PolicyDecision.confirmForeign,
       PolicyAction.confirm => PolicyDecision.confirm,
       PolicyAction.deny => PolicyDecision.deny(deniedReason),
     };

@@ -5,6 +5,7 @@ import '../provider/attestation.dart';
 import '../provider/provider_exception.dart';
 import '../tools/tool.dart';
 import '../tools/tool_outcome.dart';
+import '../tools/tool_runtime.dart';
 
 /// Why the agent hands a request to another provider. Wendelin never does
 /// so on its own (concept K28): only on the user's explicit request or
@@ -235,7 +236,23 @@ final class ConfirmationRequired extends AgentEvent {
     required void Function(bool approved) respond,
     this.risk = RiskLevel.external,
     this.privateDetails = false,
+    this.askedBecauseForeign = false,
   }) : _answer = _Once(respond);
+
+  /// The event for the invoker's [needed] (all fields carried over).
+  factory ConfirmationRequired.from(ConfirmationNeeded needed) =>
+      ConfirmationRequired(
+        call: needed.call,
+        description: needed.description,
+        respond: needed.respond,
+        risk: needed.risk,
+        privateDetails: needed.privateDetails,
+        askedBecauseForeign: needed.askedBecauseForeign,
+      );
+
+  /// Asked only because foreign content was seen earlier in the run (WP201,
+  /// `ConfirmationNeeded.askedBecauseForeign`); the card names the reason.
+  final bool askedBecauseForeign;
 
   /// The lines after the first of [description] are private text (the tool
   /// redacts its audit arguments); the audit log keeps only the first line.

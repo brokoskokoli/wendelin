@@ -114,7 +114,12 @@ final class ConfirmationNeeded extends ToolInvocationEvent {
     this.decision, {
     this.risk = RiskLevel.external,
     this.privateDetails = false,
+    this.askedBecauseForeign = false,
   });
+
+  /// The call is only confirmed because foreign content was seen earlier in
+  /// the run (WP201); the card says so (no content, just the reason).
+  final bool askedBecauseForeign;
 
   /// The tool redacts its audit arguments ([AuditArgumentsRedactor]): the
   /// lines after the first of [description] are private text and must not

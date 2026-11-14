@@ -2230,6 +2230,12 @@ abstract class AppLocalizations {
   /// **'Schließen'**
   String get close;
 
+  /// No description provided for @confirmCardForeignReason.
+  ///
+  /// In de, this message translates to:
+  /// **'Fragt nach, weil vorher Inhalte aus anderer Quelle gelesen wurden.'**
+  String get confirmCardForeignReason;
+
   /// No description provided for @confirmCardNeedsConfirm.
   ///
   /// In de, this message translates to:

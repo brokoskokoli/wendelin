@@ -643,6 +643,7 @@
   },
   "cancel": "Abbrechen",
   "close": "Schließen",
+  "confirmCardForeignReason": "Fragt nach, weil vorher Inhalte aus anderer Quelle gelesen wurden.",
   "confirmCardNeedsConfirm": "Braucht deine Bestätigung",
   "confirmCardToolLevel": "{toolName} · Stufe {level}",
   "@confirmCardToolLevel": {
