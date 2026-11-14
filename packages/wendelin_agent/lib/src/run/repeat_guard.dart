@@ -25,9 +25,12 @@ String _textOf(ToolOutcome o) =>
 /// repetitions of a run.
 final class RepeatGuard {
   /// Creates the guard of the run with [_state].
-  RepeatGuard(this._state);
+  RepeatGuard(this._state, this._riskOf);
 
   final RunState _state;
+
+  /// The risk of the tool [name], or `null` if it is not known.
+  final RiskLevel? Function(String name) _riskOf;
 
   /// How often the same failing call (same tool, same arguments, error each
   /// time) may be sent before the run stops with that error. The first
@@ -36,6 +39,14 @@ final class RepeatGuard {
   /// executed: 1 execution + 2 repetitions. Only calls of one round can
   /// still be executed more than once.
   static const maxSameFailures = 3;
+
+  /// Whether [e] succeeded with a tool that may have changed state (not
+  /// `read`). Unknown tools do not count.
+  bool _changedState(Executed e) {
+    if (e.outcome.isError || isDeclined(e.outcome)) return false;
+    final risk = _riskOf(e.call.name);
+    return risk != null && risk != RiskLevel.read;
+  }
 
   /// The error result for [call] if the same tool with the same arguments
   /// already failed in this run (it never reaches the invoker, so there is
@@ -49,6 +60,11 @@ final class RepeatGuard {
           e.outcome.text != ToolOutcome.cancelledText &&
           sameContent(e.call, call)) {
         failed = e;
+      } else if (failed != null && _changedState(e)) {
+        // A write/external call succeeded since: the cause may be fixed
+        // (list created, then the same add). The call runs again; the stop
+        // limit still counts every real failure ([repeatedFailure]).
+        failed = null;
       }
     }
     // Transient failures (timeout, network, 429/5xx) may succeed the next

@@ -163,7 +163,7 @@ abstract final class AgentRunnerTexts {
   /// arguments): not executed, [error] is the earlier error text.
   static String repeatedFailedCall(String error) =>
       'Nicht ausgeführt: Genau dieser Aufruf (gleiches Tool, gleiche '
-      'Argumente) ist gerade fehlgeschlagen: $error Ändere die Argumente '
+      'Argumente) ist bereits fehlgeschlagen: $error Ändere die Argumente '
       'entsprechend dem Fehler oder antworte dem Nutzer, statt ihn zu '
       'wiederholen.';
 }

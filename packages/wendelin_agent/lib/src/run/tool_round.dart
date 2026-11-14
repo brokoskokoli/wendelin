@@ -42,7 +42,10 @@ final class ToolRound {
   final PrivacyScope _privacy;
   final RunControl _control;
   final AttestationGate _attest;
-  late final RepeatGuard _repeats = RepeatGuard(_state);
+  late final RepeatGuard _repeats = RepeatGuard(
+    _state,
+    (name) => _privacy.catalog.lookup(name)?.risk,
+  );
 
   /// Id the model sent for each (possibly renamed) call id.
   final Map<String, String> _sourceIds = {};

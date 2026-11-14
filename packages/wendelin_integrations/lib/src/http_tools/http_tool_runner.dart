@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
-import 'package:meta/meta.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 import '../common/base_tool.dart' show ellipsize;
@@ -11,111 +10,19 @@ import '../common/net_scope.dart' show HostResolver;
 import '../common/port_exception.dart';
 import '../common/tool_args.dart';
 import '../web/web_search_backend.dart' show orCancel;
+import 'http_call_result.dart';
 import 'http_target.dart';
 import 'http_template.dart';
 import 'http_tool_definition.dart';
 import 'http_transport.dart';
+
+export 'http_call_result.dart';
 
 /// Placeholder shown instead of secret header values.
 const redactedSecret = '••••••';
 
 /// Placeholder replacing secrets a server echoes back.
 const scrubbedSecret = '[geheim]';
-
-/// The request as it was (or would be) sent, without secrets: secret
-/// header values are [redactedSecret]. For the editor preview and logs.
-@immutable
-final class SentRequest {
-  /// Creates the description.
-  SentRequest({
-    required this.method,
-    required this.url,
-    required Map<String, String> headers,
-    this.body,
-  }) : headers = Map.unmodifiable(headers);
-
-  /// Longest body kept in [body].
-  static const maxBodyChars = 2000;
-
-  /// HTTP method.
-  final String method;
-
-  /// URL of the first request (no secrets: secrets only go into headers).
-  final Uri url;
-
-  /// Headers; secret values replaced by [redactedSecret].
-  final Map<String, String> headers;
-
-  /// Body text (shortened to [maxBodyChars]), if any.
-  final String? body;
-
-  /// JSON for the editor preview.
-  Map<String, Object?> toJson() => {
-    'method': method,
-    'url': url.toString(),
-    'headers': headers,
-    if (body != null) 'body': body,
-  };
-
-  @override
-  String toString() => 'SentRequest($method $url)';
-}
-
-/// Outcome of [HttpToolRunner.call]. Never contains secrets.
-@immutable
-final class HttpCallResult {
-  /// Creates a result.
-  const HttpCallResult({
-    required this.duration,
-    this.request,
-    this.finalUrl,
-    this.status,
-    this.reason,
-    this.contentType,
-    this.text = '',
-    this.truncated = false,
-    this.error,
-    this.retryable = false,
-  });
-
-  /// What was sent (`null` if the call failed before a request was built).
-  final SentRequest? request;
-
-  /// URL of the last request (after same-origin redirects).
-  final Uri? finalUrl;
-
-  /// HTTP status, if a response arrived.
-  final int? status;
-
-  /// Reason phrase of [status], if any.
-  final String? reason;
-
-  /// MIME type of the response without parameters.
-  final String? contentType;
-
-  /// Response text (after `responsePath`), secrets scrubbed.
-  final String text;
-
-  /// Whether the body exceeded the size limit and was cut.
-  final bool truncated;
-
-  /// Time from start to finish.
-  final Duration duration;
-
-  /// German, model-safe description of a failure without usable answer.
-  final String? error;
-
-  /// The failure is transient (timeout, connection): repeating may help.
-  final bool retryable;
-
-  /// Whether the call failed ([error] or HTTP status ≥ 400).
-  bool get isError => error != null || (status ?? 0) >= 400;
-
-  @override
-  String toString() =>
-      'HttpCallResult(status: $status, error: $error, '
-      'truncated: $truncated)';
-}
 
 final class _Prepared {
   _Prepared(this.url, this.headers, this.body, this.sent);
@@ -210,21 +117,28 @@ final class HttpToolRunner {
     DateTime started,
     CancelToken abort,
   ) async {
-    HttpCallResult fail(String message, [SentRequest? sent]) => HttpCallResult(
+    HttpCallResult fail(
+      String message,
+      SentRequest? sent, {
+      int? status,
+      bool retryable = false,
+    }) => HttpCallResult(
       duration: clock.now().difference(started),
       request: sent,
+      status: status,
       error: message,
+      retryable: retryable,
     );
     try {
       definition.validate();
     } on FormatException catch (e) {
-      return fail('Definition ungültig: ${e.message}');
+      return fail('Definition ungültig: ${e.message}', null);
     }
     final _Prepared prepared;
     try {
       prepared = _prepare(definition, args);
     } on InvalidArgumentsException catch (e) {
-      return fail('Ungültige Argumente: ${e.message}');
+      return fail('Ungültige Argumente: ${e.message}', null);
     }
     final used = <String>[];
     try {
@@ -240,22 +154,20 @@ final class HttpToolRunner {
         cancel,
       );
     } on TimeoutException {
-      return HttpCallResult(
-        duration: clock.now().difference(started),
-        request: prepared.sent,
-        error:
-            'Zeitüberschreitung: keine Antwort nach '
-            '${definition.timeout.inSeconds} s',
+      return fail(
+        'Zeitüberschreitung: keine Antwort nach '
+        '${definition.timeout.inSeconds} s. Die Wirkung ist unklar: erst '
+        'prüfen, bevor der Aufruf wiederholt wird.',
+        prepared.sent,
         retryable: true,
       );
     } on PortException catch (e) {
       return fail(_scrub(e.message, used), prepared.sent);
     } on _CallFailure catch (e) {
-      return HttpCallResult(
-        duration: clock.now().difference(started),
-        request: prepared.sent,
+      return fail(
+        _scrub(e.message, used),
+        prepared.sent,
         status: e.status,
-        error: _scrub(e.message, used),
         retryable: e.retryable,
       );
     }

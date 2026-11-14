@@ -90,7 +90,7 @@ void main() {
     expect(second.isError, isTrue);
     final text = _text(second);
     expect(text, contains(_error));
-    expect(text, contains('gerade fehlgeschlagen'));
+    expect(text, contains('bereits fehlgeschlagen'));
     expect(text, contains('Argumente'));
   });
 
@@ -181,5 +181,74 @@ void main() {
     );
     await _run(h, <int>[]);
     expect(inv.calls, hasLength(2));
+  });
+
+  Harness twoTools(CountingInvoker inv, RiskLevel otherRisk) {
+    final (a, _) = scripted('a', [
+      ScriptedTurn.toolCalls([call('c1', 'ha__set', same)]),
+      ScriptedTurn.toolCalls([call('c2', 'ha__make', '{}')]),
+      ScriptedTurn.toolCalls([call('c3', 'ha__set', same)]),
+      ScriptedTurn.text('fertig'),
+    ]);
+    return Harness(
+      primary: a,
+      tools: [
+        FakeTool(name: 'ha__set', risk: RiskLevel.external),
+        FakeTool(name: 'ha__make', risk: otherRisk),
+      ],
+      invoker: inv,
+    );
+  }
+
+  test('Fehlschlag, dann write-Erfolg eines anderen Aufrufs: derselbe Aufruf '
+      'läuft erneut', () async {
+    final inv = CountingInvoker([
+      ToolOutcome.error(_error),
+      ToolOutcome.text('angelegt'),
+      ToolOutcome.text('ok'),
+    ]);
+    final events = await _run(twoTools(inv, RiskLevel.write), <int>[]);
+    expect(inv.calls.map((c) => c.id), ['c1', 'c2', 'c3']);
+    expect(terminal(events), isNot(isA<AgentFailed>()));
+  });
+
+  test(
+    'Fehlschlag, dann read-Erfolg: derselbe Aufruf bleibt gesperrt',
+    () async {
+      final inv = CountingInvoker([
+        ToolOutcome.error(_error),
+        ToolOutcome.text('gelesen'),
+        ToolOutcome.text('ok'),
+      ]);
+      await _run(twoTools(inv, RiskLevel.read), <int>[]);
+      expect(inv.calls.map((c) => c.id), ['c1', 'c2']);
+    },
+  );
+
+  test('nach write-Erfolg zählen Fehlschläge weiter bis zum Stopp', () async {
+    final inv = CountingInvoker([
+      ToolOutcome.error(_error),
+      ToolOutcome.text('angelegt'),
+      ToolOutcome.error(_error),
+    ]);
+    final (a, _) = scripted('a', [
+      ScriptedTurn.toolCalls([call('c1', 'ha__set', same)]),
+      ScriptedTurn.toolCalls([call('c2', 'ha__make', '{}')]),
+      ScriptedTurn.toolCalls([call('c3', 'ha__set', same)]),
+      ScriptedTurn.toolCalls([call('c4', 'ha__set', same)]),
+      ScriptedTurn.text('fertig'),
+    ]);
+    final h = Harness(
+      primary: a,
+      tools: [
+        FakeTool(name: 'ha__set', risk: RiskLevel.external),
+        FakeTool(name: 'ha__make', risk: RiskLevel.write),
+      ],
+      invoker: inv,
+    );
+    final events = await _run(h, <int>[]);
+    expect(inv.calls.map((c) => c.id), ['c1', 'c2', 'c3']);
+    final failed = terminal(events) as AgentFailed;
+    expect(failed.error, AgentErrorKind.repeatedToolError);
   });
 }
