@@ -109,6 +109,21 @@ void main() {
     );
   });
 
+  test('Tool ohne Herkunftsangabe und unbekannte Herkunft: bestätigt '
+      '(unknown ist nie „gleicher Server“)', () {
+    final net = FakeTool(name: 'p__net');
+    final p = RiskPolicy()..setLevel(net.name, SecurityLevel.a);
+    expect(
+      p.decide(
+        net,
+        's',
+        foreignContent: true,
+        foreignOrigin: ContentOrigin.unknown,
+      ),
+      _confirm,
+    );
+  });
+
   group('andere Schutzstufen unverändert', () {
     test('gesperrtes Gerät: Y → X wartet auf Entsperren', () {
       expect(
@@ -133,11 +148,7 @@ void main() {
         ),
         // Level A is allowed on a locked device only where the table says so;
         // the exemption must not loosen it beyond the plain level.
-        levelA(x).decide(
-          x,
-          's',
-          access: AccessContext.lockedUnknownVoice,
-        ),
+        levelA(x).decide(x, 's', access: AccessContext.lockedUnknownVoice),
       );
     });
     test('Stufe D (Alle bestätigen) bleibt bestätigt', () {

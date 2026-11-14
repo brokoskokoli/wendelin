@@ -333,6 +333,11 @@ final class RiskPolicy {
     await store.save(base);
   }
 
+  /// Whether the foreign content comes only from the server [tool] belongs
+  /// to (`ContentOriginAware`, the stable server id).
+  static bool _isSameServer(Tool tool, ContentOrigin origin) =>
+      origin is ServerOrigin && contentOriginOf(tool) == origin;
+
   /// The decision for running [tool] in [sessionId] in the context
   /// [access] (default: unlocked).
   ///
@@ -349,6 +354,11 @@ final class RiskPolicy {
   /// to this minimum, level A does not lift it (the stricter wins), and a
   /// locked device waits for the unlock like level D. In a conversation with
   /// a session lock such a call is denied outright, not asked.
+  ///
+  /// WP201: if all foreign content came from one MCP server ([foreignOrigin]
+  /// is `ContentOrigin.server(X)`) and [tool] is a tool of X, this minimum
+  /// does not apply (the level decides). Other, mixed or unknown origins and
+  /// the session lock keep it.
   PolicyDecision decide(
     Tool tool,
     String sessionId, {
@@ -363,16 +373,21 @@ final class RiskPolicy {
             : lockedReason,
       );
     }
-    final mustAsk = foreignContent && tool is! NoNetworkTarget;
+    final networkAfterForeign = foreignContent && tool is! NoNetworkTarget;
     // Locked conversation + foreign content: a network tool is denied for
-    // good, also after a later green receipt (the stricter wins).
-    if (mustAsk && isExternalLocked(sessionId)) {
+    // good, also after a later green receipt (the stricter wins). Also for
+    // the same server (WP201): the lock means a failed TEE receipt, and
+    // sending data to the server whose content we hold is exfiltration.
+    if (networkAfterForeign && isExternalLocked(sessionId)) {
       return PolicyDecision.deny(
         _storeUnreadable && !_locked.containsKey(sessionId)
             ? storeUnreadableReason
             : networkLockedReason,
       );
     }
+    // WP201: foreign content only of the MCP server X does not force a
+    // question for a tool of X (fail-closed: every other origin does).
+    final mustAsk = networkAfterForeign && !_isSameServer(tool, foreignOrigin);
     final override = _overrides[tool.name];
     if (access.locked) {
       if (override == PolicyAction.deny) {

@@ -299,6 +299,21 @@ void main() {
     expect(long, endsWith('…'));
   });
 
+  test(
+    'WP201: Herkunft der Ergebnisse = stabile Server-ID (nicht Name/Slug)',
+    () async {
+      final tools = await integration().loadTools();
+      expect(tools, isNotEmpty);
+      for (final t in tools) {
+        expect(t, isA<ContentOriginAware>());
+        final origin = (t as ContentOriginAware).contentOrigin;
+        expect(origin, const ContentOrigin.server('home-1'));
+        expect(origin, isNot(const ContentOrigin.server('Home')));
+        expect(origin, isNot(const ContentOrigin.server('home')));
+      }
+    },
+  );
+
   test('WP157: Haken „Kann unsichere Inhalte enthalten“ (Standard an, '
       'Netzziel, nicht abschaltbar über die Datei)', () async {
     for (final may in [true, false]) {

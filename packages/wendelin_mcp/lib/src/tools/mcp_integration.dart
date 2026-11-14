@@ -272,7 +272,8 @@ final class McpIntegration implements Integration {
 ///
 /// No undo (`ToolOutcome.undo` stays `null`): the effect happens on the
 /// server and cannot be reverted by the app.
-final class McpTool implements Tool, ContentTrustAware, LevelFixedTool {
+final class McpTool
+    implements Tool, ContentTrustAware, LevelFixedTool, ContentOriginAware {
   /// Creates the tool.
   McpTool({
     required this.integration,
@@ -302,6 +303,13 @@ final class McpTool implements Tool, ContentTrustAware, LevelFixedTool {
   @override
   bool get mayContainUntrustedContent =>
       integration.config.mayContainUntrustedContent;
+
+  /// The stable server id (`McpServerConfig.id`), never the display name or
+  /// the slug (WP201): foreign content of this server may skip the minimum
+  /// confirmation for its own tools only.
+  @override
+  ContentOrigin get contentOrigin =>
+      ContentOrigin.server(integration.config.id);
 
   /// Name on the server.
   String get mcpName => info.name;

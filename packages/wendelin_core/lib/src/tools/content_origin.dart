@@ -28,7 +28,8 @@ sealed class ContentOrigin {
     (final o, NoOrigin()) => o,
     (UnknownOrigin(), _) || (_, UnknownOrigin()) => unknown,
     (ServerOrigin(serverId: final a), ServerOrigin(serverId: final b))
-        when a == b => this,
+        when a == b =>
+      this,
     _ => unknown,
   };
 
