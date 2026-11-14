@@ -7,12 +7,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-11-14
+
+Push-to-talk, better recognizer hints, a faster start and quieter endings (WP191–WP198).
+
 ### Added
 - **Push-to-talk by holding the mic button** – hold the button (longer than 450 ms) and Wendelin keeps listening through pauses until you release it, even if your finger slides off; the whole recording is then processed as one request. A short tap works as before. Recordings end after 2 minutes; long recordings are recognized in segments (WP192).
 - **Device synonyms as recognizer hints** – approved Home Assistant devices also add generic words for their type (e.g. lamp/light), in German, English and French (WP191).
+- **Microphone first** – when a conversation starts, Wendelin opens the microphone before the speech models are loaded and shows "Listening" as soon as audio arrives; what you say while the models load is kept and recognized (WP194).
+
+### Changed
+- **Silence ends quietly** – if nothing is said within 5 seconds after Wendelin starts listening, it plays a short stop tone and goes quiet instead of saying "not understood". "Not understood" remains for speech that was heard but not understood (WP195).
+- **Long transcripts in a smaller font** – long spoken requests are shown smaller in the conversation view (down to 16 px) so they fit on screen (WP196).
+- **Tones respect quiet hours** – the wake-word confirmation tone and the stop tone stay silent during the quiet hours of station mode (WP197).
 
 ### Fixed
 - **List and Home Assistant names reach the recognizer again** – with many contacts the hint terms were cut off before lists and devices; lists, rooms and devices now come first, and up to 128 hint terms are passed (WP191).
+- **Assistant overlay showed "One moment" while already listening** – when the audio came from the wake-word pre-roll, the overlay did not switch to "Listening"; it now does on every path where audio arrives (WP198).
 
 ## [0.1.7] - 2026-11-10
 
@@ -117,7 +128,8 @@ Download the APK below and install it. On Android 13 and later, you may have to 
 Certificate fingerprint (SHA-256): `A9:E9:5A:13:98:34:19:23:4B:DB:8F:CA:F6:0F:1B:84:18:88:36:86:7B:F8:DC:38:99:15:B5:25:39:DC:09:7B`
 APK checksum: see `SHA256SUMS`.
 
-[Unreleased]: https://github.com/brokoskokoli/wendelin/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/brokoskokoli/wendelin/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/brokoskokoli/wendelin/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/brokoskokoli/wendelin/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/brokoskokoli/wendelin/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/brokoskokoli/wendelin/compare/v0.1.4...v0.1.5
