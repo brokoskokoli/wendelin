@@ -58,6 +58,8 @@ Stand: 2026-10-30; läuft: keiner; Release v0.1.6 (4ce2d167).
 | WP199 | Release 0.1.8 | gemergt `fac6dd16` | CHANGELOG 0.1.8 (WP191–WP198), Tag v0.1.8 auf `fac6dd16` nach grünem Gate. Gerätetests wp194–wp198 noch offen (rc3 auf dem Testhandy). |
 | WP200 | Identischen fehlgeschlagenen Werkzeugaufruf nicht erneut ausführen | gemergt (`6961da09`) | RepeatGuard: 1 Ausführung, 1 gesperrte Wiederholung mit Hinweis, Stopp bei der 2.; vorübergehende Fehler (`ToolOutcome.retryable`) nicht gesperrt, Stopp nach 3 (K157). Offen: Gerätetest `docs/testing/m5/wp200.md`; Policy-Frage: auf „erlaubt“ gestellte Tools laufen nach Timeout ohne Rückfrage erneut (`risk_policy.dart:398`). |
 | WP201 | „Ohne Nachfrage“ für MCP-Tools trotz Inhalten desselben Servers (K156) | gemergt (`0a5a1048`) | Herkunft fremder Inhalte je Server, Rückfrage entfällt nur bei Inhalten ausschließlich desselben Servers; TEE-Quittung bleibt Pflicht (Mutation vom Orchestrator geprüft); `tools__search`-Umschlag wird jetzt geparst. Offen: Gerätetest `docs/testing/m5/wp201.md`; Folgepunkt: Sprachansage der Rückfrage und Outgoing-Preview nennen den Grund „fremde Inhalte“ nicht. |
+| WP202 | Release-Kandidat 0.1.9 | gemergt | Tag v0.1.9-rc1 (WP200, WP201), auf dem Testhandy. |
+| WP203 | Fehlermeldung eines MCP-Servers zählt als Inhalt desselben Servers (K156) | in Arbeit | Gerätetest v0.1.9-rc1 (Maintainer 2026-11-14): nach „Gerät nicht gefunden“ fragt der nächste Aufruf desselben Servers wieder nach. |
 
 ## Offen
 
