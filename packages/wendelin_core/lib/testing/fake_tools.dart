@@ -142,6 +142,7 @@ final class FakeTool
     return ToolOutcome(
       content: result.content,
       isError: result.isError,
+      serverReportedError: result.serverReportedError,
       summary: result.summary,
       fixed: result.fixed,
       undo: UndoAction(label: 'Rückgängig', run: () async => undoCount++),

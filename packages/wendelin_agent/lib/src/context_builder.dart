@@ -129,18 +129,24 @@ bool hasUntrustedResult(ToolCatalog catalog, List<Message> messages) {
 
 /// Origin of one result that is not trusted (WP201). A tool that names its
 /// origin ([ResultOriginAware] first, then [ContentOriginAware]) gives it
-/// for a successful result; error texts, unknown tools and everything else
-/// are [ContentOrigin.unknown] (fail-closed). Never [ContentOrigin.none]:
+/// for a successful result. An error carries the origin only when the MCP
+/// server itself reported it ([serverReportedError], a structural flag set
+/// by the result mapper, never read from text; WP203); client errors
+/// (timeout, network, protocol, validation, cancel), unknown tools and
+/// everything else are [ContentOrigin.unknown] (fail-closed). Never [ContentOrigin.none]:
 /// an untrusted result without a readable origin must not turn into a
 /// server.
 ContentOrigin originOfUntrustedResult(
   ToolCatalog catalog,
   String? name, {
   bool isError = false,
+  bool serverReportedError = false,
   List<ContentBlock> content = const [],
 }) {
   final tool = name == null ? null : catalog.lookup(name);
-  if (tool == null || isError) return ContentOrigin.unknown;
+  if (tool == null || (isError && !serverReportedError)) {
+    return ContentOrigin.unknown;
+  }
   final origin = tool is ResultOriginAware
       ? (tool as ResultOriginAware).resultOrigin(content)
       : contentOriginOf(tool);
@@ -171,6 +177,7 @@ ContentOrigin foreignOriginOf(ToolCatalog catalog, List<Message> messages) {
               catalog,
               name,
               isError: b.isError,
+              serverReportedError: b.serverReportedError,
               content: b.content,
             ),
           );

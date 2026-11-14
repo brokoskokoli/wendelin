@@ -42,6 +42,8 @@ ToolOutcome mcpOutcome(
   return ToolOutcome(
     content: [TextBlock(text)],
     isError: result.isError,
+    // Structural, from the protocol flag only; never from text (WP203).
+    serverReportedError: result.isError,
     summary: summary,
   );
 }

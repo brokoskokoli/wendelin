@@ -34,6 +34,7 @@ final class ToolOutcome {
     this.fixed,
     this.endsRun = false,
     this.retryable = false,
+    this.serverReportedError = false,
   }) : content = List.unmodifiable(content);
 
   /// Successful outcome with a single text block.
@@ -112,12 +113,23 @@ final class ToolOutcome {
   /// set for errors; never sent to the model.
   final bool retryable;
 
+  /// The error was reported by the remote MCP server itself (`tools/call`
+  /// answered with `isError`), not produced by this client (timeout,
+  /// network, protocol, session, validation, cancel). Set only by the MCP
+  /// result mapper, structurally; never derived from text (WP203). Decides
+  /// whether an error carries the origin of its server.
+  final bool serverReportedError;
+
   /// Concatenated text of all [TextBlock]s in [content].
   String get text => content.whereType<TextBlock>().map((b) => b.text).join();
 
   /// The block sent back to the model for the call [callId].
-  ToolResultBlock toResultBlock(String callId) =>
-      ToolResultBlock(callId: callId, content: content, isError: isError);
+  ToolResultBlock toResultBlock(String callId) => ToolResultBlock(
+    callId: callId,
+    content: content,
+    isError: isError,
+    serverReportedError: serverReportedError,
+  );
 
   @override
   String toString() =>

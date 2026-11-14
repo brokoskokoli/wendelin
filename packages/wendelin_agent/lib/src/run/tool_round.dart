@@ -233,6 +233,7 @@ final class ToolRound {
         ...earlier.outcome.content,
       ],
       isError: earlier.outcome.isError,
+      serverReportedError: earlier.outcome.serverReportedError,
       summary: 'Bereits ausgeführt',
     );
   }
@@ -331,6 +332,7 @@ final class ToolRound {
                 _privacy.catalog,
                 call.name,
                 isError: outcome.isError,
+                serverReportedError: outcome.serverReportedError,
                 content: outcome.content,
               ),
             );

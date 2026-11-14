@@ -59,7 +59,11 @@ void _applyResults(List<ChatEntry> out, Message m) {
     final i = out.indexWhere((e) => e is ToolEntry && e.id == r.callId);
     if (i < 0) continue;
     final phase = ConversationReducer.phaseOf(
-      ToolOutcome(content: r.content, isError: r.isError),
+      ToolOutcome(
+        content: r.content,
+        isError: r.isError,
+        serverReportedError: r.serverReportedError,
+      ),
     );
     out[i] = (out[i] as ToolEntry).copyWith(phase: phase);
   }

@@ -66,6 +66,39 @@ void main() {
       expect((result.content.first as TextBlock).text, startsWith('Bereits'));
     });
 
+    for (final (reported, label) in [
+      (true, 'server-reported error keeps its flag'),
+      (false, 'client error stays without the flag'),
+    ]) {
+      test('WP203: repeated call: $label', () async {
+        final tool = FakeTool(
+          name: 'cal__create',
+          outcome: reported
+              ? ToolOutcome(
+                  content: const [TextBlock('Gerät nicht gefunden')],
+                  isError: true,
+                  serverReportedError: true,
+                )
+              : ToolOutcome.error('Gerät nicht gefunden'),
+        );
+        final (a, provider) = scripted('a', [
+          ScriptedTurn.toolCalls([call('c1', 'cal__create', '{"t":1}')]),
+          ScriptedTurn.toolCalls([call('c1', 'cal__create', '{ "t": 1 }')]),
+          ScriptedTurn.text('ok'),
+        ]);
+        final h = Harness(primary: a, tools: [tool]);
+        await h.run('x');
+        expect(tool.callCount, 1);
+        final first = lastResults(provider.requests[1]).single;
+        final repeat = lastResults(provider.requests[2]).single;
+        expect(repeat.callId, 'c1_dup1');
+        expect((repeat.content.first as TextBlock).text, startsWith('Bereits'));
+        expect(repeat.isError, isTrue);
+        expect(first.serverReportedError, reported);
+        expect(repeat.serverReportedError, reported);
+      });
+    }
+
     test('replacement ids match the strictest provider pattern', () async {
       final tool = FakeTool(name: 'web__search');
       final (a, provider) = scripted('a', [
