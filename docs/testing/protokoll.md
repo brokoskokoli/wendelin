@@ -6,10 +6,17 @@ Regeln: Öffentliches Repo. Ergebnisse ohne Namen, Kontaktdaten, Geräte-Serienn
 
 ## Aktueller Stand
 
-- Release-Kandidat: **v0.1.8-rc2** (GitHub-Release, Vorabversion), Commit siehe Release-Seite. APK und `SHA256SUMS` von der Release-Seite laden; Zertifikat-Fingerabdruck wie im README.
+- Release-Kandidat: **v0.1.8-rc3** (GitHub-Release, Vorabversion), Commit siehe Release-Seite. APK und `SHA256SUMS` von der Release-Seite laden; Zertifikat-Fingerabdruck wie im README.
 - Installation über v0.1.7 (gleiche Signatur, Daten bleiben).
 
 ## Reihenfolge und Ergebnisse
+
+### Neu in v0.1.8-rc3
+
+| Block | Anleitung | Ergebnis |
+| --- | --- | --- |
+| Bestätigungs- und Stopp-Ton still in der Ruhezeit der Station | [m5/wp197.md](m5/wp197.md) | offen |
+| Overlay: „Ich höre zu“ statt „Moment …“, sobald Ton ankommt | [m5/wp198.md](m5/wp198.md) | offen |
 
 ### Neu in v0.1.8-rc2
 
