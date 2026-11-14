@@ -59,7 +59,8 @@ Stand: 2026-10-30; läuft: keiner; Release v0.1.6 (4ce2d167).
 | WP200 | Identischen fehlgeschlagenen Werkzeugaufruf nicht erneut ausführen | gemergt (`6961da09`) | RepeatGuard: 1 Ausführung, 1 gesperrte Wiederholung mit Hinweis, Stopp bei der 2.; vorübergehende Fehler (`ToolOutcome.retryable`) nicht gesperrt, Stopp nach 3 (K157). Offen: Gerätetest `docs/testing/m5/wp200.md`; Policy-Frage: auf „erlaubt“ gestellte Tools laufen nach Timeout ohne Rückfrage erneut (`risk_policy.dart:398`). |
 | WP201 | „Ohne Nachfrage“ für MCP-Tools trotz Inhalten desselben Servers (K156) | gemergt (`0a5a1048`) | Herkunft fremder Inhalte je Server, Rückfrage entfällt nur bei Inhalten ausschließlich desselben Servers; TEE-Quittung bleibt Pflicht (Mutation vom Orchestrator geprüft); `tools__search`-Umschlag wird jetzt geparst. Offen: Gerätetest `docs/testing/m5/wp201.md`; Folgepunkt: Sprachansage der Rückfrage und Outgoing-Preview nennen den Grund „fremde Inhalte“ nicht. |
 | WP202 | Release-Kandidat 0.1.9 | gemergt | Tag v0.1.9-rc1 (WP200, WP201), auf dem Testhandy. |
-| WP203 | Fehlermeldung eines MCP-Servers zählt als Inhalt desselben Servers (K156) | in Arbeit | Gerätetest v0.1.9-rc1 (Maintainer 2026-11-14): nach „Gerät nicht gefunden“ fragt der nächste Aufruf desselben Servers wieder nach. |
+| WP204 | Release 0.1.9 | in Arbeit | Volles Release (WP200, WP201, WP203) auf Wunsch des Maintainers. |
+| WP203 | Fehlermeldung eines MCP-Servers zählt als Inhalt desselben Servers (K156) | gemergt | Vom Server per `isError` gemeldeter Fehler trägt dessen Herkunft; Client-Fehler (Timeout, Netz, Protokoll, Validierung, Abbruch) und JSON-RPC-error bleiben unbekannt. Review 2 Runden, CI grün. Gerätetest `m5/wp203.md` offen. |
 
 ## Offen
 
