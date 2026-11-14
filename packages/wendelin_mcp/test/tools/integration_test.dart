@@ -311,6 +311,54 @@ void main() {
     expect(net.retryable, isTrue);
   });
 
+  test('WP203: nur isError des Servers setzt serverReportedError', () async {
+    final tools = {
+      for (final t in await integration().loadTools()) t.mcpName: t,
+    };
+
+    final isErr = await tools['docker.restart']!.execute(const {}, ctx());
+    expect(isErr.isError, isTrue);
+    expect(isErr.serverReportedError, isTrue);
+    final ok = await tools['get_weather']!.execute({'city': 'Kiel'}, ctx());
+    expect(ok.isError, isFalse);
+    expect(ok.serverReportedError, isFalse);
+
+    // Client-Fehler: Fehler, aber nicht vom Server gemeldet.
+    final clientErrors = <String, ToolOutcome>{};
+    // Eigener Client mit kurzer Frist (ohne tools/list, damit die Last des
+    // Testrechners nur die Art des Fehlers, nie den Aufbau trifft).
+    final slow = tools['slow']!;
+    final fast = integration(
+      timeouts: const McpTimeouts(response: Duration(milliseconds: 300)),
+    );
+    clientErrors['timeout'] = await McpTool(
+      integration: fast,
+      info: slow.info,
+      name: slow.name,
+      risk: slow.risk,
+    ).execute(const {}, ctx());
+    server.tools.removeWhere((t) => t.name == 'note_add');
+    clientErrors['rpc'] = await tools['note_add']!.execute(const {}, ctx());
+    server.failNext.add(401);
+    clientErrors['auth'] = await tools['get_weather']!.execute({
+      'city': 'Kiel',
+    }, ctx());
+    server.failNext.add(500);
+    clientErrors['http500'] = await tools['get_weather']!.execute({
+      'city': 'Kiel',
+    }, ctx());
+    await server.close();
+    clientErrors['network'] = await tools['get_weather']!.execute({
+      'city': 'Kiel',
+    }, ctx());
+    expect(clientErrors['timeout']!.text, contains('Wirkung ist unklar'));
+    expect(clientErrors.keys, hasLength(5));
+    clientErrors.forEach((kind, o) {
+      expect(o.isError, isTrue, reason: kind);
+      expect(o.serverReportedError, isFalse, reason: kind);
+    });
+  });
+
   test('Bestätigungstext: Server, Tool, gekürzte Argumente', () async {
     final tools = {
       for (final t in await integration().loadTools()) t.mcpName: t,
