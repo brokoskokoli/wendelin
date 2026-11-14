@@ -7,6 +7,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- **MCP tools: "Ohne Nachfrage" works after the server's own results** – content returned by an MCP server no longer forces a confirmation for tools of the same server; content from other sources (web, mail, other servers, unknown) still does. The confirmation card names foreign content as the reason (K156 / WP201).
+- **A failed tool call is not repeated unchanged** – an identical call that already failed in the same run is neither executed nor confirmed again; the model gets the error and is asked to change the arguments, and the run stops at the second repeat. Temporary errors (timeout, network, 429/5xx) may run again (K157 / WP200).
+
+### Fixed
+- **Tool search results counted as foreign content** – the result of the tool search was never parsed correctly, so every conversation with a tool search asked for confirmation of all network tools (WP201).
+
 ## [0.1.8] - 2026-11-14
 
 Push-to-talk, better recognizer hints, a faster start and quieter endings (WP191–WP198).
