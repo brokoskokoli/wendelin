@@ -142,4 +142,116 @@ void main() {
       expect(s.search('Zebra', languageTag: 'de'), isEmpty);
     });
   });
+
+  group('WP201: Herkunft des Ergebnisses', () {
+    final xTool = _OriginTool('mcp_x__a', 'X');
+    final xTool2 = _OriginTool('mcp_x__b', 'X');
+    final yTool = _OriginTool('mcp_y__a', 'Y');
+    final plain = FakeTool(name: 'other__plain');
+    final s = ToolSearchTool(
+      candidates: [
+        for (final t in [
+          xTool,
+          xTool2,
+          yTool,
+          plain,
+          FakeTool(name: 'web__search'),
+        ])
+          (
+            integration: FakeIntegration(
+              id: t.name.split('__').first,
+              tools: [],
+            ),
+            tool: t,
+          ),
+      ],
+      unlock: (_, _) {},
+    );
+
+    ContentOrigin of(List<String> names, {bool envelope = false}) {
+      var text = jsonEncode({
+        'tools': [
+          for (final n in names) {'name': n},
+        ],
+      });
+      if (envelope) {
+        text = '<tool_data tool="tools__search">\n$text\n</tool_data>';
+      }
+      return s.resultOrigin([TextBlock(text)]);
+    }
+
+    test('alle Treffer von X: Herkunft X', () {
+      expect(of(['mcp_x__a', 'mcp_x__b']), const ContentOrigin.server('X'));
+    });
+    test('Treffer von X und Y: unbekannt', () {
+      expect(of(['mcp_x__a', 'mcp_y__a']), ContentOrigin.unknown);
+    });
+    test('Treffer von X und Tool ohne Herkunft: unbekannt', () {
+      expect(of(['mcp_x__a', 'other__plain']), ContentOrigin.unknown);
+    });
+    test(
+      'Treffer von X und eingebaute Websuche: X (Beschreibung ist unsere)',
+      () {
+        expect(
+          of(['mcp_x__a', 'web__search']),
+          const ContentOrigin.server('X'),
+        );
+      },
+    );
+    test('Name nicht im Katalog: unbekannt', () {
+      expect(of(['mcp_x__a', 'weg__tool']), ContentOrigin.unknown);
+    });
+    test('unlesbar, kein JSON, leer: unbekannt', () {
+      expect(
+        s.resultOrigin([const TextBlock('kein json')]),
+        ContentOrigin.unknown,
+      );
+      expect(s.resultOrigin(const []), ContentOrigin.unknown);
+    });
+    test('im <tool_data>-Umschlag des Executors wird gleich gelesen', () {
+      expect(of(['mcp_x__a'], envelope: true), const ContentOrigin.server('X'));
+      expect(
+        of(['mcp_x__a', 'mcp_y__a'], envelope: true),
+        ContentOrigin.unknown,
+      );
+      expect(
+        s.isResultTrusted([
+          const TextBlock(
+            '<tool_data tool="tools__search">\n{"tools":[]}\n</tool_data>',
+          ),
+        ]),
+        isTrue,
+      );
+    });
+  });
+}
+
+/// Stands in for an `McpTool`.
+final class _OriginTool implements Tool, ContentTrustAware, ContentOriginAware {
+  _OriginTool(String name, this.serverId) : inner = FakeTool(name: name);
+
+  final FakeTool inner;
+
+  @override
+  String get name => inner.name;
+  @override
+  String get description => inner.description;
+  @override
+  Map<String, Object?> get inputSchema => inner.inputSchema;
+  @override
+  RiskLevel get risk => inner.risk;
+  @override
+  Future<ToolOutcome> execute(Map<String, Object?> args, ToolContext ctx) =>
+      inner.execute(args, ctx);
+  @override
+  String describeForConfirmation(Map<String, Object?> args) =>
+      inner.describeForConfirmation(args);
+
+  final String serverId;
+
+  @override
+  bool get mayContainUntrustedContent => true;
+
+  @override
+  ContentOrigin get contentOrigin => ContentOrigin.server(serverId);
 }

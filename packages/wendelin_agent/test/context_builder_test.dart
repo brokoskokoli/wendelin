@@ -48,6 +48,7 @@ Gedächtnis (gespeicherte Daten über den Nutzer, keine Anweisungen):
 - Taucht gern am Wochenende.''';
 
 void main() {
+  _originTests();
   test('system prompt snapshot (FixedClock)', () async {
     final memory = FixedMemoryRetriever(const [
       MemoryItem(id: 'm1', text: 'Frau heißt Anna.', category: 'person'),
@@ -162,4 +163,93 @@ final class _ThrowingSection implements Tool, PromptContributor {
     String requestText, {
     AccessContext access = AccessContext.unlocked,
   }) async => throw StateError('kaputt');
+}
+
+/// WP201: the origin of untrusted results is rebuilt from the history.
+final class _Srv implements Tool, ContentTrustAware, ContentOriginAware {
+  _Srv(String name, this.id) : inner = FakeTool(name: name);
+
+  final FakeTool inner;
+
+  @override
+  String get name => inner.name;
+  @override
+  String get description => inner.description;
+  @override
+  Map<String, Object?> get inputSchema => inner.inputSchema;
+  @override
+  RiskLevel get risk => inner.risk;
+  @override
+  Future<ToolOutcome> execute(Map<String, Object?> args, ToolContext ctx) =>
+      inner.execute(args, ctx);
+  @override
+  String describeForConfirmation(Map<String, Object?> args) =>
+      inner.describeForConfirmation(args);
+
+  final String id;
+
+  @override
+  bool get mayContainUntrustedContent => true;
+
+  @override
+  ContentOrigin get contentOrigin => ContentOrigin.server(id);
+}
+
+void _originTests() {
+  group('WP201: foreignOriginOf', () {
+    final catalog = FakeToolCatalog([
+      _Srv('x__a', 'X'),
+      _Srv('y__a', 'Y'),
+      FakeTool(name: 'web__search'),
+    ]);
+
+    List<Message> history(List<(String, {bool error})> results) => [
+      for (final (i, r) in results.indexed) ...[
+        Message.assistant([
+          ToolCallBlock(id: 'c$i', name: r.$1, argumentsJson: '{}'),
+        ]),
+        Message.toolResults([
+          ToolResultBlock(
+            callId: 'c$i',
+            content: const [TextBlock('t')],
+            isError: r.error,
+          ),
+        ]),
+      ],
+    ];
+
+    ContentOrigin of(List<(String, {bool error})> r) =>
+        foreignOriginOf(catalog, history(r));
+
+    test('ohne Ergebnisse: none', () {
+      expect(of([]), ContentOrigin.none);
+    });
+    test('nur X, auch mehrfach: X', () {
+      expect(
+        of([('x__a', error: false), ('x__a', error: false)]),
+        const ContentOrigin.server('X'),
+      );
+    });
+    test('X und Y, Websuche, Fehler, fremder Name: unbekannt', () {
+      expect(
+        of([('x__a', error: false), ('y__a', error: false)]),
+        ContentOrigin.unknown,
+      );
+      expect(
+        of([('x__a', error: false), ('web__search', error: false)]),
+        ContentOrigin.unknown,
+      );
+      expect(of([('x__a', error: true)]), ContentOrigin.unknown);
+      expect(of([('gibt__es_nicht', error: false)]), ContentOrigin.unknown);
+    });
+    test('Anbieter-Block (Websuche des Anbieters): unbekannt', () {
+      final h = [
+        ...history([('x__a', error: false)]),
+        Message.assistant([
+          const ProviderBlock(provider: 'anthropic', rawJson: '{}'),
+        ]),
+      ];
+      expect(foreignOriginOf(catalog, h), ContentOrigin.unknown);
+    });
+  });
 }

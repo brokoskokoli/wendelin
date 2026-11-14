@@ -133,7 +133,7 @@ final class ModelCall {
         case ProviderBlockComplete(:final block):
           // Kept in place for the same provider; never text, never spoken.
           // Server-side tool results (web search) are third-party text.
-          _state.untrustedSeen = true;
+          _state.markUntrusted(ContentOrigin.unknown);
           blocks.add(block);
         case ToolCallDelta():
           break; // assembled calls arrive as ToolCallComplete

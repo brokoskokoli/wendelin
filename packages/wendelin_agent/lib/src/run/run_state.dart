@@ -82,6 +82,28 @@ final class RunState {
   /// cannot see what injected text would make the assistant say.
   bool untrustedSeen = false;
 
+  /// Where the untrusted content came from (WP201), merged over history and
+  /// run; a tool of the same MCP server may skip the minimum confirmation.
+  /// Invariant: [untrustedSeen] without a stored origin never means a
+  /// server (see [foreignOriginForTools]).
+  ContentOrigin foreignOrigin = ContentOrigin.none;
+
+  /// [foreignOrigin] as handed to the policy: [ContentOrigin.unknown] when
+  /// untrusted content was seen but no origin is known.
+  ContentOrigin get foreignOriginForTools =>
+      untrustedSeen && foreignOrigin is NoOrigin
+      ? ContentOrigin.unknown
+      : foreignOrigin;
+
+  /// Records untrusted content of [origin] (fail-closed: `none` counts as
+  /// unknown).
+  void markUntrusted(ContentOrigin origin) {
+    untrustedSeen = true;
+    foreignOrigin = foreignOrigin.merge(
+      origin is NoOrigin ? ContentOrigin.unknown : origin,
+    );
+  }
+
   /// Language of the request (for the spoken-text check); `null` = unknown.
   String? language;
 

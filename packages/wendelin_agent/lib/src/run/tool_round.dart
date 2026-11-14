@@ -280,6 +280,7 @@ final class ToolRound {
             tool,
             runner.sessionId,
             foreignContent: _state.untrustedSeen,
+            foreignOrigin: _state.foreignOriginForTools,
           )
         : (tool.risk == RiskLevel.read ? RiskLevel.read : RiskLevel.external);
     return risk == RiskLevel.external;
@@ -302,6 +303,7 @@ final class ToolRound {
       privacyFloor: current.privacyFloor,
       memoryOwner: runner.memoryOwner,
       foreignContentSeen: _state.untrustedSeen,
+      foreignOrigin: _state.foreignOriginForTools,
     );
     await for (final event in runner.invoker.invokeAll(pending, ctx)) {
       switch (event) {
@@ -326,7 +328,14 @@ final class ToolRound {
             isError: outcome.isError,
             content: outcome.content,
           )) {
-            _state.untrustedSeen = true;
+            _state.markUntrusted(
+              originOfUntrustedResult(
+                _privacy.catalog,
+                call.name,
+                isError: outcome.isError,
+                content: outcome.content,
+              ),
+            );
           }
           _state.executed.add((call: call, outcome: outcome));
           _control.emit(

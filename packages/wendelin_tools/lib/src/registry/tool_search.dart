@@ -2,13 +2,16 @@ import 'dart:convert';
 
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../executor/result_shaper.dart';
+
 /// A tool offered by an integration, with its integration (for search).
 typedef CatalogEntry = ({Integration integration, Tool tool});
 
 /// Meta tool `tools__search`, offered instead of all tools once many are
 /// active. Finds tools by words and/or category (integration id), returns
 /// their specs and unlocks them for the session via [unlock].
-final class ToolSearchTool implements Tool, NoNetworkTarget, ResultTrustAware {
+final class ToolSearchTool
+    implements Tool, NoNetworkTarget, ResultTrustAware, ResultOriginAware {
   /// Creates the meta tool over [candidates] (the active tools the current
   /// provider may see, sorted by name).
   ToolSearchTool({
@@ -54,24 +57,64 @@ final class ToolSearchTool implements Tool, NoNetworkTarget, ResultTrustAware {
     // (third parties write those descriptions). Fail-closed: unreadable
     // result, unknown name or unknown origin count as foreign.
     try {
-      final text = content.whereType<TextBlock>().map((b) => b.text).join();
-      final decoded = jsonDecode(text);
+      final decoded = _decode(content);
       if (decoded is! Map || decoded['tools'] is! List) return false;
       final byName = {for (final e in _candidates) e.tool.name: e.tool};
       for (final hit in decoded['tools'] as List) {
         final tool = hit is Map ? byName[hit['name']] : null;
         if (tool == null) return false;
-        final safe = switch (tool) {
-          ContentTrustAware(:final mayContainUntrustedContent) =>
-            !mayContainUntrustedContent,
-          TrustedContentSource() || NoNetworkTarget() => true,
-          _ => _builtInNetworkTools.contains(tool.name),
-        };
+        final safe = _isSafe(tool);
         if (!safe) return false;
       }
       return true;
     } on FormatException {
       return false;
+    }
+  }
+
+  /// The result JSON; the executor's `<tool_data>` envelope is taken off
+  /// first (the stored history holds the wrapped text). Throws
+  /// [FormatException] for anything else (also text cut by the shaper).
+  static Object? _decode(List<ContentBlock> content) {
+    var text = content.whereType<TextBlock>().map((b) => b.text).join();
+    final open = '${ResultShaper.openTag(toolName)}\n';
+    const close = '\n${ResultShaper.closeTag}';
+    if (text.startsWith(open) && text.endsWith(close)) {
+      text = text.substring(open.length, text.length - close.length);
+    }
+    return jsonDecode(text);
+  }
+
+  bool _isSafe(Tool tool) => switch (tool) {
+    ContentTrustAware(:final mayContainUntrustedContent) =>
+      !mayContainUntrustedContent,
+    TrustedContentSource() || NoNetworkTarget() => true,
+    _ => _builtInNetworkTools.contains(tool.name),
+  };
+
+  @override
+  ContentOrigin resultOrigin(List<ContentBlock> content) {
+    // Same hit analysis as [isResultTrusted]; every foreign hit contributes
+    // the origin of its tool (an MCP server id, else unknown). Only hits of
+    // exactly one server stay that server; mixed, unreadable or unknown
+    // results (also tools no longer in the candidates when the stored
+    // history is read again) count as unknown (fail-closed).
+    try {
+      final decoded = _decode(content);
+      if (decoded is! Map || decoded['tools'] is! List) {
+        return ContentOrigin.unknown;
+      }
+      final byName = {for (final e in _candidates) e.tool.name: e.tool};
+      var origin = ContentOrigin.none;
+      for (final hit in decoded['tools'] as List) {
+        final tool = hit is Map ? byName[hit['name']] : null;
+        if (tool == null) return ContentOrigin.unknown;
+        if (_isSafe(tool)) continue;
+        origin = origin.merge(contentOriginOf(tool));
+      }
+      return origin;
+    } on FormatException {
+      return ContentOrigin.unknown;
     }
   }
 
