@@ -1,5 +1,5 @@
-// WP198 (Analyse): Startwege, auf denen Ton für die Anfrage ankommt, aber
-// `micLive` („Ich höre zu“) nicht gesetzt wird. Absichtlich ROT bis zum Fix.
+// WP198: „Ich höre zu“ (`micLive`) auf jedem Startweg, auf dem Ton für die
+// Anfrage ankommt (Vorlauf des Weckworts), und nicht ohne Ton.
 
 import 'dart:async';
 import 'dart:typed_data';
@@ -11,6 +11,7 @@ import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin/voice/voice_controller.dart';
+import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
@@ -43,11 +44,11 @@ final class GatedInput implements AudioInput {
   Future<void> stop() async => _running = false;
 }
 
-/// Mikrofon, das schon läuft (jemand anderes hat es geöffnet) und jedem
-/// neuen Zuhörer Ton liefert.
-final class AlreadyRunningInput implements AudioInput {
-  int delivered = 0;
+/// Mikrofon, das schon läuft (ein anderer Zuhörer hält es): wie alle echten
+/// Eingänge wirft `start` dann busy.
+final class BusyInput implements AudioInput {
   int starts = 0;
+  int stops = 0;
 
   @override
   bool get isRunning => true;
@@ -55,20 +56,27 @@ final class AlreadyRunningInput implements AudioInput {
   @override
   Stream<Int16List> start() {
     starts++;
-    return Stream.periodic(const Duration(milliseconds: 30), (_) {
-      delivered++;
-      return Int16List(480)..fillRange(0, 480, 5000);
-    });
+    throw const VoiceException(VoiceErrorKind.busy, 'busy');
   }
 
   @override
-  Future<void> stop() async {}
+  Future<void> stop() async => stops++;
 }
 
 void main() {
   late ProviderContainer c;
+  final lines = <String>[];
+  late void Function(String) savedSink;
 
-  tearDown(() => c.dispose());
+  setUp(() {
+    lines.clear();
+    savedSink = voiceLogSink;
+    voiceLogSink = lines.add;
+  });
+  tearDown(() {
+    voiceLogSink = savedSink;
+    c.dispose();
+  });
 
   VoiceController voice() => c.read(voiceControllerProvider.notifier);
   VoiceUiState ui() => c.read(voiceControllerProvider);
@@ -102,7 +110,7 @@ void main() {
       ..read(agentControllerProvider);
   }
 
-  group('WP198 Startwege: Ton kommt an, micLive fehlt', () {
+  group('WP198 Startwege: Ton kommt an -> „Ich höre zu“', () {
     test('Weckwort-Übergabe: Dienst nimmt auf (keepOpen), das App-Mikrofon '
         'liefert erst nach Dienst-Ende -> „Ich höre zu“ schon beim Laden', () {
       fakeAsync((async) {
@@ -147,16 +155,67 @@ void main() {
       });
     });
 
-    test('Mikrofon läuft schon (prime kehrt bei isRunning zurück): Ton wird '
-        'beim Laden weder gepuffert noch gemeldet', () {
+    test('Vorlauf, danach erster App-Block: mic-ready wird weiter gemessen und '
+        'der Dienst beendet', () {
       fakeAsync((async) {
-        final mic = AlreadyRunningInput();
+        final mic = GatedInput();
+        setUpContainer(mic);
+        var finished = 0;
+        final pre = WakePreRoll(
+          pcm: Int16List(1600)..fillRange(0, 1600, 3),
+          wakeEnd: 0,
+          finish: () async {
+            finished++;
+            return (pcm: Int16List(0), lastSampleAtMs: null);
+          },
+        );
+        unawaited(
+          voice().start(TriggerKind.wakeWord, takePreRoll: () async => pre),
+        );
+        async.elapse(const Duration(seconds: 1));
+        expect(ui().micLive, isTrue, reason: 'Vorlauf');
+        expect(finished, 0, reason: 'noch kein App-Block');
+        mic.open();
+        async.elapse(const Duration(milliseconds: 100));
+        expect(finished, 1, reason: 'erster App-Block beendet den Dienst');
+        async.elapse(const Duration(seconds: 3));
+        expect(
+          lines.where((l) => l.contains(' mic-ready ')),
+          hasLength(1),
+          reason: lines.join(' | '),
+        );
+      });
+    });
+
+    test(
+      'Vorlauf ohne Ton (leer), App-Mikrofon still -> bleibt „Moment …“',
+      () {
+        fakeAsync((async) {
+          final mic = GatedInput();
+          setUpContainer(mic);
+          final pre = WakePreRoll(pcm: Int16List(0), wakeEnd: 0);
+          unawaited(
+            voice().start(TriggerKind.wakeWord, takePreRoll: () async => pre),
+          );
+          async.elapse(const Duration(seconds: 1));
+          expect(ui().preparing, isTrue);
+          expect(ui().micLive, isFalse);
+        });
+      },
+    );
+
+    test('Mikrofon gehört einem anderen Zuhörer: prime() öffnet nichts und '
+        'beendet es nicht, micLive bleibt false', () {
+      fakeAsync((async) {
+        final mic = BusyInput();
         setUpContainer(mic);
         unawaited(voice().start(TriggerKind.assistant));
         async.elapse(const Duration(seconds: 1));
         expect(ui().preparing, isTrue);
-        expect(mic.starts, 1, reason: 'prime() hat das Mikrofon geöffnet');
-        expect(ui().micLive, isTrue, reason: 'Ton liegt an');
+        expect(mic.starts, 0, reason: 'prime() lässt es in Ruhe');
+        expect(mic.stops, 0, reason: 'fremdes Mikrofon nicht beendet');
+        expect(ui().micLive, isFalse);
+        expect(ui().error, isNull);
       });
     });
   });
