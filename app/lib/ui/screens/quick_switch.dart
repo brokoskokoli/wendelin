@@ -9,12 +9,11 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
 
-/// How long the provider chip must be held until the quick switch opens.
-const quickSwitchHold = Duration(seconds: 2);
-
-/// Holding the chip: after the long-press time it is marked with a short
-/// vibration (HapticFeedback follows the system setting), after
-/// [quickSwitchHold] [onOpen] runs. Letting go earlier cancels (WP94).
+/// Holding the chip for the platform long-press time ([kLongPressTimeout])
+/// opens the switch: a short vibration (HapticFeedback follows the system
+/// setting) and [onOpen] run together, there is no further waiting stage.
+/// Letting go earlier or moving more than [kTouchSlop] cancels; letting go
+/// after opening does nothing (WP94).
 ///
 /// For screen readers a custom action opens [onOpen] directly.
 class QuickSwitchTarget extends StatefulWidget {
@@ -32,30 +31,25 @@ class QuickSwitchTarget extends StatefulWidget {
 }
 
 class _QuickSwitchTargetState extends State<QuickSwitchTarget> {
-  Timer? _markTimer;
-  Timer? _openTimer;
+  Timer? _timer;
   Offset? _down;
-  bool _marked = false;
 
   void _cancel() {
-    _markTimer?.cancel();
-    _openTimer?.cancel();
-    _markTimer = _openTimer = null;
+    _timer?.cancel();
+    _timer = null;
     _down = null;
-    if (_marked) setState(() => _marked = false);
   }
 
   void _start(PointerDownEvent e) {
     if (widget.onOpen == null) return;
     _cancel();
     _down = e.position;
-    _markTimer = Timer(kLongPressTimeout, () {
-      unawaited(HapticFeedback.mediumImpact());
-      setState(() => _marked = true);
-    });
-    _openTimer = Timer(quickSwitchHold, () {
+    _timer = Timer(kLongPressTimeout, () {
       _cancel();
-      widget.onOpen?.call();
+      final open = widget.onOpen;
+      if (open == null) return;
+      unawaited(HapticFeedback.mediumImpact());
+      open();
     });
   }
 
@@ -67,8 +61,7 @@ class _QuickSwitchTargetState extends State<QuickSwitchTarget> {
 
   @override
   void dispose() {
-    _markTimer?.cancel();
-    _openTimer?.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -85,24 +78,14 @@ class _QuickSwitchTargetState extends State<QuickSwitchTarget> {
       onPointerUp: (_) => _cancel(),
       onPointerCancel: (_) => _cancel(),
       child: Semantics(
+        key: const ValueKey('quickSwitchTarget'),
         container: true,
         onLongPressHint: open == null ? null : label,
         onLongPress: open,
         customSemanticsActions: open == null
             ? null
             : {CustomSemanticsAction(label: label): open},
-        child: DecoratedBox(
-          key: const ValueKey('quickSwitchMark'),
-          position: DecorationPosition.foreground,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(WRadius.chip),
-            border: Border.all(
-              color: _marked ? WColors.accentLight : WColors.transparent,
-              width: WSpace.xxs,
-            ),
-          ),
-          child: widget.child,
-        ),
+        child: widget.child,
       ),
     );
   }

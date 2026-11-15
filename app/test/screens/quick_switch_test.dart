@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart' show kLongPressTimeout, kTouchSlop;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -10,7 +11,6 @@ import 'package:wendelin/agent/conversation_state.dart';
 import 'package:wendelin/di/profiles.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
-import 'package:wendelin/ui/screens/quick_switch.dart';
 import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin_voice/testing.dart';
@@ -27,7 +27,7 @@ const _sheetTitle = 'Agent wechseln';
 
 Future<void> _openSheet(WidgetTester tester) async {
   final g = await tester.startGesture(tester.getCenter(_chip));
-  await tester.pump(quickSwitchHold);
+  await tester.pump(kLongPressTimeout);
   await settle(tester);
   await g.up();
 }
@@ -71,63 +71,80 @@ Future<(ProviderContainer, List<String>)> _pump(
 
 Finder get _chip => find.text('Profil a');
 
-Color? _markColor(WidgetTester tester) {
-  final box = tester.widget<DecoratedBox>(
-    find.byKey(const ValueKey('quickSwitchMark')),
-  );
-  return ((box.decoration as BoxDecoration).border! as Border).top.color;
-}
+Finder get _target => find.byKey(const ValueKey('quickSwitchTarget'));
+
+final _justBefore = kLongPressTimeout - const Duration(milliseconds: 1);
 
 bool _hasHistory(ProviderContainer c) =>
     c.read(agentControllerProvider).entries.any((e) => e is! SessionStartEntry);
 
 void main() {
-  testWidgets('Halten markiert mit Vibration, nach 2 s öffnet das Popup', (
+  testWidgets('Halten knapp unter der Long-Press-Dauer: nichts passiert', (
     tester,
   ) async {
     final (_, haptics) = await _pump(tester);
     final g = await tester.startGesture(tester.getCenter(_chip));
-    await tester.pump(const Duration(milliseconds: 200));
-    expect(haptics, isEmpty);
-    expect(_markColor(tester), Colors.transparent);
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(haptics, ['HapticFeedbackType.mediumImpact']);
-    expect(_markColor(tester), isNot(Colors.transparent));
-    await tester.pump(const Duration(milliseconds: 1399));
-    expect(find.text(_sheetTitle), findsNothing, reason: '1999 ms');
-    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(_justBefore);
     await tester.pump();
-    expect(find.text(_sheetTitle), findsOneWidget, reason: '2000 ms');
+    expect(haptics, isEmpty);
+    expect(find.text(_sheetTitle), findsNothing);
+    await g.up();
+  });
+
+  testWidgets('Langer Druck öffnet das Popup zusammen mit der Vibration', (
+    tester,
+  ) async {
+    final (_, haptics) = await _pump(tester);
+    final g = await tester.startGesture(tester.getCenter(_chip));
+    await tester.pump(kLongPressTimeout);
+    await tester.pump();
+    expect(haptics, ['HapticFeedbackType.mediumImpact']);
+    expect(find.text(_sheetTitle), findsOneWidget);
+    await g.up();
     await settle(tester);
+    expect(haptics, hasLength(1));
     expect(find.text(_sheetTitle), findsOneWidget);
     expect(find.text('Profil a'), findsWidgets);
     expect(find.text('Profil b'), findsOneWidget);
     expect(find.text('Profil c'), findsNothing);
     expect(find.byType(CheckStatusIcon), findsOneWidget);
-    await g.up();
   });
 
-  testWidgets('Loslassen vor 2 s bricht ab: keine Markierung, kein Popup', (
+  testWidgets('Weiter halten und loslassen lässt das Popup offen', (
     tester,
   ) async {
-    final (c, _) = await _pump(tester);
+    final (c, haptics) = await _pump(tester);
     final g = await tester.startGesture(tester.getCenter(_chip));
-    await tester.pump(const Duration(milliseconds: 1200));
-    expect(_markColor(tester), isNot(Colors.transparent));
+    await tester.pump(kLongPressTimeout);
+    await settle(tester);
+    await tester.pump(const Duration(seconds: 2));
+    await g.up();
+    await settle(tester);
+    expect(find.text(_sheetTitle), findsOneWidget);
+    expect(haptics, hasLength(1));
+    expect((await c.read(profilesProvider.future)).defaultId, 'a');
+    expect(_hasHistory(c), isTrue);
+  });
+
+  testWidgets('Loslassen vor der Long-Press-Dauer bricht ab', (tester) async {
+    final (c, haptics) = await _pump(tester);
+    final g = await tester.startGesture(tester.getCenter(_chip));
+    await tester.pump(const Duration(milliseconds: 300));
     await g.up();
     await tester.pump();
-    expect(_markColor(tester), Colors.transparent);
     await tester.pump(const Duration(seconds: 3));
+    expect(haptics, isEmpty);
     expect(find.text(_sheetTitle), findsNothing);
     expect(_hasHistory(c), isTrue);
   });
 
-  testWidgets('Wegziehen bricht ab', (tester) async {
-    await _pump(tester);
+  testWidgets('Wegziehen vor der Long-Press-Dauer bricht ab', (tester) async {
+    final (_, haptics) = await _pump(tester);
     final g = await tester.startGesture(tester.getCenter(_chip));
-    await tester.pump(const Duration(milliseconds: 700));
-    await g.moveBy(const Offset(0, 80));
+    await tester.pump(const Duration(milliseconds: 300));
+    await g.moveBy(const Offset(0, kTouchSlop + 1));
     await tester.pump(const Duration(seconds: 3));
+    expect(haptics, isEmpty);
     expect(find.text(_sheetTitle), findsNothing);
     await g.up();
   });
@@ -135,10 +152,7 @@ void main() {
   testWidgets('Auswahl setzt den Standard und leert den Chat', (tester) async {
     final (c, _) = await _pump(tester);
     expect(_hasHistory(c), isTrue);
-    final g = await tester.startGesture(tester.getCenter(_chip));
-    await tester.pump(quickSwitchHold);
-    await settle(tester);
-    await g.up();
+    await _openSheet(tester);
     await tester.tap(find.text('Profil b'));
     await settle(tester);
     expect((await c.read(profilesProvider.future)).defaultId, 'b');
@@ -149,10 +163,7 @@ void main() {
 
   testWidgets('Auswahl des aktuellen Agenten ändert nichts', (tester) async {
     final (c, _) = await _pump(tester);
-    final g = await tester.startGesture(tester.getCenter(_chip));
-    await tester.pump(quickSwitchHold);
-    await settle(tester);
-    await g.up();
+    await _openSheet(tester);
     await tester.tap(find.text('Profil a').last);
     await settle(tester);
     expect((await c.read(profilesProvider.future)).defaultId, 'a');
@@ -161,10 +172,7 @@ void main() {
 
   testWidgets('Schließen ohne Auswahl ändert nichts', (tester) async {
     final (c, _) = await _pump(tester);
-    final g = await tester.startGesture(tester.getCenter(_chip));
-    await tester.pump(quickSwitchHold);
-    await settle(tester);
-    await g.up();
+    await _openSheet(tester);
     await tester.tapAt(const Offset(195, 40));
     await settle(tester);
     expect(find.text(_sheetTitle), findsNothing);
@@ -191,12 +199,9 @@ void main() {
     final g = await tester.startGesture(tester.getCenter(_chip));
     await tester.pump(const Duration(seconds: 3));
     expect(haptics, isEmpty);
-    expect(_markColor(tester), Colors.transparent);
     expect(find.text(_sheetTitle), findsNothing);
     await g.up();
-    final data = tester
-        .getSemantics(find.byKey(const ValueKey('quickSwitchMark')))
-        .getSemanticsData();
+    final data = tester.getSemantics(_target).getSemanticsData();
     expect(data.customSemanticsActionIds, anyOf(isNull, isEmpty));
     expect(data.hasAction(SemanticsAction.longPress), isFalse);
     handle.dispose();
@@ -205,9 +210,7 @@ void main() {
   testWidgets('Semantics-Aktion öffnet das Popup direkt', (tester) async {
     final handle = tester.ensureSemantics();
     await _pump(tester);
-    final node = tester.getSemantics(
-      find.byKey(const ValueKey('quickSwitchMark')),
-    );
+    final node = tester.getSemantics(_target);
     final ids = node.getSemanticsData().customSemanticsActionIds!;
     final id = ids.firstWhere(
       (i) => CustomSemanticsAction.getAction(i)?.label == _sheetTitle,
@@ -272,7 +275,7 @@ void main() {
   ) async {
     await _pump(tester);
     await tester.startGesture(tester.getCenter(_chip));
-    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 3));
     expect(tester.takeException(), isNull);

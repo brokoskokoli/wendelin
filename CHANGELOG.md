@@ -7,6 +7,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- **Agent quick switch opens on the long press** – holding the provider chip on the main screen opens "Agent wechseln" together with the vibration after the usual Android long-press time; the extra wait up to 2 s and the blue frame are gone (K55 / WP94).
+
 ## [0.1.9] - 2026-11-14
 
 "Ohne Nachfrage" for MCP tools works again after the server's own results and errors, and failed calls are no longer repeated unchanged (WP200, WP201, WP203).
