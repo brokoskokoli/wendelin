@@ -6,6 +6,7 @@ import 'claude_hooks_self_test.dart';
 import 'doc_check_self_test.dart';
 import 'git_guards_self_test.dart';
 import 'latency_report_self_test.dart';
+import 'merge_pr_self_test.dart';
 import 'privacy_self_test.dart';
 import 'ratchet_self_test.dart';
 import 'self_check.dart';
@@ -17,6 +18,7 @@ Future<void> guardChecks(SelfCheck t) async {
   kotlinReportsClearChecks(t);
   ratchetChecks(t);
   gitGuardsChecks(t);
+  mergePrChecks(t);
   privacyChecks(t);
   latencyReportChecks(t);
   await claudeHooksChecks(t);
