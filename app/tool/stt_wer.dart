@@ -7,8 +7,8 @@
 //
 // <dir> enthält je Modell einen Ordner mit den Dateien aus dem Katalog
 // (z. B. <dir>/whisper-base/base-encoder.int8.onnx). Die Modelle werden
-// nicht eingecheckt. Ausgabe: Markdown-Tabellen auf stdout (für
-// docs/notes/stt-wer-<datum>.md), je Satz die Erkennung auf stderr.
+// nicht eingecheckt. Ausgabe: Markdown-Tabellen auf stdout, je Satz die
+// Erkennung auf stderr.
 //
 // Jede Aufnahme bekommt die Stille, die der Endpointer mitliefert (300 ms
 // Pre-Roll, 800 ms Endstille). Gemessen wird über `WhisperSpeechToText` (dieselbe Bereinigung wie in der

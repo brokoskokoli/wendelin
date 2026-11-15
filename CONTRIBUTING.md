@@ -29,7 +29,7 @@ The full gate runs in CI before anything is merged.
 | `packages/` | Pure Dart packages (no Flutter import); device access only through ports |
 | `native/attest/` | Rust module for attestation checks |
 | `tool/` | Gate, test and release scripts |
-| `docs/` | Architecture, engineering rules, work packages, decisions |
+| `docs/` | Architecture, engineering rules, decisions |
 
 ## Coding conventions
 

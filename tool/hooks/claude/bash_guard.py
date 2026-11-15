@@ -5,7 +5,7 @@ Gesperrt: --no-verify (und commit -n), git push auf main ohne WENDELIN_PUSH_MAIN
 pkill/killall, git -c user.*/core.hooksPath, git config user.*/core.hooksPath,
 GIT_AUTHOR_*/GIT_COMMITTER_*-Zuweisungen. Erkennt Ketten, env/export, Quotes,
 bash -c/eval, git -C, HEAD:main, refs/heads/main, +main. Quelle der Regeln:
-docs/agents/common.md. Fail-open bei Fehlern im Hook selbst.
+AGENTS.md („Git, Identität, Secrets“). Fail-open bei Fehlern im Hook selbst.
 """
 import json
 import os
@@ -100,7 +100,7 @@ def check_git(tokens, state, cwd):
         if t == "-c" and i + 1 < n:
             key = tokens[i + 1].split("=", 1)[0]
             if BAD_CFG.match(key):
-                raise Deny("git -c %s: Identität/Hooks nicht per Override ändern (docs/agents/common.md)." % key)
+                raise Deny("git -c %s: Identität/Hooks nicht per Override ändern (AGENTS.md)." % key)
             i += 2
         elif t.startswith("--config-env=") or t == "--config-env":
             key = (t.split("=", 1)[1] if "=" in t else (tokens[i + 1] if i + 1 < n else "")).split("=", 1)[0]
@@ -124,18 +124,18 @@ def check_git(tokens, state, cwd):
         o = a.split("=", 1)[0]
         # Git akzeptiert eindeutige Abkürzungen langer Optionen (--no-v, --no-veri …).
         if len(o) >= 6 and "--no-verify".startswith(o):
-            raise Deny("--no-verify ist verboten (Hooks sind verbindlich, docs/agents/common.md).")
+            raise Deny("--no-verify ist verboten (Hooks sind verbindlich, AGENTS.md).")
     if sub == "commit":
         check_commit(args)
     elif sub == "config":
         keys = [a for a in args if not a.startswith("-")]
         writes = len(keys) >= 2 or any(a in ("--unset", "--unset-all", "--replace-all", "--add") for a in args)
         if keys and writes and BAD_CFG.match(keys[0]):
-            raise Deny("git config %s: Identität/Hooks nicht ändern (docs/agents/common.md)." % keys[0])
+            raise Deny("git config %s: Identität/Hooks nicht ändern (AGENTS.md)." % keys[0])
     elif sub == "push":
         if state.get("WENDELIN_PUSH_MAIN") != "1" and targets_main(args, gcwd):
-            raise Deny("Push auf main nur für Orchestrator/Integrator mit WENDELIN_PUSH_MAIN=1 "
-                       "(nach tool/merge_wp.sh bzw. reinem Doku-Commit). Arbeitsbranch: git push origin wp/<nr>-<slug>.")
+            raise Deny("Push auf main nur mit WENDELIN_PUSH_MAIN=1 und nur für reine Doku-Commits; "
+                       "Code kommt über einen Pull Request. Arbeitsbranch: git push origin <branch>.")
 
 
 def check_cmd(tokens, state, cwd, depth=0):
@@ -148,7 +148,7 @@ def check_cmd(tokens, state, cwd, depth=0):
         m = ASSIGN.match(t)
         if m:
             if IDENT_VAR.match(m.group(1)):
-                raise Deny("%s setzen ist verboten (Identität, docs/agents/common.md)." % m.group(1))
+                raise Deny("%s setzen ist verboten (Identität, AGENTS.md)." % m.group(1))
             assigns[m.group(1)] = m.group(2)
             i += 1
         elif t in KEYWORDS:
@@ -182,7 +182,7 @@ def check_cmd(tokens, state, cwd, depth=0):
             if a in EXEC_FLAGS:
                 check_cmd(rest[k + 1:], local, cwd, depth + 1)
     if prog in ("pkill", "killall"):
-        raise Deny("%s ist verboten (fremde Prozesse nicht anfassen, docs/agents/common.md)." % prog)
+        raise Deny("%s ist verboten (fremde Prozesse nicht anfassen, AGENTS.md)." % prog)
     if prog == "git":
         check_git(rest, local, cwd)
     elif prog in SHELLS or prog == "eval":

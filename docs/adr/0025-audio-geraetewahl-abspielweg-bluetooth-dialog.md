@@ -17,5 +17,5 @@ Der Maintainer will Mikrofon und Ausgabe wählen (Standard: System). Bisher konn
 ## Folgen
 - Standard „System“ ohne Verhaltens- oder Latenzänderung und ohne neue Berechtigungsabfrage.
 - Kabel/USB gelten auch fürs Weckwort; Bluetooth nur im Dialog.
-- Offen bis zum Gerätetest (`docs/testing/m5/wp188.md`): Playback-Head nach Geräteverlust (Timeout greift nach dauer + 5 s), VOICE_RECOGNITION mit SCO im Modus 3, Echounterdrückung, Latenz, kurze Lücke am Dialogende, `MODE_STATIC` bei sehr langen Clips (Rückfall auf System ohne Log).
+- Offen bis zum Gerätetest (`docs/testing/m5/wp188.md` (nur im Git-Verlauf)): Playback-Head nach Geräteverlust (Timeout greift nach dauer + 5 s), VOICE_RECOGNITION mit SCO im Modus 3, Echounterdrückung, Latenz, kurze Lücke am Dialogende, `MODE_STATIC` bei sehr langen Clips (Rückfall auf System ohne Log).
 - Der Dart-Fallback ohne Dienst (`record`) kennt weder Mikrofonwahl noch Bluetooth-Dialog.

@@ -11,7 +11,7 @@ import 'speech_model_catalog.dart';
 @immutable
 final class VoiceSettings {
   /// Creates the settings; defaults calibrated in
-  /// `docs/notes/stt-wer-2026-10-13.md` (whisper-small with a fixed
+  /// `docs/notes/stt-wer-2026-10-13.md`, git history only (whisper-small with a fixed
   /// language since WP33; see the app's `VoiceSettingsNotifier` for base).
   const VoiceSettings({
     this.sttModel = 'whisper-small',

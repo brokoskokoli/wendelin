@@ -1,9 +1,9 @@
 // Gerätetest WP92b (Personen: Anrede, Gedächtnis, Agent) mit synthetischen
 // Stimmen. Echtes CAM++-Modell (wie speaker_e2e_test.dart, Voraussetzungen
-// siehe dort und docs/testing/m5/wp92a.md), echter Controller, Werkzeuge und
+// siehe dort), echter Controller, Werkzeuge und
 // Speicher; LLM-Provider sind Fakes (keine Netzkosten, keine Keys).
 //
-//   handoff/wp92a-e2e/prepare.sh emulator-5554
+//   <lokales Vorbereitungsskript> emulator-5554
 //   WENDELIN_WP92A_DIR=wp92a \
 //     tool/e2e_android.sh integration_test/speaker_persons_e2e_test.dart
 

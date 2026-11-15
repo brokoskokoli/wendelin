@@ -15,7 +15,7 @@ Mikrofonrauschen 25 dB). Negativ-Mengen: "neg" (Systemstimmen-Sprache) und "tv" 
 Stufe 2 spiegelt matchesWakeWord aus kws_measure.py in zwei Regeln: "d1" (Abstand 1) und "app" (App: Abstand 2,
 Zwei-Aenderungs-Regel nur fuer ein Wort, Zweiwort-Treffer nie vor Funktionswort); Spalte "match" in den Tabellen.
 WP111 (--compare): Vergleich „Wendelin“ gegen „Hey Wendelin“ und mehrerer Stufe-1-Programme (Vorlagen T, openWakeWord-Modell M, microWakeWord W,
-sherpa-onnx-KWS K) auf denselben Audiodaten, siehe compare_main und docs/notes/wake-word-compare.md.
+sherpa-onnx-KWS K) auf denselben Audiodaten, siehe compare_main und docs/notes/wake-word-compare.md (nur im Git-Verlauf).
 Basis des Boosts ist "parakeet-bs" (modified_beam_search ohne Hotwords), nicht das greedy-"parakeet". Zwischendaten nur unter
 ~/wendelin-models/kws/wp106/work. Voraussetzung: FLEURS-dev entpackt nach work/fleurs, CAM++ nach wp106/models.
 """

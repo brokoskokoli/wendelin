@@ -35,9 +35,9 @@ void regenGeneratedChecks(SelfCheck t) {
     t.eq(run(['app/lib/l10n/app_en.arb']), [
       'run tool/l10n_merge.dart',
     ], 'ARB: nur l10n');
-    t.eq(run(['docs/testing/m5/README.md']), [
+    t.eq(run(['docs/architecture/generated/ports.md']), [
       'run tool/gen_docs.dart',
-    ], 'm5-Index: nur gen_docs');
+    ], 'erzeugte Doku: nur gen_docs');
     final r = Process.runSync(
       'sh',
       [script, 'lib/x.dart'],

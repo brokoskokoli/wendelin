@@ -1,5 +1,4 @@
 @AGENTS.md
 
 ## Nur für Claude Code
-- Rollen-Agenten liegen in `.claude/agents/` (`wendelin-coder`, `wendelin-reviewer`, `wendelin-e2e`); der Orchestrator-Skill ist `project-supervisor` (Arbeitsorte in `PROJECT.md`).
-- Fragen an den Maintainer stellst du per AskUserQuestion (Buttons), auch in Paket-Sitzungen.
+- Die Claude-Code-Hooks in `.claude/settings.json` (`tool/hooks/claude/bash_guard.py`) sperren verbotene Befehle (`--no-verify`, Push auf `main`, `pkill`, Identitäts-Overrides); nicht umgehen.

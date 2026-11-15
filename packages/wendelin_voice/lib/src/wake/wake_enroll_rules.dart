@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'wake_math.dart';
 
 /// Limits of the content check of the enrollment (WP140, WP142), measured on
-/// real calls (see `docs/testing/m5/wp140.md`, `wp142.md`); change them here
+/// real calls (device tests of WP140 and WP142); change them here
 /// only.
 abstract final class WakeEnrollRules {
   /// A recording passes the content check by the classifier alone when its

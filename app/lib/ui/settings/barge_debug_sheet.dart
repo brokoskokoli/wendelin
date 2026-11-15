@@ -38,8 +38,9 @@ final bargeVariantActiveProvider = FutureProvider<bool>((ref) async {
 
 /// Opens the sheet „Erweitert“ (WP80, was hidden behind a long press in
 /// WP72): button next to „Unterbrechen während der Antwort“. Both choices
-/// apply to the next spoken answer; `docs/testing/m4-device.md` 11.6
-/// explains how to read the `barge-diag` lines for each variant.
+/// apply to the next spoken answer. The former device checklist
+/// `docs/testing/m4-device.md` 11.6 (git history only) explains how to read
+/// the `barge-diag` lines for each variant.
 Future<void> showBargeDebugSheet(BuildContext context) =>
     showModalBottomSheet<void>(
       context: context,

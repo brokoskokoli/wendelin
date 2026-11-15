@@ -19,7 +19,8 @@ import 'barge_meter.dart';
 /// silent (barge-in by a tap on the microphone still works).
 /// WP113: with the check by the big recognizer (stage 2) stage 1 only has to
 /// find a candidate, so its thresholds lie below the learned ones. See
-/// `docs/notes/barge-stop-verify.md`. (WP134: the „Stopp“ rules were removed.)
+/// `docs/notes/barge-stop-verify.md` (git history only). (WP134: the „Stopp“
+/// rules were removed.)
 const candidateWakeMargin = -0.05;
 
 /// Lowest stage 1 threshold with stage 2 (WP134). A calibrated template

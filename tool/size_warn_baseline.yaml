@@ -83,7 +83,7 @@ packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline._answ
 packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline._run: 90
 packages/wendelin_voice/test/voice_pipeline_test.dart: 1493
 tool/check_deps.dart#main: 89
-tool/self_test.dart: 777
+tool/self_test.dart: 775
 tool/self_test.dart#_depsAndGit: 113
 tool/self_test.dart#_gateRunRed: 95
 tool/self_test.dart#_gateRust: 130
@@ -91,7 +91,7 @@ tool/src/channel_check.dart: 712
 tool/src/channel_check.dart#checkChannels: 108
 tool/src/channel_self_test.dart#channelArgChecks: 137
 tool/src/channel_self_test.dart#channelChecks: 83
-tool/src/doc_check_self_test.dart#docCheckChecks: 109
+tool/src/doc_check_self_test.dart#docCheckChecks: 100
 tool/src/gate_cache.dart#sha256Hex: 124
 tool/src/gate_cache_self_test.dart: 693
 tool/src/gate_cache_self_test.dart#_attestScript: 122

@@ -22,7 +22,7 @@ app/test/**/failures/
 __pycache__/
 *.pyc
 
-# Lokales Startskript der Orchestrator-Sitzung
+# Lokales Startskript (nicht im Repo)
 start-wendelin-coding.sh
 
 # Signierschlüssel nie ins Repo (WP131); Beispieldatei key.properties.example bleibt

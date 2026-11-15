@@ -73,7 +73,7 @@ download() {
   [ -f "$D/dl.done" ] && return 0
   mkdir -p "$D/oww" "$D/tatoeba"
   [ -e "$D/oww/melspectrogram.onnx" ] || cp "$B/dl/oww/"*.onnx "$D/oww/"      # Apache-2.0
-  # Stimmen: Ordner v-<name>/m.onnx(+.json), Lizenzen siehe docs/notes/wake-word-v8-licenses.md (pavoque/NC ausgeschlossen)
+  # Stimmen: Ordner v-<name>/m.onnx(+.json), Lizenzen: Attribution in WakeClassifierCatalog (pavoque/NC ausgeschlossen)
   for v in thorsten-low:thorsten/low/de_DE-thorsten-low thorsten-medium:thorsten/medium/de_DE-thorsten-medium \
            thorsten-high:thorsten/high/de_DE-thorsten-high emo:thorsten_emotional/medium/de_DE-thorsten_emotional-medium \
            kerstin:kerstin/low/de_DE-kerstin-low mls:mls/medium/de_DE-mls-medium eva:eva_k/x_low/de_DE-eva_k-x_low \

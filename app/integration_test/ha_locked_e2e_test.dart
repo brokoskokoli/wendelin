@@ -8,7 +8,7 @@
 // Läuft mit `tool/e2e_android.sh integration_test/ha_locked_e2e_test.dart`:
 // das Skript startet den Fake-HA für jede Datei `ha_*e2e_test.dart` und
 // übergibt HA_URL/HA_TOKEN. Bisher nur `flutter analyze`d; der Emulatorlauf
-// steht aus (E2E-Agent).
+// steht aus.
 //
 // L3 (zweiter Test): dieselbe Anfrage mit der Stimme aus der Sprechererkennung
 // (`FakeSpeakerRecognizer`, die Eingabe entsteht wie in der Pipeline aus

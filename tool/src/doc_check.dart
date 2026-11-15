@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'doc_idents.dart';
 import 'doc_paths.dart';
-import 'doc_stand.dart';
 import 'gen_docs.dart';
 import 'ratchet.dart';
 
@@ -15,10 +14,7 @@ const checkedDocs = [
   'docs/ARCHITECTURE.md',
   'docs/ENGINEERING.md',
   'docs/RELEASE.md',
-  'PROJECT.md',
   'Voice Agent App – Gesamtkonzept.md',
-  'docs/work-packages/README.md',
-  'docs/work-packages/REVIEW.md',
   'packages/wendelin_core/README.md',
   'packages/wendelin_providers/README.md',
   'packages/wendelin_tools/README.md',
@@ -36,18 +32,11 @@ DocCheck checkDocs(List<String> files, {String root = '.'}) {
   final index = RepoIndex(files);
   final errors = <String>[];
   var count = 0;
-  // Bereichsdateien der Architekturkarte, Gerätetests und Rollen-Briefings
-  // (docs/agents/, .claude/agents/) werden mitgeprüft.
+  // Bereichsdateien der Architekturkarte werden mitgeprüft.
   final docsToCheck = [
     ...checkedDocs,
     for (final f in files)
-      if (f.endsWith('.md') &&
-          (f.startsWith('docs/architecture/') ||
-              f.startsWith('docs/testing/m5/') ||
-              f.startsWith('docs/agents/') ||
-              f.startsWith('docs/concept-changelog/') ||
-              f.startsWith('.claude/agents/')))
-        f,
+      if (f.endsWith('.md') && f.startsWith('docs/architecture/')) f,
   ];
   for (final doc in docsToCheck) {
     final f = File('$root/$doc');
@@ -79,7 +68,6 @@ DocCheck checkDocs(List<String> files, {String root = '.'}) {
     }
   }
   errors.addAll(identErrors(files, root: root));
-  errors.addAll(standErrors(files, root: root));
   return (errors: errors, count: count, docs: docsToCheck.length);
 }
 
@@ -126,16 +114,13 @@ List<String> identErrors(List<String> files, {String root = '.'}) {
   );
 }
 
-/// Konzept und Änderungsarchiv nennen auch Fremdes (Notizen, MCP-Methoden,
-/// Netze, Modellnamen): dort zählen nur Pfade, die mit einem Repo-Ordner oder
-/// einer Repo-Datei auf oberster Ebene beginnen.
-bool _rootedOnly(String doc) =>
-    doc.startsWith('Voice Agent App') ||
-    doc.startsWith('docs/concept-changelog/');
+/// Das Konzept nennt auch Fremdes (MCP-Methoden, Netze, Modellnamen): dort
+/// zählen nur Pfade, die mit einem Repo-Ordner oder einer Repo-Datei auf
+/// oberster Ebene beginnen.
+bool _rootedOnly(String doc) => doc.startsWith('Voice Agent App');
 
-/// Zeilen mit „(nur im Git-Verlauf)“ nennen bewusst gelöschte Dateien
-/// (Archiv `docs/concept-changelog/`) und werden nicht aufgelöst. Der Vermerk
-/// nimmt alle Pfade seiner Zeile aus (auch einer ganzen K-Tabellenzeile).
+/// Zeilen mit „(nur im Git-Verlauf)“ nennen bewusst gelöschte Dateien und
+/// werden nicht aufgelöst. Der Vermerk nimmt alle Pfade seiner Zeile aus.
 bool _inHistory(String text, int line) =>
     text.split('\n')[line - 1].contains('nur im Git-Verlauf');
 
@@ -143,15 +128,3 @@ String _dirOf(String path) {
   final i = path.lastIndexOf('/');
   return i < 0 ? '' : path.substring(0, i);
 }
-
-/// m5-Anleitungen ohne gültige Stand-Zeile (zweite Zeile).
-List<String> standErrors(List<String> files, {String root = '.'}) => [
-  for (final f in files)
-    if (f.startsWith('docs/testing/m5/') &&
-        f.endsWith('.md') &&
-        !f.endsWith('/README.md') &&
-        File('$root/$f').existsSync() &&
-        standOf(File('$root/$f').readAsStringSync()) == null)
-      '$f:2: Stand-Zeile fehlt (`> Stand: gültig | teilweise überholt (…) | '
-          'überholt durch WPnn`)',
-];

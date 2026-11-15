@@ -76,7 +76,7 @@ emu_lock_acquire() {
 }
 
 _emu_lock_busy() {
-  echo "Emulator $1 belegt durch ${2:-unbekannt}, PID ${3:-?}. Nicht warten: Gerätetest als offen melden (Zuteilung durch den Orchestrator)." >&2
+  echo "Emulator $1 belegt durch ${2:-unbekannt}, PID ${3:-?}. Nicht warten: Gerätetest als offen melden." >&2
 }
 
 emu_lock_release() {

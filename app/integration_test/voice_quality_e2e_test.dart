@@ -3,7 +3,7 @@
 // (Thorsten medium und high) und Kokoro (Heart, Emma, Siwis) ohne Fehler.
 //
 // Die Modelle liegen NICHT im Repo: Sie werden vorab in die App-Daten
-// kopiert (siehe docs/testing/m5/wp103.md, Abschnitt „Gerätetest“), der
+// kopiert, der
 // Ordner kommt als Define. Ohne das Define wird der Test übersprungen.
 //
 //   WENDELIN_WP103_MODELS=wp103 \
@@ -32,7 +32,7 @@ String _base(SpeechModel m) =>
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   final skip = _models.isEmpty
-      ? 'WENDELIN_WP103_MODELS nicht gesetzt (siehe docs/testing/m5/wp103.md)'
+      ? 'WENDELIN_WP103_MODELS nicht gesetzt (siehe Dateikopf)'
       : null;
 
   testWidgets(

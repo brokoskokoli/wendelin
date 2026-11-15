@@ -132,7 +132,7 @@ int runPrivacyCheck({bool staged = false, String? termsPath}) {
   }
   hits.forEach(stderr.writeln);
   stderr.writeln(
-    'check_privacy: ${hits.length} Treffer (Regel: docs/agents/common.md → Öffentliches Repo)',
+    'check_privacy: ${hits.length} Treffer (Regel: AGENTS.md → Öffentliches Repo)',
   );
   return 1;
 }

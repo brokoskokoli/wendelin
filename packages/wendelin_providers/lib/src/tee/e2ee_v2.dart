@@ -20,7 +20,7 @@ import 'session_channel.dart';
 /// Source: `Dstack-TEE/private-ai-gateway` @ `57477f5d` (`spec/e2ee-v2.md`,
 /// `spec/e2ee-v2-test-vectors.md`, server code `src/aci/e2ee.rs` and
 /// `src/aggregator/service/e2ee_crypto.rs`); the same notes are in
-/// `docs/notes/wp62-phala-e2ee-spec.md`.
+/// `docs/notes/wp62-phala-e2ee-spec.md` (git history only).
 ///
 /// What it encrypts and what not (spec §Feldliste): every string
 /// `messages[].content` (or each `text`, `image_url.url` and

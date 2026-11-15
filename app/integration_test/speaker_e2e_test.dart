@@ -4,8 +4,8 @@
 // Speicher, damit nichts im Schlüsselspeicher des Geräts bleibt).
 //
 // Modell und WAVs (16 kHz mono) liegen NICHT im Repo: Sie werden vorab in
-// die App-Daten kopiert (`files/e2e/<Define>/`, siehe docs/testing/m5/
-// wp92a.md und handoff/wp92a-e2e/prepare.sh). Ohne Define wird übersprungen.
+// die App-Daten kopiert (`files/e2e/<Define>/`, mit einem lokalen
+// Vorbereitungsskript, nicht im Repo). Ohne Define wird übersprungen.
 //
 //   WENDELIN_WP92A_DIR=wp92a \
 //     tool/e2e_android.sh integration_test/speaker_e2e_test.dart
@@ -42,7 +42,7 @@ Int16List _wav(String root, String name) =>
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   final skip = _dir.isEmpty
-      ? 'WENDELIN_WP92A_DIR nicht gesetzt (siehe docs/testing/m5/wp92a.md)'
+      ? 'WENDELIN_WP92A_DIR nicht gesetzt (siehe Dateikopf)'
       : null;
 
   testWidgets(

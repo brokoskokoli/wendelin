@@ -2,7 +2,7 @@
 //
 // Nur auf einem Emulator ausführen. Der Test passt sich an: Ohne
 // Benachrichtigungszugriff prüft er Fehlertext und Medientasten-Fallback,
-// mit Zugriff und einem laufenden Test-Player (siehe docs/testing/m5-device.md)
+// mit Zugriff und einem laufenden Test-Player
 // pausiert, spult und spielt er. Zugriff vorher geben:
 //   adb -s emulator-xxxx shell cmd notification allow_listener \
 //     app.wendelin/app.wendelin.MediaListenerService

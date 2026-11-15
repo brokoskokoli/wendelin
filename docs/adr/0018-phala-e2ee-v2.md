@@ -3,7 +3,7 @@
 Status: angenommen (umgesetzt, nachgezogen 2026-10-25) · 2026-10-14
 
 ## Kontext
-Phala/RedPill bietet Ende-zu-Ende-Verschlüsselung der Nachrichtenfelder zum Gateway-CVM (Protokoll v2, `X-E2EE-*`). Wendelin sendet an Phala-Profile nur noch verschlüsselt (Wunsch Maintainer). Quelle des Protokolls: `Dstack-TEE/private-ai-gateway` @ 57477f5d (`spec/e2ee-v2.md`, `src/aci/e2ee.rs`); die Notiz mit Zeilenbelegen liegt in `docs/notes/wp62-phala-e2ee-spec.md`. Die Phala-Doku nennt nur `secp256k1`; der Server bietet im Keyset auch `x25519` an, und die Spezifikation empfiehlt es.
+Phala/RedPill bietet Ende-zu-Ende-Verschlüsselung der Nachrichtenfelder zum Gateway-CVM (Protokoll v2, `X-E2EE-*`). Wendelin sendet an Phala-Profile nur noch verschlüsselt (Wunsch Maintainer). Quelle des Protokolls: `Dstack-TEE/private-ai-gateway` @ 57477f5d (`spec/e2ee-v2.md`, `src/aci/e2ee.rs`); die Notiz mit Zeilenbelegen liegt in `docs/notes/wp62-phala-e2ee-spec.md` (nur im Git-Verlauf). Die Phala-Doku nennt nur `secp256k1`; der Server bietet im Keyset auch `x25519` an, und die Spezifikation empfiehlt es.
 
 ## Entscheidung
 - **Suite** `x25519-aes-256-gcm-hkdf-sha256`: je Feld ephemeres X25519, HKDF-SHA256 ohne Salt mit info `aci.e2ee.v2.x25519`, AES-256-GCM, 12-Byte-Nonce, AAD als JCS-JSON, Hex von `ephemeral(32) ‖ nonce(12) ‖ ciphertext ‖ tag(16)`. Die Primitive stehen in Rust (`native/attest/src/e2ee.rs`, `x25519-dalek`, `hkdf`, `aes-gcm`) hinter dem Port `AttestationCrypto`; AAD, Feldliste und Header (alles, was an der Protokollversion hängt) kapselt `E2eeProtocolV2` in Dart (`packages/wendelin_providers/lib/src/tee/e2ee_v2.dart`). v3 ersetzt nur diesen Baustein.

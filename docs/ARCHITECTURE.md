@@ -19,4 +19,3 @@ Wo liegt was, und welche Dateien gehören zu einer Änderung? Das ist nur der In
 - **Release und Signatur** (WP131): Schlüssel, Secrets, Tag-Release, Umstieg vom Debug-Schlüssel. [RELEASE.md](RELEASE.md)
 - **Checklisten „Feature → Dateien“**: neue Integration, Einstellungsseite, Kanal u. a. [checklists.md](architecture/checklists.md)
 
-Gerätetests je Arbeitspaket stehen in `docs/testing/m5/README.md` (erzeugter Index).

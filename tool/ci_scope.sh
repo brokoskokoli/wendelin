@@ -1,5 +1,5 @@
 #!/bin/bash
-# Umfang eines CI-Laufs (WP110). Gemeinsame Quelle für .github/workflows/gate.yml und tool/merge_wp.sh.
+# Umfang eines CI-Laufs (WP110), für .github/workflows/gate.yml.
 #   tool/ci_scope.sh --classify          Pfade (eine je Zeile) auf stdin → "docs" oder "code"
 #   tool/ci_scope.sh --ci                im Workflow: schreibt docs_only=… und android=… nach $GITHUB_OUTPUT (sonst stdout)
 #   tool/ci_scope.sh --self-test         Selbsttest der Einstufung
@@ -38,9 +38,9 @@ if [ "${1:-}" = "--self-test" ]; then
     got=$(printf '%s\n' "$@" | classify)
     if [ "$got" != "$want" ]; then echo "Selbsttest FEHLER: $* → $got (erwartet $want)" >&2; st=1; else echo "ok: $* → $got"; fi
   }
-  chk docs docs/work-packages/STATUS.md
-  chk docs AGENTS.md docs/a.md .claude/agents/x.md
-  chk code docs/work-packages/STATUS.md app/lib/x.dart
+  chk docs docs/adr/0001-modulschnitt.md
+  chk docs AGENTS.md docs/a.md .claude/x.md
+  chk code docs/adr/0001-modulschnitt.md app/lib/x.dart
   chk code docs/design/tokens.json
   chk code tool/gate.dart
   chk code README.md .github/workflows/gate.yml

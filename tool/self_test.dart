@@ -16,7 +16,6 @@ import 'src/gate_run.dart';
 import 'src/gate_rust.dart';
 import 'src/guard_checks.dart';
 import 'src/l10n_merge_self_test.dart';
-import 'src/merge_wp_self_test.dart';
 import 'src/regen_generated_self_test.dart';
 import 'src/registry_lint_self_test.dart';
 import 'src/self_check.dart';
@@ -35,7 +34,6 @@ Future<void> main() async {
   _docPaths(t);
   _depsAndGit(t);
   await guardChecks(t);
-  mergeWpChecks(t);
   l10nMergeChecks(t);
   registryLintChecks(t);
   regenGeneratedChecks(t);
@@ -80,7 +78,7 @@ void _changedSelection(SelfCheck t) {
     'tool/gate.dart → alles': (['docs/x.md', 'tool/gate.dart'], null),
     'tool/check_deps.dart → alles': (['tool/check_deps.dart'], null),
     'docs/design (Tokens) → App': (['docs/design/tokens.json'], {'app'}),
-    'andere Nicht-Doku unter docs/ → alles': (['docs/notes/a.json'], null),
+    'andere Nicht-Doku unter docs/ → alles': (['docs/adr/a.json'], null),
     'pubspec.lock → alles': (['pubspec.lock'], null),
     'analysis_options.yaml → alles': (['analysis_options.yaml'], null),
     'unbekanntes Paket → alles': (['packages/wendelin_neu/lib/a.dart'], null),

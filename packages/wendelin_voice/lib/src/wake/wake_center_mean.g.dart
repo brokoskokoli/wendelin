@@ -5,7 +5,7 @@
 // FLEURS test split and from all enrollment and evaluation recordings),
 // synthetic white/pink noise and digital silence. No fit on evaluation data.
 // Bound to the feature models [wakeCenterFeatureVersion]; a new feature version
-// needs a new mean (see docs/notes/wake-word-compare.md, "Vorlagen zentriert").
+// needs a new mean (see docs/notes/wake-word-compare.md, "Vorlagen zentriert", git history only).
 
 /// Feature version ([WakeFeatureChain.featureVersion]) the mean belongs to.
 const wakeCenterFeatureVersion = 'oww-0.5.1-mel-emb-1';

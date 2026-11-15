@@ -9,7 +9,7 @@
 // (signierte Commits). Nur wenn beide Quellen byte-gleich sind, gilt die Datei als
 // verlässlich. Danach den Hash in `native/attest/tests/sigstore.rs`
 // (`embedded_trust_root_is_the_documented_one`) und in
-// `docs/notes/sigstore-trust-root.md` nachziehen. Siehe dort für den Ablauf.
+// `docs/architecture/sigstore-trust-root.md` nachziehen. Siehe dort für den Ablauf.
 import 'dart:convert';
 import 'dart:io';
 

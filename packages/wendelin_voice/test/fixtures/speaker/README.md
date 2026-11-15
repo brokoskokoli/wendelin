@@ -19,4 +19,4 @@ Regenerate: `python gen_embeddings.py out.json` with `sherpa_onnx` and `numpy`
 installed and the two paths at the top set. Synthetic voices are far more
 uniform than people: genuine scores are 0.7–0.95, strangers 0.0–0.15. The
 thresholds in `SpeakerIdentifier` are therefore chosen conservatively and
-must be checked with real voices on the device (`docs/testing/m5/wp92a.md`).
+must be checked with real voices on the device (device test of WP92a).

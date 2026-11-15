@@ -6,6 +6,6 @@
 # Die Liste schrumpft nur. Ein Eintrag über der Anzahl ist verboten, ein
 # Eintrag unter der Anzahl wird vom Check zum Senken/Entfernen gemeldet.
 # Abbau: Flake-Fixes (pumpUntil, fakeAsync), siehe
-# docs/notes/dev-speedup-analysis.md §2.
+# docs/notes/dev-speedup-analysis.md §2 (nur im Git-Verlauf).
 
 app/test/platform/voice/isolate_exit_test.dart: 2  # echtes Isolat, Untergrenze 100 ms (kein fakeAsync möglich, nicht lastflaky)

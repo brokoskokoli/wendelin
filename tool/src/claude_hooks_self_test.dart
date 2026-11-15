@@ -3,7 +3,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'budget_self_test.dart';
 import 'emulator_boot_self_test.dart';
 import 'emulator_lock_self_test.dart';
 import 'sandbox.dart';
@@ -11,7 +10,6 @@ import 'self_check.dart';
 
 Future<void> claudeHooksChecks(SelfCheck t) async {
   _bashGuard(t);
-  budgetChecks(t);
   _settings(t);
   await emulatorLockChecks(t);
   await emulatorBootChecks(t);
@@ -165,7 +163,7 @@ const _allowed = [
   'git config --get user.email',
   'git config pull.rebase false',
   'git -C ../x status',
-  'tool/merge_wp.sh wp/110-agent-guardrails-ci',
+  'tool/regen_generated.sh',
   'tool/ci_wait.sh wp/110-agent-guardrails-ci',
   'WENDELIN_PUSH_MAIN=1 git push origin main',
   'WENDELIN_PUSH_MAIN=1 git push origin HEAD:main',
@@ -281,17 +279,12 @@ void _settings(SelfCheck t) {
     'PreToolUse Bash -> bash_guard.py',
   );
   t.isTrue(
-    cmd('PreToolUse', '*').endsWith('/$hooksDir/budget.py pre'),
-    'PreToolUse * -> budget.py pre',
+    hooks.keys.toList().join(',') == 'PreToolUse' &&
+        (hooks['PreToolUse'] as List).length == 1,
+    'nur der Bash-Hook ist eingetragen',
   );
   t.isTrue(
-    cmd('PostToolUse', '*').endsWith('/$hooksDir/budget.py post'),
-    'PostToolUse * -> budget.py post',
+    File('$hooksDir/bash_guard.py').statSync().mode & 0x40 != 0,
+    'bash_guard.py ist ausführbar',
   );
-  for (final s in ['bash_guard.py', 'budget.py']) {
-    t.isTrue(
-      File('$hooksDir/$s').statSync().mode & 0x40 != 0,
-      '$s ist ausführbar',
-    );
-  }
 }
