@@ -11,6 +11,8 @@
 # Claude-Modell-Trailer) und keine Claude-Session-Zeile. Ein leerer Bereich
 # ist grün. Exit 1 mit einer Zeile je Verstoß.
 set -u
+# Erlaubte Identität (tool/merge_pr.sh liest NAME/EMAIL/TRAILER_RE von hier).
+NAME='brokoskokoli'
 EMAIL='16724498+brokoskokoli@users.noreply.github.com'
 # Trailer = Claude-Modell des committenden Agenten (WP170); Muster eng und identisch zu
 # tool/hooks/commit-msg-guard.sh halten. Alles andere ist rot (fail-closed).
@@ -38,7 +40,7 @@ fail() { echo "check_commit_identity: $(git rev-parse --short "$1"): $2" >&2; ba
 for c in $revs; do
   n=$((n + 1))
   while IFS='|' read -r role name mail; do
-    if [ "$mail" != "$EMAIL" ] || [ "$name" != brokoskokoli ]; then
+    if [ "$mail" != "$EMAIL" ] || [ "$name" != "$NAME" ]; then
       fail "$c" "$role '$name <$mail>' ist nicht die noreply-Identität"
     fi
   done <<IDENT

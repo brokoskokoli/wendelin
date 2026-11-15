@@ -24,10 +24,23 @@ final class _PushRepo {
   late final String c0;
   late final String common;
 
-  /// Schreibt eine Freigabedatei im früheren Format (`<tree>` je Zeile), die
-  /// der Hook nicht mehr auswertet.
-  void note(String rev) => File('$common/wendelin-merge-ok').writeAsStringSync(
+  File get okFile => File('$common/wendelin-merge-ok');
+
+  /// Schreibt eine Freigabe für [rev] wie tool/merge_pr.sh (`<tree> <commit>`).
+  void note(String rev) => okFile.writeAsStringSync(
+    '${r.git(['rev-parse', '$rev^{tree}'])} ${r.git(['rev-parse', rev])}\n',
+    mode: FileMode.append,
+  );
+
+  /// Schreibt eine Zeile im früheren Format (nur `<tree>`), die nichts freigibt.
+  void noteTreeOnly(String rev) => okFile.writeAsStringSync(
     '${r.git(['rev-parse', '$rev^{tree}'])}\n',
+    mode: FileMode.append,
+  );
+
+  /// Freigabe für einen fremden Tree (gleiches Format, anderer Inhalt).
+  void noteOther() => okFile.writeAsStringSync(
+    '${'b' * 40} ${'c' * 40}\n',
     mode: FileMode.append,
   );
 
@@ -73,7 +86,10 @@ void _prePushPlain(SelfCheck t, _PushRepo p) {
     'Doku-Commits mit Variable: erlaubt',
   );
   r.commit('code.dart', 'c\n');
-  t.isTrue(p.push(main, r.head(), allow: true) != 0, 'Code-Commit: abgelehnt');
+  t.isTrue(
+    p.push(main, r.head(), allow: true) != 0,
+    'Code-Commit ohne Freigabe: abgelehnt',
+  );
   t.eq(p.push('refs/heads/wp/1-x', r.head()), 0, 'wp/*-Push: frei');
   t.eq(p.push('refs/heads/other', r.head()), 0, 'anderer Branch: frei');
   t.eq(p.push('refs/tags/v1', r.head()), 0, 'Tag: frei');
@@ -130,14 +146,73 @@ void _prePushMerge(SelfCheck t, _PushRepo p) {
   r.git(['merge', '-q', '--no-ff', '-m', 'Merge feat\n\n$sbTrailer', 'feat']);
   t.isTrue(
     p.push(main, r.head(), allow: true) != 0,
-    'lokaler Merge eines Code-Branches: abgelehnt',
+    'lokaler Merge eines Code-Branches ohne Freigabe: abgelehnt',
+  );
+  p.noteTreeOnly('HEAD');
+  t.isTrue(
+    p.push(main, r.head(), allow: true) != 0,
+    'Zeile nur mit Tree (früheres Format) gibt keinen Code frei',
+  );
+  p.noteOther();
+  t.isTrue(
+    p.push(main, r.head(), allow: true) != 0,
+    'Freigabe für einen anderen Tree gibt nichts frei',
   );
   p.note('HEAD');
   t.isTrue(
-    p.push(main, r.head(), allow: true) != 0,
-    'alte Freigabedatei gibt keinen Code frei',
+    p.push(main, r.head()) != 0,
+    'freigegebener Merge ohne WENDELIN_PUSH_MAIN=1: abgelehnt',
   );
+  t.eq(
+    p.push(main, r.head(), allow: true),
+    0,
+    'freigegebener Merge-Commit: erlaubt (Branch-Commits gedeckt)',
+  );
+  r.commit('docs/s.md', 's\n');
+  t.eq(
+    p.push(main, r.head(), allow: true),
+    0,
+    'freigegebener Merge plus Doku-Commit: erlaubt',
+  );
+  r.commit('late.dart', 'l\n');
+  t.isTrue(
+    p.push(main, r.head(), allow: true) != 0,
+    'Code-Commit nach dem freigegebenen Merge: abgelehnt',
+  );
+  r.git(['reset', '-q', '--hard', 'HEAD~1']);
+  _prePushConsume(t, p);
   _prePushMergeReset(t, p);
+  _prePushFresh(t, p);
+}
+
+/// Freigaben, deren Commit schon in origin/main liegt, verfallen beim nächsten Push.
+void _prePushConsume(SelfCheck t, _PushRepo p) {
+  final r = p.r;
+  final merge = r.git(['rev-parse', 'HEAD~1']); // freigegebener Merge-Commit
+  final tree = r.git(['rev-parse', '$merge^{tree}']);
+  final pushed = r.head();
+  r.git(['update-ref', 'refs/remotes/origin/main', pushed]);
+  r.git(['checkout', '-q', '-b', 'later']);
+  r.commit('docs/later.md', 'l\n');
+  t.eq(
+    p.push('refs/heads/main', r.head(), allow: true, remote: pushed),
+    0,
+    'Doku-Push nach dem Merge',
+  );
+  final left = p.okFile.readAsStringSync();
+  t.isTrue(
+    !left.contains(tree),
+    'verbrauchte Freigabe (Commit in origin/main) entfernt',
+  );
+  t.isTrue(
+    !left.split('\n').any((l) => l.isNotEmpty && !l.contains(' ')),
+    'Zeilen ohne Commit beim Aufräumen entfernt',
+  );
+  // Rücksetzen hinter den freigegebenen Merge bleibt verboten.
+  t.isTrue(
+    p.push('refs/heads/main', p.c0, allow: true, remote: pushed) != 0,
+    'Rücksetzen trotz (früherer) Freigabe: abgelehnt',
+  );
 }
 
 /// Merge `-s ours`: erster Elternteil alt, zweiter origin/main, Tree alter Stand.
@@ -162,6 +237,25 @@ void _prePushMergeReset(SelfCheck t, _PushRepo p) {
   t.isTrue(
     p.push(main, r.head(), allow: true, remote: remote) != 0,
     'Merge -s ours (Code des zweiten Elternteils verworfen): abgelehnt',
+  );
+}
+
+/// Eine frische, noch nicht gepushte Freigabe übersteht das Aufräumen; der
+/// Merge `-s ours` aus dem Fall davor bleibt ohne Freigabe abgelehnt.
+void _prePushFresh(SelfCheck t, _PushRepo p) {
+  final r = p.r;
+  r.git(['checkout', '-q', '-B', 'fresh', p.c0]);
+  r.commit('fresh_code.dart', 'f\n');
+  p.note('HEAD');
+  r.git(['update-ref', 'refs/remotes/origin/main', p.c0]);
+  t.eq(
+    p.push('refs/heads/main', r.head(), allow: true, remote: p.c0),
+    0,
+    'frische Freigabe bei gesetztem origin/main: Push erlaubt',
+  );
+  t.isTrue(
+    p.okFile.readAsStringSync().contains(r.git(['rev-parse', 'HEAD^{tree}'])),
+    'frische Freigabe nicht aufgeräumt',
   );
 }
 
