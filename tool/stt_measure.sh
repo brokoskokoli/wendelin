@@ -8,7 +8,7 @@
 # Das Verzeichnis enthält je Katalog-Id einen Ordner mit den Modelldateien
 # (whisper-base/, whisper-small/, silero-vad/), z. B. aus der App kopiert
 # oder mit den URLs aus SpeechModelCatalog geladen. Modelle nie einchecken.
-# Ergebnis: Markdown-Tabellen auf stdout (für docs/notes/stt-wer-<datum>.md).
+# Ergebnis: Markdown-Tabellen auf stdout.
 set -eu
 models="${1:?Modell-Verzeichnis fehlt}"
 cd "$(dirname "$0")/../app"

@@ -1,4 +1,4 @@
-// Gerätetest (WP164 C, E2E-Agent): contacts__navigate über den echten
+// Gerätetest (WP164 C): contacts__navigate über den echten
 // Kontakte-Kanal und die echte App-Erkennung, mit Fake-Launcher. Vorher legt
 // der Host synthetische Kontakte an (Anna Meier mit einer Adresse, Clara Zell
 // mit Privat/Arbeit, Bert Kurz nur mit Adresse) und erteilt READ_CONTACTS.

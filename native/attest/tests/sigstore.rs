@@ -388,7 +388,7 @@ fn garbage_inputs_never_panic() {
 
 #[test]
 fn embedded_trust_root_is_the_documented_one() {
-    // Eine Änderung muss bewusst erfolgen und `docs/notes/sigstore-trust-root.md` mitziehen.
+    // Eine Änderung muss bewusst erfolgen und `docs/architecture/sigstore-trust-root.md` mitziehen.
     use sha2::{Digest, Sha256};
     assert_eq!(
         hex::encode(Sha256::digest(TRUSTED_ROOT_JSON.as_bytes())),

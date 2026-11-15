@@ -20,7 +20,7 @@ Die C-API von sherpa-onnx liefert keine Wahrscheinlichkeit pro Fenster, nur „S
 Stille (RMS < −54 dBFS) geht nicht ins Modell; Geräusch-Annotationen (`[Music]`, `(Lachen)`) und bekannte Untertitel-Halluzinationen werden entfernt. Die Konfidenz ist heuristisch (Textrate, Wiederholungen, Sprache außerhalb de/fr/en), weil sherpa-onnx für Whisper keine Token-Wahrscheinlichkeiten liefert.
 
 ### 5. Standardsprache = App-Sprache
-Die Einstellung „Gesprochene Sprache“ steht anfangs auf „Wie die App“ (feste Sprache aus dem Onboarding). Automatische Erkennung bleibt wählbar. Grund: Auf den Fixtures halbiert die feste Sprache die WER für Deutsch (Whisper small 21 % → 9 %), und kurze Antworten („Ja“) werden automatisch oft als Englisch erkannt (`docs/notes/stt-wer-2026-10-13.md`).
+Die Einstellung „Gesprochene Sprache“ steht anfangs auf „Wie die App“ (feste Sprache aus dem Onboarding). Automatische Erkennung bleibt wählbar. Grund: Auf den Fixtures halbiert die feste Sprache die WER für Deutsch (Whisper small 21 % → 9 %), und kurze Antworten („Ja“) werden automatisch oft als Englisch erkannt (`docs/notes/stt-wer-2026-10-13.md` (nur im Git-Verlauf)).
 
 ### 6. Modelle, Archive, Speicherplatz
 `FileModelStore` unter `<App-Support>/models/<id>/`, Teil-Downloads als `.part`. `ModelInstaller` prüft vorher den freien Platz (libc `statvfs` per FFI, Download + 3 × Archiv + 50 MB), lädt mit `ModelDownloader`, entpackt `.tar.bz2` mit eigenem Tar-Leser (nur Dateien/Ordner, relative Pfade ohne `..`, bzip2 mit Größenlimit) in ein temporäres Verzeichnis und benennt es um; erst danach wird das Archiv gelöscht. Ein angefangener Download wird beim Öffnen des Onboarding-Schritts fortgesetzt und ist in den Einstellungen als „Fortsetzen“ sichtbar.

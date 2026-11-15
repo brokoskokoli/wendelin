@@ -3,7 +3,6 @@
 // Hinweis, sie nicht von Hand zu ändern.
 import 'dart:io';
 
-import 'doc_stand.dart';
 import 'gen_docs_tables.dart';
 
 const _head =
@@ -16,7 +15,6 @@ Map<String, String> generateDocs([String root = '.']) => {
   'docs/architecture/generated/integrations.md': _integrations(root),
   'docs/architecture/generated/ports.md': _ports(root),
   'docs/architecture/generated/channels.md': _channels(root),
-  'docs/testing/m5/README.md': _m5Index(root),
 };
 
 String _read(String root, String path) =>
@@ -158,33 +156,6 @@ String _integrations(String root) {
         ? '[$id.md](../integrations/$id.md)'
         : '–';
     b.writeln('| `$id` | `app/lib/di/integrations/$file` | $pkg | $doc |');
-  }
-  return b.toString();
-}
-
-String _m5Index(String root) {
-  final dir = Directory('$root/docs/testing/m5');
-  final files = [
-    for (final f in dir.listSync())
-      if (f is File && f.path.endsWith('.md') && !f.path.endsWith('/README.md'))
-        f.path.split('/').last,
-  ]..sort();
-  final b = StringBuffer(_head)
-    ..writeln('# Geräte-Prüflisten je Paket')
-    ..writeln()
-    ..writeln(
-      'Jedes Arbeitspaket mit Gerätebezug (M5 und M6) legt hier seine '
-      'eigene Datei `<wp>.md` an '
-      '(Überschrift `# WPnn Titel`, zweite Zeile `> Stand: …`); dieser Index wird erzeugt '
-      '(`tool/regen_generated.sh`). Befehle am Telefon führt nur der '
-      'Maintainer aus.',
-    )
-    ..writeln();
-  for (final f in files) {
-    final text = _read(root, 'docs/testing/m5/$f');
-    final title =
-        RegExp(r'^# (.+)$', multiLine: true).firstMatch(text)?.group(1) ?? f;
-    b.writeln('- [$title]($f)${standSuffix(text)}');
   }
   return b.toString();
 }

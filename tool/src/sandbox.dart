@@ -1,7 +1,7 @@
 // Temporäre Git-Repos für die Selbsttests der Skripte (WP109).
 import 'dart:io';
 
-/// Erlaubte Identität und Trailer (wie in docs/agents/common.md).
+/// Erlaubte Identität und Trailer (wie in AGENTS.md).
 const sbName = 'brokoskokoli';
 const sbMail = '16724498+brokoskokoli@users.noreply.github.com';
 const sbTrailer =

@@ -1,7 +1,7 @@
 // WP143: Rechenvorschrift von Prüfer B gegen die Lieferung WP137
 // (test/fixtures/wake_verifier_b/verifier_b_parity.json, synthetisch, erzeugt
 // mit tool/train_wake_word/verifier_export.py; Beschreibung in
-// docs/notes/wake-verifier-b.md der Lieferung).
+// docs/notes/wake-verifier-b.md der Lieferung, nur im Git-Verlauf).
 //
 // Toleranz 1e-4 (Wert der Lieferung): Python rechnet in float64, die App in
 // float32 (Frames) mit double-Summen; gemessen liegen die Abweichungen bei

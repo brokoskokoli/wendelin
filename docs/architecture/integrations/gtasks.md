@@ -24,4 +24,3 @@ Eigenes Cloud-Projekt des Nutzers, OAuth-Client Typ **Desktop** (Client-ID und C
 ## Sicherheit
 Refresh-Token, Client-ID und Client-Secret nur im `SecretStore`; das Access-Token nur im Speicher. Nichts davon in Meldungen, Logs, Audit oder Export (Canary-Tests); das Client-Log hat nur Operation und Status, nie Titel. Erneuerung vor Ablauf und einmal nach 401; `invalid_grant` (im Testmodus nach 7 Tagen) löscht das Refresh-Token und pausiert die Integration. Abmelden widerruft das Token (best effort) und löscht alles.
 
-Gerätetests: `docs/testing/m5/wp89.md`.

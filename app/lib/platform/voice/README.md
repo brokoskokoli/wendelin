@@ -44,7 +44,7 @@ SHA-256-Prüfung jedes Downloads und die Größenprüfung vor jedem Laden.
 `VoicePipeline.cancel()` aufrufen (ADR 0007 §12), damit das Mikrofon
 freigegeben wird.
 
-**Laufzeit:** Jede Whisper-Erkennung meldet ihre Dauer ohne Inhalt (`WhisperTiming`, logcat „Whisper-Zeit …“, beim System-Erkenner „Erkenner: Whisper-Zeit …“). `tool/whisper_timing.sh` wertet das auf dem Telefon aus, Emulator-Werte in `docs/notes/m2-e2e-2026-10-13.md`.
+**Laufzeit:** Jede Whisper-Erkennung meldet ihre Dauer ohne Inhalt (`WhisperTiming`, logcat „Whisper-Zeit …“, beim System-Erkenner „Erkenner: Whisper-Zeit …“). `tool/whisper_timing.sh` wertet das auf dem Telefon aus, Emulator-Werte in `docs/notes/m2-e2e-2026-10-13.md` (nur im Git-Verlauf).
 
 **Messen:** `tool/stt_wer.dart` (WER) und `tool/vad_calibrate.dart`
 (Schwelle, Mindestsprechdauer), Fixtures aus `tool/make_stt_fixtures.sh`.

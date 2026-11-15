@@ -1,12 +1,12 @@
 # Sigstore-Trust-Root und Release-Prüfung (WP76b)
 
-Stand 2026-10-18. Modul: `native/attest/src/sigstore.rs`, Vektoren `native/attest/tests/sigstore.rs` mit `tests/sigstore/bundle_v0.0.158.json` und `bundle_v0.0.159.json` (öffentliche Bundles des Router-Repos `tinfoilsh/confidential-model-router`, ohne Geheimnisse).
+Stand 2026-10-18. Modul: `native/attest/src/sigstore.rs`, Vektoren `native/attest/tests/sigstore.rs` mit `tests/sigstore/bundle_v0.0.158.json` und `bundle_v0.0.159.json` (öffentliche Bundles des Router-Repos `github.com/tinfoilsh/confidential-model-router`, ohne Geheimnisse).
 
 ## Was geprüft wird
 Der SNP-Messwert des Routers (`SnpReportInfo.measurementHex`, WP76a) wird gegen das signierte GitHub-Release verglichen. Eingaben des Aufrufers (WP76d, holt sie über HTTP und Cache):
-1. `tag` = `releases/latest` des Repos, `digestHex` = `releases/download/<tag>/tinfoil.hash` (64 Hex).
+1. `tag` = `/releases/latest` des Repos, `digestHex` = `releases/download/<tag>/tinfoil.hash` (64 Hex).
 2. `bundleJson` = `attestations[0].bundle` aus `GET /repos/<repo>/attestations/sha256:<digest>` (Sigstore-Bundle v0.3).
-   Quellen: `api.github.com` (60 Anfragen/h ohne Token) oder die Proxys von Tinfoil (`api-github-proxy.tinfoil.sh`; `github-proxy.tinfoil.sh` für `tinfoil.hash`). Alles wird signaturgeprüft, die Proxys sind kein Vertrauensanker.
+   Quellen: `api.github.com` (60 Anfragen/h ohne Token) oder die Proxys von Tinfoil (`https://api-github-proxy.tinfoil.sh`; `https://github-proxy.tinfoil.sh` für `tinfoil.hash`). Alles wird signaturgeprüft, die Proxys sind kein Vertrauensanker.
 
 `verifyRelease` (Dart) bzw. `verify_tinfoil_release` (Rust) liefert je Stufe ein Ergebnis: `dsseOk`, `chainOk`, `identityOk`, `rekorOk`, `measurementOk`. Nur alle zusammen (`allOk`) sagen: Der Messwert des Reports gehört zum signierten Release `repo@tag`. Der Aufrufer prüft zusätzlich, dass `tag` wirklich das neueste Release ist; nach einem Tinfoil-Update kann der Router kurz noch den alten Messwert melden (fail-closed, nach Pause erneut versuchen).
 
@@ -19,9 +19,9 @@ Sigstore rotiert die Schlüssel selten (Fulcio-CA seit 2022-04, Rekor v1 seit 20
     dart run tool/update_sigstore_root.dart          # nur prüfen
     dart run tool/update_sigstore_root.dart --write  # Asset überschreiben
 
-Das Skript folgt der TUF-Kette von `tuf-repo-cdn.sigstore.dev` (timestamp, snapshot, targets; Hashes und Längen) und vergleicht die Datei byte-genau mit `sigstore/root-signing` (GitHub, signierte Commits); bei Abweichung bricht es ab. Danach den SHA-256 in `native/attest/tests/sigstore.rs` (`embedded_trust_root_is_the_documented_one`) und hier nachziehen, Rust-Tests laufen lassen, Review. Ein neues Release der App liefert die neue Root aus; eine Aktualisierung ist nötig, wenn Tinfoils Bundles gegen neue Schlüssel signiert werden (Symptom: `chain`/`rekor` rot bei sonst gültigem Bundle). Die TUF-Signaturen selbst prüft das Skript nicht; das ist der Grund für den zweiten, unabhängigen Quellenvergleich.
+Das Skript folgt der TUF-Kette von `tuf-repo-cdn.sigstore.dev` (timestamp, snapshot, targets; Hashes und Längen) und vergleicht die Datei byte-genau mit `github.com/sigstore/root-signing` (GitHub, signierte Commits); bei Abweichung bricht es ab. Danach den SHA-256 in `native/attest/tests/sigstore.rs` (`embedded_trust_root_is_the_documented_one`) und hier nachziehen, Rust-Tests laufen lassen, Review. Ein neues Release der App liefert die neue Root aus; eine Aktualisierung ist nötig, wenn Tinfoils Bundles gegen neue Schlüssel signiert werden (Symptom: `chain`/`rekor` rot bei sonst gültigem Bundle). Die TUF-Signaturen selbst prüft das Skript nicht; das ist der Grund für den zweiten, unabhängigen Quellenvergleich.
 
-Aktueller Stand: SHA-256 `6494e21ea73fa7ee769f85f57d5a3e6a08725eae1e38c755fc3517c9e6bc0b66`. Gleich in drei Quellen (TUF-CDN, `sigstore/root-signing`, eingebettete Datei von `tinfoil-rs`), TUF-Zeitstempel gültig bis 2026-10-25 (wird laufend erneuert, ohne die Root-Datei zu ändern).
+Aktueller Stand: SHA-256 `6494e21ea73fa7ee769f85f57d5a3e6a08725eae1e38c755fc3517c9e6bc0b66`. Gleich in drei Quellen (TUF-CDN, `github.com/sigstore/root-signing`, eingebettete Datei von `tinfoil-rs`), TUF-Zeitstempel gültig bis 2026-10-25 (wird laufend erneuert, ohne die Root-Datei zu ändern).
 
 ## Größe
 `libwendelin_attest.so` (arm64-v8a, Release, `opt-level=z`, LTO) wächst von 1 780 648 auf 1 846 176 Byte, also +65 528 Byte (+64 KiB) für Sigstore samt Trust-Root, `p256` und `base64` (Messung 2026-10-18 mit `cargo ndk`, Basis = Stand vor WP76b). Das Ziel (≤ ~1,2 MB je ABI für ganz Tinfoil) ist damit für diesen Teil weit unterschritten; der Grund ist der Verzicht auf `tinfoil-rs` (tokio/reqwest) und auf SCT.

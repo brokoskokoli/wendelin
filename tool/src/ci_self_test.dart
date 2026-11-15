@@ -3,7 +3,6 @@
 import 'dart:io';
 
 import 'gate_changed.dart';
-import 'review_stats.dart';
 import 'sandbox.dart';
 import 'self_check.dart';
 import 'text_scan.dart';
@@ -13,7 +12,6 @@ void ciChecks(SelfCheck t) {
   _textRunChecks(t);
   _scopeChecks(t);
   _workflowChecks(t);
-  _reviewChecks(t);
 }
 
 void _textChecks(SelfCheck t) {
@@ -164,10 +162,9 @@ void _workflowChecks(SelfCheck t) {
   );
   t.isTrue(
     docs.contains('tool/check_docs.dart') &&
-        docs.contains('tool/check_concept.dart') &&
         !docs.contains('gate.dart') &&
         !docs.contains('flutter test'),
-    'docs-only führt nur check_docs und check_concept aus',
+    'docs-only führt nur check_docs aus',
   );
   t.isTrue(
     (jobs['scope'] ?? '').contains('tool/ci_scope.sh --ci'),
@@ -190,50 +187,6 @@ void _workflowChecks(SelfCheck t) {
   t.isTrue(
     (jobs['pkg-coverage'] ?? '').contains('check_pkg_coverage.dart'),
     'Shard-Abdeckung wird zusammengeführt',
-  );
-}
-
-void _reviewChecks(SelfCheck t) {
-  t.group('review_stats');
-  const ok1 =
-      'URTEIL: FREIGABE\nRUNDE: 1\nMUTATIONEN: 5/0\nBEFUNDE: texte=0 doku=1\n\nText';
-  const bad1 =
-      'URTEIL: NACHBESSERN\nRUNDE: 1\nMUTATIONEN: 6/2\nBEFUNDE: fail-closed=1 negativtest=2\n';
-  const re2 =
-      'URTEIL: FREIGABE\nRUNDE: 2\nMUTATIONEN: 3/0\nBEFUNDE: sonstiges=0\n';
-  final h = parseReview(bad1)!;
-  t.isTrue(
-    !h.cleanFirst && h.survived == 2 && h.findings['negativtest'] == 2,
-    'Kopf gelesen',
-  );
-  t.isTrue(parseReview(ok1)!.cleanFirst, 'Runde 1 mit FREIGABE ist sauber');
-  t.isTrue(!parseReview(re2)!.cleanFirst, 'Re-Review zählt nicht als sauber');
-  t.eq(
-    parseReview(
-      'URTEIL: VIELLEICHT\nRUNDE: 1\nMUTATIONEN: 1/0\nBEFUNDE: texte=0',
-    ),
-    null,
-    'unbekanntes Urteil ungültig',
-  );
-  t.eq(
-    parseReview(
-      'URTEIL: FREIGABE\nRUNDE: 1\nMUTATIONEN: viele\nBEFUNDE: texte=0',
-    ),
-    null,
-    'Mutationen müssen n/m sein',
-  );
-  t.eq(parseReview('Freitext ohne Kopf'), null, 'ohne Kopf ungültig');
-  final out = summarizeReviews({
-    'a-review.md': ok1,
-    'b-review.md': bad1,
-    'b-review2.md': re2,
-    'c-review.md': 'kaputt',
-  });
-  t.isTrue(out.contains('1 von 2 (50 %)'), 'Quote sauber: 1 von 2 ($out)');
-  t.isTrue(out.contains('ungültig: c-review.md'), 'ungültige Datei genannt');
-  t.isTrue(
-    out.contains('Mutationen: 14 getestet, 2 überlebt'),
-    'Mutationsbilanz',
   );
 }
 

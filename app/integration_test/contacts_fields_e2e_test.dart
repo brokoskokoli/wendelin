@@ -1,5 +1,5 @@
 // Gerätetest (WP164 A): Kanal `all` mit `fields` gegen das echte Adressbuch
-// des Emulators. Der Host (E2E-Agent) legt vorher einen synthetischen Kontakt
+// des Emulators. Der Host legt vorher einen synthetischen Kontakt
 // an: „Anna Meier“ mit Postanschrift „Musterstraße 1, 12345 Musterstadt“
 // (privat), Geburtstag 1985-03-14 und Firma „Muster GmbH“, und erteilt die
 // Kontakte-Berechtigung (adb shell pm grant app.wendelin

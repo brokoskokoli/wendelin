@@ -1,5 +1,5 @@
-// Erzeugt die aus Code ableitbaren Dokumente (Pakete, Integrationen, Index der
-// Gerätetests). `--check` schreibt nichts und meldet Veraltetes (Exit 1).
+// Erzeugt die aus Code ableitbaren Dokumente (Pakete, Integrationen, Ports,
+// Kanäle). `--check` schreibt nichts und meldet Veraltetes (Exit 1).
 import 'dart:io';
 
 import 'src/gen_docs.dart';

@@ -6,7 +6,7 @@
 3. Port-Implementierung in `app/lib/platform/`, Feld in `PlatformPorts`.
 4. `IntegrationSpec` in eigener Datei `app/lib/di/integrations/<name>_spec.dart` (eigene Provider über `prepare`, nicht über `IntegrationDeps`) und **eine** Zeile in `app/lib/di/integrations/registry.dart`; Einrichtungsseite ggf. in `app/lib/ui/settings/integration_routes.dart` (und `setupPageFor` in `settings_routes.dart`).
 5. Texte als Fragment `app/lib/l10n/src/<name>/<name>_{de,en,fr}.arb` (eigener Ordner reicht), Berechtigung ggf. in `AndroidManifest.xml`.
-6. Vertrauensdatei `app/test/trust/<id>.json`, Integrationsdoku `docs/architecture/integrations/<id>.md`, Gerätetests `docs/testing/m5/<wp>.md` (Überschrift `# WPnn Titel`).
+6. Vertrauensdatei `app/test/trust/<id>.json`, Integrationsdoku `docs/architecture/integrations/<id>.md`.
 7. Tests im Paket; danach `tool/regen_generated.sh` (l10n, Tabellen, m5-Index) und die erzeugten Dateien mitcommitten.
 
 **Neue Einstellungsseite**
@@ -23,7 +23,7 @@
 
 **Neue Provider-Art**
 1. Adapter unter `packages/wendelin_providers/lib/src/<adapter>/` (Wire-Format nur dort), Contract-Suite `llmProviderContract` aus `wendelin_core`.
-2. `ProviderType` (`packages/wendelin_core/lib/src/provider/provider_type.dart`), `ProviderFactory`, Vorlage in `packages/wendelin_providers/lib/src/catalog/provider_template.dart`; Empfehlungen (Modell-ID, Treffer, p50, Messdatum) nur dort in `modelRecommendations` (WP128, Quelle `docs/notes/model-recommendation.md`), die Anzeige im Modellschritt `app/lib/ui/settings/provider_setup/model_step.dart`.
+2. `ProviderType` (`packages/wendelin_core/lib/src/provider/provider_type.dart`), `ProviderFactory`, Vorlage in `packages/wendelin_providers/lib/src/catalog/provider_template.dart`; Empfehlungen (Modell-ID, Treffer, p50, Messdatum) nur dort in `modelRecommendations` (WP128, Quelle: Live-Eval 2026-10-20 in `evals/reports/README.md`), die Anzeige im Modellschritt `app/lib/ui/settings/provider_setup/model_step.dart`.
 3. Einrichtung in `app/lib/ui/settings/provider_setup_screen.dart` und `app/lib/di/provider_setup.dart`.
 
 **Smart Home: Gerät/Prompt/Abgleich (WP135)**

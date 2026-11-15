@@ -53,7 +53,7 @@ abstract final class WakeClassifierCatalog {
   /// still change model and rule.
   ///
   /// The URL is a placeholder until the release asset is uploaded (the
-  /// orchestrator does that); the SHA-256 is the one of the published file,
+  /// maintainer does that); the SHA-256 is the one of the published file,
   /// so a wrong or replaced file is refused.
   static const model = SpeechModel(
     id: 'wake-classifier-wendelin',
@@ -95,7 +95,7 @@ abstract final class WakeClassifierCatalog {
 /// Stage 1 limits of the wake word classifier per mode (WP129, rule of
 /// WP133: score at or above `acceptFrom` is taken directly, from `verifyFrom`
 /// up to it stage 2 checks, below it is discarded). The values are the
-/// v8a working point of `docs/notes/wake-word-compare.md` with the final
+/// v8a working point of `docs/notes/wake-word-compare.md` (git history only) with the final
 /// values of WP133 (threshold 0.98 for phone and station, direct from 0.999).
 /// Change them here only.
 abstract final class WakeClassifierRules {

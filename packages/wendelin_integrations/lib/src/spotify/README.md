@@ -36,6 +36,5 @@ Kein Premium (403 `PREMIUM_REQUIRED`), kein Gerät (404 `NO_ACTIVE_DEVICE`), nic
 ## Hinweise
 
 - Titel, Künstler und Playlistnamen sind fremde Daten: Die Ergebnisse tragen `spotifyDataNotice`, URIs werden gegen `spotifyUriPattern` geprüft.
-- Die Tools liefern höchstens 5 Treffer je Art (3 bei Suche über alle Arten). Bei Playlists fragt die API mit `limit=10` ab und kürzt danach: Spotify füllt `playlists.items` mit `null` für ausgeblendete Playlists und zählt sie gegen `limit`; mit `limit=5` konnte die Seite nur aus `null` bestehen (Ergebnis „nichts gefunden“). Ursache am Gerät nicht live bestätigt, siehe `docs/testing/m5/wp161.md`.
+- Die Tools liefern höchstens 5 Treffer je Art (3 bei Suche über alle Arten). Bei Playlists fragt die API mit `limit=10` ab und kürzt danach: Spotify füllt `playlists.items` mit `null` für ausgeblendete Playlists und zählt sie gegen `limit`; mit `limit=5` konnte die Seite nur aus `null` bestehen (Ergebnis „nichts gefunden“). Ursache am Gerät nicht live bestätigt, siehe `docs/testing/m5/wp161.md` (nur im Git-Verlauf).
 - Ohne Treffer sagt `spotify__play` ehrlich „nichts gefunden, nichts abgespielt“ und bietet höchstens eine Alternative an; es spielt nie still etwas anderes.
-- Prüfpunkte für das Gerät: `docs/testing/m5/README.md`.

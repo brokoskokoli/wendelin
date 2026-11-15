@@ -1,7 +1,7 @@
 //! Sigstore-Prüfung des Tinfoil-Releases (WP76b): Der Messwert des Routers (SNP-Report) muss zum
 //! signierten GitHub-Release passen. Reine, netzfreie Funktionen: Das Bundle (`tinfoil.hash` →
 //! GitHub-Attestierung, Sigstore-Bundle v0.3) holt Dart, die Trust-Root liegt eingebettet im Repo
-//! (`assets/sigstore_trusted_root.json`, Pflege siehe `docs/notes/sigstore-trust-root.md`).
+//! (`assets/sigstore_trusted_root.json`, Pflege siehe `docs/architecture/sigstore-trust-root.md`).
 //!
 //! Geprüft wird, fail-closed, jede Stufe einzeln:
 //! - `dsse_ok`: DSSE-Signatur (PAE) mit dem Blattzertifikat, in-toto-Statement (`predicateType`

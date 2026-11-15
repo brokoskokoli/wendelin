@@ -14,7 +14,7 @@ enum TemplateAuth {
 }
 
 /// A model recommended for a template, with the numbers behind it
-/// (source: `docs/notes/model-recommendation.md`).
+/// (source: live evaluation 2026-10-20, `evals/reports/README.md`).
 @immutable
 final class ModelRecommendation {
   /// Creates a recommendation.
@@ -257,7 +257,7 @@ const providerTemplates = <ProviderTemplate>[
     auth: TemplateAuth.apiKey,
     keyPageUrl: 'https://tinfoil.sh',
     privacy: PrivacyLevel.tee,
-    // Live evaluation 2026-10-20 (docs/notes/model-recommendation.md):
+    // Live evaluation 2026-10-20 (evals/reports/README.md):
     // `gemma4-31b` 57/58, `gpt-oss-120b` only 50/58.
     suggestedModel: 'gemma4-31b',
     options: {'attestation': 'tinfoil', 'modelType': 'chat', 'toolsOnly': true},

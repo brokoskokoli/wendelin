@@ -74,7 +74,7 @@ final class HintTermLimits {
   /// 128 (WP191): the largest measured value without an inserted name at
   /// hotword bonus 1.0; at 200 and 300 one invented name (only in the list
   /// from size 200 on) appeared in a noisy hypothesis. See
-  /// `docs/notes/hotword-bias-2026-10-25.md` ("Nachtrag WP191").
+  /// `docs/notes/hotword-bias-2026-10-25.md` ("Nachtrag WP191", git history only).
   final int maxTerms;
 
   /// Maximum characters of one term.

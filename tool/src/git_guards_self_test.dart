@@ -24,7 +24,8 @@ final class _PushRepo {
   late final String c0;
   late final String common;
 
-  /// Notiert den Tree von [rev] wie merge_wp.sh.
+  /// Schreibt eine Freigabedatei im früheren Format (`<tree>` je Zeile), die
+  /// der Hook nicht mehr auswertet.
   void note(String rev) => File('$common/wendelin-merge-ok').writeAsStringSync(
     '${r.git(['rev-parse', '$rev^{tree}'])}\n',
     mode: FileMode.append,
@@ -50,7 +51,6 @@ void _prePush(SelfCheck t) {
   try {
     final p = _PushRepo(Sandbox(d));
     _prePushPlain(t, p);
-    _prePushNoted(t, p);
     _prePushMerge(t, p);
   } finally {
     d.deleteSync(recursive: true);
@@ -73,10 +73,7 @@ void _prePushPlain(SelfCheck t, _PushRepo p) {
     'Doku-Commits mit Variable: erlaubt',
   );
   r.commit('code.dart', 'c\n');
-  t.isTrue(
-    p.push(main, r.head(), allow: true) != 0,
-    'Code-Commit ohne notierten Tree: abgelehnt',
-  );
+  t.isTrue(p.push(main, r.head(), allow: true) != 0, 'Code-Commit: abgelehnt');
   t.eq(p.push('refs/heads/wp/1-x', r.head()), 0, 'wp/*-Push: frei');
   t.eq(p.push('refs/heads/other', r.head()), 0, 'anderer Branch: frei');
   t.eq(p.push('refs/tags/v1', r.head()), 0, 'Tag: frei');
@@ -122,34 +119,6 @@ void _prePushPlain(SelfCheck t, _PushRepo p) {
   r.git(['checkout', '-q', 'docs']);
 }
 
-void _prePushNoted(SelfCheck t, _PushRepo p) {
-  final r = p.r;
-  const main = 'refs/heads/main';
-  p.note('HEAD');
-  t.eq(p.push(main, r.head(), allow: true), 0, 'notierter Tree: erlaubt');
-  r.git(['commit', '-q', '--amend', '-m', 'andere Nachricht\n\n$sbTrailer']);
-  t.eq(
-    p.push(main, r.head(), allow: true),
-    0,
-    'Amend der Nachricht: Tree zählt weiter',
-  );
-  t.isTrue(
-    p.push(main, r.head()) != 0,
-    'notierter Tree ohne Variable: abgelehnt',
-  );
-  r.commit('docs/more.md', 'm\n');
-  t.eq(
-    p.push(main, r.head(), allow: true),
-    0,
-    'Status-Commit (Doku) nach der Freigabe: erlaubt',
-  );
-  r.commit('late.dart', 'l\n');
-  t.isTrue(
-    p.push(main, r.head(), allow: true) != 0,
-    'Code-Commit nach der Freigabe: abgelehnt',
-  );
-}
-
 void _prePushMerge(SelfCheck t, _PushRepo p) {
   final r = p.r;
   const main = 'refs/heads/main';
@@ -161,43 +130,14 @@ void _prePushMerge(SelfCheck t, _PushRepo p) {
   r.git(['merge', '-q', '--no-ff', '-m', 'Merge feat\n\n$sbTrailer', 'feat']);
   t.isTrue(
     p.push(main, r.head(), allow: true) != 0,
-    'Merge ohne notierten Tree: abgelehnt',
+    'lokaler Merge eines Code-Branches: abgelehnt',
   );
   p.note('HEAD');
-  t.eq(
-    p.push(main, r.head(), allow: true),
-    0,
-    'Merge mit notiertem Tree: erlaubt (Branch-Commits gedeckt)',
-  );
-  r.commit('docs/s.md', 's\n');
-  t.eq(
-    p.push(main, r.head(), allow: true),
-    0,
-    'Merge plus Status-Commit: erlaubt',
-  );
-  _prePushConsume(t, p);
-  _prePushMergeReset(t, p);
-  _prePushFresh(t, p);
-}
-
-/// Freigaben, deren Commit schon in origin/main liegt, verfallen beim nächsten Push.
-void _prePushConsume(SelfCheck t, _PushRepo p) {
-  final r = p.r;
-  final okFile = File('${p.common}/wendelin-merge-ok');
-  final tree = r.git(['rev-parse', 'HEAD~1^{tree}']); // Merge-Commit (notiert)
-  final pushed = r.head();
-  r.git(['update-ref', 'refs/remotes/origin/main', pushed]);
-  r.git(['checkout', '-q', '-b', 'later']);
-  r.commit('docs/later.md', 'l\n');
-  t.eq(
-    p.push('refs/heads/main', r.head(), allow: true, remote: pushed),
-    0,
-    'Doku-Push nach der Freigabe',
-  );
   t.isTrue(
-    !okFile.readAsStringSync().contains(tree),
-    'verbrauchte Freigabe (Commit in origin/main) entfernt',
+    p.push(main, r.head(), allow: true) != 0,
+    'alte Freigabedatei gibt keinen Code frei',
   );
+  _prePushMergeReset(t, p);
 }
 
 /// Merge `-s ours`: erster Elternteil alt, zweiter origin/main, Tree alter Stand.
@@ -222,27 +162,6 @@ void _prePushMergeReset(SelfCheck t, _PushRepo p) {
   t.isTrue(
     p.push(main, r.head(), allow: true, remote: remote) != 0,
     'Merge -s ours (Code des zweiten Elternteils verworfen): abgelehnt',
-  );
-}
-
-/// Eine frisch notierte, noch nicht gepushte Freigabe übersteht das Aufräumen.
-void _prePushFresh(SelfCheck t, _PushRepo p) {
-  final r = p.r;
-  final okFile = File('${p.common}/wendelin-merge-ok');
-  r.git(['checkout', '-q', '-B', 'fresh', p.c0]);
-  r.commit('fresh_code.dart', 'f\n');
-  final code = r.head();
-  p.note('HEAD');
-  r.git(['update-ref', 'refs/remotes/origin/main', p.c0]);
-  r.git(['checkout', '-q', '-B', 'fresh2', code]);
-  t.eq(
-    p.push('refs/heads/main', r.head(), allow: true, remote: p.c0),
-    0,
-    'frisch notierte Freigabe bei gesetztem origin/main: Push erlaubt',
-  );
-  t.isTrue(
-    okFile.readAsStringSync().contains(r.git(['rev-parse', 'HEAD^{tree}'])),
-    'frische Freigabe nicht aufgeräumt',
   );
 }
 
