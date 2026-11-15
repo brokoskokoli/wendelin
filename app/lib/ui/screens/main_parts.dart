@@ -83,8 +83,9 @@ class MainChips extends StatelessWidget {
     this.onQuickSwitch,
   });
 
-  /// Opens the agent quick switch after holding the provider chip (WP94);
-  /// `null` = not possible now (request running, fewer than two agents).
+  /// Opens the agent quick switch on a long press on the provider chip,
+  /// together with the vibration (WP94); `null` = not possible now (request
+  /// running, fewer than two agents).
   final VoidCallback? onQuickSwitch;
 
   /// Display name of the active provider.
