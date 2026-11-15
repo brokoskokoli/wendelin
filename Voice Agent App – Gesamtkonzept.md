@@ -376,7 +376,7 @@ Die App ist in erster Linie ein Sprach-Overlay; der Hauptbildschirm zeigt Verlau
 **Oberflächen**
 
 - **Assistenten-Overlay** (halber Bildschirm über anderen Apps, ausgelöst durch Wake Word oder Assistenten-Geste): Wellenform während der Aufnahme, Live-Transkript, Antwort, Tool-Karten ("Termin angelegt – Rückgängig"), Bestätigungskarten, kleines Symbol für Provider und Prüfstatus. Gesperrt zeigt es nur die aktuelle Anfrage und die gesprochene Antwort (kein Verlauf) mit einem Entsperren-Knopf; Sperrsätze in der Sprache der Äußerung (K131).
-- **Hauptbildschirm**: Gesprächsverlauf, Texteingabe als Alternative zur Sprache, Mikrofon-Button, aktiver Provider. Langer Druck auf den Agenten oben öffnet den Schnellwechsel; die Auswahl wird Standard mit leerem Chat (K55).
+- **Hauptbildschirm**: Gesprächsverlauf, Texteingabe als Alternative zur Sprache, Mikrofon-Button, aktiver Provider. Langer Druck auf den Agenten oben öffnet den Schnellwechsel sofort mit der Vibration (übliche Android-Dauer für langen Druck, keine zusätzliche Wartezeit); die Auswahl wird Standard mit leerem Chat (K55).
 - **Onboarding**: Sprache, erster Provider (Key einfügen, testen), Whisper-Modell herunterladen, Integrationen auswählen, optional Standard-Assistent setzen.
 - **Schnellkachel** für den Stationsmodus; Widget offen (K137); iOS-Elemente erst mit M7 (K99).
 
