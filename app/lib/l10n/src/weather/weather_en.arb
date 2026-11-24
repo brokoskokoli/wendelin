@@ -1,13 +1,19 @@
 {
-  "weatherHomeHelp": "Used when you name no place and the location is not known. Leave empty = no home place.",
+  "weatherGpsDenied": "No access to the location",
+  "weatherGpsDeniedDetail": "Allow it in the Android settings under Permissions → Location. Until then Wendelin uses the home place.",
+  "weatherGpsOpenSettings": "Android settings",
+  "weatherGpsRationale": "For Wendelin to tell you the weather and sea at your current place, it needs location access. Android will ask you right after this. Wendelin only reads the position for a weather or sea question without a place (never in the background), does not send it to cloud models below your privacy level and sends it to the weather service only rounded. “Approximate” is enough.",
+  "weatherHomeHelp": "Used when you name no place and no GPS position is available (box unticked, no permission or no fix). Leave empty = no home place.",
   "weatherHomeLabel": "Home place, e.g. Kiel",
-  "weatherIntro": "All weather services are free and need no key. Sea data (waves, water temperature) always comes from Open-Meteo.",
+  "weatherIntro": "Place: from the question, else the GPS position (if ticked), else the home place. All weather services are free and need no key. Sea data (waves, water temperature) always comes from Open-Meteo.",
   "weatherKindBrightSkyDetail": "Data of the German Weather Service",
   "weatherKindMetNorwayDetail": "Norwegian weather service, worldwide",
   "weatherKindOpenMeteoDetail": "Default, worldwide",
   "weatherNotFound": "Place “{name}” not found.",
   "weatherSearchFailed": "Place search not reachable, try again later.",
-  "weatherSetupDetail": "Choose a service, set the place for “weather here”",
+  "weatherSetupDetail": "Choose a service, set GPS position or home place for “weather here”",
   "weatherSetupTitle": "Weather service and home place",
-  "weatherTitle": "Weather and sea"
+  "weatherTitle": "Weather and sea",
+  "weatherUseGps": "Use GPS position",
+  "weatherUseGpsHelp": "Only for questions without a place. The place is sent to the weather service."
 }

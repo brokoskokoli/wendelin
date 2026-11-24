@@ -5788,15 +5788,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wakeWordWhoSpeaks => 'Who is speaking?';
 
   @override
+  String get weatherGpsDenied => 'No access to the location';
+
+  @override
+  String get weatherGpsDeniedDetail =>
+      'Allow it in the Android settings under Permissions → Location. Until then Wendelin uses the home place.';
+
+  @override
+  String get weatherGpsOpenSettings => 'Android settings';
+
+  @override
+  String get weatherGpsRationale =>
+      'For Wendelin to tell you the weather and sea at your current place, it needs location access. Android will ask you right after this. Wendelin only reads the position for a weather or sea question without a place (never in the background), does not send it to cloud models below your privacy level and sends it to the weather service only rounded. “Approximate” is enough.';
+
+  @override
   String get weatherHomeHelp =>
-      'Used when you name no place and the location is not known. Leave empty = no home place.';
+      'Used when you name no place and no GPS position is available (box unticked, no permission or no fix). Leave empty = no home place.';
 
   @override
   String get weatherHomeLabel => 'Home place, e.g. Kiel';
 
   @override
   String get weatherIntro =>
-      'All weather services are free and need no key. Sea data (waves, water temperature) always comes from Open-Meteo.';
+      'Place: from the question, else the GPS position (if ticked), else the home place. All weather services are free and need no key. Sea data (waves, water temperature) always comes from Open-Meteo.';
 
   @override
   String get weatherKindBrightSkyDetail => 'Data of the German Weather Service';
@@ -5819,13 +5833,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get weatherSetupDetail =>
-      'Choose a service, set the place for “weather here”';
+      'Choose a service, set GPS position or home place for “weather here”';
 
   @override
   String get weatherSetupTitle => 'Weather service and home place';
 
   @override
   String get weatherTitle => 'Weather and sea';
+
+  @override
+  String get weatherUseGps => 'Use GPS position';
+
+  @override
+  String get weatherUseGpsHelp =>
+      'Only for questions without a place. The place is sent to the weather service.';
 
   @override
   String get webSearchAddress => 'Address, e.g. https://search.example.org';

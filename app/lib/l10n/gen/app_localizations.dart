@@ -9903,10 +9903,34 @@ abstract class AppLocalizations {
   /// **'Wer spricht?'**
   String get wakeWordWhoSpeaks;
 
+  /// No description provided for @weatherGpsDenied.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Zugriff auf den Standort'**
+  String get weatherGpsDenied;
+
+  /// No description provided for @weatherGpsDeniedDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'In den Android-Einstellungen unter Berechtigungen → Standort erlauben. Bis dahin nimmt Wendelin den Heimatort.'**
+  String get weatherGpsDeniedDetail;
+
+  /// No description provided for @weatherGpsOpenSettings.
+  ///
+  /// In de, this message translates to:
+  /// **'Android-Einstellungen'**
+  String get weatherGpsOpenSettings;
+
+  /// No description provided for @weatherGpsRationale.
+  ///
+  /// In de, this message translates to:
+  /// **'Damit Wendelin das Wetter und das Meer an deinem aktuellen Ort nennen kann, braucht es den Standortzugriff. Android fragt dich gleich danach. Wendelin fragt die Position nur bei einer Wetter- oder Meer-Frage ohne Ort (nie im Hintergrund), schickt sie nicht an Cloud-Modelle unterhalb deiner Datenschutzstufe und an den Wetterdienst nur gerundet. „Ungefähr“ reicht.'**
+  String get weatherGpsRationale;
+
   /// No description provided for @weatherHomeHelp.
   ///
   /// In de, this message translates to:
-  /// **'Wird genutzt, wenn du keinen Ort nennst und der Standort nicht bekannt ist. Leer lassen = kein Heimatort.'**
+  /// **'Wird genutzt, wenn du keinen Ort nennst und keine GPS-Position verfügbar ist (Haken aus, keine Berechtigung oder kein Empfang). Leer lassen = kein Heimatort.'**
   String get weatherHomeHelp;
 
   /// No description provided for @weatherHomeLabel.
@@ -9918,7 +9942,7 @@ abstract class AppLocalizations {
   /// No description provided for @weatherIntro.
   ///
   /// In de, this message translates to:
-  /// **'Alle Wetterdienste sind kostenlos und brauchen keinen Schlüssel. Meeresdaten (Wellen, Wassertemperatur) kommen immer von Open-Meteo.'**
+  /// **'Ort: aus der Frage, sonst die GPS-Position (wenn angehakt), sonst der Heimatort. Alle Wetterdienste sind kostenlos und brauchen keinen Schlüssel. Meeresdaten (Wellen, Wassertemperatur) kommen immer von Open-Meteo.'**
   String get weatherIntro;
 
   /// No description provided for @weatherKindBrightSkyDetail.
@@ -9954,7 +9978,7 @@ abstract class AppLocalizations {
   /// No description provided for @weatherSetupDetail.
   ///
   /// In de, this message translates to:
-  /// **'Dienst wählen, Ort für „Wetter hier“ festlegen'**
+  /// **'Dienst wählen, GPS-Position oder Heimatort für „Wetter hier“ festlegen'**
   String get weatherSetupDetail;
 
   /// No description provided for @weatherSetupTitle.
@@ -9968,6 +9992,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Wetter und Meer'**
   String get weatherTitle;
+
+  /// No description provided for @weatherUseGps.
+  ///
+  /// In de, this message translates to:
+  /// **'GPS-Position verwenden'**
+  String get weatherUseGps;
+
+  /// No description provided for @weatherUseGpsHelp.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur für Fragen ohne Ortsangabe. Der Ort geht an den Wetterdienst.'**
+  String get weatherUseGpsHelp;
 
   /// No description provided for @webSearchAddress.
   ///
