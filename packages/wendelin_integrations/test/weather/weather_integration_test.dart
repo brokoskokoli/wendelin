@@ -136,7 +136,60 @@ void main() {
       final o = await tool('weather__forecast').execute({}, at());
       expect(o.isError, isTrue);
       expect(o.text, contains('Heimatort'));
+      expect(o.text, contains('GPS-Position verwenden'));
       expect(service.requests, isEmpty);
+    });
+
+    test('ohne Position und ohne Heimatort: Hinweis auf Haken', () async {
+      for (final loc in [
+        FakeWeatherLocationPort(null),
+        FakeWeatherLocationPort(palma)
+          ..error = const PortException(PortErrorKind.unavailable, 'kein Fix'),
+      ]) {
+        integration = make(location: loc);
+        for (final name in ['weather__forecast', 'weather__marine']) {
+          final o = await tool(name).execute({}, at());
+          expect(o.isError, isTrue, reason: name);
+          expect(o.text, contains('Heimatort'), reason: name);
+          expect(o.text, contains('GPS-Position verwenden'), reason: name);
+        }
+      }
+      expect(service.requests, isEmpty);
+      expect(marine.requests, isEmpty);
+    });
+
+    test('Position bei jeder Frage neu: Wetter und Meer', () async {
+      final loc = FakeWeatherLocationPort(palma);
+      integration = make(home: home, location: loc);
+      await tool('weather__forecast').execute({}, at());
+      await tool('weather__marine').execute({}, at());
+      loc.place = kiel;
+      await tool('weather__forecast').execute({}, at());
+      await tool('weather__marine').execute({}, at());
+      expect(service.requests.map((r) => r.place), [palma, kiel]);
+      expect(marine.requests.map((r) => r.place), [palma, kiel]);
+      expect(loc.levels, hasLength(4));
+      expect(geocoder.asked, isEmpty);
+    });
+
+    test('Ort in der Frage: Geocoder, Position nicht abgefragt', () async {
+      final loc = FakeWeatherLocationPort(palma);
+      integration = make(home: home, location: loc);
+      await tool('weather__forecast').execute({'place': 'Kiel'}, at());
+      await tool('weather__marine').execute({'place': 'Kiel'}, at());
+      expect(geocoder.asked, ['Kiel', 'Kiel']);
+      expect(service.requests.single.place, kiel);
+      expect(marine.requests.single.place, kiel);
+      expect(loc.levels, isEmpty);
+    });
+
+    test('Ohne Position (Port wirft) auch beim Meer: Heimatort', () async {
+      final loc = FakeWeatherLocationPort(palma)
+        ..error = const PortException(PortErrorKind.unavailable, 'kein Fix');
+      integration = make(home: home, location: loc);
+      final o = await tool('weather__marine').execute({}, at());
+      expect(o.isError, isFalse, reason: o.text);
+      expect(marine.requests.single.place, home);
     });
 
     test('unbekannter Ort: Fehler mit dem Namen', () async {
