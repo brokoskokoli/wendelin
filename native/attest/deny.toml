@@ -37,4 +37,8 @@ allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 # ein gepatchtes `rsa` erscheint.
 ignore = [
     { id = "RUSTSEC-2023-0071", reason = "rsa nur zum Verifizieren öffentlicher Signaturen (AMD-Kette), nie mit privatem Schlüssel" },
+    # Nur „unmaintained“, keine Schwachstelle. `chrono` kommt fest (nicht abschaltbar) über `dcap-qvl` und
+    # dient dort nur dem Parsen von RFC-3339-Zeitstempeln der Intel-Kollateralen. Wegfall, sobald `dcap-qvl`
+    # auf eine gepflegte Zeitbibliothek wechselt.
+    { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained (keine Schwachstelle), nur indirekt über dcap-qvl zum Parsen von RFC-3339-Zeitstempeln" },
 ]
