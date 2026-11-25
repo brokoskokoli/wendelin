@@ -1,7 +1,8 @@
 // WP86: Verdrahtung der Integrationen „location“ und „maps“ und der
-// Wetter-Standort. Eigene Datei (konfliktarm, wie media_wiring_test).
+// Wetter-Standort (Haken „GPS-Position verwenden“). Eigene Datei (konfliktarm, wie media_wiring_test).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:wendelin/di/app_requirements.dart';
 import 'package:wendelin/di/integration_specs.dart';
 import 'package:wendelin/di/integrations/location_spec.dart';
@@ -9,7 +10,9 @@ import 'package:wendelin/di/integrations/maps_spec.dart';
 import 'package:wendelin/di/preference_models.dart';
 import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/weather.dart';
+import 'package:wendelin/di/weather_config.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
@@ -120,15 +123,55 @@ void main() {
   });
 
   group('Wetter und Standort', () {
-    test('nur bei eingeschaltetem Standort', () async {
-      final off = TestEnv();
-      final c1 = off.container();
-      addTearDown(c1.dispose);
-      expect(c1.read(weatherLocationPortProvider), isNull);
+    // Wetter nutzt die Geräteposition nur mit dem Haken „GPS-Position
+    // verwenden“, unabhängig von der Integration „Standort“.
+    TestEnv gps({bool useGps = true, Set<String> enabled = const {}}) =>
+        TestEnv(
+          startup: StartupSettings(
+            enabledIntegrations: enabled,
+            weather: WeatherConfig(useGps: useGps),
+          ),
+        );
+
+    test('ohne Haken kein Port, auch bei eingeschaltetem Standort', () async {
+      for (final env in [
+        TestEnv(),
+        TestEnv(enabled: const {'location'}),
+        gps(useGps: false, enabled: const {'location', 'weather'}),
+      ]) {
+        final c = env.container();
+        addTearDown(c.dispose);
+        expect(c.read(weatherLocationPortProvider), isNull);
+      }
+    });
+
+    test('mit Haken ein Port, auch bei ausgeschaltetem Standort', () async {
+      final on = gps();
+      final c = on.container();
+      addTearDown(c.dispose);
+      expect(c.read(enabledIntegrationsProvider), isNot(contains('location')));
+      final port = c.read(weatherLocationPortProvider)!;
+      expect(
+        (await port.currentPlace(level: PrivacyLevel.tee))!.name,
+        'Hamburg',
+      );
+    });
+
+    test('Haken umschalten baut den Port neu', () async {
+      final env = gps(useGps: false);
+      final c = env.container();
+      addTearDown(c.dispose);
+      expect(c.read(weatherLocationPortProvider), isNull);
+      await c
+          .read(weatherConfigProvider.notifier)
+          .set(const WeatherConfig(useGps: true));
+      expect(c.read(weatherLocationPortProvider), isNotNull);
+      await c.read(weatherConfigProvider.notifier).set(const WeatherConfig());
+      expect(c.read(weatherLocationPortProvider), isNull);
     });
 
     test('Ziel ab Mindeststufe bekommt die Geräteposition', () async {
-      final on = TestEnv(enabled: const {'location'});
+      final on = gps();
       final c = on.container();
       addTearDown(c.dispose);
       final port = c.read(weatherLocationPortProvider)!;
@@ -144,8 +187,27 @@ void main() {
       expect(await port.currentPlace(level: PrivacyLevel.local), isNull);
     });
 
+    test('Position bei jeder Frage neu', () async {
+      final on = gps();
+      final c = on.container();
+      addTearDown(c.dispose);
+      final port = c.read(weatherLocationPortProvider)!;
+      expect(
+        (await port.currentPlace(level: PrivacyLevel.tee))!.name,
+        'Hamburg',
+      );
+      on.location.fix = const GeoFix(
+        latitude: 54.3233,
+        longitude: 10.1228,
+        placeName: 'Kiel',
+      );
+      final moved = (await port.currentPlace(level: PrivacyLevel.tee))!;
+      expect(moved.name, 'Kiel');
+      expect((moved.latitude, moved.longitude), (54.32, 10.12));
+    });
+
     test('Standard-Ziel: Wetter ohne Geräteposition', () async {
-      final on = TestEnv(enabled: const {'location'});
+      final on = gps();
       final c = on.container();
       addTearDown(c.dispose);
       final port = c.read(weatherLocationPortProvider)!;
@@ -155,10 +217,48 @@ void main() {
       expect(on.location.methodCalls, isNot(contains('current')));
     });
 
+    test('Abfluss-Schutz verweigert: Wetter nimmt den Heimatort', () async {
+      const home = Place(name: 'Zuhause', latitude: 48.1, longitude: 11.6);
+      final seen = <Uri>[];
+      final env = TestEnv(
+        startup: const StartupSettings(
+          enabledIntegrations: {'weather'},
+          weather: WeatherConfig(home: home, useGps: true),
+        ),
+        extraOverrides: [
+          httpClientProvider.overrideWithValue(
+            MockClient((r) async {
+              seen.add(r.url);
+              return http.Response('{}', 200);
+            }),
+          ),
+        ],
+      );
+      final c = env.container();
+      addTearDown(c.dispose);
+      final registry = c.read(toolRegistryProvider);
+      await registry.refresh();
+      final tool = registry
+          .catalogFor(PrivacyLevel.standard, sessionId: 's')
+          .lookup('weather__forecast')!;
+      await tool.execute(
+        {},
+        ToolContext(
+          sessionId: 's',
+          clock: FixedClock(testNow),
+          locale: 'de-DE',
+          timeZone: 'Europe/Berlin',
+          privacyLevel: PrivacyLevel.standard,
+        ),
+      );
+      expect(seen.single.queryParameters['latitude'], '48.1000');
+      expect(env.location.methodCalls, isNot(contains('current')));
+    });
+
     test(
       'Nutzer markiert Standort als nicht sensibel: auch Standard',
       () async {
-        final on = TestEnv(enabled: const {'location'});
+        final on = gps();
         final c = on.container();
         addTearDown(c.dispose);
         await c
@@ -173,7 +273,7 @@ void main() {
     );
 
     test('eigene Mindeststufe zählt', () async {
-      final on = TestEnv(enabled: const {'location'});
+      final on = gps();
       final c = on.container();
       addTearDown(c.dispose);
       await c

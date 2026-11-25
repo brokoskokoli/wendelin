@@ -5816,15 +5816,29 @@ class AppLocalizationsDe extends AppLocalizations {
   String get wakeWordWhoSpeaks => 'Wer spricht?';
 
   @override
+  String get weatherGpsDenied => 'Kein Zugriff auf den Standort';
+
+  @override
+  String get weatherGpsDeniedDetail =>
+      'In den Android-Einstellungen unter Berechtigungen → Standort erlauben. Bis dahin nimmt Wendelin den Heimatort.';
+
+  @override
+  String get weatherGpsOpenSettings => 'Android-Einstellungen';
+
+  @override
+  String get weatherGpsRationale =>
+      'Damit Wendelin das Wetter und das Meer an deinem aktuellen Ort nennen kann, braucht es den Standortzugriff. Android fragt dich gleich danach. Wendelin fragt die Position nur bei einer Wetter- oder Meer-Frage ohne Ort (nie im Hintergrund), schickt sie nicht an Cloud-Modelle unterhalb deiner Datenschutzstufe und an den Wetterdienst nur gerundet. „Ungefähr“ reicht.';
+
+  @override
   String get weatherHomeHelp =>
-      'Wird genutzt, wenn du keinen Ort nennst und der Standort nicht bekannt ist. Leer lassen = kein Heimatort.';
+      'Wird genutzt, wenn du keinen Ort nennst und keine GPS-Position verfügbar ist (Haken aus, keine Berechtigung oder kein Empfang). Leer lassen = kein Heimatort.';
 
   @override
   String get weatherHomeLabel => 'Heimatort, z. B. Kiel';
 
   @override
   String get weatherIntro =>
-      'Alle Wetterdienste sind kostenlos und brauchen keinen Schlüssel. Meeresdaten (Wellen, Wassertemperatur) kommen immer von Open-Meteo.';
+      'Ort: aus der Frage, sonst die GPS-Position (wenn angehakt), sonst der Heimatort. Alle Wetterdienste sind kostenlos und brauchen keinen Schlüssel. Meeresdaten (Wellen, Wassertemperatur) kommen immer von Open-Meteo.';
 
   @override
   String get weatherKindBrightSkyDetail => 'Daten des Deutschen Wetterdienstes';
@@ -5847,13 +5861,20 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get weatherSetupDetail =>
-      'Dienst wählen, Ort für „Wetter hier“ festlegen';
+      'Dienst wählen, GPS-Position oder Heimatort für „Wetter hier“ festlegen';
 
   @override
   String get weatherSetupTitle => 'Wetterdienst und Heimatort';
 
   @override
   String get weatherTitle => 'Wetter und Meer';
+
+  @override
+  String get weatherUseGps => 'GPS-Position verwenden';
+
+  @override
+  String get weatherUseGpsHelp =>
+      'Nur für Fragen ohne Ortsangabe. Der Ort geht an den Wetterdienst.';
 
   @override
   String get webSearchAddress => 'Adresse, z. B. https://search.example.org';

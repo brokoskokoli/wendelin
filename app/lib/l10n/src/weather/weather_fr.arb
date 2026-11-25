@@ -1,13 +1,19 @@
 {
-  "weatherHomeHelp": "Utilisé lorsque vous ne nommez aucun lieu et que la position est inconnue. Laisser vide = pas de lieu de résidence.",
+  "weatherGpsDenied": "Pas d’accès à la position",
+  "weatherGpsDeniedDetail": "Autorisez-le dans les paramètres Android sous Autorisations → Position. En attendant, Wendelin utilise le lieu de résidence.",
+  "weatherGpsOpenSettings": "Paramètres Android",
+  "weatherGpsRationale": "Pour que Wendelin puisse indiquer la météo et l’état de la mer à l’endroit où vous êtes, il a besoin de l’accès à la position. Android vous le demandera juste après. Wendelin ne lit la position que pour une question météo ou mer sans lieu (jamais en arrière-plan), ne l’envoie pas aux modèles cloud en dessous de votre niveau de confidentialité et ne l’envoie au service météo qu’arrondie. « Approximative » suffit.",
+  "weatherHomeHelp": "Utilisé lorsque vous ne nommez aucun lieu et qu’aucune position GPS n’est disponible (case décochée, pas d’autorisation ou pas de signal). Laisser vide = pas de lieu de résidence.",
   "weatherHomeLabel": "Lieu de résidence, p. ex. Kiel",
-  "weatherIntro": "Tous les services météo sont gratuits et sans clé. Les données maritimes (vagues, température de l’eau) viennent toujours d’Open-Meteo.",
+  "weatherIntro": "Lieu : celui de la question, sinon la position GPS (si cochée), sinon le lieu de résidence. Tous les services météo sont gratuits et sans clé. Les données maritimes (vagues, température de l’eau) viennent toujours d’Open-Meteo.",
   "weatherKindBrightSkyDetail": "Données du service météorologique allemand",
   "weatherKindMetNorwayDetail": "Service météorologique norvégien, mondial",
   "weatherKindOpenMeteoDetail": "Par défaut, mondial",
   "weatherNotFound": "Lieu « {name} » introuvable.",
   "weatherSearchFailed": "Recherche de lieu injoignable, réessayez plus tard.",
-  "weatherSetupDetail": "Choisir un service, définir le lieu pour « météo ici »",
+  "weatherSetupDetail": "Choisir un service, définir la position GPS ou le lieu pour « météo ici »",
   "weatherSetupTitle": "Service météo et lieu de résidence",
-  "weatherTitle": "Météo et mer"
+  "weatherTitle": "Météo et mer",
+  "weatherUseGps": "Utiliser la position GPS",
+  "weatherUseGpsHelp": "Uniquement pour les questions sans lieu. Le lieu est envoyé au service météo."
 }

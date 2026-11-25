@@ -7,6 +7,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- **Weather and sea: "GPS-Position verwenden"** – a tick box on the "Wetter und Meer" settings page decides whether questions without a place use the current device position (asked anew for every question, permission requested when ticking). It no longer depends on the "Standort" integration: without the tick the weather uses the home place even when "Standort" is on. A place named in the question still wins; without a position the home place is used.
+
 ## [0.1.10] - 2026-11-15
 
 The agent quick switch opens right on the long press.

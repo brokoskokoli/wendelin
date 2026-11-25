@@ -35,16 +35,17 @@ final weatherGeocoderProvider = Provider<Geocoder>(
 );
 
 /// The current location for the weather: the device position while the
-/// `location` integration is on (WP86); the port itself answers `null`
-/// without the permission or a fix, and the weather then uses the home
-/// place. `null` while the integration is off.
+/// user ticked „GPS-Position verwenden“ ([WeatherConfig.useGps]),
+/// independent of the `location` integration; `null` while it is off. The
+/// port itself answers `null` without the permission or a fix, and the
+/// weather then uses the home place. Read anew for every question.
 ///
 /// The place name ends up in the answer text and so at the provider, like
 /// the `location` tools: the position is only used for a target that meets
 /// the sensitive minimum (default `tee` if none is set), or if the user
 /// marked `location` as not sensitive. Any other target gets `null`.
 final weatherLocationPortProvider = Provider<WeatherLocationPort?>((ref) {
-  if (!ref.watch(enabledIntegrationsProvider).contains('location')) return null;
+  if (!ref.watch(weatherConfigProvider.select((c) => c.useGps))) return null;
   final port = ref.watch(platformPortsProvider).location;
   if (port == null) return null;
   return _GatedWeatherLocation(LocationWeatherPort(port), () {

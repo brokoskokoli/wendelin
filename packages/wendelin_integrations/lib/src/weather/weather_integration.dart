@@ -112,7 +112,8 @@ final class WeatherIntegration implements Integration {
     throw const PortException(
       PortErrorKind.notFound,
       'Kein Ort bekannt: nach dem Ort fragen oder in den Einstellungen '
-      '(Wetter und Meer) einen Heimatort festlegen',
+      '(Wetter und Meer) einen Heimatort festlegen oder '
+      '„GPS-Position verwenden“ einschalten',
     );
   }
 

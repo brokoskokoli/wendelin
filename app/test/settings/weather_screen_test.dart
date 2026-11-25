@@ -10,7 +10,9 @@ import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/weather.dart';
 import 'package:wendelin/di/weather_config.dart';
+import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/weather_screen.dart';
+import 'package:wendelin/ui/voice/microphone_access.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/fakes.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
@@ -103,6 +105,145 @@ void main() {
     await settle(tester);
     expect(c.read(weatherConfigProvider).home, isNull);
     expect((await env.storage.settings.get(AppSettings.weather))!.home, isNull);
+  });
+
+  group('Haken „GPS-Position verwenden“', () {
+    Finder gpsSwitch() => find.byKey(const ValueKey('weatherUseGps'));
+    bool gpsOn(WidgetTester tester) =>
+        tester.widget<WSwitch>(gpsSwitch()).value;
+    final denied = find.text('Kein Zugriff auf den Standort');
+
+    testWidgets('Antippen schaltet um, Speichern schreibt useGps', (
+      tester,
+    ) async {
+      final env = TestEnv(enabled: const {'weather'});
+      final c = await pumpPage(tester, env, const WeatherScreen());
+      expect(find.text('GPS-Position verwenden'), findsOneWidget);
+      expect(
+        find.text(
+          'Nur für Fragen ohne Ortsangabe. Der Ort geht an den Wetterdienst.',
+        ),
+        findsOneWidget,
+      );
+      expect(gpsOn(tester), isFalse);
+
+      await tester.tap(gpsSwitch());
+      await settle(tester);
+      expect(gpsOn(tester), isTrue);
+      // Berechtigung schon erteilt: keine Erklärung, genau eine Anfrage.
+      expect(find.text('Weiter'), findsNothing);
+      expect(env.location.requests, 1);
+      expect(denied, findsNothing);
+      expect(c.read(weatherConfigProvider).useGps, isFalse);
+
+      await tester.tap(find.text('Speichern'));
+      await settle(tester);
+      expect(c.read(weatherConfigProvider), const WeatherConfig(useGps: true));
+      expect(
+        await env.storage.settings.get(AppSettings.weather),
+        const WeatherConfig(useGps: true),
+      );
+    });
+
+    testWidgets('verweigert: Haken bleibt an, Hinweis mit Einstellungen', (
+      tester,
+    ) async {
+      final opened = <int>[];
+      final env = TestEnv(
+        enabled: const {'weather'},
+        extraOverrides: [
+          appSettingsOpenerProvider.overrideWithValue(
+            () async => opened.add(1),
+          ),
+        ],
+      );
+      env.location
+        ..permission = false
+        ..grantOnRequest = false;
+      final c = await pumpPage(tester, env, const WeatherScreen());
+
+      await tester.tap(gpsSwitch());
+      await settle(tester);
+      // Erst die Erklärung, dann fragt Android.
+      expect(find.textContaining('Standortzugriff'), findsOneWidget);
+      expect(env.location.requests, 0);
+      await tester.tap(find.text('Weiter'));
+      await settle(tester);
+
+      expect(env.location.requests, 1);
+      expect(gpsOn(tester), isTrue);
+      expect(denied, findsOneWidget);
+      await tester.tap(find.text('Android-Einstellungen'));
+      await settle(tester);
+      expect(opened, [1]);
+
+      await tester.tap(find.text('Speichern'));
+      await settle(tester);
+      expect(c.read(weatherConfigProvider).useGps, isTrue);
+    });
+
+    testWidgets('erlaubt nach der Erklärung: kein Hinweis', (tester) async {
+      final env = TestEnv(enabled: const {'weather'});
+      env.location.permission = false;
+      await pumpPage(tester, env, const WeatherScreen());
+      await tester.tap(gpsSwitch());
+      await settle(tester);
+      await tester.tap(find.text('Weiter'));
+      await settle(tester);
+      expect(env.location.requests, 1);
+      expect(gpsOn(tester), isTrue);
+      expect(denied, findsNothing);
+    });
+
+    testWidgets('Erklärung abgebrochen: Haken bleibt aus, keine Anfrage', (
+      tester,
+    ) async {
+      final env = TestEnv(enabled: const {'weather'});
+      env.location.permission = false;
+      await pumpPage(tester, env, const WeatherScreen());
+      await tester.tap(gpsSwitch());
+      await settle(tester);
+      await tester.tap(find.text('Abbrechen'));
+      await settle(tester);
+      expect(env.location.requests, 0);
+      expect(gpsOn(tester), isFalse);
+    });
+
+    testWidgets('Abhaken fragt nicht und speichert aus', (tester) async {
+      final env = TestEnv(
+        enabled: const {'weather'},
+        startup: const StartupSettings(
+          enabledIntegrations: {'weather'},
+          weather: WeatherConfig(useGps: true),
+        ),
+      );
+      final c = await pumpPage(tester, env, const WeatherScreen());
+      expect(gpsOn(tester), isTrue);
+      await tester.tap(gpsSwitch());
+      await settle(tester);
+      expect(gpsOn(tester), isFalse);
+      expect(env.location.requests, 0);
+      expect(find.text('Weiter'), findsNothing);
+      await tester.tap(find.text('Speichern'));
+      await settle(tester);
+      expect(c.read(weatherConfigProvider).useGps, isFalse);
+    });
+
+    testWidgets('Berechtigung später entzogen: Hinweis beim Öffnen', (
+      tester,
+    ) async {
+      final env = TestEnv(
+        enabled: const {'weather'},
+        startup: const StartupSettings(
+          enabledIntegrations: {'weather'},
+          weather: WeatherConfig(useGps: true),
+        ),
+      );
+      env.location.permission = false;
+      await pumpPage(tester, env, const WeatherScreen());
+      expect(denied, findsOneWidget);
+      expect(env.location.requests, 0);
+    });
   });
 
   group('Verdrahtung', () {

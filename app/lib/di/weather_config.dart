@@ -27,11 +27,16 @@ enum WeatherServiceKind {
   };
 }
 
-/// Choice of weather service and the home place (no secrets).
+/// Choice of weather service, home place and whether the device position
+/// is used (no secrets).
 @immutable
 final class WeatherConfig {
   /// Creates a configuration.
-  const WeatherConfig({this.kind = WeatherServiceKind.openMeteo, this.home});
+  const WeatherConfig({
+    this.kind = WeatherServiceKind.openMeteo,
+    this.home,
+    this.useGps = false,
+  });
 
   /// Decodes [toJson]; throws [FormatException].
   factory WeatherConfig.fromJson(Map<String, Object?> json) {
@@ -42,9 +47,14 @@ final class WeatherConfig {
     if (home != null && home is! Map<String, Object?>) {
       throw const FormatException('weather: home ist kein Objekt');
     }
+    final useGps = json['useGps'];
+    if (useGps != null && useGps is! bool) {
+      throw const FormatException('weather: useGps must be a bool');
+    }
     return WeatherConfig(
       kind: kind ?? WeatherServiceKind.openMeteo,
       home: home == null ? null : Place.fromJson(home as Map<String, Object?>),
+      useGps: useGps as bool? ?? false,
     );
   }
 
@@ -54,23 +64,37 @@ final class WeatherConfig {
   /// Place used when the question names none and no location is known.
   final Place? home;
 
-  /// A copy with another [kind] or [home] ([clearHome] removes it).
+  /// Whether a question without a place uses the device position (before
+  /// the home place). Independent of the `location` integration.
+  final bool useGps;
+
+  /// A copy with another [kind], [home] ([clearHome] removes it) or
+  /// [useGps].
   WeatherConfig copyWith({
     WeatherServiceKind? kind,
     Place? home,
     bool clearHome = false,
+    bool? useGps,
   }) => WeatherConfig(
     kind: kind ?? this.kind,
     home: clearHome ? null : home ?? this.home,
+    useGps: useGps ?? this.useGps,
   );
 
   /// JSON for the settings.
-  Map<String, Object?> toJson() => {'kind': kind.name, 'home': ?home?.toJson()};
+  Map<String, Object?> toJson() => {
+    'kind': kind.name,
+    'home': ?home?.toJson(),
+    'useGps': useGps,
+  };
 
   @override
   bool operator ==(Object other) =>
-      other is WeatherConfig && other.kind == kind && other.home == home;
+      other is WeatherConfig &&
+      other.kind == kind &&
+      other.home == home &&
+      other.useGps == useGps;
 
   @override
-  int get hashCode => Object.hash(kind, home);
+  int get hashCode => Object.hash(kind, home, useGps);
 }

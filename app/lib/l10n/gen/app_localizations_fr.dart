@@ -5849,15 +5849,29 @@ class AppLocalizationsFr extends AppLocalizations {
   String get wakeWordWhoSpeaks => 'Qui parle ?';
 
   @override
+  String get weatherGpsDenied => 'Pas d’accès à la position';
+
+  @override
+  String get weatherGpsDeniedDetail =>
+      'Autorisez-le dans les paramètres Android sous Autorisations → Position. En attendant, Wendelin utilise le lieu de résidence.';
+
+  @override
+  String get weatherGpsOpenSettings => 'Paramètres Android';
+
+  @override
+  String get weatherGpsRationale =>
+      'Pour que Wendelin puisse indiquer la météo et l’état de la mer à l’endroit où vous êtes, il a besoin de l’accès à la position. Android vous le demandera juste après. Wendelin ne lit la position que pour une question météo ou mer sans lieu (jamais en arrière-plan), ne l’envoie pas aux modèles cloud en dessous de votre niveau de confidentialité et ne l’envoie au service météo qu’arrondie. « Approximative » suffit.';
+
+  @override
   String get weatherHomeHelp =>
-      'Utilisé lorsque vous ne nommez aucun lieu et que la position est inconnue. Laisser vide = pas de lieu de résidence.';
+      'Utilisé lorsque vous ne nommez aucun lieu et qu’aucune position GPS n’est disponible (case décochée, pas d’autorisation ou pas de signal). Laisser vide = pas de lieu de résidence.';
 
   @override
   String get weatherHomeLabel => 'Lieu de résidence, p. ex. Kiel';
 
   @override
   String get weatherIntro =>
-      'Tous les services météo sont gratuits et sans clé. Les données maritimes (vagues, température de l’eau) viennent toujours d’Open-Meteo.';
+      'Lieu : celui de la question, sinon la position GPS (si cochée), sinon le lieu de résidence. Tous les services météo sont gratuits et sans clé. Les données maritimes (vagues, température de l’eau) viennent toujours d’Open-Meteo.';
 
   @override
   String get weatherKindBrightSkyDetail =>
@@ -5881,13 +5895,20 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get weatherSetupDetail =>
-      'Choisir un service, définir le lieu pour « météo ici »';
+      'Choisir un service, définir la position GPS ou le lieu pour « météo ici »';
 
   @override
   String get weatherSetupTitle => 'Service météo et lieu de résidence';
 
   @override
   String get weatherTitle => 'Météo et mer';
+
+  @override
+  String get weatherUseGps => 'Utiliser la position GPS';
+
+  @override
+  String get weatherUseGpsHelp =>
+      'Uniquement pour les questions sans lieu. Le lieu est envoyé au service météo.';
 
   @override
   String get webSearchAddress => 'Adresse, p. ex. https://search.example.org';
