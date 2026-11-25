@@ -49,7 +49,7 @@ final class WeatherConfig {
     }
     final useGps = json['useGps'];
     if (useGps != null && useGps is! bool) {
-      throw const FormatException('weather: useGps ist kein bool');
+      throw const FormatException('weather: useGps must be a bool');
     }
     return WeatherConfig(
       kind: kind ?? WeatherServiceKind.openMeteo,
