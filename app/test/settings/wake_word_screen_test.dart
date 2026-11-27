@@ -299,6 +299,7 @@ void main() {
       final env = wakeEnv();
       final c = await pumpWake(tester, env, const WakeWordScreen());
       final bRow = find.byKey(const ValueKey('wakeStage2VerifierB'));
+      await until(tester, bRow);
       expect(bRow, findsOneWidget);
       expect(
         find.descendant(of: bRow, matching: find.byType(CheckStatusIcon)),
