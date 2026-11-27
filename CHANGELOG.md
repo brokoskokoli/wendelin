@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-11-27
+
+Weather and sea can use the current GPS position.
+
 ### Changed
 - **Weather and sea: "GPS-Position verwenden"** – a tick box on the "Wetter und Meer" settings page decides whether questions without a place use the current device position (asked anew for every question, permission requested when ticking). It no longer depends on the "Standort" integration: without the tick the weather uses the home place even when "Standort" is on. A place named in the question still wins; without a position the home place is used.
 
@@ -150,7 +154,8 @@ Download the APK below and install it. On Android 13 and later, you may have to 
 Certificate fingerprint (SHA-256): `A9:E9:5A:13:98:34:19:23:4B:DB:8F:CA:F6:0F:1B:84:18:88:36:86:7B:F8:DC:38:99:15:B5:25:39:DC:09:7B`
 APK checksum: see `SHA256SUMS`.
 
-[Unreleased]: https://github.com/brokoskokoli/wendelin/compare/v0.1.10...HEAD
+[Unreleased]: https://github.com/brokoskokoli/wendelin/compare/v0.1.11...HEAD
+[0.1.11]: https://github.com/brokoskokoli/wendelin/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/brokoskokoli/wendelin/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/brokoskokoli/wendelin/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/brokoskokoli/wendelin/compare/v0.1.7...v0.1.8
